@@ -22,32 +22,29 @@ import (
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/tinyverse-web3/share-call-utils/sharenode"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	tvutil "github.com/tinyverse-web3/tvbase/common/util"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
-	tvdb "github.com/tinyverse-web3/tvutil/db"
+	"github.com/tinyverse-web3/tvutil/db"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-
 	"go.opentelemetry.io/otel/trace"
-
 	"go.uber.org/dig"
 	"go.uber.org/fx"
 )
 
-type Tvbase struct {
+type TvBase struct {
 	DmsgService                 tvCommon.DmsgService
 	ctx                         context.Context
 	host                        host.Host
 	dht                         *kaddht.IpfsDHT
-	dhtDatastore                tvdb.Datastore
+	dhtDatastore                db.Datastore
 	nodeCfg                     *config.NodeConfig
 	lightPeerListMutex          sync.Mutex
 	servicePeerListMutex        sync.Mutex
@@ -67,7 +64,7 @@ type Tvbase struct {
 }
 
 // new infrasture
-func NewTvbase(options ...any) (*Tvbase, error) {
+func NewTvbase(options ...any) (*TvBase, error) {
 	var isStart bool = true
 	var rootPath string = ""
 	ctx := context.Background()
@@ -97,7 +94,7 @@ func NewTvbase(options ...any) (*Tvbase, error) {
 		}
 	}
 
-	m := &Tvbase{
+	m := &TvBase{
 		ctx: ctx,
 	}
 
@@ -116,7 +113,7 @@ func NewTvbase(options ...any) (*Tvbase, error) {
 	return m, nil
 }
 
-func (m *Tvbase) Start() error {
+func (m *TvBase) Start() error {
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
 	case config.FullMode:
@@ -169,7 +166,7 @@ func (m *Tvbase) Start() error {
 	return nil
 }
 
-func (m *Tvbase) Stop() {
+func (m *TvBase) Stop() {
 	m.closeSync.Do(func() {
 		if m.DmsgService != nil {
 			err := m.DmsgService.Stop()
@@ -207,7 +204,7 @@ func (m *Tvbase) Stop() {
 	})
 }
 
-func (m *Tvbase) initDisc() (fx.Option, error) {
+func (m *TvBase) initDisc() (fx.Option, error) {
 	var fxOpts []fx.Option
 
 	// trace init
@@ -321,7 +318,7 @@ func (m *Tvbase) initDisc() (fx.Option, error) {
 	return fx.Options(fxOpts...), nil
 }
 
-func (m *Tvbase) initFx(opt fx.Option) error {
+func (m *TvBase) initFx(opt fx.Option) error {
 	fxOpts := []fx.Option{
 		fx.NopLogger,
 		opt,
@@ -338,9 +335,9 @@ func (m *Tvbase) initFx(opt fx.Option) error {
 	return nil
 }
 
-func (m *Tvbase) init(rootPath string) error {
+func (m *TvBase) init(rootPath string) error {
 	var err error
-	fullPath, err := tvUtil.GetRootPath(rootPath)
+	fullPath, err := tvutil.GetRootPath(rootPath)
 	if err != nil {
 		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
 		return err
@@ -408,7 +405,7 @@ func (m *Tvbase) init(rootPath string) error {
 	return nil
 }
 
-func (m *Tvbase) bootstrap() error {
+func (m *TvBase) bootstrap() error {
 	// Bootstrap the persistence DHT. In the default configuration, this spawns a Background, thread that will refresh the peer table every five minutes.
 	tvLog.Logger.Info("Bootstrapping the persistence DHT")
 	if err := m.dht.Bootstrap(m.ctx); err != nil {
@@ -443,7 +440,7 @@ func (m *Tvbase) bootstrap() error {
 	return nil
 }
 
-func (m *Tvbase) netCheck() {
+func (m *TvBase) netCheck() {
 	go func() {
 		t := time.NewTicker(30 * time.Second)
 		defer t.Stop()
@@ -466,23 +463,23 @@ func (m *Tvbase) netCheck() {
 	}()
 }
 
-func (m *Tvbase) GetClientDmsgService() *dmsgClient.DmsgService {
+func (m *TvBase) GetClientDmsgService() *dmsgClient.DmsgService {
 	return m.DmsgService.(*dmsgClient.DmsgService)
 }
 
-func (m *Tvbase) GetServiceDmsgService() *dmsgService.DmsgService {
+func (m *TvBase) GetServiceDmsgService() *dmsgService.DmsgService {
 	return m.DmsgService.(*dmsgService.DmsgService)
 }
 
-func (m *Tvbase) GetDhtDatabase() tvdb.Datastore {
+func (m *TvBase) GetDhtDatabase() db.Datastore {
 	return m.dhtDatastore
 }
 
-func (m *Tvbase) GetNodeConnectedness() network.Connectedness {
+func (m *TvBase) GetNodeConnectedness() network.Connectedness {
 	return m.host.Network().Connectedness(m.host.ID())
 }
 
-func (m *Tvbase) RegistNetReachabilityChanged(n sharenode.NoArgCallback) error {
+func (m *TvBase) RegistNetReachabilityChanged(n tvCommon.NoArgCallback) error {
 	m.registNetReachabilityChanged(n)
 	return nil
 }

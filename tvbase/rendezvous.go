@@ -10,14 +10,14 @@ import (
 
 const TinverseInfrastureRendezvous = "tinverseInfrasture/discover-rendzvous/common"
 
-func (m *Tvbase) initRendezvous() error {
+func (m *TvBase) initRendezvous() error {
 	var err error
 	m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
 	tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TinverseInfrastureRendezvous)
 	return err
 }
 
-func (m *Tvbase) DiscoverRendezvousPeers() {
+func (m *TvBase) DiscoverRendezvousPeers() {
 	start := time.Now()
 	anyConnected := false
 	tvLog.Logger.Info("Infrasture->DiscoverRendezvousPeers: Searching for rendezvous peers...")

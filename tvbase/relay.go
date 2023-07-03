@@ -13,7 +13,7 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 )
 
-func (m *Tvbase) createRelayOpts() ([]libp2p.Option, error) {
+func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 	var opts []libp2p.Option
 	opts = append(opts,
 		libp2p.EnableRelay(),
@@ -161,7 +161,7 @@ func (m *Tvbase) createRelayOpts() ([]libp2p.Option, error) {
 	return opts, nil
 }
 
-func (m *Tvbase) cleanRelayPeerSignal() {
+func (m *TvBase) cleanRelayPeerSignal() {
 	if m.relayPeerSignal != nil {
 		close(m.relayPeerSignal)
 		m.relayPeerSignal = nil

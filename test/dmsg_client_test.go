@@ -202,7 +202,7 @@ func TestPubsubMsg(t *testing.T) {
 	<-ctx.Done()
 }
 
-func initMsgClient(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.Tvbase, *dmsgClient.DmsgService, error) {
+func initMsgClient(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		tvLog.Logger.Fatalf("InitMsgClient error: %v", err)

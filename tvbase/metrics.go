@@ -11,7 +11,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 )
 
-func (m *Tvbase) initMetric() {
+func (m *TvBase) initMetric() {
 	addr := ":" + strconv.Itoa(m.nodeCfg.Metrics.ApiPort)
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
@@ -44,7 +44,7 @@ var (
 )
 
 type NodeCollector struct {
-	Node *Tvbase
+	Node *TvBase
 }
 
 func (NodeCollector) Describe(ch chan<- *prometheus.Desc) {

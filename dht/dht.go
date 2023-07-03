@@ -5,10 +5,9 @@ import (
 
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
-
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/tinyverse-web3/dkvs"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/dkvs"
 	db "github.com/tinyverse-web3/tvutil/db"
 )
 

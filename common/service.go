@@ -9,6 +9,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/config"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
+	db "github.com/tinyverse-web3/tvutil/db"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -19,6 +20,8 @@ type DmsgService interface {
 
 type TraceSpanCallback func(ctx context.Context)
 
+type NoArgCallback func() error
+
 type NodeService interface {
 	DiscoverRendezvousPeers()
 	GetServicePeerList() tvPeer.PeerInfoList
@@ -28,9 +31,13 @@ type NodeService interface {
 	GetDht() *kaddht.IpfsDHT
 	GetCtx() context.Context
 	GetHost() host.Host
+	GetDhtDatabase() db.Datastore
 	GetTraceSpan() trace.Span
 	TraceSpan(componentName string, spanName string, options ...any) error
 	SetTracerStatus(err error)
 	GetAvailableServicePeerList() ([]peer.ID, error)
 	GetAvailableLightPeerList() ([]peer.ID, error)
+	RegistNetReachabilityChanged(NoArgCallback) error
+	ConnectBootstrapNode()
+	GetDhtProtocolPrefix() string
 }

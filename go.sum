@@ -798,12 +798,6 @@ github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 h1:epCh84lMvA70
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7/go.mod h1:q4W45IWZaF22tdD+VEXcAWRA037jwmWEB5VWYORlTpc=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
-github.com/tinyverse-web3/dkvs v0.0.0-20230702170147-7a40b7c1f084 h1:TRM2ycAyMOJEcobDIF7Ycm2UgEMCKDEQLoh9bnfSm84=
-github.com/tinyverse-web3/dkvs v0.0.0-20230702170147-7a40b7c1f084/go.mod h1:+hThj5pTNAFh/qL6nz1clnsWeyxte8/a4EaOa+/JhBU=
-github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230629011822-c5910db42679 h1:cXw4ZFi2aKuDEwkv8ljnl3a6o0Bm3a9EDaRhwcH9aL4=
-github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230629011822-c5910db42679/go.mod h1:a7wv5YyzqZITC6j+sJPH8zzlcCd03MVYgYPIcdB9aKY=
-github.com/tinyverse-web3/share-call-utils v0.0.0-20230702102201-3d613edb48ea h1:gVa1ZoZNCLAGCh5GEJKRB9HhDHKCfGua4pJwwhsy0xc=
-github.com/tinyverse-web3/share-call-utils v0.0.0-20230702102201-3d613edb48ea/go.mod h1:PbNqeMg4DDSJ9YOK89ptmJamREioNhvmRzaW305wq1g=
 github.com/tinyverse-web3/tvutil v0.0.0-20230703044827-838181996c4b h1:PiYhQUf/7sy0c/T+394TnCwsMfD40tIuL+8tpJbRdD8=
 github.com/tinyverse-web3/tvutil v0.0.0-20230703044827-838181996c4b/go.mod h1:XYYRVZmUhYLAIGSTpT2HPSyK/XNyV2v+Ghpz4pNEIek=
 github.com/tklauser/go-sysconf v0.3.5 h1:uu3Xl4nkLzQfXNsWn15rPc/HQCJKObbt1dKJeWp3vU4=

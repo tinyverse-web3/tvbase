@@ -16,31 +16,31 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func (m *Tvbase) GetNodeInfoService() *tvProtocol.NodeInfoService {
+func (m *TvBase) GetNodeInfoService() *tvProtocol.NodeInfoService {
 	return m.nodeInfoService
 }
 
-func (m *Tvbase) GetDht() *kaddht.IpfsDHT {
+func (m *TvBase) GetDht() *kaddht.IpfsDHT {
 	return m.dht
 }
 
-func (m *Tvbase) GetCtx() context.Context {
+func (m *TvBase) GetCtx() context.Context {
 	return m.ctx
 }
 
-func (m *Tvbase) GetHost() host.Host {
+func (m *TvBase) GetHost() host.Host {
 	return m.host
 }
 
-func (m *Tvbase) GetConfig() *tvConfig.NodeConfig {
+func (m *TvBase) GetConfig() *tvConfig.NodeConfig {
 	return m.nodeCfg
 }
 
-func (m *Tvbase) GetTraceSpan() trace.Span {
+func (m *TvBase) GetTraceSpan() trace.Span {
 	return m.TracerSpan
 }
 
-func (m *Tvbase) TraceSpan(componentName string, spanName string, options ...any) error {
+func (m *TvBase) TraceSpan(componentName string, spanName string, options ...any) error {
 	var key string
 	var value string
 	var ok bool
@@ -76,7 +76,7 @@ func (m *Tvbase) TraceSpan(componentName string, spanName string, options ...any
 	return nil
 }
 
-func (m *Tvbase) SetTracerStatus(err error) {
+func (m *TvBase) SetTracerStatus(err error) {
 	if m.TracerSpan == nil {
 		tvLog.Logger.Warnf("Infrasture->SetTracerStatus: span is nil")
 		return
@@ -84,10 +84,10 @@ func (m *Tvbase) SetTracerStatus(err error) {
 	m.TracerSpan.SetStatus(codes.Error, err.Error())
 }
 
-func (m *Tvbase) GetAvailableServicePeerList() ([]peer.ID, error) {
+func (m *TvBase) GetAvailableServicePeerList() ([]peer.ID, error) {
 	return m.getAvailablePeerList(tvConfig.FullMode)
 }
 
-func (m *Tvbase) GetAvailableLightPeerList() ([]peer.ID, error) {
+func (m *TvBase) GetAvailableLightPeerList() ([]peer.ID, error) {
 	return m.getAvailablePeerList(tvConfig.LightMode)
 }

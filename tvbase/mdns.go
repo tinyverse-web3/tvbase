@@ -9,7 +9,7 @@ import (
 const MdnsServiceName = "tinverseInfrasture/mdns/default"
 
 // for mdns Notifee interface
-func (m *Tvbase) HandlePeerFound(p libp2pPeer.AddrInfo) {
+func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	if p.ID == m.host.ID() {
 		return
 	}
@@ -26,7 +26,7 @@ func (m *Tvbase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	go m.registPeerInfo(p.ID)
 }
 
-func (m *Tvbase) initMdns() error {
+func (m *TvBase) initMdns() error {
 	if !m.nodeCfg.Network.EnableMdns {
 		return nil
 	}
@@ -38,7 +38,7 @@ func (m *Tvbase) initMdns() error {
 	return nil
 }
 
-func (m *Tvbase) disableMdns() error {
+func (m *TvBase) disableMdns() error {
 	if m.mdnsService != nil {
 		m.mdnsService.Close()
 		m.mdnsService = nil

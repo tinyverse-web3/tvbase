@@ -10,13 +10,13 @@ import (
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
 )
 
-func (m *Tvbase) initProtocol() error {
+func (m *TvBase) initProtocol() error {
 	m.nodeInfoService = tvProtocol.NewNodeInfoService(m.host, m.nodeCfg)
 	return nil
 }
 
 // regist custom stream client protocol
-func (m *Tvbase) RegistCSCProtocol(protocol customProtocol.CustomProtocolClient) error {
+func (m *TvBase) RegistCSCProtocol(protocol customProtocol.CustomProtocolClient) error {
 	if m.DmsgService == nil {
 		tvLog.Logger.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
 		return fmt.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
@@ -31,7 +31,7 @@ func (m *Tvbase) RegistCSCProtocol(protocol customProtocol.CustomProtocolClient)
 }
 
 // regist custom stream service protocol
-func (m *Tvbase) RegistCSSProtocol(protocolService customProtocol.CustomProtocolService) error {
+func (m *TvBase) RegistCSSProtocol(protocolService customProtocol.CustomProtocolService) error {
 	if m.DmsgService == nil {
 		tvLog.Logger.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
 		return fmt.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")

@@ -35,7 +35,7 @@ const NetLimitTraceFilename = "rcmgr.json.gz"
 
 var ErrNoResourceMgr = fmt.Errorf("missing ResourceMgr: make sure the daemon is running with Swarm.ResourceMgr.Enabled")
 
-func (m *Tvbase) initResourceManager() (network.ResourceManager, error) {
+func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 	var manager network.ResourceManager
 
 	tvLog.Logger.Debug("Infrasture->initResourceManager: libp2p resource manager is enabled")

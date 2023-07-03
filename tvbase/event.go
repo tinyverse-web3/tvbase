@@ -8,7 +8,7 @@ import (
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 )
 
-func (m *Tvbase) initEvent() error {
+func (m *TvBase) initEvent() error {
 	m.connectedCbList = make([]tvPeer.ConnectCallback, 0)
 	m.notConnectedCbList = make([]tvPeer.ConnectCallback, 0)
 
@@ -61,29 +61,29 @@ func (m *Tvbase) initEvent() error {
 	return nil
 }
 
-func (m *Tvbase) RegistConnectedCallback(callback tvPeer.ConnectCallback) {
+func (m *TvBase) RegistConnectedCallback(callback tvPeer.ConnectCallback) {
 	m.connectedCbList = append(m.connectedCbList, callback)
 }
 
-func (m *Tvbase) RegistNotConnectedCallback(callback tvPeer.ConnectCallback) {
+func (m *TvBase) RegistNotConnectedCallback(callback tvPeer.ConnectCallback) {
 	m.notConnectedCbList = append(m.notConnectedCbList, callback)
 }
 
-func (m *Tvbase) NotifyConnected(peerID libp2pPeer.ID) {
+func (m *TvBase) NotifyConnected(peerID libp2pPeer.ID) {
 	m.TrySetPeerStatus(peerID, network.Connected)
 	for _, callback := range m.connectedCbList {
 		callback(peerID)
 	}
 }
 
-func (m *Tvbase) NotifyNotConnected(peerID libp2pPeer.ID) {
+func (m *TvBase) NotifyNotConnected(peerID libp2pPeer.ID) {
 	m.TrySetPeerStatus(peerID, network.NotConnected)
 	for _, callback := range m.notConnectedCbList {
 		callback(peerID)
 	}
 }
 
-func (m *Tvbase) TrySetPeerStatus(peerID libp2pPeer.ID, status network.Connectedness) {
+func (m *TvBase) TrySetPeerStatus(peerID libp2pPeer.ID, status network.Connectedness) {
 	peerId := peerID.String()
 	if m.servicePeerList[peerId] != nil {
 		m.servicePeerList[peerId].ConnectStatus = status

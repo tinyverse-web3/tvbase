@@ -11,13 +11,13 @@ import (
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 )
 
-func (m *Tvbase) initPeer() error {
+func (m *TvBase) initPeer() error {
 	m.servicePeerList = make(tvPeer.PeerInfoList)
 	m.lightPeerList = make(tvPeer.PeerInfoList)
 	return nil
 }
 
-func (m *Tvbase) registPeerInfo(peerID libp2pPeer.ID) {
+func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 	id := peerID.String()
 	if m.lightPeerList[id] != nil {
 		return
@@ -49,7 +49,7 @@ func (m *Tvbase) registPeerInfo(peerID libp2pPeer.ID) {
 	}
 }
 
-func (m *Tvbase) RegistServicePeer(peerID libp2pPeer.ID) error {
+func (m *TvBase) RegistServicePeer(peerID libp2pPeer.ID) error {
 	m.servicePeerListMutex.Lock()
 	defer m.servicePeerListMutex.Unlock()
 	m.servicePeerList[peerID.String()] = &tvPeer.PeerInfo{
@@ -59,7 +59,7 @@ func (m *Tvbase) RegistServicePeer(peerID libp2pPeer.ID) error {
 	return nil
 }
 
-func (m *Tvbase) RegistLightPeer(peerID libp2pPeer.ID) error {
+func (m *TvBase) RegistLightPeer(peerID libp2pPeer.ID) error {
 	m.lightPeerListMutex.Lock()
 	defer m.lightPeerListMutex.Unlock()
 	m.lightPeerList[peerID.String()] = &tvPeer.PeerInfo{
@@ -69,15 +69,15 @@ func (m *Tvbase) RegistLightPeer(peerID libp2pPeer.ID) error {
 	return nil
 }
 
-func (d *Tvbase) GetServicePeerList() tvPeer.PeerInfoList {
+func (d *TvBase) GetServicePeerList() tvPeer.PeerInfoList {
 	return d.servicePeerList
 }
 
-func (m *Tvbase) GetLightPeerList() tvPeer.PeerInfoList {
+func (m *TvBase) GetLightPeerList() tvPeer.PeerInfoList {
 	return m.lightPeerList
 }
 
-func (m *Tvbase) getAvailablePeerList(nodeMode tvConfig.NodeMode) ([]libp2pPeer.ID, error) {
+func (m *TvBase) getAvailablePeerList(nodeMode tvConfig.NodeMode) ([]libp2pPeer.ID, error) {
 	var findedPeerList []libp2pPeer.ID
 	host := m.host
 	hostId := host.ID().String()

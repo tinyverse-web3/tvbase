@@ -27,7 +27,7 @@ import (
 	mamask "github.com/whyrusleeping/multiaddr-filter"
 )
 
-func (m *Tvbase) initConfig(rootPath string) error {
+func (m *TvBase) initConfig(rootPath string) error {
 	cfg := config.NewDefaultNodeConfig()
 	err := config.InitConfig(rootPath, &cfg)
 	if err != nil {
@@ -38,7 +38,7 @@ func (m *Tvbase) initConfig(rootPath string) error {
 	return nil
 }
 
-func (m *Tvbase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
+func (m *TvBase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
 	var err error
 	identityPath := rootPath + identity.IdentityFileName
 	_, err = os.Stat(identityPath)
@@ -60,7 +60,7 @@ func (m *Tvbase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
 	return privteKey, swarmPsk, nil
 }
 
-func (m *Tvbase) createOpts(ctx context.Context, privateKey crypto.PrivKey, swamPsk pnet.PSK) ([]libp2p.Option, error) {
+func (m *TvBase) createOpts(ctx context.Context, privateKey crypto.PrivKey, swamPsk pnet.PSK) ([]libp2p.Option, error) {
 	var err error
 	var opts []libp2p.Option
 	opts, err = m.createCommonOpts(privateKey, swamPsk)
@@ -84,7 +84,7 @@ func (m *Tvbase) createOpts(ctx context.Context, privateKey crypto.PrivKey, swam
 	return opts, nil
 }
 
-func (m *Tvbase) createNATOpts() ([]libp2p.Option, error) {
+func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	var opts []libp2p.Option
 
 	// Let this host use the DHT to find other hosts
@@ -134,7 +134,7 @@ func (m *Tvbase) createNATOpts() ([]libp2p.Option, error) {
 	return opts, nil
 }
 
-func (m *Tvbase) createTransportOpts(isPrivateSwarm bool) ([]libp2p.Option, error) {
+func (m *TvBase) createTransportOpts(isPrivateSwarm bool) ([]libp2p.Option, error) {
 	var opts []libp2p.Option
 	opts = append(opts,
 		libp2p.Transport(tcp.NewTCPTransport, tcp.WithMetrics()),
@@ -148,7 +148,7 @@ func (m *Tvbase) createTransportOpts(isPrivateSwarm bool) ([]libp2p.Option, erro
 	return opts, nil
 }
 
-func (m *Tvbase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) ([]libp2p.Option, error) {
+func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) ([]libp2p.Option, error) {
 	var opts []libp2p.Option
 
 	opts = append(opts,

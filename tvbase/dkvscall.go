@@ -3,12 +3,11 @@ package tvbase
 import (
 	libp2pEvent "github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
-
-	sharenode "github.com/tinyverse-web3/share-call-utils/sharenode"
 )
 
-func (m *Tvbase) registNetReachabilityChanged(n sharenode.NoArgCallback) error {
+func (m *TvBase) registNetReachabilityChanged(n tvCommon.NoArgCallback) error {
 	// 订阅EEvtPeerConnectednessChanged事件
 	h := m.GetHost()
 	reachabilityChanged, err := h.EventBus().Subscribe(&libp2pEvent.EvtPeerConnectednessChanged{})
@@ -61,10 +60,10 @@ func (m *Tvbase) registNetReachabilityChanged(n sharenode.NoArgCallback) error {
 	return nil
 }
 
-func (m *Tvbase) ConnectBootstrapNode() {
+func (m *TvBase) ConnectBootstrapNode() {
 	m.bootstrap()
 }
 
-func (m *Tvbase) GetDhtProtocolPrefix() string {
+func (m *TvBase) GetDhtProtocolPrefix() string {
 	return m.nodeCfg.DHT.DatastorePath
 }
