@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "node/pb";
+
+
+enum NodeType {
+    Service = 0;
+    Light = 1;
+}
+
+message NodeInfo {
+    NodeType nodeType = 2;
+}
+

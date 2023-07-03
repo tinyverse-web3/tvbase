@@ -1,0 +1,12 @@
+.DS_Store
+__debug_bin
+msg_data
+ldb_data
+config.json
+identity.bin
+*.lock
+# tvnodelight
+tvnodelight/tvnodelight
+# tvnode
+tvnode/tvnode
+tvnode/*.pid

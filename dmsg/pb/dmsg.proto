@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "dmsg/pb";
+
+enum ProtocolID {
+    CREATE_MAILBOX_RES = 0;
+    CREATE_MAILBOX_REQ = 1;
+    RELEASE_MAILBOX_RES = 2;
+    RELEASE_MAILBOX_REQ = 3;
+    SEEK_MAILBOX_RES = 4;
+    SEEK_MAILBOX_REQ = 5;
+    READ_MAILBOX_MSG_RES = 6;
+    READ_MAILBOX_MSG_REQ = 7;
+    SEND_MSG_RES = 8;
+    SEND_MSG_REQ = 9;
+    CUSTOM_PROTOCOL_RES = 10;
+    CUSTOM_PROTOCOL_REQ = 11;
+}
+
+message BasicData {
+    string id = 1;
+    ProtocolID protocolID = 2;
+    int64 timestamp = 3;
+    string peerId = 4;
+    bytes signPubKey = 5;
+    string destPubkey = 6;
+    bytes sign = 7;
+    string ver = 8;
+}
+
+message RetCode {
+    int32 code = 1;
+    string result = 2;
+}
+
+message SendMsgReq {
+    BasicData basicData = 1;
+    string srcPubkey = 2;
+    bytes msgContent = 3;
+}
+
+message ReadMailboxMsgReq {
+    BasicData basicData = 1;
+}
+
+message MailboxMsgData {
+    string key = 1;
+    bytes msgContent = 2;
+}
+
+message ReadMailboxMsgRes {
+    BasicData basicData = 1;
+    repeated MailboxMsgData mailboxMsgDatas = 2;
+    RetCode retCode = 3;
+}
+
+message CreateMailboxReq {
+    BasicData basicData = 1;
+}
+
+message CreateMailboxRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
+}
+
+message ReleaseMailboxReq {
+    BasicData basicData = 1;
+}
+
+message ReleaseMailboxRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
+}
+
+message SeekMailboxReq {
+    BasicData basicData = 1;
+}
+
+message SeekMailboxRes {
+    BasicData basicData = 1;
+    string peerId = 2;
+    RetCode retCode = 3;
+}
+
+message CustomProtocolReq {
+    BasicData basicData = 1;
+    string customProtocolID = 2;
+    bytes content = 3;
+}
+
+message CustomProtocolRes {
+    BasicData basicData = 1;
+    string customProtocolID = 2;
+    bytes content = 3;
+    RetCode retCode = 4;
+}
