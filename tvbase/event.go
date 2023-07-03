@@ -72,14 +72,20 @@ func (m *TvBase) RegistNotConnectedCallback(callback tvPeer.ConnectCallback) {
 func (m *TvBase) NotifyConnected(peerID libp2pPeer.ID) {
 	m.TrySetPeerStatus(peerID, network.Connected)
 	for _, callback := range m.connectedCbList {
-		callback(peerID)
+		err := callback(peerID)
+		if err != nil {
+			tvLog.Logger.Errorf("Infrasture->NotifyConnected: callback error: %v", err)
+		}
 	}
 }
 
 func (m *TvBase) NotifyNotConnected(peerID libp2pPeer.ID) {
 	m.TrySetPeerStatus(peerID, network.NotConnected)
 	for _, callback := range m.notConnectedCbList {
-		callback(peerID)
+		err := callback(peerID)
+		if err != nil {
+			tvLog.Logger.Errorf("Infrasture->NotifyNotConnected: callback error: %v", err)
+		}
 	}
 }
 

@@ -479,10 +479,10 @@ func (m *TvBase) GetNodeConnectedness() network.Connectedness {
 	return m.host.Network().Connectedness(m.host.ID())
 }
 
-func (m *TvBase) RegistNetReachabilityChanged(n tvCommon.NoArgCallback) error {
-	m.registNetReachabilityChanged(n)
-	return nil
-}
+// func (m *TvBase) RegistNetReachabilityChanged(n tvCommon.NoArgCallback) error {
+// 	m.registNetReachabilityChanged(n)
+// 	return nil
+// }
 
 // Log the entire `app.Err()` but return only the innermost one to the user
 // given the full error can be very long (as it can expose the entire build

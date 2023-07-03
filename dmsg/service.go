@@ -16,24 +16,24 @@ import (
 )
 
 type DmsgService struct {
-	NodeService                 tvCommon.NodeService
+	BaseService                 tvCommon.TvBaseService
 	Pubsub                      *pubsub.PubSub
 	Datastore                   tvdb.Datastore
 	PubsubProtocolResSubscribes map[pb.ProtocolID]protocol.ResSubscribe
 	PubsubProtocolReqSubscribes map[pb.ProtocolID]protocol.ReqSubscribe
 }
 
-func (d *DmsgService) Init(nodeService tvCommon.NodeService) error {
-	d.NodeService = nodeService
+func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
+	d.BaseService = nodeService
 
 	var err error
-	cfg := d.NodeService.GetConfig()
+	cfg := d.BaseService.GetConfig()
 	d.Datastore, err = commonDb.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
 	if err != nil {
 		return err
 	}
 
-	d.Pubsub, err = pubsub.NewGossipSub(d.NodeService.GetCtx(), d.NodeService.GetHost())
+	d.Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,7 @@ func TestDkvs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var tvNode tvCommon.NodeService = tvbase
+	var tvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
@@ -168,7 +168,7 @@ func TestGun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.NodeService = tvbase
+	var mtvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
 
 	seed := "zjMGsKesWSlZnayK" //dkvs.RandString(16)
@@ -454,7 +454,7 @@ func TestLDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var mtvNode tvCommon.NodeService
+	var mtvNode tvCommon.TvBaseService
 	mtvNode = node
 	dkvs.NewDkvs("./", mtvNode) //.表示当前路径
 

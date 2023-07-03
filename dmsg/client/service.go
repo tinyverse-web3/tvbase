@@ -46,7 +46,7 @@ type DmsgService struct {
 	customProtocolInfoList map[string]*common.CustomProtocolInfo
 }
 
-func CreateService(nodeService tvCommon.NodeService) (*DmsgService, error) {
+func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
 
 	d := &DmsgService{}
 	err := d.Init(nodeService)
@@ -56,20 +56,20 @@ func CreateService(nodeService tvCommon.NodeService) (*DmsgService, error) {
 	return d, nil
 }
 
-func (d *DmsgService) Init(nodeService tvCommon.NodeService) error {
+func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	err := d.DmsgService.Init(nodeService)
 	if err != nil {
 		return err
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
+	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
 
 	// pubsub protocol
-	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d, d)
-	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.NodeService.GetHost(), d, d)
+	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
 	d.SrcUsers = make(map[string]*common.SrcUserInfo)
 	d.DestUsers = make(map[string]*common.DestUserInfo)
@@ -141,7 +141,7 @@ func (d *DmsgService) initMailbox() error {
 		dmsgLog.Logger.Errorf("After 3s, no seek info, will create a new mailbox")
 		go d.createMailbox(userPubkey)
 		return nil
-	case <-d.NodeService.GetCtx().Done():
+	case <-d.BaseService.GetCtx().Done():
 		dmsgLog.Logger.Errorf("NodeService.GetCtx().Done()")
 		return nil
 	}
@@ -159,7 +159,8 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 		return
 	}
 
-	servicePeerList, err := d.NodeService.GetAvailableServicePeerList()
+	hostId := d.BaseService.GetHost().ID().String()
+	servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
 	if err != nil {
 		dmsgLog.Logger.Error(err)
 	}
@@ -180,7 +181,7 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 			}
 		case <-time.After(time.Second * 3):
 			continue
-		case <-d.NodeService.GetCtx().Done():
+		case <-d.BaseService.GetCtx().Done():
 			return
 		}
 	}
@@ -222,7 +223,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 		dmsgLog.Logger.Error(err)
 		return err
 	}
-	go d.NodeService.DiscoverRendezvousPeers()
+	go d.BaseService.DiscoverRendezvousPeers()
 
 	pubsub := &common.DestUserInfo{}
 	pubsub.UserTopic = userTopic
@@ -268,7 +269,7 @@ func (d *DmsgService) subscribeSrcUser(userKey *common.SrcUserKey) error {
 		dmsgLog.Logger.Error(err)
 		return err
 	}
-	go d.NodeService.DiscoverRendezvousPeers()
+	go d.BaseService.DiscoverRendezvousPeers()
 
 	userInfo := &common.SrcUserInfo{}
 	userInfo.UserTopic = userTopic
@@ -312,13 +313,13 @@ func (d *DmsgService) getDestUserInfo(userPubkey string) *common.DestUserInfo {
 
 func (d *DmsgService) readUserPubsub(subscription *pubsub.Subscription) {
 	for {
-		m, err := subscription.Next(d.NodeService.GetCtx())
+		m, err := subscription.Next(d.BaseService.GetCtx())
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->readUserPubsub: subscription.Next happen err, %v", err)
 			return
 		}
 
-		if d.NodeService.GetHost().ID() == m.ReceivedFrom {
+		if d.BaseService.GetHost().ID() == m.ReceivedFrom {
 			continue
 		}
 
@@ -414,7 +415,7 @@ func (d *DmsgService) DeleteCurUserMsg(destPubkey string) error {
 		Prefix:   prefixStr,
 		KeysOnly: true,
 	}
-	results, err := d.Datastore.Query(d.NodeService.GetCtx(), query)
+	results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
 	if err != nil {
 		return err
 	}
@@ -426,7 +427,7 @@ func (d *DmsgService) DeleteCurUserMsg(destPubkey string) error {
 		keys = append(keys, &key)
 	}
 	for _, key := range keys {
-		d.Datastore.Delete(d.NodeService.GetCtx(), *key)
+		d.Datastore.Delete(d.BaseService.GetCtx(), *key)
 	}
 	return nil
 }
@@ -449,7 +450,7 @@ func (d *DmsgService) GetUserMsgList(destPubkey string) ([]common.UserMsg, error
 	var query = query.Query{
 		Prefix: prefixStr,
 	}
-	results, err := d.Datastore.Query(d.NodeService.GetCtx(), query)
+	results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -785,7 +786,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 		}
-		err := userPubsub.UserTopic.Publish(d.NodeService.GetCtx(), pubsubData)
+		err := userPubsub.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
 			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
@@ -796,7 +797,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 		}
-		err := userPubsub.UserTopic.Publish(d.NodeService.GetCtx(), pubsubData)
+		err := userPubsub.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
 			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
@@ -834,7 +835,7 @@ func (d *DmsgService) SaveUserMsg(protoMsg protoreflect.ProtoMessage, msgDirecti
 
 	pubsub.MsgRWMutex.RLock()
 	defer pubsub.MsgRWMutex.RUnlock()
-	err := d.Datastore.Put(d.NodeService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
+	err := d.Datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
 	if err != nil {
 		return err
 	}
@@ -872,7 +873,8 @@ func (d *DmsgService) RequestCustomProtocol(customProtocolId string, content []b
 		return fmt.Errorf("DmsgService->RequestCustomProtocol: protocol %s is not exist", customProtocolId)
 	}
 
-	servicePeerList, err := d.NodeService.GetAvailableServicePeerList()
+	hostId := d.BaseService.GetHost().ID().String()
+	servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
 	if err != nil {
 		dmsgLog.Logger.Error(err)
 	}
@@ -903,10 +905,10 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomPro
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		StreamProtocol: clientProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Client:         client,
 	}
-	client.SetCtx(d.NodeService.GetCtx())
+	client.SetCtx(d.BaseService.GetCtx())
 	client.SetService(d)
 	return nil
 }
@@ -918,7 +920,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomP
 		return nil
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		StreamProtocol: clientProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Client:         client,
 	}
 	return nil

@@ -40,7 +40,7 @@ type DmsgService struct {
 	customProtocolInfoList map[string]*common.CustomProtocolInfo
 }
 
-func CreateService(nodeService tvCommon.NodeService) (*DmsgService, error) {
+func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
 	d := &DmsgService{}
 	err := d.Init(nodeService)
 	if err != nil {
@@ -49,20 +49,20 @@ func CreateService(nodeService tvCommon.NodeService) (*DmsgService, error) {
 	return d, nil
 }
 
-func (d *DmsgService) Init(nodeService tvCommon.NodeService) error {
+func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	err := d.DmsgService.Init(nodeService)
 	if err != nil {
 		return err
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = serviceProtocol.NewCreateMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.releaseMailboxPrtocol = serviceProtocol.NewReleaseMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.readMailboxMsgPrtocol = serviceProtocol.NewReadMailboxMsgProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
+	d.createMailboxProtocol = serviceProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.releaseMailboxPrtocol = serviceProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.readMailboxMsgPrtocol = serviceProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
 
 	// pubsub protocol
-	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.NodeService.GetHost(), d, d)
-	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.NodeService.GetHost(), d, d)
+	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
+	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
 	d.DestUserPubsubs = make(map[string]*common.DestUserPubsub)
 
@@ -108,19 +108,19 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *common.DestUserP
 	for {
 		days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
 		// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default day is 30
-		cfg := d.NodeService.GetConfig()
+		cfg := d.BaseService.GetConfig()
 		if days >= cfg.DMsg.KeepMailboxMsgDay {
 			var query = query.Query{
 				Prefix:   d.getMsgPrefix(pubkey),
 				KeysOnly: true,
 			}
-			results, err := d.Datastore.Query(d.NodeService.GetCtx(), query)
+			results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
 			if err != nil {
 				dmsgLog.Logger.Errorf("serviceDmsgService->readDestUserPubsub: query error: %v", err)
 			}
 
 			for result := range results.Next() {
-				d.Datastore.Delete(d.NodeService.GetCtx(), ds.NewKey(result.Key))
+				d.Datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(result.Key))
 				dmsgLog.Logger.Debugf("serviceDmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
 			}
 
@@ -128,12 +128,12 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *common.DestUserP
 			return
 		}
 
-		m, err := pubsub.UserSub.Next(d.NodeService.GetCtx())
+		m, err := pubsub.UserSub.Next(d.BaseService.GetCtx())
 		if err != nil {
 			dmsgLog.Logger.Error(err)
 			return
 		}
-		if d.NodeService.GetHost().ID() == m.ReceivedFrom {
+		if d.BaseService.GetHost().ID() == m.ReceivedFrom {
 			continue
 		}
 
@@ -173,7 +173,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	if err != nil {
 		return err
 	}
-	go d.NodeService.DiscoverRendezvousPeers()
+	go d.BaseService.DiscoverRendezvousPeers()
 
 	d.DestUserPubsubs[userPubKey] = &common.DestUserPubsub{
 		UserTopic:           userTopic,
@@ -228,7 +228,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent
 	defer pubsub.MsgRWMutex.RUnlock()
 
 	key := d.GetFullFromMsgPrefix(sendMsgReq)
-	err := d.Datastore.Put(d.NodeService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
+	err := d.Datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent
 
 func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
 	destUserCount := len(d.DestUserPubsubs)
-	cfg := d.NodeService.GetConfig()
+	cfg := d.BaseService.GetConfig()
 	if destUserCount >= cfg.DMsg.MaxMailboxPubsubCount {
 		dmsgLog.Logger.Warnf("serviceDmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", destUserCount)
 		return false
@@ -333,7 +333,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	var query = query.Query{
 		Prefix: d.getMsgPrefix(pubkey),
 	}
-	results, err := d.Datastore.Query(d.NodeService.GetCtx(), query)
+	results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	}
 
 	for _, needDeleteKey := range needDeleteKeyList {
-		err := d.Datastore.Delete(d.NodeService.GetCtx(), ds.NewKey(needDeleteKey))
+		err := d.Datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(needDeleteKey))
 		if err != nil {
 			dmsgLog.Logger.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: delete msg happen err: %v", err)
 		}
@@ -465,7 +465,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 		return err
 	}
 	pubsubData := pubsubBuf.Bytes()
-	if err := userPubsub.UserTopic.Publish(d.NodeService.GetCtx(), pubsubData); err != nil {
+	if err := userPubsub.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData); err != nil {
 		dmsgLog.Logger.Errorf("serviceDmsgService->PublishProtocol: publish protocol err: %v", err)
 		return fmt.Errorf("serviceDmsgService->PublishProtocol: publish protocol err: %v", err)
 	}
@@ -480,10 +480,10 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomPr
 		return fmt.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		StreamProtocol: serviceProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Service:        service,
 	}
-	service.SetCtx(d.NodeService.GetCtx())
+	service.SetCtx(d.BaseService.GetCtx())
 	return nil
 }
 
@@ -494,7 +494,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 		return nil
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		StreamProtocol: serviceProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Service:        callback,
 	}
 	return nil

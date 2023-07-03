@@ -11,4 +11,4 @@ type PeerInfo struct {
 }
 type PeerInfoList map[string]*PeerInfo
 
-type ConnectCallback func(peerID peer.ID)
+type ConnectCallback func(peerID peer.ID) error

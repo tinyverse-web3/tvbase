@@ -24,9 +24,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
-	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
-
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 	db "github.com/tinyverse-web3/tvutil/db"
 )
@@ -38,7 +37,7 @@ type Dkvs struct {
 	ldb            db.Datastore // 对这个对象的操作要考虑加锁
 	dhtDatastore   db.Datastore
 	protoMessenger *kadpb.ProtocolMessenger
-	node           tvCommon.NodeService
+	baseService    tvCommon.TvBaseService
 }
 
 /*
@@ -64,7 +63,7 @@ func init() {
 	// InitModule(DKVS_NAMESPACE, LogDebug)
 }
 
-func NewDkvs(rootPath string, node tvCommon.NodeService) *Dkvs {
+func NewDkvs(rootPath string, node tvCommon.TvBaseService) *Dkvs {
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	ldb, err := createBadgerDB(dbPath)
 	if err != nil {
@@ -82,11 +81,12 @@ func NewDkvs(rootPath string, node tvCommon.NodeService) *Dkvs {
 		ldb:            ldb,
 		dhtDatastore:   node.GetDhtDatabase(),
 		protoMessenger: pms,
-		node:           node,
+		baseService:    node,
 	}
 
 	// register a network event to handler unsynckey
-	node.RegistNetReachabilityChanged(_dkvs.putAllUnsyncKeyToNetwork)
+	node.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
+	// node.RegistNetReachabilityChanged(_dkvs.putAllUnsyncKeyToNetwork)
 	return _dkvs
 }
 
@@ -282,10 +282,11 @@ func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
 	return badgerds.NewDatastore(fullPath, &defopts)
 }
 
-func getProtocolMessenger(node tvCommon.NodeService, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
-	v1proto := "/tvnode" + kad1
+func getProtocolMessenger(baseService tvCommon.TvBaseService, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
+	// v1proto := "/tvnode" + kad1
+	v1proto := baseService.GetConfig().DHT.ProtocolPrefix + string(kad1)
 	//v1proto := protocol.ID(node.GetDhtProtocolPrefix()) + kad1
-	protocols := []protocol.ID{v1proto}
+	protocols := []protocol.ID{protocol.ID(v1proto)}
 	msgSender := kaddht.NewMessageSenderImpl(dht.Host(), protocols)
 	return kadpb.NewProtocolMessenger(msgSender)
 }

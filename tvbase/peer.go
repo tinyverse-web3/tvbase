@@ -77,13 +77,9 @@ func (m *TvBase) GetLightPeerList() tvPeer.PeerInfoList {
 	return m.lightPeerList
 }
 
-func (m *TvBase) getAvailablePeerList(nodeMode tvConfig.NodeMode) ([]libp2pPeer.ID, error) {
+func (m *TvBase) getAvailablePeerList(key string, nodeMode tvConfig.NodeMode) ([]libp2pPeer.ID, error) {
 	var findedPeerList []libp2pPeer.ID
-	host := m.host
-	hostId := host.ID().String()
-	ctx := m.ctx
-
-	closestPeerList, err := m.dht.GetClosestPeers(ctx, hostId)
+	closestPeerList, err := m.dht.GetClosestPeers(m.ctx, key)
 	if err != nil {
 		tvLog.Logger.Errorf("Infrasture->getAvailablePeerList: no find peers, err :%v", err)
 		return findedPeerList, err
@@ -106,7 +102,7 @@ func (m *TvBase) getAvailablePeerList(nodeMode tvConfig.NodeMode) ([]libp2pPeer.
 			tvLog.Logger.Debugf("Infrasture->getAvailablePeerList: peer %v is not exist in peerList", closestPeer)
 			continue
 		}
-		if peerInfo.PeerID == host.ID() {
+		if peerInfo.PeerID == m.host.ID() {
 			continue
 		}
 		if peerInfo.ConnectStatus != network.Connected {

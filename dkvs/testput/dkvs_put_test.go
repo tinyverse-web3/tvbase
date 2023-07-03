@@ -51,7 +51,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvNode tvCommon.NodeService = tvbase
+	var tvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
 	seed := "oIBBgepoPyhdJTYB"       //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
@@ -199,7 +199,7 @@ func TestUnsyncedDb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.NodeService = tvbase
+	var mtvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
@@ -287,7 +287,7 @@ func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.NodeService = tvbase
+	var mtvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)

@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go"
+	// "github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
 	u "github.com/ipfs/boxo/util"
 	"github.com/ipfs/go-cid"
@@ -182,16 +183,18 @@ func (d *Dkvs) startSpan(ctx context.Context, name string, opts ...trace.SpanSta
 	return otel.Tracer("go-libp2p-kad-dht").Start(ctx, fmt.Sprintf("KademliaDHT.%s", name), opts...)
 }
 
-func (d *Dkvs) putAllUnsyncKeyToNetwork() error {
+func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 	lock.Lock() //加锁防止多线程同时操作putAllKeyToPeers
 	defer lock.Unlock()
+	log.Printf("peerID: %s", peerID.Pretty())
 	d.putAllKeysToPeers() //将db中未同步的key再一次put到基他节点
 	return nil
 }
 
 func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Record) error {
+	peers, err := d.baseService.GetAvailableServicePeerList(key)
 	// peers, err := d.idht.GetClosestPeers(ctx, key)
-	peers, err := d.getConnectedPeers(ctx, key)
+	// peers, err := d.getConnectedPeers(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -362,34 +365,34 @@ func (d *Dkvs) findPeersByKey(ctx context.Context, key string) []peer.AddrInfo {
 	return providers
 }
 
-func (d *Dkvs) getConnectedPeers(ctx context.Context, key string) ([]peer.ID, error) {
-	var peers []peer.ID
-	retryStrategy := []retry.Option{
-		retry.Delay(500 * time.Millisecond), // delay 500 ms
-		retry.Attempts(3),                   // max retry times 3
-		retry.LastErrorOnly(true),           // Return last error only
-		retry.RetryIf(func(err error) bool { // Retries based on error type
-			switch err.Error() {
-			case ErrLookupFailure.Error():
-				return true
-			default:
-				return false
-			}
-		}),
-	}
-	err := retry.Do(
-		func() error {
-			var err error
-			peers, err = d.idht.GetClosestPeers(ctx, key) // 自定义的函数
-			if err != nil {
-				d.node.ConnectBootstrapNode()
-			}
-			return err // 返回错误
-		},
-		retryStrategy...,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return peers, nil
-}
+// func (d *Dkvs) getConnectedPeers(ctx context.Context, key string) ([]peer.ID, error) {
+// 	var peers []peer.ID
+// 	retryStrategy := []retry.Option{
+// 		retry.Delay(500 * time.Millisecond), // delay 500 ms
+// 		retry.Attempts(3),                   // max retry times 3
+// 		retry.LastErrorOnly(true),           // Return last error only
+// 		retry.RetryIf(func(err error) bool { // Retries based on error type
+// 			switch err.Error() {
+// 			case ErrLookupFailure.Error():
+// 				return true
+// 			default:
+// 				return false
+// 			}
+// 		}),
+// 	}
+// 	err := retry.Do(
+// 		func() error {
+// 			var err error
+// 			peers, err = d.idht.GetClosestPeers(ctx, key) // 自定义的函数
+// 			if err != nil {
+// 				d.baseService.ConnectBootstrapNode()
+// 			}
+// 			return err // 返回错误
+// 		},
+// 		retryStrategy...,
+// 	)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return peers, nil
+// }

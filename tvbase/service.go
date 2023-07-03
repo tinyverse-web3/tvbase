@@ -84,10 +84,10 @@ func (m *TvBase) SetTracerStatus(err error) {
 	m.TracerSpan.SetStatus(codes.Error, err.Error())
 }
 
-func (m *TvBase) GetAvailableServicePeerList() ([]peer.ID, error) {
-	return m.getAvailablePeerList(tvConfig.FullMode)
+func (m *TvBase) GetAvailableServicePeerList(key string) ([]peer.ID, error) {
+	return m.getAvailablePeerList(key, tvConfig.FullMode)
 }
 
-func (m *TvBase) GetAvailableLightPeerList() ([]peer.ID, error) {
-	return m.getAvailablePeerList(tvConfig.LightMode)
+func (m *TvBase) GetAvailableLightPeerList(key string) ([]peer.ID, error) {
+	return m.getAvailablePeerList(key, tvConfig.LightMode)
 }

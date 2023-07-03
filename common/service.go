@@ -22,7 +22,7 @@ type TraceSpanCallback func(ctx context.Context)
 
 type NoArgCallback func() error
 
-type NodeService interface {
+type TvBaseService interface {
 	DiscoverRendezvousPeers()
 	GetServicePeerList() tvPeer.PeerInfoList
 	GetLightPeerList() tvPeer.PeerInfoList
@@ -35,9 +35,12 @@ type NodeService interface {
 	GetTraceSpan() trace.Span
 	TraceSpan(componentName string, spanName string, options ...any) error
 	SetTracerStatus(err error)
-	GetAvailableServicePeerList() ([]peer.ID, error)
-	GetAvailableLightPeerList() ([]peer.ID, error)
-	RegistNetReachabilityChanged(NoArgCallback) error
-	ConnectBootstrapNode()
-	GetDhtProtocolPrefix() string
+	GetAvailableServicePeerList(key string) ([]peer.ID, error)
+	GetAvailableLightPeerList(key string) ([]peer.ID, error)
+	RegistConnectedCallback(callback tvPeer.ConnectCallback)
+	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
+
+	// RegistNetReachabilityChanged(NoArgCallback) error
+	// ConnectBootstrapNode()
+	// GetDhtProtocolPrefix() string
 }

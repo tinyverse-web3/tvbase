@@ -151,7 +151,7 @@ func TestPubsubMsg(t *testing.T) {
 				// topic := pubsub.UserSub.Topic()
 				// tvLog.Logger.Infof("pubsub topic: %s", topic)
 				// pubsub.UserTopic.Publish(dmsgService.DmsgService.Ctx, []byte("hello"))
-			case <-dmsgService.DmsgService.NodeService.GetCtx().Done():
+			case <-dmsgService.DmsgService.BaseService.GetCtx().Done():
 				return
 			}
 		}
