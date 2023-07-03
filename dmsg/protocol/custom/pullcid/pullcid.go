@@ -12,7 +12,7 @@ import (
 
 const pullCidPID = "pullcid"
 
-type lightCommicateInfo struct {
+type clientCommicateInfo struct {
 	data            any
 	responseSignal  chan any
 	createTimestamp int64
@@ -34,39 +34,39 @@ type PullCidResponse struct {
 	Status         ipfs.PidStatus
 }
 
-// light
-type PullCidLightProtocol struct {
-	customProtocol.CustomStreamLightProtocol
-	commicateInfoList map[string]*lightCommicateInfo
+// client
+type PullCidClientProtocol struct {
+	customProtocol.CustomStreamClientProtocol
+	commicateInfoList map[string]*clientCommicateInfo
 }
 
-var pullCidLightProtocol *PullCidLightProtocol
+var pullCidClientProtocol *PullCidClientProtocol
 var pullCidServiceProtocol *PullCidServiceProtocol
 
-func GetPullCidLightProtocol() *PullCidLightProtocol {
-	if pullCidLightProtocol == nil {
-		pullCidLightProtocol = &PullCidLightProtocol{}
-		pullCidLightProtocol.Init()
+func GetPullCidClientProtocol() *PullCidClientProtocol {
+	if pullCidClientProtocol == nil {
+		pullCidClientProtocol = &PullCidClientProtocol{}
+		pullCidClientProtocol.Init()
 	}
-	return pullCidLightProtocol
+	return pullCidClientProtocol
 }
 
-func (p *PullCidLightProtocol) Init() {
-	p.CustomStreamLightProtocol.Init(pullCidPID)
-	p.commicateInfoList = make(map[string]*lightCommicateInfo)
+func (p *PullCidClientProtocol) Init() {
+	p.CustomStreamClientProtocol.Init(pullCidPID)
+	p.commicateInfoList = make(map[string]*clientCommicateInfo)
 }
 
-func (p *PullCidLightProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
+func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
 	pullCidResponse := &PullCidResponse{}
-	err := p.CustomStreamLightProtocol.HandleResponse(response, pullCidResponse)
+	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 	requestInfo := p.commicateInfoList[pullCidResponse.CID]
 	if requestInfo == nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidLightProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
+		return fmt.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
 	}
 
 	requestInfo.responseSignal <- pullCidResponse
@@ -75,10 +75,10 @@ func (p *PullCidLightProtocol) HandleResponse(request *pb.CustomProtocolReq, res
 	return nil
 }
 
-func (p *PullCidLightProtocol) Request(request *PullCidRequest, options ...any) (*PullCidResponse, error) {
+func (p *PullCidClientProtocol) Request(request *PullCidRequest, options ...any) (*PullCidResponse, error) {
 	_, err := cid.Decode(request.CID)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
 		return nil, err
 	}
 
@@ -87,8 +87,8 @@ func (p *PullCidLightProtocol) Request(request *PullCidRequest, options ...any) 
 		var ok bool
 		timeout, ok = options[0].(time.Duration)
 		if !ok {
-			customProtocol.Logger.Errorf("PullCidLightProtocol->Request: timeout is not time.Duration")
-			return nil, fmt.Errorf("PullCidLightProtocol->Request: timeout is not time.Duration")
+			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
+			return nil, fmt.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
 		}
 	}
 
@@ -96,21 +96,21 @@ func (p *PullCidLightProtocol) Request(request *PullCidRequest, options ...any) 
 		go p.cleanCommicateInfoList(30 * time.Second)
 	}
 
-	requestInfo := &lightCommicateInfo{
+	requestInfo := &clientCommicateInfo{
 		data:            request,
 		createTimestamp: time.Now().Unix(),
 		responseSignal:  make(chan any),
 	}
 	p.commicateInfoList[request.CID] = requestInfo
 
-	err = p.CustomStreamLightProtocol.Request(request)
+	err = p.CustomStreamClientProtocol.Request(request)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->Request: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err
 	}
 
 	if timeout <= 0 {
-		customProtocol.Logger.Warnf("PullCidLightProtocol->Request: timeout <= 0")
+		customProtocol.Logger.Warnf("PullCidClientProtocol->Request: timeout <= 0")
 		return nil, nil
 	}
 
@@ -118,7 +118,7 @@ func (p *PullCidLightProtocol) Request(request *PullCidRequest, options ...any) 
 	case responseObject := <-requestInfo.responseSignal:
 		pullCidResponse, ok := responseObject.(*PullCidResponse)
 		if !ok {
-			customProtocol.Logger.Errorf("PullCidLightProtocol->Request: responseData is not PullCidResponse")
+			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
 			return nil, err
 		}
 		return pullCidResponse, nil
@@ -131,13 +131,13 @@ func (p *PullCidLightProtocol) Request(request *PullCidRequest, options ...any) 
 	}
 }
 
-func (p *PullCidLightProtocol) cleanCommicateInfoList(expiration time.Duration) {
+func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration) {
 	for id, v := range p.commicateInfoList {
 		if time.Since(time.Unix(v.createTimestamp, 0)) > expiration {
 			delete(p.commicateInfoList, id)
 		}
 	}
-	customProtocol.Logger.Debug("PullCidLightProtocol->cleanCommicateInfoList: clean commicateInfoList")
+	customProtocol.Logger.Debug("PullCidClientProtocol->cleanCommicateInfoList: clean commicateInfoList")
 }
 
 // service
@@ -217,25 +217,25 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
 	if commicateInfo == nil {
-		customProtocol.Logger.Warnf("PullCidLightProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
-		return fmt.Errorf("PullCidLightProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
+		customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
+		return fmt.Errorf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 	}
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
 	if !ok {
-		customProtocol.Logger.Infof("PullCidLightProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidLightProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
+		customProtocol.Logger.Infof("PullCidClientProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
+		return fmt.Errorf("PullCidClientProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
 	}
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 

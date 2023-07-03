@@ -23,18 +23,18 @@ const (
 type NodeType int32
 
 const (
-	NodeType_Service NodeType = 0
+	NodeType_Full NodeType = 0
 	NodeType_Light NodeType = 1
 )
 
 // Enum value maps for NodeType.
 var (
 	NodeType_name = map[int32]string{
-		0: "Service",
+		0: "Full",
 		1: "Light",
 	}
 	NodeType_value = map[string]int32{
-		"Service": 0,
+		"Full": 0,
 		"Light": 1,
 	}
 )
@@ -110,7 +110,7 @@ func (x *NodeInfo) GetNodeType() NodeType {
 	if x != nil {
 		return x.NodeType
 	}
-	return NodeType_Service
+	return NodeType_Full
 }
 
 var File_node_proto protoreflect.FileDescriptor

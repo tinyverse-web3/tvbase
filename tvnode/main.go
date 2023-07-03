@@ -50,7 +50,7 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
+		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.FullMode)
 		if err != nil {
 			tvsLog.Fatalf("Failed to generate config file: %v", err)
 		}

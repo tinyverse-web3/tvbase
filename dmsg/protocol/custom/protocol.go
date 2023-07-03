@@ -48,60 +48,60 @@ type CustomStreamProtocol struct {
 	CustomProtocol
 }
 
-type CustomStreamLightProtocol struct {
+type CustomStreamClientProtocol struct {
 	CustomStreamProtocol
-	Service LightService
+	Service ClientService
 }
 
 type CustomStreamServiceProtocol struct {
 	CustomStreamProtocol
 }
 
-// light
-func (p *CustomStreamLightProtocol) Init(customProtocolID string) {
+// client
+func (p *CustomStreamClientProtocol) Init(customProtocolID string) {
 	p.CustomStreamProtocol.Init(customProtocolID)
 }
 
-func (p *CustomStreamLightProtocol) SetService(service LightService) {
+func (p *CustomStreamClientProtocol) SetService(service ClientService) {
 	p.Service = service
 }
 
-func (p *CustomStreamLightProtocol) HandleResponse(protocolResponse *pb.CustomProtocolRes, responseObject any) error {
+func (p *CustomStreamClientProtocol) HandleResponse(protocolResponse *pb.CustomProtocolRes, responseObject any) error {
 	if protocolResponse == nil {
-		Logger.Errorf("CustomStreamLightProtocol->HandleResponse: response is nil")
-		return fmt.Errorf("CustomStreamLightProtocol->HandleResponse: response is nil")
+		Logger.Errorf("CustomStreamClientProtocol->HandleResponse: response is nil")
+		return fmt.Errorf("CustomStreamClientProtocol->HandleResponse: response is nil")
 	}
-	Logger.Debugf("CustomStreamLightProtocol->HandleResponse: response: %v", protocolResponse)
+	Logger.Debugf("CustomStreamClientProtocol->HandleResponse: response: %v", protocolResponse)
 	if protocolResponse.CustomProtocolID != p.PID {
-		Logger.Errorf("CustomStreamLightProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
-		return fmt.Errorf("CustomStreamLightProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
+		Logger.Errorf("CustomStreamClientProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
+		return fmt.Errorf("CustomStreamClientProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
 	}
 	if protocolResponse.RetCode.Code < 0 {
-		Logger.Warnf("CustomStreamLightProtocol->HandleResponse: response.RetCode Code < 0: %v", protocolResponse.RetCode)
+		Logger.Warnf("CustomStreamClientProtocol->HandleResponse: response.RetCode Code < 0: %v", protocolResponse.RetCode)
 	}
 
 	err := p.Unmarshal(protocolResponse.Content, responseObject)
 	if err != nil {
-		Logger.Errorf("CustomStreamLightProtocol->HandleResponse: unmarshal error: %v", err)
+		Logger.Errorf("CustomStreamClientProtocol->HandleResponse: unmarshal error: %v", err)
 		return err
 	}
 
 	return nil
 }
 
-func (p *CustomStreamLightProtocol) Request(request any) error {
+func (p *CustomStreamClientProtocol) Request(request any) error {
 	if p.Ctx == nil {
-		Logger.Errorf("CustomStreamLightProtocol->Request: context is nil")
-		return fmt.Errorf("CustomStreamLightProtocol->Request: context is nil")
+		Logger.Errorf("CustomStreamClientProtocol->Request: context is nil")
+		return fmt.Errorf("CustomStreamClientProtocol->Request: context is nil")
 	}
 
 	if p.PID == "" {
-		Logger.Errorf("CustomStreamLightProtocol->Request: customProtocolID is empty")
-		return fmt.Errorf("CustomStreamLightProtocol->Request: customProtocolID is empty")
+		Logger.Errorf("CustomStreamClientProtocol->Request: customProtocolID is empty")
+		return fmt.Errorf("CustomStreamClientProtocol->Request: customProtocolID is empty")
 	}
 	if p.Service == nil {
-		Logger.Errorf("CustomStreamLightProtocol->Request: light service is nil")
-		return fmt.Errorf("CustomStreamLightProtocol->Request: light service is nil")
+		Logger.Errorf("CustomStreamClientProtocol->Request: client service is nil")
+		return fmt.Errorf("CustomStreamClientProtocol->Request: client service is nil")
 	}
 
 	content, err := p.Marshal(request)

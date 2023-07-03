@@ -1,4 +1,4 @@
-package light
+package client
 
 import (
 	"bytes"
@@ -18,9 +18,9 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	commonKeyUtil "github.com/tinyverse-web3/tvbase/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg"
+	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
+	clientProtocol "github.com/tinyverse-web3/tvbase/dmsg/client/protocol"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
-	"github.com/tinyverse-web3/tvbase/dmsg/light/common"
-	lightProtocol "github.com/tinyverse-web3/tvbase/dmsg/light/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	keyUtil "github.com/tinyverse-web3/tvutil/key"
@@ -32,14 +32,14 @@ type ProtocolProxy struct {
 	createMailboxProtocol *common.StreamProtocol
 	releaseMailboxPrtocol *common.StreamProtocol
 	seekMailboxProtocol   *common.PubsubProtocol
-	sendMsgPrtocol        *lightProtocol.SendMsgProtocol
+	sendMsgPrtocol        *clientProtocol.SendMsgProtocol
 }
 
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	DestUsers map[string]*common.DestUserInfo
-	// light
+	// client
 	SrcUsers               map[string]*common.SrcUserInfo
 	CurSrcUserKey          *common.SrcUserKey
 	OnReceiveMsg           common.OnReceiveMsg
@@ -63,13 +63,13 @@ func (d *DmsgService) Init(nodeService tvCommon.NodeService) error {
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = lightProtocol.NewCreateMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.releaseMailboxPrtocol = lightProtocol.NewReleaseMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
-	d.readMailboxMsgPrtocol = lightProtocol.NewReadMailboxMsgProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
+	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
+	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
+	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d)
 
 	// pubsub protocol
-	d.seekMailboxProtocol = lightProtocol.NewSeekMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d, d)
-	d.sendMsgPrtocol = lightProtocol.NewSendMsgProtocol(d.NodeService.GetHost(), d, d)
+	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), d, d)
+	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.NodeService.GetHost(), d, d)
 
 	d.SrcUsers = make(map[string]*common.SrcUserInfo)
 	d.DestUsers = make(map[string]*common.DestUserInfo)
@@ -713,7 +713,7 @@ func (d *DmsgService) OnCustomProtocolResponse(reqProtoData protoreflect.ProtoMe
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: customProtocolInfo(%v) is nil", response.CustomProtocolID)
 		return nil, fmt.Errorf("DmsgService->OnCustomContentRequest: customProtocolInfo(%v) is nil", customProtocolInfo)
 	}
-	if customProtocolInfo.Light == nil {
+	if customProtocolInfo.Client == nil {
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: callback is nil")
 		return nil, fmt.Errorf("DmsgService->OnCustomContentRequest: callback is nil")
 	}
@@ -724,9 +724,9 @@ func (d *DmsgService) OnCustomProtocolResponse(reqProtoData protoreflect.ProtoMe
 		return nil, fmt.Errorf("DmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
 	}
 
-	err := customProtocolInfo.Light.HandleResponse(request, response)
+	err := customProtocolInfo.Client.HandleResponse(request, response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: OnLightResponse error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: OnClientResponse error: %v", err)
 		return nil, err
 	}
 	return nil, nil
@@ -764,7 +764,7 @@ func (d *DmsgService) OnSendMsgResquest(protoMsg protoreflect.ProtoMessage, prot
 	return nil, nil
 }
 
-// LightService interface
+// ClientService interface
 func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey string,
 	protocolData []byte, pubsubSource common.PubsubSourceType) error {
 	pubsubBuf := new(bytes.Buffer)
@@ -896,30 +896,30 @@ func (d *DmsgService) RequestCustomProtocol(customProtocolId string, content []b
 	return nil
 }
 
-func (d *DmsgService) RegistCustomStreamProtocol(light customProtocol.CustomProtocolLight) error {
-	customProtocolID := light.GetProtocolID()
+func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomProtocolClient) error {
+	customProtocolID := client.GetProtocolID()
 	if d.customProtocolInfoList[customProtocolID] != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: lightProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
-		Light:          light,
+		StreamProtocol: clientProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		Client:         client,
 	}
-	light.SetCtx(d.NodeService.GetCtx())
-	light.SetService(d)
+	client.SetCtx(d.NodeService.GetCtx())
+	client.SetService(d)
 	return nil
 }
 
-func (d *DmsgService) UnregistCustomStreamProtocol(light customProtocol.CustomProtocolLight) error {
-	customProtocolID := light.GetProtocolID()
+func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomProtocolClient) error {
+	customProtocolID := client.GetProtocolID()
 	if d.customProtocolInfoList[customProtocolID] == nil {
 		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
 	d.customProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
-		StreamProtocol: lightProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
-		Light:          light,
+		StreamProtocol: clientProtocol.NewCustomProtocol(d.NodeService.GetCtx(), d.NodeService.GetHost(), customProtocolID, d),
+		Client:         client,
 	}
 	return nil
 }

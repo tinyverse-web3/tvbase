@@ -63,8 +63,8 @@ func (p *NodeInfoService) requestHandler(s network.Stream) {
 	switch p.NodeConfig.Mode {
 	case config.LightMode:
 		nodeType = pb.NodeType_Light
-	case config.ServiceMode:
-		nodeType = pb.NodeType_Service
+	case config.FullMode:
+		nodeType = pb.NodeType_Full
 	}
 	nodeInfo := &pb.NodeInfo{
 		NodeType: nodeType,

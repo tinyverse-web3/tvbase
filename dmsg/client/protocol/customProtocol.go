@@ -6,8 +6,8 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
-	"github.com/tinyverse-web3/tvbase/dmsg/light/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )

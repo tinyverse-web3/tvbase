@@ -44,7 +44,7 @@ func (m *Tvbase) registPeerInfo(peerID libp2pPeer.ID) {
 	switch result.NodeInfo.NodeType {
 	case tvPb.NodeType_Light:
 		m.RegistLightPeer(peerID)
-	case tvPb.NodeType_Service:
+	case tvPb.NodeType_Full:
 		m.RegistServicePeer(peerID)
 	}
 }
@@ -91,7 +91,7 @@ func (m *Tvbase) getAvailablePeerList(nodeMode tvConfig.NodeMode) ([]libp2pPeer.
 
 	var peerList tvPeer.PeerInfoList
 	switch nodeMode {
-	case tvConfig.ServiceMode:
+	case tvConfig.FullMode:
 		peerList = m.servicePeerList
 	case tvConfig.LightMode:
 		peerList = m.lightPeerList

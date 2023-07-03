@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/dmsg/light/common"
+	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
@@ -25,7 +25,7 @@ func (adapter *SeekMailboxProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.SeekMailboxRes{}
 
 	protocolID := adapter.GetResponseProtocolID()
-	adapter.protocol.LightService.RegPubsubProtocolResCallback(protocolID, adapter.protocol)
+	adapter.protocol.ClientService.RegPubsubProtocolResCallback(protocolID, adapter.protocol)
 }
 
 func (adapter *SeekMailboxProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
@@ -80,7 +80,7 @@ func (adapter *SeekMailboxProtocolAdapter) SetProtocolRequestSign() error {
 	return nil
 }
 
-func NewSeekMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.LightService) *common.PubsubProtocol {
+func NewSeekMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.ClientService) *common.PubsubProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
 	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
 	adapter.protocol = protocol

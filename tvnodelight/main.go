@@ -15,7 +15,7 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsglight "github.com/tinyverse-web3/tvbase/dmsg/light"
+	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvcrypto "github.com/tinyverse-web3/tvutil/crypto"
 	keyutil "github.com/tinyverse-web3/tvutil/key"
@@ -71,24 +71,24 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return prikey, pubkey, nil
 }
 
-func initMsgLight(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.Tvbase, *dmsglight.DmsgService, error) {
+func initMsgClient(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.Tvbase, *dmsgClient.DmsgService, error) {
 	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
-		tvcLog.Fatalf("InitMsgLight error: %v", err)
+		tvcLog.Fatalf("InitMsgClient error: %v", err)
 	}
 
-	dmsgLight := tvInfra.GetLightDmsgService()
+	dmsgService := tvInfra.GetClientDmsgService()
 	srcPubkeyStr, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubKey)
 	if err != nil {
 		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
 	}
-	err = dmsgLight.InitUser(srcPubkeyStr)
+	err = dmsgService.InitUser(srcPubkeyStr)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return tvInfra, dmsgLight, nil
+	return tvInfra, dmsgService, nil
 }
 
 func main() {
@@ -128,15 +128,15 @@ func main() {
 
 	tvcLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
-	// init dmsg light
-	tvInfrasture, dmsgLight, err := initMsgLight(srcPubkey, rootPath, ctx)
+	// init dmsg client
+	tvbase, dmsgService, err := initMsgClient(srcPubkey, rootPath, ctx)
 	if err != nil {
 		tvcLog.Errorf("init acceptable error: %v", err)
 		return
 	}
 
 	// set src user msg receive callback
-	dmsgLight.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
+	dmsgService.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
 		tvcLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
 	}
@@ -144,14 +144,14 @@ func main() {
 	// publish dest user
 	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
-		tvInfrasture.SetTracerStatus(err)
+		tvbase.SetTracerStatus(err)
 		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
 	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgLight.SubscribeDestUser(destPubKeyStr)
+	err = dmsgService.SubscribeDestUser(destPubKeyStr)
 	if err != nil {
-		tvInfrasture.SetTracerStatus(err)
+		tvbase.SetTracerStatus(err)
 		tvcLog.Errorf("SubscribeDestUser error: %v", err)
 		return
 	}
@@ -172,7 +172,7 @@ func main() {
 				continue
 			}
 			// Prepare the message info for sending, requestMsg is struct data for sending, data is signning data
-			requestMsg, data, err := dmsgLight.PreSendMsg(destPubKeyStr, encrypedContent)
+			requestMsg, data, err := dmsgService.PreSendMsg(destPubKeyStr, encrypedContent)
 			if err != nil {
 				tvcLog.Errorf("preSendMsg error: %v", err)
 				continue
@@ -188,7 +188,7 @@ func main() {
 
 			tvcLog.Debugf("sign = %v", signed)
 			// Send the message with sign
-			err = dmsgLight.SendMsg(requestMsg, signed)
+			err = dmsgService.SendMsg(requestMsg, signed)
 			tvcLog.Info("SendMsg done. ")
 
 			if err != nil {
@@ -199,5 +199,5 @@ func main() {
 
 	<-ctx.Done()
 	tvcLog.Info("tvnodelight->main: Gracefully shut down")
-	tvInfrasture.Stop()
+	tvbase.Stop()
 }

@@ -15,7 +15,7 @@ import (
 func NewTinyverseNetDht(ctx context.Context, h host.Host, ds db.Datastore, mode tvConfig.NodeMode, protocolPrefix string) (*dht.IpfsDHT, error) {
 	var modeCfg dht.Option
 	switch mode {
-	case tvConfig.ServiceMode:
+	case tvConfig.FullMode:
 		modeCfg = dht.Mode(dht.ModeServer)
 	case tvConfig.LightMode:
 		modeCfg = dht.Mode(dht.ModeAuto)

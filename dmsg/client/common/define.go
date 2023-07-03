@@ -62,7 +62,7 @@ type PubsubProtocol struct {
 	Host             host.Host
 	RequestInfoList  map[string]*RequestInfo
 	Callback         PubsubProtocolCallback
-	LightService     LightService
+	ClientService    ClientService
 	ProtocolRequest  protoreflect.ProtoMessage
 	ProtocolResponse protoreflect.ProtoMessage
 	Adapter          PubsubProtocolAdapter
@@ -73,7 +73,7 @@ type PubsubProtocolCallback interface {
 	OnSendMsgResquest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 }
 
-type LightService interface {
+type ClientService interface {
 	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
@@ -128,7 +128,7 @@ type UserMsg struct {
 type UserMsgByTimeStamp []UserMsg
 
 type CustomProtocolInfo struct {
-	Light          customProtocol.CustomProtocolLight
+	Client         customProtocol.CustomProtocolClient
 	StreamProtocol *StreamProtocol
 }
 

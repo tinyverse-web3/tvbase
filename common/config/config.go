@@ -16,7 +16,7 @@ import (
 type NodeMode int32
 
 const (
-	ServiceMode NodeMode = iota
+	FullMode NodeMode = iota
 	LightMode
 )
 

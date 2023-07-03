@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "light",
+            "name": "tvnodelight",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -14,7 +14,7 @@
             "args": ["-srcSeed", "a", "-destSeed", "b"]
         },
         {
-            "name": "light-a-b",
+            "name": "tvnodelight-a-b",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -23,7 +23,7 @@
             "args": ["-srcSeed", "a", "-destSeed", "b", "-rootPath", "./"]
         },
         {
-            "name": "light-b-a",
+            "name": "tvnodelight-b-a",
             "type": "go",
             "request": "launch",
             "mode": "auto",

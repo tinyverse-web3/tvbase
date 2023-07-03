@@ -17,14 +17,14 @@ import (
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsglight "github.com/tinyverse-web3/tvbase/dmsg/light"
+	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	keyUtils "github.com/tinyverse-web3/tvutil/key"
 )
 
-func parseLightCmdParams() (string, string, string) {
+func parseClientCmdParams() (string, string, string) {
 	help := flag.Bool("help", false, "Display help")
 	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
 	srcSeed := flag.String("srcSeed", "", "src user pubkey")
@@ -71,7 +71,7 @@ func TestPubsubMsg(t *testing.T) {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, destSeed, rootPath := parseLightCmdParams()
+	srcSeed, destSeed, rootPath := parseClientCmdParams()
 
 	err := tvUtil.InitLog(rootPath)
 	if err != nil {
@@ -98,21 +98,21 @@ func TestPubsubMsg(t *testing.T) {
 
 	tvLog.Logger.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
-	// init dmsg light
-	_, dmsgLight, err := initMsgLight(srcPubkey, rootPath, ctx)
+	// init dmsg client
+	_, dmsgService, err := initMsgClient(srcPubkey, rootPath, ctx)
 	if err != nil {
 		tvLog.Logger.Errorf("init acceptable error: %v", err)
 		return
 	}
 
 	// set src user msg receive callback
-	dmsgLight.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
+	dmsgService.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
 		tvLog.Logger.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
 	}
 
 	// get src user message list
-	// msgList, err := dmsgLight.GetUserMsgList(destPubkeyHex)
+	// msgList, err := dmsgService.GetUserMsgList(destPubkeyHex)
 	// if err != nil {
 	// 	tvLog.Logger.Errorf("GetUserMsgList error: %v", err)
 	// 	return
@@ -129,7 +129,7 @@ func TestPubsubMsg(t *testing.T) {
 		return
 	}
 	destPubKeyStr := keyUtils.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgLight.SubscribeDestUser(destPubKeyStr)
+	err = dmsgService.SubscribeDestUser(destPubKeyStr)
 	if err != nil {
 		tvLog.Logger.Errorf("SubscribeDestUser error: %v", err)
 		return
@@ -143,15 +143,15 @@ func TestPubsubMsg(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				// dmsgLight.SendMsg(destPubkeyHex, []byte("hello"))
+				// dmsgService.SendMsg(destPubkeyHex, []byte("hello"))
 				// fmt.Println("Executing every 2 seconds...")
 
 				//send err protocol data
-				// pubsub := dmsgLight.DestUserPubsubs[destPubkeyHex]
+				// pubsub := dmsgService.DestUserPubsubs[destPubkeyHex]
 				// topic := pubsub.UserSub.Topic()
 				// tvLog.Logger.Infof("pubsub topic: %s", topic)
-				// pubsub.UserTopic.Publish(dmsgLight.DmsgService.Ctx, []byte("hello"))
-			case <-dmsgLight.DmsgService.NodeService.GetCtx().Done():
+				// pubsub.UserTopic.Publish(dmsgService.DmsgService.Ctx, []byte("hello"))
+			case <-dmsgService.DmsgService.NodeService.GetCtx().Done():
 				return
 			}
 		}
@@ -173,7 +173,7 @@ func TestPubsubMsg(t *testing.T) {
 				continue
 			}
 			// Prepare the message info for sending, requestMsg is struct data for sending, data is signning data
-			requestMsg, data, err := dmsgLight.PreSendMsg(destPubKeyStr, encrypedContent)
+			requestMsg, data, err := dmsgService.PreSendMsg(destPubKeyStr, encrypedContent)
 			if err != nil {
 				tvLog.Logger.Errorf("preSendMsg error: %v", err)
 				continue
@@ -190,7 +190,7 @@ func TestPubsubMsg(t *testing.T) {
 
 			tvLog.Logger.Debugf("sign = %v", signed)
 			// Send the message with sign
-			err = dmsgLight.SendMsg(requestMsg, signed)
+			err = dmsgService.SendMsg(requestMsg, signed)
 			tvLog.Logger.Info("SendMsg done. ")
 
 			if err != nil {
@@ -202,24 +202,24 @@ func TestPubsubMsg(t *testing.T) {
 	<-ctx.Done()
 }
 
-func initMsgLight(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.Tvbase, *dmsglight.DmsgService, error) {
+func initMsgClient(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Context) (*tvbase.Tvbase, *dmsgClient.DmsgService, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
-		tvLog.Logger.Fatalf("InitMsgLight error: %v", err)
+		tvLog.Logger.Fatalf("InitMsgClient error: %v", err)
 	}
 
-	dmsgLight := tvbase.GetLightDmsgService()
+	dmsgService := tvbase.GetClientDmsgService()
 	srcPubkeyStr, err := keyUtils.ECDSAPublicKeyToProtoBuf(srcPubKey)
 	if err != nil {
 		tvLog.Logger.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
 	}
-	err = dmsgLight.InitUser(srcPubkeyStr)
+	err = dmsgService.InitUser(srcPubkeyStr)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return tvbase, dmsgLight, nil
+	return tvbase, dmsgService, nil
 }
 
 func TestIpfsCmd(t *testing.T) {
@@ -255,7 +255,7 @@ func TestPullCID(t *testing.T) {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, _, rootPath := parseLightCmdParams()
+	srcSeed, _, rootPath := parseClientCmdParams()
 
 	err := tvUtil.InitLog(rootPath)
 	if err != nil {
@@ -274,15 +274,15 @@ func TestPullCID(t *testing.T) {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubKey))
 	tvLog.Logger.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-	// init dmsg light
-	node, _, err := initMsgLight(srcPubKey, rootPath, ctx)
+	// init dmsg client
+	node, _, err := initMsgClient(srcPubKey, rootPath, ctx)
 	if err != nil {
 		tvLog.Logger.Errorf("init acceptable error: %v", err)
 		t.Errorf("init acceptable error: %v", err)
 		return
 	}
 
-	pullCidProtocol := pullcid.GetPullCidLightProtocol()
+	pullCidProtocol := pullcid.GetPullCidClientProtocol()
 	err = node.RegistCSCProtocol(pullCidProtocol)
 	if err != nil {
 		tvLog.Logger.Errorf("node.RegistCSCProtocol error: %v", err)
@@ -307,7 +307,7 @@ func TesTinverseInfrasture(t *testing.T) {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, _, rootPath := parseLightCmdParams()
+	srcSeed, _, rootPath := parseClientCmdParams()
 
 	err := tvUtil.InitLog(rootPath)
 	if err != nil {
@@ -327,8 +327,8 @@ func TesTinverseInfrasture(t *testing.T) {
 	_, err = tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		t.Errorf("NewInfrasture error: %v", err)
-		tvLog.Logger.Errorf("InitMsgLight error: %v", err)
-		//tvLog.Logger.Fatalf("InitMsgLight error: %v", err)
+		tvLog.Logger.Errorf("InitMsgClient error: %v", err)
+		//tvLog.Logger.Fatalf("InitMsgClient error: %v", err)
 	}
 
 	<-ctx.Done()

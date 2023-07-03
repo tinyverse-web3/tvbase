@@ -29,7 +29,7 @@ import (
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsglight "github.com/tinyverse-web3/tvbase/dmsg/light"
+	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
 	tvdb "github.com/tinyverse-web3/tvutil/db"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
@@ -102,10 +102,10 @@ func NewTvbase(options ...any) (*Tvbase, error) {
 	}
 
 	err := m.init(rootPath)
-
 	if err != nil {
 		return m, err
 	}
+	tvLog.Logger.Infof("tvnode mode: %v", m.nodeCfg.Mode)
 
 	if isStart {
 		err = m.Start()
@@ -119,7 +119,7 @@ func NewTvbase(options ...any) (*Tvbase, error) {
 func (m *Tvbase) Start() error {
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
-	case config.ServiceMode:
+	case config.FullMode:
 		m.initMetric()
 	}
 
@@ -150,7 +150,7 @@ func (m *Tvbase) Start() error {
 		if err != nil {
 			return err
 		}
-	case config.ServiceMode:
+	case config.FullMode:
 	}
 
 	err = m.initRendezvous()
@@ -259,7 +259,7 @@ func (m *Tvbase) initDisc() (fx.Option, error) {
 	var intrOpt fx.Option
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
-	case config.ServiceMode:
+	case config.FullMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -397,8 +397,8 @@ func (m *Tvbase) init(rootPath string) error {
 
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
-		m.DmsgService, err = dmsglight.CreateService(m)
-	case config.ServiceMode:
+		m.DmsgService, err = dmsgClient.CreateService(m)
+	case config.FullMode:
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {
@@ -466,8 +466,8 @@ func (m *Tvbase) netCheck() {
 	}()
 }
 
-func (m *Tvbase) GetLightDmsgService() *dmsglight.DmsgService {
-	return m.DmsgService.(*dmsglight.DmsgService)
+func (m *Tvbase) GetClientDmsgService() *dmsgClient.DmsgService {
+	return m.DmsgService.(*dmsgClient.DmsgService)
 }
 
 func (m *Tvbase) GetServiceDmsgService() *dmsgService.DmsgService {

@@ -128,7 +128,7 @@ func (m *Tvbase) createNATOpts() ([]libp2p.Option, error) {
 			// attempt to open a port in your network's firewall using UPnP
 			libp2p.NATPortMap(),
 		)
-	case config.ServiceMode:
+	case config.FullMode:
 	}
 
 	return opts, nil
@@ -200,7 +200,7 @@ func (m *Tvbase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			}),
 		)
 	} else {
-		if m.nodeCfg.Mode == config.ServiceMode && !m.nodeCfg.Network.IsLocalNet {
+		if m.nodeCfg.Mode == config.FullMode && !m.nodeCfg.Network.IsLocalNet {
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
@@ -273,7 +273,7 @@ func (m *Tvbase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		opts = append(opts,
 			libp2p.DisableMetrics(),
 		)
-	case config.ServiceMode:
+	case config.FullMode:
 		// resource manager
 		rmgr, err := m.initResourceManager()
 		if err != nil {

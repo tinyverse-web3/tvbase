@@ -7,8 +7,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/common/key"
+	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
-	"github.com/tinyverse-web3/tvbase/dmsg/light/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
@@ -103,7 +103,7 @@ func (p *SendMsgProtocol) Request(requestMsg *pb.SendMsgReq, sign []byte) error 
 		dmsgLog.Logger.Error("Request: marshal protocolData error %v", err)
 		return err
 	}
-	err = p.LightService.PublishProtocol(requestMsg.BasicData.ProtocolID,
+	err = p.ClientService.PublishProtocol(requestMsg.BasicData.ProtocolID,
 		requestMsg.BasicData.DestPubkey, protocolData, common.PubsubSource.DestUser)
 	if err != nil {
 		dmsgLog.Logger.Error("Request: publish protocol error %v", err)
@@ -143,7 +143,7 @@ func (p *SendMsgProtocol) Request(msgData interface{}) error {
 		return err
 	}
 	p.SendMsgRequest.MsgContent = encryptMsgContent
-	err = p.LightService.SaveUserMsg(p.SendMsgRequest, dmsg.MsgDirection.To)
+	err = p.ClientService.SaveUserMsg(p.SendMsgRequest, dmsg.MsgDirection.To)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (p *SendMsgProtocol) Request(msgData interface{}) error {
 		return err
 	}
 
-	err = p.LightService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
+	err = p.ClientService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
 		p.SendMsgRequest.BasicData.DestPubkey, protocolData, common.PubsubSource.DestUser)
 	if err != nil {
 		return err
@@ -190,14 +190,14 @@ func (p *SendMsgProtocol) SetProtocolRequestSign(prikey *ecdsa.PrivateKey, proto
 	return nil
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback common.PubsubProtocolCallback, lightService common.LightService) *SendMsgProtocol {
+func NewSendMsgProtocol(host host.Host, protocolCallback common.PubsubProtocolCallback, clientService common.ClientService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
 	ret.SendMsgRequest = &pb.SendMsgReq{}
 	ret.ProtocolRequest = ret.SendMsgRequest
 	ret.Host = host
-	ret.LightService = lightService
+	ret.ClientService = clientService
 	ret.Callback = protocolCallback
 
-	ret.LightService.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, ret)
+	ret.ClientService.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, ret)
 	return ret
 }

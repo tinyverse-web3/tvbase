@@ -11,8 +11,8 @@ import (
 /*
     usage
 	## implement 1
-	Refer to demo's DemoLightProtocol and DemoServiceProtocol to implement your custom protocol
-	## light 2
+	Refer to demo's DemoClientProtocol and DemoServiceProtocol to implement your custom protocol
+	## client 2
 	import (
 		tvLog "github.com/tinyverse-web3/tvnode/common/log"
 		"github.com/tinyverse-web3/infrasture/infrasture"
@@ -23,21 +23,21 @@ import (
 		tvLog.Logger.Fatalf("NewInfrasture error: %v", err)
 	}
 
-	demoLightProtocol := demo.GetDemoLightProtocol()
+	demoClientProtocol := demo.GetDemoClientProtocol()
 
-	// regist Light protocol
-	err = infrasture.RegistCSCProtocol(demoLightProtocol)
+	// regist Client protocol
+	err = infrasture.RegistCSCProtocol(demoClientProtocol)
 	if err != nil {
 		tvLog.Logger.Errorf("infrasture.RegistCSCProtocol error: %v", err)
 		return
 	}
 
-	// light request
-	demoResponse, err := demoLightProtocol.Request(&demo.DemoRequest{
+	// client request
+	demoResponse, err := demoClientProtocol.Request(&demo.DemoRequest{
 		ID:     "QmTX7d5vWYrmKzj35MwcEJYsrA6P7Uf6ieWWNJf7kdjdX4"
 	})
 	if err != nil {
-		tvLog.Logger.Errorf("demoLightProtocol.Request error: %v", err)
+		tvLog.Logger.Errorf("demoClientProtocol.Request error: %v", err)
 	}
 	tvLog.Logger.Infof("demoResponse: %v", demoResponse)
 
@@ -58,7 +58,7 @@ import (
 
 const demoPID = "demo"
 
-type lightCommicateInfo struct {
+type clientCommicateInfo struct {
 	data           any
 	responseSignal chan any
 }
@@ -71,48 +71,48 @@ type DemoResponse struct {
 	ID string
 }
 
-// light
-type DemoLightProtocol struct {
-	customProtocol.CustomStreamLightProtocol
-	commicateInfoList map[string]*lightCommicateInfo
+// client
+type DemoClientProtocol struct {
+	customProtocol.CustomStreamClientProtocol
+	commicateInfoList map[string]*clientCommicateInfo
 }
 
-var pullCidLightProtocol *DemoLightProtocol
+var pullCidClientProtocol *DemoClientProtocol
 var pullCidServiceProtocol *DemoServiceProtocol
 
-// GetDemoLightProtocol returns the DemoLightProtocol instance, creating it if it does not exist.
+// GetDemoClientProtocol returns the DemoClientProtocol instance, creating it if it does not exist.
 //
 // No parameters.
-// Returns a pointer to a DemoLightProtocol instance.
-func GetDemoLightProtocol() *DemoLightProtocol {
-	if pullCidLightProtocol == nil {
-		pullCidLightProtocol = &DemoLightProtocol{}
-		pullCidLightProtocol.Init()
+// Returns a pointer to a DemoClientProtocol instance.
+func GetDemoClientProtocol() *DemoClientProtocol {
+	if pullCidClientProtocol == nil {
+		pullCidClientProtocol = &DemoClientProtocol{}
+		pullCidClientProtocol.Init()
 	}
-	return pullCidLightProtocol
+	return pullCidClientProtocol
 }
 
-func (p *DemoLightProtocol) Init() {
-	p.CustomStreamLightProtocol.Init(demoPID)
-	p.commicateInfoList = make(map[string]*lightCommicateInfo)
+func (p *DemoClientProtocol) Init() {
+	p.CustomStreamClientProtocol.Init(demoPID)
+	p.commicateInfoList = make(map[string]*clientCommicateInfo)
 }
 
-// HandleResponse handles a response for the DemoLightProtocol.
+// HandleResponse handles a response for the DemoClientProtocol.
 //
 // request: a pointer to a CustomProtocolReq.
 // response: a pointer to a CustomProtocolRes.
 // error: an error if any occurred.
-func (p *DemoLightProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
+func (p *DemoClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
 	pullCidResponse := &DemoResponse{}
-	err := p.CustomStreamLightProtocol.HandleResponse(response, pullCidResponse)
+	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoLightProtocol->HandleResponse: err: %v", err)
-		return fmt.Errorf("DemoLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
+		return fmt.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 	}
 	requestInfo := p.commicateInfoList[pullCidResponse.ID]
 	if requestInfo == nil {
-		customProtocol.Logger.Errorf("DemoLightProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
-		return fmt.Errorf("DemoLightProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
+		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
+		return fmt.Errorf("DemoClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
 	}
 
 	requestInfo.responseSignal <- pullCidResponse
@@ -126,31 +126,31 @@ func (p *DemoLightProtocol) HandleResponse(request *pb.CustomProtocolReq, respon
 // The function takes a DemoRequest as its first parameter and an optional list of
 // options. The options can include a time.Duration for setting the timeout.
 // The function returns a DemoResponse and an error type.
-func (p *DemoLightProtocol) Request(request *DemoRequest, options ...any) (*DemoResponse, error) {
+func (p *DemoClientProtocol) Request(request *DemoRequest, options ...any) (*DemoResponse, error) {
 	var defaultTimeout time.Duration = 3 * time.Second
 	if len(options) > 0 {
 		var ok bool
 		defaultTimeout, ok = options[0].(time.Duration)
 		if !ok {
-			customProtocol.Logger.Errorf("DemoLightProtocol->Request: timeout is not time.Duration")
-			return nil, fmt.Errorf("DemoLightProtocol->Request: timeout is not time.Duration")
+			customProtocol.Logger.Errorf("DemoClientProtocol->Request: timeout is not time.Duration")
+			return nil, fmt.Errorf("DemoClientProtocol->Request: timeout is not time.Duration")
 		}
 	}
 
-	requestInfo := &lightCommicateInfo{
+	requestInfo := &clientCommicateInfo{
 		data:           request,
 		responseSignal: make(chan any),
 	}
 	p.commicateInfoList[request.ID] = requestInfo
 
-	err := p.CustomStreamLightProtocol.Request(request)
+	err := p.CustomStreamClientProtocol.Request(request)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoLightProtocol->Request: err: %v", err)
-		return nil, fmt.Errorf("DemoLightProtocol->Request err: %v", err)
+		customProtocol.Logger.Errorf("DemoClientProtocol->Request: err: %v", err)
+		return nil, fmt.Errorf("DemoClientProtocol->Request err: %v", err)
 	}
 
 	if defaultTimeout <= 0 {
-		customProtocol.Logger.Warnf("DemoLightProtocol->Request: timeout <= 0")
+		customProtocol.Logger.Warnf("DemoClientProtocol->Request: timeout <= 0")
 		return nil, nil
 	}
 
@@ -158,13 +158,13 @@ func (p *DemoLightProtocol) Request(request *DemoRequest, options ...any) (*Demo
 	case responseObject := <-requestInfo.responseSignal:
 		pullCidResponse, ok := responseObject.(*DemoResponse)
 		if !ok {
-			customProtocol.Logger.Errorf("DemoLightProtocol->Request: responseData is not DemoResponse")
-			return nil, fmt.Errorf("DemoLightProtocol->Request: responseData is not DemoResponse")
+			customProtocol.Logger.Errorf("DemoClientProtocol->Request: responseData is not DemoResponse")
+			return nil, fmt.Errorf("DemoClientProtocol->Request: responseData is not DemoResponse")
 		}
 		return pullCidResponse, nil
 	case <-time.After(defaultTimeout):
 		delete(p.commicateInfoList, request.ID)
-		return nil, fmt.Errorf("DemoLightProtocol->Request: timeout")
+		return nil, fmt.Errorf("DemoClientProtocol->Request: timeout")
 	case <-p.Ctx.Done():
 		delete(p.commicateInfoList, request.ID)
 		return nil, p.Ctx.Err()
@@ -217,18 +217,18 @@ func (p *DemoServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, resp
 	pullCidRequest := &DemoRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
-	// TODO: your code, for light response
+	// TODO: your code, for Client response
 	pullCidResponse := &DemoResponse{
 		ID: pullCidRequest.ID,
 	}
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoLightProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 

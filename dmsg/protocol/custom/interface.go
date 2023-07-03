@@ -6,14 +6,14 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 )
 
-type LightService interface {
+type ClientService interface {
 	RequestCustomProtocol(customProtocolId string, content []byte) error
 }
 
-type CustomProtocolLight interface {
+type CustomProtocolClient interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
-	SetService(service LightService)
+	SetService(service ClientService)
 	HandleResponse(request *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
