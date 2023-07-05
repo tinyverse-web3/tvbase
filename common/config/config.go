@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -22,9 +24,8 @@ const (
 
 const (
 	NodeConfigFileName = "config.json"
+	DefaultPort        = "9000"
 )
-
-const DefaultPort = "9000"
 
 // NodeConfig stores the full configuration of the relays, ACLs and other settings
 // that influence behaviour of a relay daemon.
@@ -155,7 +156,7 @@ type MetricsConfig struct {
 	ApiPort int
 }
 
-var DefaultNodeCfg NodeConfig = NewDefaultNodeConfig()
+// var DefaultNodeCfg NodeConfig = NewDefaultNodeConfig()
 
 // returns a default relay configuration using default resource
 func NewDefaultNodeConfig() NodeConfig {
@@ -240,7 +241,7 @@ func NewDefaultNodeConfig() NodeConfig {
 		Log: LogConfig{
 			AllLogLevel: ipfsLog.LevelError,
 			ModuleLevels: map[string]string{
-				"infrasture":     "debug",
+				"tvbase":         "debug",
 				"dkvs":           "debug",
 				"dmsg":           "debug",
 				"customProtocol": "debug",
@@ -276,19 +277,52 @@ func (cfg *NodeConfig) LoadConfig(filePath string) error {
 }
 
 func GenConfigFile(rootPath string, nodeCfg *NodeConfig) error {
-	file, _ := json.MarshalIndent(nodeCfg, "", " ")
-	if err := os.WriteFile(rootPath+NodeConfigFileName, file, 0644); err != nil {
+	rootPath = strings.Trim(rootPath, " ")
+	if rootPath == "" {
+		rootPath = "."
+	}
+	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
+		rootPath = rootPath + string(filepath.Separator)
+	}
+	nodeCfgPath := rootPath + NodeConfigFileName
+	_, err := os.Stat(nodeCfgPath)
+	if !os.IsNotExist(err) {
+		err = nodeCfg.LoadConfig(nodeCfgPath)
+		if err != nil {
+			return err
+		}
+		defaultCfg := NewDefaultNodeConfig()
+		err := mergeJSON(nodeCfg, &defaultCfg)
+		if err != nil {
+			return err
+		}
+	}
+	file, err := json.MarshalIndent(nodeCfg, "", " ")
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(nodeCfgPath, file, 0644)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
 func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
-	var err error
+	rootPath = strings.Trim(rootPath, " ")
+	if rootPath == "" {
+		rootPath = "."
+	}
+	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
+		rootPath = rootPath + string(filepath.Separator)
+	}
 	nodeCfgPath := rootPath + NodeConfigFileName
-	_, err = os.Stat(nodeCfgPath)
+	_, err := os.Stat(nodeCfgPath)
 	if os.IsNotExist(err) {
-		GenConfigFile(rootPath, nodeCfg)
+		file, _ := json.MarshalIndent(nodeCfg, "", " ")
+		if err := os.WriteFile(rootPath+NodeConfigFileName, file, 0644); err != nil {
+			return err
+		}
 	}
 	err = nodeCfg.LoadConfig(nodeCfgPath)
 	if err != nil {
@@ -299,6 +333,56 @@ func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
 	}
 	if !filepath.IsAbs(nodeCfg.DMsg.DatastorePath) {
 		nodeCfg.DMsg.DatastorePath = rootPath + nodeCfg.DMsg.DatastorePath
+	}
+	return nil
+}
+
+func mergeJSON(srcObj, destObj any) error {
+	srcBytes, _ := json.Marshal(srcObj)
+	destBytes, _ := json.Marshal(destObj)
+
+	var srcMap map[string]any
+	var destMap map[string]any
+	err := json.Unmarshal(srcBytes, &srcMap)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(destBytes, &destMap)
+	if err != nil {
+		return err
+	}
+
+	mergeJsonFields(srcMap, destMap)
+
+	result, err := json.Marshal(srcMap)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(result, &srcObj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func mergeJsonFields(srcObj, destObj map[string]any) error {
+	for key, value := range destObj {
+		if value == nil {
+			continue
+		}
+		if reflect.TypeOf(value).Kind() == reflect.Map {
+			if srcObj[key] == nil {
+				srcObj[key] = make(map[string]any)
+			}
+			err := mergeJsonFields(srcObj[key].(map[string]any), value.(map[string]any))
+			if err != nil {
+				return err
+			}
+		} else {
+			if srcObj[key] == nil {
+				srcObj[key] = value
+			}
+		}
 	}
 	return nil
 }

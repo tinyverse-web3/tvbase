@@ -99,7 +99,7 @@ func LoadSwarmKey(path string) (pnet.PSK, PNetFingerprint, error) {
 	return psk, pnetFingerprint(psk), nil
 }
 
-func GenIdenityFile2Print(rootPath string) error {
+func GenIdenityFile(rootPath string) error {
 	privateKey, err := generateIdentityFile(rootPath + IdentityFileName)
 	if err != nil {
 		return err

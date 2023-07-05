@@ -135,11 +135,6 @@ func main() {
 		}
 	}()
 
-	// err = recordPid()
-	// if err != nil {
-	// 	Logger.Fatalf("tvnode->main: recordPid error: %v", err)
-	// }
-
 	ctx := context.Background()
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {

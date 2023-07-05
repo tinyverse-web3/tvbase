@@ -16,18 +16,20 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 	if rootPath != "" && !strings.HasSuffix(rootPath, string(os.PathSeparator)) {
 		rootPath += string(os.PathSeparator)
 	}
-	oldMode := tvConfig.DefaultNodeCfg.Mode
-	tvConfig.DefaultNodeCfg.Mode = mode
-	err := tvConfig.GenConfigFile(rootPath, &tvConfig.DefaultNodeCfg)
+	config := tvConfig.NewDefaultNodeConfig()
+
+	oldMode := config.Mode
+	config.Mode = mode
+	err := tvConfig.GenConfigFile(rootPath, &config)
 	if err != nil {
-		log.Logger.Infoln("generate nodeConfig err: " + err.Error())
+		log.Logger.Info("generate nodeConfig err: " + err.Error())
 	}
-	tvConfig.DefaultNodeCfg.Mode = oldMode
+	config.Mode = oldMode
 	log.Logger.Infof("already generate identityKey and config file, please run program again.\n")
 
-	err = identity.GenIdenityFile2Print(rootPath)
+	err = identity.GenIdenityFile(rootPath)
 	if err != nil {
-		log.Logger.Infoln("generate identity err: " + err.Error())
+		log.Logger.Info("generate identity err: " + err.Error())
 	}
 	return nil
 }
@@ -57,12 +59,13 @@ func InitConfig(options ...any) error {
 			return fmt.Errorf("InitConfig: options[0](rootPath) is not string")
 		}
 	}
-	config := &tvConfig.DefaultNodeCfg
+	config := tvConfig.NewDefaultNodeConfig()
+
 	fullPath, err := GetRootPath(rootPath)
 	if err != nil {
 		return err
 	}
-	err = tvConfig.InitConfig(fullPath, config)
+	err = tvConfig.InitConfig(fullPath, &config)
 	if err != nil {
 		fmt.Println("InitConfig: " + err.Error())
 		return err
@@ -71,10 +74,10 @@ func InitConfig(options ...any) error {
 }
 
 func InitLog(options ...any) error {
-	config := &tvConfig.DefaultNodeCfg
+	config := tvConfig.NewDefaultNodeConfig()
 	if len(options) > 0 {
 		ok := false
-		config, ok = options[0].(*tvConfig.NodeConfig)
+		config, ok = options[0].(tvConfig.NodeConfig)
 		if !ok {
 			fmt.Println("InitLog: options[0](rootPath) is not string")
 			return fmt.Errorf("InitLog: options[0](rootPath) is not string")

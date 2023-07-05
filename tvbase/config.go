@@ -19,7 +19,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/tinyverse-web3/tvbase/common"
-	"github.com/tinyverse-web3/tvbase/common/config"
+	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
@@ -28,8 +28,8 @@ import (
 )
 
 func (m *TvBase) initConfig(rootPath string) error {
-	cfg := config.NewDefaultNodeConfig()
-	err := config.InitConfig(rootPath, &cfg)
+	cfg := tvConfig.NewDefaultNodeConfig()
+	err := tvConfig.InitConfig(rootPath, &cfg)
 	if err != nil {
 		tvLog.Logger.Errorf("infrasture->initConfig: error: %v", err)
 		return err
@@ -43,7 +43,7 @@ func (m *TvBase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
 	identityPath := rootPath + identity.IdentityFileName
 	_, err = os.Stat(identityPath)
 	if os.IsNotExist(err) {
-		identity.GenIdenityFile2Print(rootPath)
+		identity.GenIdenityFile(rootPath)
 	}
 	privteKey, err := identity.LoadIdentity(identityPath)
 	if err != nil {
@@ -96,8 +96,8 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	switch m.nodeCfg.AutoNAT.ServiceMode {
 	default:
 		panic("BUG: unhandled autonat service mode")
-	case config.AutoNATServiceDisabled:
-	case config.AutoNATServiceUnset:
+	case tvConfig.AutoNATServiceDisabled:
+	case tvConfig.AutoNATServiceUnset:
 		// TODO
 		//
 		// We're enabling the AutoNAT service by default on _all_ nodes
@@ -106,7 +106,7 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 		// We should consider disabling it by default if the dht is set
 		// to dhtclient.
 		fallthrough
-	case config.AutoNATServiceEnabled:
+	case tvConfig.AutoNATServiceEnabled:
 		if !m.nodeCfg.Swarm.DisableNatPortMap {
 			opts = append(opts, libp2p.EnableNATService())
 			if m.nodeCfg.AutoNAT.Throttle != nil { // todo need to config
@@ -122,13 +122,13 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	}
 
 	switch m.nodeCfg.Mode {
-	case config.LightMode:
+	case tvConfig.LightMode:
 		opts = append(opts,
 			// for client node, use default host NATManager,
 			// attempt to open a port in your network's firewall using UPnP
 			libp2p.NATPortMap(),
 		)
-	case config.FullMode:
+	case tvConfig.FullMode:
 	}
 
 	return opts, nil
@@ -200,7 +200,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			}),
 		)
 	} else {
-		if m.nodeCfg.Mode == config.FullMode && !m.nodeCfg.Network.IsLocalNet {
+		if m.nodeCfg.Mode == tvConfig.FullMode && !m.nodeCfg.Network.IsLocalNet {
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
@@ -263,7 +263,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	opts = append(opts, relayOpts...)
 
 	switch m.nodeCfg.Mode {
-	case config.LightMode:
+	case tvConfig.LightMode:
 		// holePunching
 		opts = append(opts,
 			libp2p.EnableHolePunching(),
@@ -273,7 +273,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		opts = append(opts,
 			libp2p.DisableMetrics(),
 		)
-	case config.FullMode:
+	case tvConfig.FullMode:
 		// resource manager
 		rmgr, err := m.initResourceManager()
 		if err != nil {
