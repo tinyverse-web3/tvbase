@@ -101,7 +101,7 @@ func verifyPubKey(newVal []byte, oldVal []byte) (int, error) {
 
 	switch oldRecord.ValidityType {
 	case pb.DkvsRecord_EOL:
-		if newRecord.ValueType == 0 {
+		if newRecord.ValueType != 0xffffffff {
 			cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
 			if cmp != 0 {
 				Logger.Error(ErrDifferentPublicKey)

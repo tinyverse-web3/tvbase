@@ -143,6 +143,7 @@ type BootstrapConfig struct {
 type DHTConfig struct {
 	DatastorePath  string
 	ProtocolPrefix string
+	ProtocolID     string
 }
 
 type DMsgConfig struct {
@@ -210,8 +211,9 @@ func NewDefaultNodeConfig() NodeConfig {
 			AllowSubnets: []string{},
 		},
 		DHT: DHTConfig{
-			DatastorePath:  "ldb_data",
+			DatastorePath:  "dht_data",
 			ProtocolPrefix: "/tvnode",
+			ProtocolID:     "/kad/1.0.0",
 		},
 		DMsg: DMsgConfig{
 			MaxMailboxPubsubCount: 1000,
@@ -240,6 +242,7 @@ func NewDefaultNodeConfig() NodeConfig {
 		Log: LogConfig{
 			AllLogLevel: ipfsLog.LevelError,
 			ModuleLevels: map[string]string{
+				"autorelay":      "debug",
 				"infrasture":     "debug",
 				"dkvs":           "debug",
 				"dmsg":           "debug",

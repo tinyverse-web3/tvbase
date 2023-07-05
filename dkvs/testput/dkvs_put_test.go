@@ -67,7 +67,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0021")
+	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0022")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")

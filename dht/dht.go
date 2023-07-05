@@ -23,6 +23,7 @@ func NewTinyverseNetDht(ctx context.Context, h host.Host, ds db.Datastore, mode 
 		h,
 		dht.ProtocolPrefix(protocol.ID(protocolPrefix)), // dht.ProtocolPrefix("/test"),
 		dht.Validator(dkvs.Validator{}),                 // dht.NamespacedValidator("tinyverseNetwork", blankValidator{}),
+		dht.EnableOptimisticProvide(),                   // enable optimistic provide
 		modeCfg,
 		dht.Datastore(ds),
 	)
