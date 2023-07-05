@@ -65,13 +65,13 @@ func IsGunService(pubkey []byte) bool {
 
 func IsGunName(key string) bool {
 	if key[0] != '/' {
-		Logger.Error("invalid key")
+		Logger.Debug("invalid key")
 		return false
 	}
 
 	subkeys := strings.Split(key, "/")
-	if len(subkeys) < 3 { // subkeys[0] = ""
-		Logger.Error("invalid key")
+	l := len(subkeys)
+	if l != 3 { // subkeys[0] = ""
 		return false
 	}
 

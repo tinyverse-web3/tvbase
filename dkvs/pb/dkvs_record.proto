@@ -28,17 +28,16 @@ message DkvsRecord {
 }
 
 enum CertType {
-	Default = 0;
+	Default = 0; // cert
 	Contract = 1;
-	Image = 2;
-	Data = 3;
+	NFT = 2;
 }
 
 // 证书，也就是某种意义上的NFT。如果指定userPubkey，就是跟该账户绑定；如果没有指定，就可以转让。
 message Cert {
 	uint32 version = 1;
 	string name = 2;       // 证书名称，如果有，必须是GUN申请过的名字，一般是""
-	uint32 type = 3;	   // 低16位：0，证书，1，合约，2，图片，3，数据。高16位，自定义
+	uint32 type = 3;	   // 低16位：0，证书，1，合约，2，NFT。。。高16位，自定义
     bytes userPubkey = 5;  // 证书所有者
     bytes data = 6;        // 证书内容，可以自定义
     uint64 issueTime = 7;  // 发行时间

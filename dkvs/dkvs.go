@@ -7,86 +7,58 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
-	u "github.com/ipfs/boxo/util"
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
 	badgerds "github.com/ipfs/go-ds-badger2"
 	levelds "github.com/ipfs/go-ds-leveldb"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
-	record "github.com/libp2p/go-libp2p-record"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/libp2p/go-libp2p/core/routing"
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 	db "github.com/tinyverse-web3/tvutil/db"
 )
 
-// var logger *log.ZapEventLogger = log.Logger(DKVS_NAMESPACE)
-
 type Dkvs struct {
 	idht           *dht.IpfsDHT
-	ldb            db.Datastore // 对这个对象的操作要考虑加锁
+	dkvsdb         db.Datastore // 对这个对象的操作要考虑加锁
 	dhtDatastore   db.Datastore
 	protoMessenger *kadpb.ProtocolMessenger
 	baseService    tvCommon.TvBaseService
+	baseServiceCfg *tvConfig.NodeConfig
 }
 
-/*
-create the DKVS instance object
-调用方式：
-
-	var mtvNode sharenode.NodeInstance = node //将node实例传递给这个接口 通过接口是为了解决循环引用的问题及共享功能的规范化
-	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径 mtvNode是Node实例接口
-
-Parameters:
-
-	rootPath：dkvs数据库的保存的根路径
-	node: mtvnode的实例接口
-
-Returns:
-
-	Dkvs实例
-*/
-
-func init() {
-	// log.SetAllLoggers(log.LogDebug) // 如果要查看其他模块的全部日志，使用此开关
-	// InitAPP(LogDebug)
-	// InitModule(DKVS_NAMESPACE, LogDebug)
-}
-
-func NewDkvs(rootPath string, node tvCommon.TvBaseService) *Dkvs {
+func NewDkvs(rootPath string, tvbase tvCommon.TvBaseService) *Dkvs {
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
-	ldb, err := createBadgerDB(dbPath)
+	dkvsdb, err := createBadgerDB(dbPath)
 	if err != nil {
 		Logger.Error("NewDkvs CreateDataStore" + err.Error())
 		return nil
 	}
-	idht := node.GetDht()
-	pms, err := getProtocolMessenger(node, idht)
+	idht := tvbase.GetDht()
+	baseServiceCfg := tvbase.GetConfig()
+	dhtDatastore := tvbase.GetDhtDatabase()
+	pms, err := getProtocolMessenger(baseServiceCfg, idht)
 	if err != nil {
 		Logger.Error("NewDkvs getProtocolMessenger" + err.Error())
 		return nil
 	}
 	_dkvs := &Dkvs{
 		idht:           idht,
-		ldb:            ldb,
-		dhtDatastore:   node.GetDhtDatabase(),
+		dkvsdb:         dkvsdb,
+		dhtDatastore:   dhtDatastore,
 		protoMessenger: pms,
-		baseService:    node,
+		baseService:    tvbase,
+		baseServiceCfg: baseServiceCfg,
 	}
 
 	// register a network event to handler unsynckey
-	node.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
-	// node.RegistNetReachabilityChanged(_dkvs.putAllUnsyncKeyToNetwork)
+	tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
 	return _dkvs
 }
 
@@ -94,7 +66,8 @@ func NewDkvs(rootPath string, node tvCommon.TvBaseService) *Dkvs {
 func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl uint64, sig []byte) error {
 
 	valueType := 0
-	if IsGunService(pubkey) || IsGunName(key) {
+	if IsGunName(key) {
+		// 如果是/gun/name这样的格式，就检查内容，需要有GUN证书，并且保证证书不被随意覆盖(更长的就不检查了，只检查name是否有权限)
 		valueType = 1
 	}
 
@@ -141,6 +114,10 @@ func GetTtlFromDuration(t time.Duration) uint64 {
 	return uint64(t.Milliseconds())
 }
 
+func GetDefaultTtl() uint64 {
+	return uint64(DefaultDKVSRecordEOL.Milliseconds())
+}
+
 func TimeNow() uint64 {
 	return uint64(time.Now().UnixMilli())
 }
@@ -165,7 +142,7 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 	return GetRecordSignData(key, record.Value, record.PubKey, record.Validity-record.Ttl, record.Ttl)
 }
 
-// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetSignData)
+// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
 // record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
 func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte) error {
@@ -204,7 +181,7 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 
 	recordKey := RecordKey(key)
 	// 已经检查过有效性，直接调用dhtPut
-	tmpRec2, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 1)
+	tmpRec2, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
 	if err != nil {
 		return err
 	}
@@ -213,8 +190,67 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	if err != nil {
 		return err
 	}
-	// err = d.dhtPut(recordKey, tmpRecBuf2)
-	err = d.asyncPut(recordKey, tmpRecBuf2)
+
+	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
+	if err != nil {
+		Logger.Error(err)
+	}
+
+	
+	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 1)
+	if err != nil {
+		return err
+	}
+
+	tmpRecBuf3, err := tmpRec3.Marshal()
+	if err != nil {
+		return err
+	}
+	err = d.dhtPut(recordKey, tmpRecBuf3) // 必须同步到网络上
+	if err != nil {
+		Logger.Error(err)
+	}
+
+	return err
+}
+
+// 将这个key处于准备转移阶段
+func (d *Dkvs) PrepareTransferKey(key string, value []byte, pubkey []byte, sig []byte) error {
+
+	// 检查发起者对key的所有权
+	oldRec, err := d.dhtGetRecord(RecordKey(key))
+	if err != nil {
+		Logger.Error("dhtGetRecord ", err)
+		return ErrTranferFailed
+	}
+
+	if !bytes.Equal(pubkey, oldRec.PubKey) {
+		Logger.Error("Equal key")
+		return ErrTranferFailed
+	}
+
+	// 提前检查数据的有效性
+	issuetime := oldRec.Validity - oldRec.Ttl
+	ttl := oldRec.Ttl
+	err = ValidateValue(key, nil, pubkey, issuetime, ttl, sig, 0)
+	if err != nil {
+		Logger.Error("ValidateValue ", err)
+		return err
+	}
+
+	recordKey := RecordKey(key)
+	// 已经检查过有效性，直接调用dhtPut
+	tmpRec2, err := CreateRecordWithType(value, pubkey, issuetime, ttl, sig, _ValueType_Transfer)
+	if err != nil {
+		return err
+	}
+
+	tmpRecBuf2, err := tmpRec2.Marshal()
+	if err != nil {
+		return err
+	}
+
+	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
 	}
@@ -282,10 +318,8 @@ func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
 	return badgerds.NewDatastore(fullPath, &defopts)
 }
 
-func getProtocolMessenger(baseService tvCommon.TvBaseService, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
-	// v1proto := "/tvnode" + kad1
-	v1proto := baseService.GetConfig().DHT.ProtocolPrefix + string(kad1)
-	//v1proto := protocol.ID(node.GetDhtProtocolPrefix()) + kad1
+func getProtocolMessenger(baseServiceCfg *tvConfig.NodeConfig, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
+	v1proto := baseServiceCfg.DHT.ProtocolPrefix + baseServiceCfg.DHT.ProtocolID
 	protocols := []protocol.ID{protocol.ID(v1proto)}
 	msgSender := kaddht.NewMessageSenderImpl(dht.Host(), protocols)
 	return kadpb.NewProtocolMessenger(msgSender)
@@ -366,26 +400,6 @@ func (d *Dkvs) checkKeyValidity(key string, pubkey []byte) bool {
 	return false
 }
 
-// 检查下该key是否仅在本地（一般情况下，连上网络就自动同步上网络）
-func (d *Dkvs) isAtLocal(key string) bool {
-	ctx := context.Background()
-	recordKey := RecordKey(key)
-	value1, err1 := d.getUnsyncedKey(ctx, recordKey)
-	if err1 == nil {
-		value2, err2 := d.idht.GetValue(ctx, key)
-		if err2 == nil && bytes.Equal(value1, value2) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func mkDsKey(s string) datastore.Key {
-	//return datastore.NewKey(base32.RawStdEncoding.EncodeToString([]byte(s)))
-	return datastore.NewKey(s)
-}
-
 func (d *Dkvs) dhtPut(key string, value []byte) error {
 	//ctxT, cancel := context.WithTimeout(context.Background(), 30*time.Second) //timeout is 30 second
 	ctx, cancel := context.WithCancel(context.Background())
@@ -418,48 +432,6 @@ func (d *Dkvs) dhtPut(key string, value []byte) error {
 	return nil
 }
 
-func (d *Dkvs) dhtPutValueToPeers(ctx context.Context, key string, value []byte) (err error) {
-
-	// don't even allow local users to put bad values.
-	if err := d.idht.Validator.Validate(key, value); err != nil {
-		Logger.Error("Validate ", err)
-		return ErrBadRecord
-	}
-
-	rec := record.MakePutRecord(key, value)
-	rec.TimeReceived = u.FormatRFC3339(time.Now())
-
-	peers, err := d.idht.GetClosestPeers(ctx, key)
-	if err != nil {
-		Logger.Error("GetClosestPeers ", err)
-		return err
-	}
-
-	wg := sync.WaitGroup{}
-	for _, p := range peers {
-		wg.Add(1)
-		go func(p peer.ID) {
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			defer wg.Done()
-			routing.PublishQueryEvent(ctx, &routing.QueryEvent{
-				Type: routing.Value,
-				ID:   p,
-			})
-
-			// 需要修改dht，以便调用这个api
-			//err := d.idht.protoMessenger.PutValue(ctx, p, rec)
-
-			if err != nil {
-				Logger.Error("failed putting value to peer: ", err)
-			}
-		}(p)
-	}
-	wg.Wait()
-
-	return nil
-}
-
 func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 	//先从本地Get如果没有就从网络中获取
 	ctx, cancel := context.WithCancel(context.Background())
@@ -469,11 +441,11 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 	if err == nil && rec != nil { //因为d.getLocal当没有记录时rec会返回空且err也会返回空，所以除了判断err是否为空还需要加上rec是否空的判断
 		val = rec.GetValue()
 	} else {
-		Logger.Warn("dhtGetRecord--> the local node does not have this {key: %s}")
+		Logger.Warnf("dhtGetRecord--> the local node does not have this {key: %s}")
 		val, err = d.dhtGetRecordFromNet(ctx, key)
 	}
 	if err != nil {
-		Logger.Error("dhtGetRecord--> neither the local node nor the network has this {key: %s}", key)
+		Logger.Errorf("dhtGetRecord--> neither the local node nor the network has this {key: %s}", key)
 		return nil, err
 	}
 	e := new(pb.DkvsRecord)
@@ -512,55 +484,6 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 		return nil, err
 	}
 	return val, nil
-}
-
-func encodeLdbValue(redunt uint32) []byte {
-	value := make([]byte, 4)
-	binary.LittleEndian.PutUint32(value, redunt)
-	return value
-}
-
-func decodeLdbValue(value []byte) uint32 {
-	if len(value) < 4 {
-		return 0
-	}
-
-	buf := make([]byte, 4)
-	copy(buf, value[0:4])
-	return binary.LittleEndian.Uint32(buf)
-}
-
-func (d *Dkvs) putAllKeyToPeers() error {
-	// Query the DataStore for all keys and values
-	ctx := context.Background()
-	q := query.Query{}
-	results, err := d.ldb.Query(ctx, q)
-	if err != nil {
-		Logger.Error("Error querying DataStore: ", err)
-		return err
-	}
-	defer results.Close()
-
-	delMap := make(map[string]bool)
-	for result := range results.Next() {
-		Logger.Debugln("Key: ", result.Key)
-		Logger.Debugln("Value: ", result.Value)
-		//err := d.dhtPutValueToPeers(ctx, result.Key, result.Value)
-		err := d.dhtPut(result.Key, result.Value)
-		Logger.Debugf("dhtPut %s return %s\n", result.Key, err)
-		if err == nil || err.Error() == ErrBadRecord.Error() {
-			delMap[result.Key] = true
-		}
-	}
-
-	for k := range delMap {
-		err := d.deleteUnsyncedKey(ctx, k)
-		if err != nil {
-			Logger.Error("DeleteUnsyncKey ", err)
-		}
-	}
-
-	return nil
 }
 
 func (d *Dkvs) IsPublicService(sn string, pubkey []byte) bool {

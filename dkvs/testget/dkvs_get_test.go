@@ -6,10 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
-	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -18,8 +18,16 @@ func init() {
 	// log.SetAllLoggers(log.LevelDebug) //设置所有日志为Debug
 	// dkvs.InitAPP(dkvs.LogDebug)
 	// dkvs.InitModule(dkvs.DKVS_NAMESPACE, dkvs.LogDebug)
-}
 
+	err := tvUtil.InitConfig()
+	if err != nil {
+		return
+	}
+	err = tvUtil.InitLog()
+	if err != nil {
+		return
+	}
+}
 func hash(key string) (hashKey string) {
 	shaHash := sha512.Sum384([]byte(key))
 	hashKey = hex.EncodeToString(shaHash[:])
@@ -43,10 +51,10 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	}
 	var tvNode tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
-	select {
-	case <-time.After(30 * time.Second):
-		fmt.Println("Timeout occurred")
-	}
+	// select {
+	// case <-time.After(30 * time.Second):
+	// 	fmt.Println("Timeout occurred")
+	// }
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
 	if err != nil {
@@ -61,18 +69,18 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-k002-bb18")
-	tKey2 := "/gun/yuiop"
+	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0022")
+	//tKey2 := "/gun/yuiop"
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
 	tValue4 := []byte("mtv4")
-	select {
-	case <-time.After(30 * time.Second):
-		fmt.Println("Timeout occurred")
-	}
-	value, _, _, _, _, err := kv.Get(tKey2)
-	value, _, _, _, _, err = kv.Get(tKey)
+	// select {
+	// case <-time.After(30 * time.Second):
+	// 	fmt.Println("Timeout occurred")
+	// }
+	// value, _, _, _, _, err := kv.Get(tKey2)
+	value, _, _, _, _, err := kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue1) {
 		t.Fatal(err)
 	}

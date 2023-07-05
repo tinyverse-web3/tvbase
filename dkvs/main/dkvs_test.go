@@ -11,6 +11,7 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -19,6 +20,15 @@ func init() {
 	// log.SetAllLoggers(log.LevelDebug) //设置所有日志为Debug
 	// dkvs.InitAPP(dkvs.LogDebug)
 	// dkvs.InitModule(dkvs.DKVS_NAMESPACE, dkvs.LogDebug)
+
+	err := tvUtil.InitConfig()
+	if err != nil {
+		return
+	}
+	err = tvUtil.InitLog()
+	if err != nil {
+		return
+	}
 }
 
 func TestDkvs(t *testing.T) {
