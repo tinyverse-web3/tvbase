@@ -9,7 +9,6 @@ import (
 	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -51,9 +50,9 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
-	seed := "oIBBgepoPyhdJTYB"       //dkvs.RandString(16)
+
+	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
+	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
 	if err != nil {
 		t.Fatal(err)
@@ -199,8 +198,8 @@ func TestUnsyncedDb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
+
+	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
@@ -287,8 +286,8 @@ func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
+
+	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)

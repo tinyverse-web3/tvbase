@@ -40,7 +40,7 @@ func TestDkvs(t *testing.T) {
 	}
 
 	var tvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
+	kv := dkvs.NewDkvs(tvNode) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
@@ -179,7 +179,7 @@ func TestGun(t *testing.T) {
 		t.Fatal(err)
 	}
 	var mtvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", mtvNode) //.表示当前路径
+	kv := dkvs.NewDkvs(mtvNode) //.表示当前路径
 
 	seed := "zjMGsKesWSlZnayK" //dkvs.RandString(16)
 	gunPrivKey, e := dkvs.GetPriKeyBySeed(seed)
@@ -459,14 +459,12 @@ func hash(key string) (hashKey string) {
 func TestLDB(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
-	node, err := tvbase.NewTvbase()
+	tvbase, err := tvbase.NewTvbase()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var mtvNode tvCommon.TvBaseService
-	mtvNode = node
-	dkvs.NewDkvs("./", mtvNode) //.表示当前路径
+	dkvs.NewDkvs(tvbase) //.表示当前路径
 
 	dkvs.TestSyncDB()
 }
