@@ -15,10 +15,10 @@ import (
 	## client 2
 	import (
 		tvLog "github.com/tinyverse-web3/tvnode/common/log"
-		"github.com/tinyverse-web3/infrasture/infrasture"
-		"github.com/tinyverse-web3/infrasture/dmsg/protocol/custom/demo"
+		"github.com/tinyverse-web3/tvbase/tvbase"
+		"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/demo"
 	)
-	infrasture, err := infrasture.NewInfrasture()
+	tvbase, err := tvbase.NewTvbase()
 	if err != nil {
 		tvLog.Logger.Fatalf("NewInfrasture error: %v", err)
 	}
@@ -26,9 +26,9 @@ import (
 	demoClientProtocol := demo.GetDemoClientProtocol()
 
 	// regist Client protocol
-	err = infrasture.RegistCSCProtocol(demoClientProtocol)
+	err = tvbase.RegistCSCProtocol(demoClientProtocol)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture.RegistCSCProtocol error: %v", err)
+		tvLog.Logger.Errorf("tvbase.RegistCSCProtocol error: %v", err)
 		return
 	}
 
@@ -44,16 +44,16 @@ import (
 	//Service 3
 
 	import (
-		"github.com/tinyverse-web3/infrasture/infrasture"
-		"github.com/tinyverse-web3/infrasture/dmsg/protocol/custom/demo"
+		"github.com/tinyverse-web3/tvbase/tvbase"
+		"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/demo"
 	)
-	infrasture, err := infrasture.NewInfrasture(rootPath, ctx, true)
+	tvbase, err := tvbase.NewInfrasture(rootPath, ctx, true)
 	if err != nil {
 		panic(err)
 	}
 
 	// register protocol
-	infrasture.RegistCSSProtocol(demo.GetDemoServiceProtocol())
+	tvbase.RegistCSSProtocol(demo.GetDemoServiceProtocol())
 */
 
 const demoPID = "demo"

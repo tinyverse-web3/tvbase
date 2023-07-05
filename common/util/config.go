@@ -84,7 +84,7 @@ func InitLog(options ...any) error {
 		}
 	}
 
-	ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
+	// ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
 	for module, level := range config.Log.ModuleLevels {
 		ipfsLog.SetLogLevel(module, level)
 	}

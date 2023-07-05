@@ -49,8 +49,8 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs("./", tvNode) //.表示当前路径
+
+	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
 	// select {
 	// case <-time.After(30 * time.Second):
 	// 	fmt.Println("Timeout occurred")
@@ -117,7 +117,7 @@ func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 		t.Fatal(err)
 	}
 	var tvBase tvCommon.TvBaseService = node
-	kv := dkvs.NewDkvs("./", tvBase) //.表示当前路径
+	kv := dkvs.NewDkvs(tvBase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)

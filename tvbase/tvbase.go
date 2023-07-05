@@ -24,13 +24,14 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	tvutil "github.com/tinyverse-web3/tvbase/common/util"
+	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
-	"github.com/tinyverse-web3/tvutil/db"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,6 +42,7 @@ import (
 
 type TvBase struct {
 	DmsgService                 tvCommon.DmsgService
+	DkvsService                 tvCommon.DkvsService
 	ctx                         context.Context
 	host                        host.Host
 	dht                         *kaddht.IpfsDHT
@@ -63,7 +65,7 @@ type TvBase struct {
 	app                         *fx.App
 }
 
-// new infrasture
+// new tvbase
 func NewTvbase(options ...any) (*TvBase, error) {
 	var isStart bool = true
 	var rootPath string = ""
@@ -339,19 +341,19 @@ func (m *TvBase) init(rootPath string) error {
 	var err error
 	fullPath, err := tvutil.GetRootPath(rootPath)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
 	err = m.initConfig(fullPath)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
 	privateKey, swamPsk, err := m.initKey(fullPath)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
@@ -362,14 +364,14 @@ func (m *TvBase) init(rootPath string) error {
 	// disc
 	fxOpt, err := m.initDisc()
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
 	// fx
 	err = m.initFx(fxOpt)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
@@ -377,13 +379,13 @@ func (m *TvBase) init(rootPath string) error {
 	var nodeOpts []libp2p.Option
 	nodeOpts, err = m.createOpts(m.ctx, privateKey, swamPsk)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
 	m.host, err = libp2p.New(nodeOpts...)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
 
@@ -391,6 +393,8 @@ func (m *TvBase) init(rootPath string) error {
 	for _, addr := range m.host.Addrs() {
 		tvLog.Logger.Debugf("\t%s/p2p/%s", addr, m.host.ID())
 	}
+
+	m.DkvsService = dkvs.NewDkvs(m)
 
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
@@ -471,6 +475,10 @@ func (m *TvBase) GetServiceDmsgService() *dmsgService.DmsgService {
 	return m.DmsgService.(*dmsgService.DmsgService)
 }
 
+func (m *TvBase) GetDkvsService() tvCommon.DkvsService {
+	return m.DkvsService
+}
+
 func (m *TvBase) GetDhtDatabase() db.Datastore {
 	return m.dhtDatastore
 }
@@ -478,11 +486,6 @@ func (m *TvBase) GetDhtDatabase() db.Datastore {
 func (m *TvBase) GetNodeConnectedness() network.Connectedness {
 	return m.host.Network().Connectedness(m.host.ID())
 }
-
-// func (m *TvBase) RegistNetReachabilityChanged(n tvCommon.NoArgCallback) error {
-// 	m.registNetReachabilityChanged(n)
-// 	return nil
-// }
 
 // Log the entire `app.Err()` but return only the innermost one to the user
 // given the full error can be very long (as it can expose the entire build

@@ -138,7 +138,7 @@ func (d *DmsgService) initMailbox() error {
 			return nil
 		}
 	case <-time.After(time.Second * 3):
-		dmsgLog.Logger.Errorf("After 3s, no seek info, will create a new mailbox")
+		dmsgLog.Logger.Debugf("After 3s, no seek info, will create a new mailbox")
 		go d.createMailbox(userPubkey)
 		return nil
 	case <-d.BaseService.GetCtx().Done():

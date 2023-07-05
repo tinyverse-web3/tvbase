@@ -4,6 +4,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
-const LoggerName = "infrasture"
+const LoggerName = "tvbase"
 
 var Logger = ipfsLog.Logger(LoggerName)

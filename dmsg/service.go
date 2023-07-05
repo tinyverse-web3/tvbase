@@ -8,17 +8,16 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	commonDb "github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	tvdb "github.com/tinyverse-web3/tvutil/db"
 )
 
 type DmsgService struct {
 	BaseService                 tvCommon.TvBaseService
 	Pubsub                      *pubsub.PubSub
-	Datastore                   tvdb.Datastore
+	Datastore                   db.Datastore
 	PubsubProtocolResSubscribes map[pb.ProtocolID]protocol.ResSubscribe
 	PubsubProtocolReqSubscribes map[pb.ProtocolID]protocol.ReqSubscribe
 }
@@ -28,7 +27,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	var err error
 	cfg := d.BaseService.GetConfig()
-	d.Datastore, err = commonDb.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+	d.Datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
 	if err != nil {
 		return err
 	}

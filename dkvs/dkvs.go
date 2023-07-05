@@ -19,9 +19,9 @@ import (
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
-	db "github.com/tinyverse-web3/tvutil/db"
 )
 
 type Dkvs struct {
@@ -33,7 +33,8 @@ type Dkvs struct {
 	baseServiceCfg *tvConfig.NodeConfig
 }
 
-func NewDkvs(rootPath string, tvbase tvCommon.TvBaseService) *Dkvs {
+func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
+	rootPath := tvbase.GetConfig().RootPath
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	dkvsdb, err := createBadgerDB(dbPath)
 	if err != nil {
@@ -196,7 +197,6 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 		Logger.Error(err)
 	}
 
-	
 	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 1)
 	if err != nil {
 		return err

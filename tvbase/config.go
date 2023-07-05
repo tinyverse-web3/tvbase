@@ -6,9 +6,13 @@ import (
 	"strings"
 
 	"github.com/libp2p/go-libp2p"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/metrics"
 	"github.com/libp2p/go-libp2p/core/pnet"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -23,7 +27,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
-	"github.com/tinyverse-web3/tvbase/dht"
+	"github.com/tinyverse-web3/tvbase/dkvs"
 	mamask "github.com/whyrusleeping/multiaddr-filter"
 )
 
@@ -31,7 +35,7 @@ func (m *TvBase) initConfig(rootPath string) error {
 	cfg := tvConfig.NewDefaultNodeConfig()
 	err := tvConfig.InitConfig(rootPath, &cfg)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->initConfig: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->initConfig: error: %v", err)
 		return err
 	}
 	m.nodeCfg = &cfg
@@ -65,19 +69,19 @@ func (m *TvBase) createOpts(ctx context.Context, privateKey crypto.PrivKey, swam
 	var opts []libp2p.Option
 	opts, err = m.createCommonOpts(privateKey, swamPsk)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createOpts->createCommonOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createOpts->createCommonOpts: error: %v", err)
 		return nil, err
 	}
 
 	m.dhtDatastore, err = db.CreateDataStore(m.nodeCfg.DHT.DatastorePath, m.nodeCfg.Mode)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createOpts->createDataStore: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
 		return nil, err
 	}
 
-	dkvsOpts, err := dht.CreateOpts(ctx, &(m.dht), m.dhtDatastore, m.nodeCfg.Mode, m.nodeCfg.DHT.ProtocolPrefix)
+	dkvsOpts, err := m.createRouteOpts()
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createOpts->dth.createOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createOpts->dth.createOpts: error: %v", err)
 		return nil, err
 	}
 	opts = append(opts, dkvsOpts...)
@@ -162,7 +166,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	// smux
 	res, err := makeSmuxTransportOption(m.nodeCfg.Swarm.Transports)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createCommonOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 		return nil, err
 	}
 	opts = append(opts, res)
@@ -239,7 +243,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		connmgr.WithGracePeriod(m.nodeCfg.ConnMgr.ConnMgrGrace),
 	)
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createCommonOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 		return nil, err
 	}
 	opts = append(opts,
@@ -249,7 +253,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	// nat
 	natOpts, err := m.createNATOpts()
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createCommonOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 		return nil, err
 	}
 	opts = append(opts, natOpts...)
@@ -257,7 +261,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	//relay
 	relayOpts, err := m.createRelayOpts()
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->createCommonOpts: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 		return nil, err
 	}
 	opts = append(opts, relayOpts...)
@@ -277,7 +281,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		// resource manager
 		rmgr, err := m.initResourceManager()
 		if err != nil {
-			tvLog.Logger.Errorf("infrasture->createCommonOpts: error: %v", err)
+			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 			return nil, err
 		}
 		opts = append(opts, libp2p.ResourceManager(rmgr))
@@ -304,5 +308,37 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		}
 	}
 
+	return opts, nil
+}
+
+func (m *TvBase) createRouteOpts() ([]libp2p.Option, error) {
+	var opts []libp2p.Option
+	var err error
+	opt := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+		var modeCfg kaddht.Option
+		switch m.nodeCfg.Mode {
+		case tvConfig.FullMode:
+			modeCfg = kaddht.Mode(kaddht.ModeServer)
+		case tvConfig.LightMode:
+			modeCfg = kaddht.Mode(kaddht.ModeAuto)
+		}
+		m.dht, err = kaddht.New(m.ctx,
+			h,
+			kaddht.ProtocolPrefix(protocol.ID(m.nodeCfg.DHT.ProtocolPrefix)), // kaddht.ProtocolPrefix("/test"),
+			kaddht.Validator(dkvs.Validator{}),                               // kaddht.NamespacedValidator("tinyverseNetwork", blankValidator{}),
+			kaddht.EnableOptimisticProvide(),                                 // enable optimistic provide
+			modeCfg,
+			kaddht.Datastore(m.dhtDatastore),
+		)
+
+		if err != nil {
+			tvLog.Logger.Errorf("tvbase->createOpts: error: %v", err)
+			return nil, err
+		}
+
+		return m.dht, nil
+	})
+
+	opts = append(opts, opt)
 	return opts, nil
 }
