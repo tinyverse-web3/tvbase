@@ -2,6 +2,7 @@ package dkvs
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -11,6 +12,9 @@ import (
 // 证书由发行者记录在用户公钥下面，一般格式（路径可以自定义）
 // addr: /服务名称/用户公钥/cert
 // value: CertsRecordValue
+
+var DefaultCertTtl = uint64(time.Duration(time.Hour * 24 * 365 * 100).Milliseconds())
+const CertTransferData = "prepare for transfer"
 
 func VerifyCert(cert *pb.Cert) bool {
 
@@ -108,9 +112,9 @@ func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64)
 
 	cert := pb.Cert{
 		Version:      1,
-		Name:         name,
+		Name:         KEY_NS_GUN,
 		Type:         uint32(pb.CertType_Default),
-		UserPubkey:   []byte(""),
+		UserPubkey:   nil,
 		Data:         []byte(name),
 		IssueTime:    issueTime,
 		Ttl:          ttl,
@@ -130,9 +134,9 @@ func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64)
 func EncodeGunValue(name string, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
 	cert := pb.Cert{
 		Version:      1,
-		Name:         name,
+		Name:         KEY_NS_GUN,
 		Type:         uint32(pb.CertType_Default),
-		UserPubkey:   []byte(""),
+		UserPubkey:   nil,
 		Data:         []byte(name),
 		IssueTime:    issueTime,
 		Ttl:          ttl,
@@ -140,34 +144,9 @@ func EncodeGunValue(name string, issueTime uint64, ttl uint64, gunPubkey []byte,
 		IssuerSign:   gunSign,
 	}
 
-	return EncodeCertsRecordValueWithCert(&cert, userData)
-}
-
-// decode from value by a GUN record
-func DecodeGunValue(value []byte) *pb.Cert {
-	return DecodeCert(value)
-}
-
-// generate value for a GUN record
-func EncodeGunRecordValue(cv []*pb.Cert, userData []byte) []byte {
 	rv := pb.CertsRecordValue{
-		UserData: userData,
-		CertVect: cv,
-	}
-
-	b, err := rv.Marshal()
-	if err != nil {
-		return nil
-	}
-
-	return b
-}
-
-// generate value for a GUN record
-func EncodeGunRecordValueWithCert(cert *pb.Cert, userData []byte) []byte {
-	rv := pb.CertsRecordValue{
-		UserData: userData,
-		CertVect: []*pb.Cert{cert},
+		UserData: userData,			// 在转移时放一个证书
+		CertVect: []*pb.Cert{&cert},
 	}
 
 	b, err := rv.Marshal()
@@ -189,7 +168,7 @@ func DecodeGunRecordValue(value []byte) *pb.CertsRecordValue {
 	return &rv
 }
 
-func VerifyGunRecordValue(value []byte, issuetime uint64, ttl uint64) bool {
+func VerifyGunRecordValue(key string, value []byte, issuetime uint64, ttl uint64) bool {
 
 	rv := DecodeGunRecordValue(value)
 	if rv == nil {
@@ -201,20 +180,44 @@ func VerifyGunRecordValue(value []byte, issuetime uint64, ttl uint64) bool {
 		return false
 	}
 
-	return cert.Ttl == ttl && cert.IssueTime == issuetime
+	return cert.Ttl == ttl && cert.IssueTime == issuetime && GetGunKey(string(cert.Data)) == key
+}
+
+
+func VerifyTransferCert(key string, oldr *pb.DkvsRecord, newr *pb.DkvsRecord) bool {
+	// 
+	oldcerts := DecodeCertsRecordValue(oldr.Data)
+	if oldcerts == nil {
+		return false
+	}
+	if oldcerts.UserData == nil {
+		return false
+	}
+	cert1 := DecodeCert(oldcerts.UserData)
+	if cert1 == nil {
+		return false
+	}
+	if !VerifyCert(cert1) {
+		return false
+	}
+	if !bytes.Equal(cert1.UserPubkey, newr.PubKey) || cert1.Name != CertTransferData || string(cert1.Data) != key {
+		return false
+	}
+
+	return true
 }
 
 // used to sign with private key
-func IssueCert(data []byte, issuePubkey []byte) *pb.Cert {
+func IssueCert(name string, data []byte, issuePubkey []byte) *pb.Cert {
 
 	cert := pb.Cert{
 		Version:      1,
 		Name:         "",
 		Type:         uint32(pb.CertType_Default),
-		UserPubkey:   []byte(""),
+		UserPubkey:   nil,
 		Data:         data,
 		IssueTime:    TimeNow(),
-		Ttl:          0, // for ever
+		Ttl:          DefaultCertTtl,
 		IssuerPubkey: issuePubkey,
 		IssuerSign:   nil,
 	}
@@ -222,52 +225,28 @@ func IssueCert(data []byte, issuePubkey []byte) *pb.Cert {
 	return &cert
 }
 
-// generate value for a certs record
-func EncodeCertValue(name string, issueTime uint64, ttl uint64, issuePubkey []byte, issueSign []byte, userData []byte) []byte {
+
+// used to sign with private key
+func IssueTransferCert(key string, receiverpk, issuePubkey []byte) *pb.Cert {
+
 	cert := pb.Cert{
 		Version:      1,
-		UserPubkey:   []byte(""),
-		Data:         []byte(name),
-		IssueTime:    issueTime,
-		Ttl:          ttl,
+		Name:         CertTransferData,
+		Type:         uint32(pb.CertType_Default),
+		UserPubkey:   receiverpk,
+		Data:         []byte(key),
+		IssueTime:    TimeNow(),
+		Ttl:          DefaultCertTtl,
 		IssuerPubkey: issuePubkey,
-		IssuerSign:   issueSign,
+		IssuerSign:   nil,
 	}
 
-	return EncodeGunRecordValueWithCert(&cert, userData)
+	return &cert
 }
 
-// generate value for a certs record
-func EncodeCertsRecordValue(cv []*pb.Cert, userData []byte) []byte {
-	rv := pb.CertsRecordValue{
-		UserData: userData,
-		CertVect: cv,
-	}
 
-	b, err := rv.Marshal()
-	if err != nil {
-		return nil
-	}
 
-	return b
-}
-
-// generate value for a certs record
-func EncodeCertsRecordValueWithCert(cert *pb.Cert, userData []byte) []byte {
-	rv := pb.CertsRecordValue{
-		UserData: userData,
-		CertVect: []*pb.Cert{cert},
-	}
-
-	b, err := rv.Marshal()
-	if err != nil {
-		return nil
-	}
-
-	return b
-}
-
-// decode from value by a GUN record
+// decode from value
 func DecodeCertsRecordValue(value []byte) *pb.CertsRecordValue {
 	var rv pb.CertsRecordValue
 	err := rv.Unmarshal(value)
@@ -277,3 +256,4 @@ func DecodeCertsRecordValue(value []byte) *pb.CertsRecordValue {
 
 	return &rv
 }
+

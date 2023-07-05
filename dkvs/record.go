@@ -9,6 +9,8 @@ import (
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
+const _ValueType_Transfer = 0xffffffff
+
 var _ record.Validator = Validator{}
 
 // RecordKey returns the libp2p record key for a given peer ID.
@@ -46,7 +48,7 @@ func (v Validator) Validate(fullkey string, value []byte) error {
 // This function returns an error if any of the records fail to parse. Validate
 // your records first!
 func (v Validator) Select(k string, vals [][]byte) (int, error) {
-	vp, err := verifyPubKey(vals[0], vals[1])
+	vp, err := verifyPubKey(k, vals[0], vals[1])
 	if vp != 0 {
 		Logger.Error(err)
 		return vp, err
@@ -89,7 +91,7 @@ func selectRecord(recs []*pb.DkvsRecord, vals [][]byte) (int, error) {
 }
 
 // Verify that the public key of the new record is the same as the old public key to prevent the record from being overwritten
-func verifyPubKey(newVal []byte, oldVal []byte) (int, error) {
+func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 	newRecord := new(pb.DkvsRecord)
 	if err := proto.Unmarshal(newVal, newRecord); err != nil {
 		return -1, err
@@ -101,7 +103,14 @@ func verifyPubKey(newVal []byte, oldVal []byte) (int, error) {
 
 	switch oldRecord.ValidityType {
 	case pb.DkvsRecord_EOL:
-		if newRecord.ValueType != 0xffffffff {
+		if newRecord.ValueType == _ValueType_Transfer {
+			// 处于转移状态的key，需要检查是否有权限继承该key（新的value中有原来所有者颁发的证书）
+			// if !VerifyTransferCert(key, oldRecord, newRecord) {
+			// 	Logger.Error(ErrSignature)
+			// 	return -1, ErrPublicKeyMismatch
+			// }
+		} else {
+			// 正常状态，只检查是否是公钥相同
 			cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
 			if cmp != 0 {
 				Logger.Error(ErrDifferentPublicKey)

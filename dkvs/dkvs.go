@@ -114,6 +114,10 @@ func GetTtlFromDuration(t time.Duration) uint64 {
 	return uint64(t.Milliseconds())
 }
 
+func GetDefaultTtl() uint64 {
+	return uint64(DefaultDKVSRecordEOL.Milliseconds())
+}
+
 func TimeNow() uint64 {
 	return uint64(time.Now().UnixMilli())
 }
@@ -138,7 +142,7 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 	return GetRecordSignData(key, record.Value, record.PubKey, record.Validity-record.Ttl, record.Ttl)
 }
 
-// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetSignData)
+// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
 // record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
 func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte) error {
@@ -177,7 +181,7 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 
 	recordKey := RecordKey(key)
 	// 已经检查过有效性，直接调用dhtPut
-	tmpRec2, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 0xffffffff)
+	tmpRec2, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
 	if err != nil {
 		return err
 	}
@@ -192,7 +196,7 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 		Logger.Error(err)
 	}
 
-	//
+	
 	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 1)
 	if err != nil {
 		return err
@@ -203,6 +207,50 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 		return err
 	}
 	err = d.dhtPut(recordKey, tmpRecBuf3) // 必须同步到网络上
+	if err != nil {
+		Logger.Error(err)
+	}
+
+	return err
+}
+
+// 将这个key处于准备转移阶段
+func (d *Dkvs) PrepareTransferKey(key string, value []byte, pubkey []byte, sig []byte) error {
+
+	// 检查发起者对key的所有权
+	oldRec, err := d.dhtGetRecord(RecordKey(key))
+	if err != nil {
+		Logger.Error("dhtGetRecord ", err)
+		return ErrTranferFailed
+	}
+
+	if !bytes.Equal(pubkey, oldRec.PubKey) {
+		Logger.Error("Equal key")
+		return ErrTranferFailed
+	}
+
+	// 提前检查数据的有效性
+	issuetime := oldRec.Validity - oldRec.Ttl
+	ttl := oldRec.Ttl
+	err = ValidateValue(key, nil, pubkey, issuetime, ttl, sig, 0)
+	if err != nil {
+		Logger.Error("ValidateValue ", err)
+		return err
+	}
+
+	recordKey := RecordKey(key)
+	// 已经检查过有效性，直接调用dhtPut
+	tmpRec2, err := CreateRecordWithType(value, pubkey, issuetime, ttl, sig, _ValueType_Transfer)
+	if err != nil {
+		return err
+	}
+
+	tmpRecBuf2, err := tmpRec2.Marshal()
+	if err != nil {
+		return err
+	}
+
+	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
 	}
