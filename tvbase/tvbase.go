@@ -15,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	libp2pEvent "github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -43,27 +42,25 @@ import (
 )
 
 type TvBase struct {
-	DmsgService                 tvCommon.DmsgService
-	DkvsService                 tvCommon.DkvsService
-	ctx                         context.Context
-	host                        host.Host
-	dht                         *kaddht.IpfsDHT
-	dhtDatastore                db.Datastore
-	nodeCfg                     *config.NodeConfig
-	lightPeerListMutex          sync.Mutex
-	servicePeerListMutex        sync.Mutex
-	servicePeerList             tvPeer.PeerInfoList
-	lightPeerList               tvPeer.PeerInfoList
-	connectedCbList             []tvPeer.ConnectCallback
-	notConnectedCbList          []tvPeer.ConnectCallback
-	nodeInfoService             *tvProtocol.NodeInfoService
-	pubRoutingDiscovery         *drouting.RoutingDiscovery
-	evtPeerConnectednessChanged libp2pEvent.Subscription
-	resourceManager             network.ResourceManager
-	relayPeerSignal             chan peer.AddrInfo
-	TracerSpan                  trace.Span
-	closeSync                   sync.Once
-	app                         *fx.App
+	DmsgService          tvCommon.DmsgService
+	DkvsService          tvCommon.DkvsService
+	TracerSpan           trace.Span
+	ctx                  context.Context
+	host                 host.Host
+	dht                  *kaddht.IpfsDHT
+	dhtDatastore         db.Datastore
+	nodeCfg              *config.NodeConfig
+	lightPeerListMutex   sync.Mutex
+	servicePeerListMutex sync.Mutex
+	servicePeerList      tvPeer.PeerInfoList
+	lightPeerList        tvPeer.PeerInfoList
+	connectedCbList      []tvPeer.ConnectCallback
+	notConnectedCbList   []tvPeer.ConnectCallback
+	nodeInfoService      *tvProtocol.NodeInfoService
+	pubRoutingDiscovery  *drouting.RoutingDiscovery
+	resourceManager      network.ResourceManager
+	relayPeerSignal      chan peer.AddrInfo
+	app                  *fx.App
 }
 
 // new tvbase
@@ -163,34 +160,30 @@ func (m *TvBase) Start() error {
 }
 
 func (m *TvBase) Stop() {
-	m.closeSync.Do(func() {
-		if m.DmsgService != nil {
-			err := m.DmsgService.Stop()
-			if err != nil {
-				tvLog.Logger.Error(err)
-			}
-			m.DmsgService = nil
+	if m.DmsgService != nil {
+		err := m.DmsgService.Stop()
+		if err != nil {
+			tvLog.Logger.Error(err)
 		}
-		// if err := m.disableMdns(); err != nil {
-		// 	tvLog.Logger.Error(err)
-		// }
-		if m.resourceManager != nil {
-			m.resourceManager.Close()
-			m.resourceManager = nil
-		}
+		m.DmsgService = nil
+	}
 
-		if m.dht != nil {
-			m.dht.Close()
-			m.dht = nil
+	if m.resourceManager != nil {
+		m.resourceManager.Close()
+		m.resourceManager = nil
+	}
+
+	if m.dht != nil {
+		m.dht.Close()
+		m.dht = nil
+	}
+	if m.app != nil {
+		stopErr := m.app.Stop(context.Background())
+		if stopErr != nil {
+			tvLog.Logger.Errorf("TvBase->Stop: failure on stop: %v", stopErr)
 		}
-		if m.app != nil {
-			stopErr := m.app.Stop(context.Background())
-			if stopErr != nil {
-				tvLog.Logger.Errorf("TvBase->Stop: failure on stop: %v", stopErr)
-			}
-			m.app = nil
-		}
-	})
+		m.app = nil
+	}
 }
 
 func (m *TvBase) initDisc() (fx.Option, error) {

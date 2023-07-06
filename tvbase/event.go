@@ -12,17 +12,14 @@ func (m *TvBase) initEvent() error {
 	m.connectedCbList = make([]tvPeer.ConnectCallback, 0)
 	m.notConnectedCbList = make([]tvPeer.ConnectCallback, 0)
 
-	var err error
-	if m.evtPeerConnectednessChanged == nil {
-		m.evtPeerConnectednessChanged, err = m.host.EventBus().Subscribe(&libp2pEvent.EvtPeerConnectednessChanged{})
-	}
+	evtPeerConnectednessChanged, err := m.host.EventBus().Subscribe(&libp2pEvent.EvtPeerConnectednessChanged{})
 	if err != nil {
 		return err
 	}
 	go func() {
 		for {
 			select {
-			case v := <-m.evtPeerConnectednessChanged.Out():
+			case v := <-evtPeerConnectednessChanged.Out():
 				var evt libp2pEvent.EvtPeerConnectednessChanged
 				evt, ok := v.(libp2pEvent.EvtPeerConnectednessChanged)
 				if !ok {
@@ -47,12 +44,12 @@ func (m *TvBase) initEvent() error {
 				}
 				continue
 			case <-m.ctx.Done():
-				if m.evtPeerConnectednessChanged != nil {
-					err := m.evtPeerConnectednessChanged.Close()
+				if evtPeerConnectednessChanged != nil {
+					err := evtPeerConnectednessChanged.Close()
 					if err != nil {
 						tvLog.Logger.Errorf("Infrasture->initEvent: evtPeerConnectednessChanged.Close() error: %v", err)
 					}
-					m.evtPeerConnectednessChanged = nil
+					evtPeerConnectednessChanged = nil
 				}
 				return
 			}
