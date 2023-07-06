@@ -1,13 +1,16 @@
+# mac
 .DS_Store
+# debug
 __debug_bin
+# config
+identity.bin
+config.json
+# data
 msg_data
 dht_data
-config.json
-identity.bin
-*.lock
+unsynckv
 # tvnodelight
 tvnodelight/tvnodelight
 # tvnode
 tvnode/tvnode
 tvnode/*.pid
-unsynckv
