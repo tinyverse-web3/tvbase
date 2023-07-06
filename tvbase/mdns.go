@@ -1,9 +1,13 @@
 package tvbase
 
 import (
+	"context"
+
+	"github.com/libp2p/go-libp2p/core/host"
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
+	"go.uber.org/fx"
 )
 
 const MdnsServiceName = "tinverseInfrasture/mdns/default"
@@ -26,22 +30,31 @@ func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	go m.registPeerInfo(p.ID)
 }
 
-func (m *TvBase) initMdns() error {
+func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {
 	if !m.nodeCfg.Network.EnableMdns {
-		return nil
+		return nil, nil
 	}
-	m.mdnsService = mdns.NewMdnsService(m.host, MdnsServiceName, m)
-	if err := m.mdnsService.Start(); err != nil {
-		tvLog.Logger.Errorf("DmsgService->enableMdns: mdns start error: %v", err)
-		return err
-	}
-	return nil
-}
+	mdnsService := mdns.NewMdnsService(ph, MdnsServiceName, m)
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			err := mdnsService.Start()
+			if err != nil {
+				tvLog.Logger.Errorf("TvBase->initMdns: mdns start error: %v", err)
+				return err
+			}
+			tvLog.Logger.Info("TvBase->initMdns: mdns start...")
+			return nil
+		},
+		OnStop: func(_ context.Context) error {
+			err := mdnsService.Close()
+			if err != nil {
+				tvLog.Logger.Errorf("TvBase->initMdns: mdns close error: %v", err)
+				return err
+			}
+			tvLog.Logger.Info("TvBase->initMdns: mdns is closed")
+			return nil
+		},
+	})
 
-func (m *TvBase) disableMdns() error {
-	if m.mdnsService != nil {
-		m.mdnsService.Close()
-		m.mdnsService = nil
-	}
-	return nil
+	return mdnsService, nil
 }

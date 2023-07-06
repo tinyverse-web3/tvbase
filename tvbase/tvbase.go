@@ -20,7 +20,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/pnet"
-	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
 	"github.com/libp2p/go-libp2p/p2p/net/swarm"
@@ -58,7 +57,6 @@ type TvBase struct {
 	connectedCbList             []tvPeer.ConnectCallback
 	notConnectedCbList          []tvPeer.ConnectCallback
 	nodeInfoService             *tvProtocol.NodeInfoService
-	mdnsService                 mdns.Service
 	pubRoutingDiscovery         *drouting.RoutingDiscovery
 	evtPeerConnectednessChanged libp2pEvent.Subscription
 	resourceManager             network.ResourceManager
@@ -146,15 +144,6 @@ func (m *TvBase) Start() error {
 		return nil
 	}
 
-	switch m.nodeCfg.Mode {
-	case config.LightMode:
-		err := m.initMdns()
-		if err != nil {
-			return err
-		}
-	case config.FullMode:
-	}
-
 	err = m.initRendezvous()
 	if err != nil {
 		return err
@@ -166,7 +155,9 @@ func (m *TvBase) Start() error {
 		return err
 	}
 
-	// m.netCheck()
+	if err := m.app.Start(m.ctx); err != nil {
+		return logAndUnwrapFxError(err)
+	}
 
 	return nil
 }
@@ -180,21 +171,14 @@ func (m *TvBase) Stop() {
 			}
 			m.DmsgService = nil
 		}
-		if err := m.disableMdns(); err != nil {
-			tvLog.Logger.Error(err)
-		}
+		// if err := m.disableMdns(); err != nil {
+		// 	tvLog.Logger.Error(err)
+		// }
 		if m.resourceManager != nil {
 			m.resourceManager.Close()
 			m.resourceManager = nil
 		}
 
-		if m.host != nil {
-			err := m.host.Close()
-			if err != nil {
-				tvLog.Logger.Error(err)
-			}
-			m.host = nil
-		}
 		if m.dht != nil {
 			m.dht.Close()
 			m.dht = nil
@@ -334,9 +318,6 @@ func (m *TvBase) initFx(opt fx.Option) error {
 		return logAndUnwrapFxError(m.app.Err())
 	}
 
-	if err := m.app.Start(m.ctx); err != nil {
-		return logAndUnwrapFxError(err)
-	}
 	return nil
 }
 
@@ -365,6 +346,11 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return nil, err
 	}
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			return m.host.Close()
+		},
+	})
 
 	tvLog.Logger.Debugf("hostID:%s,Addresses:", m.host.ID())
 	for _, addr := range m.host.Addrs() {
@@ -388,6 +374,7 @@ func (m *TvBase) init(rootPath string) error {
 	rand.Seed(time.Now().UnixNano())
 
 	var fxOpts []fx.Option
+
 	// disc
 	fxOpt, err := m.initDisc()
 	if err != nil {
@@ -399,6 +386,11 @@ func (m *TvBase) init(rootPath string) error {
 
 	// libp2p node
 	fxOpts = append(fxOpts, fx.Provide(m.initHost))
+
+	// mdns
+	fxOpts = append(fxOpts, fx.Invoke(m.initMdns))
+
+	// netcheck
 	fxOpts = append(fxOpts, fx.Invoke(m.netCheck))
 
 	// fx
@@ -474,10 +466,10 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 					case <-t.C:
 						if len(ph.Network().Peers()) == 0 {
 							tvLog.Logger.Warn("TvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
-							// err := m.bootstrap()
-							// if err != nil {
-							// 	tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
-							// }
+							err := m.bootstrap()
+							if err != nil {
+								tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
+							}
 						}
 					case <-done:
 						return
