@@ -38,7 +38,7 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	dkvsdb, err := createBadgerDB(dbPath)
 	if err != nil {
-		Logger.Error("NewDkvs CreateDataStore" + err.Error())
+		Logger.Errorf("NewDkvs CreateDataStore: %v", err)
 		return nil
 	}
 	idht := tvbase.GetDht()
@@ -46,7 +46,7 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	dhtDatastore := tvbase.GetDhtDatabase()
 	pms, err := getProtocolMessenger(baseServiceCfg, idht)
 	if err != nil {
-		Logger.Error("NewDkvs getProtocolMessenger" + err.Error())
+		Logger.Errorf("NewDkvs getProtocolMessenger： %v", err)
 		return nil
 	}
 	_dkvs := &Dkvs{
@@ -433,24 +433,17 @@ func (d *Dkvs) dhtPut(key string, value []byte) error {
 }
 
 func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
-	//先从本地Get如果没有就从网络中获取
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var val []byte
-	rec, err := d.getLocal(ctx, key)
-	if err == nil && rec != nil { //因为d.getLocal当没有记录时rec会返回空且err也会返回空，所以除了判断err是否为空还需要加上rec是否空的判断
-		val = rec.GetValue()
-	} else {
-		Logger.Warnf("dhtGetRecord--> the local node does not have this {key: %s}")
-		val, err = d.dhtGetRecordFromNet(ctx, key)
-	}
+	val, err := d.dhtGetRecordFromNet(ctx, key)
 	if err != nil {
-		Logger.Errorf("dhtGetRecord--> neither the local node nor the network has this {key: %s}", key)
+		Logger.Errorf("dhtGetRecord--> key does not exist on the network {key: %s, err: %v}", key, err)
 		return nil, err
 	}
 	e := new(pb.DkvsRecord)
 	if err := proto.Unmarshal(val, e); err != nil {
-		Logger.Error("dhtGetRecord--> found an invalid dkvs entry:", err)
+		Logger.Errorf("dhtGetRecord--> found an invalid dkvs entry: v%", err)
 		return nil, err
 	}
 	return e, nil
@@ -472,6 +465,9 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 			}
 		}),
 	}
+
+	d.baseService.GetAvailableServicePeerList(key) //增加Get的稳定性
+
 	err := retry.Do(
 		func() error {
 			var err error
@@ -481,6 +477,7 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 		retryStrategy...,
 	)
 	if err != nil {
+		Logger.Debugf("dhtGetRecordFromNet---> {key: %s, err: %v}", key, err)
 		return nil, err
 	}
 	return val, nil
