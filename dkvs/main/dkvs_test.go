@@ -39,8 +39,7 @@ func TestDkvs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var tvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs(tvNode) //.表示当前路径
+	kv := tvbase.GetDkvsService()
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)

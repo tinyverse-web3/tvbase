@@ -45,12 +45,12 @@ func bytesToHexString(input []byte) string {
 func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
-	tvbase, err := tvbase.NewTvbase()
+	tvbase, err := tvbase.NewTvbase() //如果不传入任何参数，默认数据存储路径是当前路径下
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
+	kv := tvbase.GetDkvsService() //.表示当前路径
 	// select {
 	// case <-time.After(30 * time.Second):
 	// 	fmt.Println("Timeout occurred")
@@ -70,7 +70,6 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
 	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0022")
-	//tKey2 := "/gun/yuiop"
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -79,7 +78,6 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	// case <-time.After(30 * time.Second):
 	// 	fmt.Println("Timeout occurred")
 	// }
-	// value, _, _, _, _, err := kv.Get(tKey2)
 	value, _, _, _, _, err := kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue1) {
 		t.Fatal(err)

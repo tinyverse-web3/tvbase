@@ -46,13 +46,13 @@ func bytesToHexString(input []byte) string {
 func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
-	tvbase, err := tvbase.NewTvbase()
+	tvbase, err := tvbase.NewTvbase() //如果不传入任何参数，默认数据存储路径是当前路径下
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	kv := dkvs.NewDkvs(tvbase) //.表示当前路径
-	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
+	kv := tvbase.GetDkvsService() //.表示当前路径
+	seed := "oIBBgepoPyhdJTYB"    //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)
 	if err != nil {
 		t.Fatal(err)
