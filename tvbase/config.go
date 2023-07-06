@@ -23,7 +23,6 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
-	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dkvs"
@@ -61,30 +60,6 @@ func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
 		tvLog.Logger.Infof("PSK detected, private identity: %x\n", fprint)
 	}
 	return privteKey, swarmPsk, nil
-}
-
-func (m *TvBase) createOpts(privateKey crypto.PrivKey, swamPsk pnet.PSK) ([]libp2p.Option, error) {
-	var err error
-	var opts []libp2p.Option
-	opts, err = m.createCommonOpts(privateKey, swamPsk)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->createOpts->createCommonOpts: error: %v", err)
-		return nil, err
-	}
-
-	m.dhtDatastore, err = db.CreateDataStore(m.nodeCfg.DHT.DatastorePath, m.nodeCfg.Mode)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
-		return nil, err
-	}
-
-	dkvsOpts, err := m.createRouteOpts()
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->createOpts->dth.createOpts: error: %v", err)
-		return nil, err
-	}
-	opts = append(opts, dkvsOpts...)
-	return opts, nil
 }
 
 func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
@@ -277,15 +252,6 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			libp2p.DisableMetrics(),
 		)
 	case tvConfig.FullMode:
-		// resource manager
-		rmgr, err := m.initResourceManager()
-		if err != nil {
-			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
-			return nil, err
-		}
-		opts = append(opts, libp2p.ResourceManager(rmgr))
-		m.resourceManager = rmgr
-
 		// BandwidthCounter
 		if !m.nodeCfg.Swarm.DisableBandwidthMetrics {
 			reporter := metrics.NewBandwidthCounter()
@@ -310,8 +276,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	return opts, nil
 }
 
-func (m *TvBase) createRouteOpts() ([]libp2p.Option, error) {
-	var opts []libp2p.Option
+func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 	var err error
 	opt := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 		var modeCfg kaddht.Option
@@ -325,7 +290,16 @@ func (m *TvBase) createRouteOpts() ([]libp2p.Option, error) {
 			h,
 			kaddht.ProtocolPrefix(protocol.ID(m.nodeCfg.DHT.ProtocolPrefix)), // kaddht.ProtocolPrefix("/test"),
 			kaddht.Validator(dkvs.Validator{}),                               // kaddht.NamespacedValidator("tinyverseNetwork", blankValidator{}),
-			kaddht.EnableOptimisticProvide(),                                 // enable optimistic provide
+			// EnableOptimisticProvide enables an optimization that skips the last hops of the provide process.
+			// This works by using the network size estimator (which uses the keyspace density of queries)
+			// to optimistically send ADD_PROVIDER requests when we most likely have found the last hop.
+			// It will also run some ADD_PROVIDER requests asynchronously in the background after returning,
+			// this allows to optimistically return earlier if some threshold number of RPCs have succeeded.
+			// The number of background/in-flight queries can be configured with the OptimisticProvideJobsPoolSize
+			// option.
+			//
+			// EXPERIMENTAL: This is an experimental option and might be removed in the future. Use at your own risk.
+			kaddht.EnableOptimisticProvide(), // enable optimistic provide
 			modeCfg,
 			kaddht.Datastore(m.dhtDatastore),
 		)
@@ -337,7 +311,5 @@ func (m *TvBase) createRouteOpts() ([]libp2p.Option, error) {
 
 		return m.dht, nil
 	})
-
-	opts = append(opts, opt)
-	return opts, nil
+	return opt, nil
 }

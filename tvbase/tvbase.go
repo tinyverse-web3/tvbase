@@ -24,7 +24,7 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	"github.com/tinyverse-web3/tvbase/common/config"
+	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
@@ -49,7 +49,7 @@ type TvBase struct {
 	host                 host.Host
 	dht                  *kaddht.IpfsDHT
 	dhtDatastore         db.Datastore
-	nodeCfg              *config.NodeConfig
+	nodeCfg              *tvConfig.NodeConfig
 	lightPeerListMutex   sync.Mutex
 	servicePeerListMutex sync.Mutex
 	servicePeerList      tvPeer.PeerInfoList
@@ -58,9 +58,7 @@ type TvBase struct {
 	notConnectedCbList   []tvPeer.ConnectCallback
 	nodeInfoService      *tvProtocol.NodeInfoService
 	pubRoutingDiscovery  *drouting.RoutingDiscovery
-	resourceManager      network.ResourceManager
-	relayPeerSignal      chan peer.AddrInfo
-	app                  *fx.App
+	launch               *fx.App
 }
 
 // new tvbase
@@ -115,8 +113,8 @@ func NewTvbase(options ...any) (*TvBase, error) {
 
 func (m *TvBase) Start() error {
 	switch m.nodeCfg.Mode {
-	case config.LightMode:
-	case config.FullMode:
+	case tvConfig.LightMode:
+	case tvConfig.FullMode:
 		m.initMetric()
 	}
 
@@ -152,7 +150,7 @@ func (m *TvBase) Start() error {
 		return err
 	}
 
-	if err := m.app.Start(m.ctx); err != nil {
+	if err := m.launch.Start(m.ctx); err != nil {
 		return logAndUnwrapFxError(err)
 	}
 
@@ -160,29 +158,11 @@ func (m *TvBase) Start() error {
 }
 
 func (m *TvBase) Stop() {
-	if m.DmsgService != nil {
-		err := m.DmsgService.Stop()
-		if err != nil {
-			tvLog.Logger.Error(err)
-		}
-		m.DmsgService = nil
-	}
-
-	if m.resourceManager != nil {
-		m.resourceManager.Close()
-		m.resourceManager = nil
-	}
-
-	if m.dht != nil {
-		m.dht.Close()
-		m.dht = nil
-	}
-	if m.app != nil {
-		stopErr := m.app.Stop(context.Background())
+	if m.launch != nil {
+		stopErr := m.launch.Stop(context.Background())
 		if stopErr != nil {
 			tvLog.Logger.Errorf("TvBase->Stop: failure on stop: %v", stopErr)
 		}
-		m.app = nil
 	}
 }
 
@@ -237,8 +217,8 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 
 	var intrOpt fx.Option
 	switch m.nodeCfg.Mode {
-	case config.LightMode:
-	case config.FullMode:
+	case tvConfig.LightMode:
+	case tvConfig.FullMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -305,22 +285,58 @@ func (m *TvBase) initFx(opt fx.Option) error {
 		fx.NopLogger,
 		opt,
 	}
-	m.app = fx.New(fxOpts...)
+	m.launch = fx.New(fxOpts...)
 
-	if m.app.Err() != nil {
-		return logAndUnwrapFxError(m.app.Err())
+	if m.launch.Err() != nil {
+		return logAndUnwrapFxError(m.launch.Err())
 	}
 
 	return nil
 }
 
 func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pnet.PSK) (host.Host, error) {
-	var nodeOpts []libp2p.Option
-
-	nodeOpts, err := m.createOpts(privateKey, swamPsk)
+	var err error
+	m.dhtDatastore, err = db.CreateDataStore(m.nodeCfg.DHT.DatastorePath, m.nodeCfg.Mode)
 	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
 		return nil, err
+	}
+
+	// common
+	var nodeOpts []libp2p.Option
+	nodeOpts, err = m.createCommonOpts(privateKey, swamPsk)
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->initHost->createCommonOpts: error: %v", err)
+		return nil, err
+	}
+
+	// route
+	routeOpt, err := m.createRouteOpt()
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->createOpts->createRouteOpt: error: %v", err)
+		return nil, err
+	}
+	nodeOpts = append(nodeOpts, routeOpt)
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			return m.dht.Close()
+		},
+	})
+
+	// resource manager
+	switch m.nodeCfg.Mode {
+	case tvConfig.FullMode:
+		rmgr, err := m.initResourceManager()
+		if err != nil {
+			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
+			return nil, err
+		}
+		nodeOpts = append(nodeOpts, libp2p.ResourceManager(rmgr))
+		lc.Append(fx.Hook{
+			OnStop: func(ctx context.Context) error {
+				return rmgr.Close()
+			},
+		})
 	}
 
 	pstore, err := pstoremem.NewPeerstore()
@@ -366,9 +382,8 @@ func (m *TvBase) init(rootPath string) error {
 
 	rand.Seed(time.Now().UnixNano())
 
+	// init fx launch
 	var fxOpts []fx.Option
-
-	// disc
 	fxOpt, err := m.initDisc()
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
@@ -376,17 +391,10 @@ func (m *TvBase) init(rootPath string) error {
 	}
 	fxOpts = append(fxOpts, fxOpt)
 	fxOpts = append(fxOpts, fx.Provide(m.initKey))
-
-	// libp2p node
 	fxOpts = append(fxOpts, fx.Provide(m.initHost))
-
-	// mdns
 	fxOpts = append(fxOpts, fx.Invoke(m.initMdns))
-
-	// netcheck
 	fxOpts = append(fxOpts, fx.Invoke(m.netCheck))
-
-	// fx
+	fxOpts = append(fxOpts, fx.Invoke(m.initDmsgService))
 	err = m.initFx(fx.Options(fxOpts...))
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
@@ -395,18 +403,26 @@ func (m *TvBase) init(rootPath string) error {
 
 	// dkvs service
 	m.DkvsService = dkvs.NewDkvs(m)
+	return nil
+}
 
-	// dmsg service
+func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
+	var err error
 	switch m.nodeCfg.Mode {
-	case config.LightMode:
+	case tvConfig.LightMode:
 		m.DmsgService, err = dmsgClient.CreateService(m)
-	case config.FullMode:
+	case tvConfig.FullMode:
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
-		return err
+		return nil
 	}
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			return m.DmsgService.Stop()
+		},
+	})
 	return nil
 }
 

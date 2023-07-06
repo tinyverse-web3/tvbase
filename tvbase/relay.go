@@ -37,9 +37,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 		}
 
 		// auto relay -- dynamic find relays
-		if m.relayPeerSignal == nil {
-			m.relayPeerSignal = make(chan peer.AddrInfo)
-		}
+		relayPeerSignal := make(chan peer.AddrInfo)
 
 		opt := libp2p.EnableAutoRelayWithPeerSource(
 			func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
@@ -49,7 +47,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 					defer close(r)
 					for ; numPeers != 0; numPeers-- {
 						select {
-						case v, ok := <-m.relayPeerSignal:
+						case v, ok := <-relayPeerSignal:
 							if !ok {
 								return
 							}
@@ -88,7 +86,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 				select {
 				case <-t.C:
 				case <-m.ctx.Done():
-					m.cleanRelayPeerSignal()
+					close(relayPeerSignal)
 					return
 				}
 
@@ -98,9 +96,9 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 						continue
 					}
 					select {
-					case m.relayPeerSignal <- trustedPeer:
+					case relayPeerSignal <- trustedPeer:
 					case <-m.ctx.Done():
-						m.cleanRelayPeerSignal()
+						close(relayPeerSignal)
 						return
 					}
 				}
@@ -125,9 +123,9 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 					select {
 					case <-t.C:
 						continue
-					case m.relayPeerSignal <- dhtPeer:
+					case relayPeerSignal <- dhtPeer:
 					case <-m.ctx.Done():
-						m.cleanRelayPeerSignal()
+						close(relayPeerSignal)
 						return
 					}
 				}
@@ -159,11 +157,4 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 	}
 
 	return opts, nil
-}
-
-func (m *TvBase) cleanRelayPeerSignal() {
-	if m.relayPeerSignal != nil {
-		close(m.relayPeerSignal)
-		m.relayPeerSignal = nil
-	}
 }
