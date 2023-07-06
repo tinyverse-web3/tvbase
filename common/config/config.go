@@ -331,6 +331,7 @@ func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
 	if err != nil {
 		return err
 	}
+	nodeCfg.RootPath = rootPath
 	if !filepath.IsAbs(nodeCfg.DHT.DatastorePath) {
 		nodeCfg.DHT.DatastorePath = rootPath + nodeCfg.DHT.DatastorePath
 	}

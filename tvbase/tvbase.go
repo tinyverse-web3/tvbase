@@ -14,12 +14,15 @@ import (
 	"github.com/ipfs/go-metrics-interface"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	libp2pEvent "github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/pnet"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
+	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
 	"github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
@@ -163,7 +166,7 @@ func (m *TvBase) Start() error {
 		return err
 	}
 
-	m.netCheck()
+	// m.netCheck()
 
 	return nil
 }
@@ -199,7 +202,7 @@ func (m *TvBase) Stop() {
 		if m.app != nil {
 			stopErr := m.app.Stop(context.Background())
 			if stopErr != nil {
-				tvLog.Logger.Errorf("Infrasture->Stop: failure on stop: %v", stopErr)
+				tvLog.Logger.Errorf("TvBase->Stop: failure on stop: %v", stopErr)
 			}
 			m.app = nil
 		}
@@ -213,7 +216,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	ctx := logging.ContextWithLoggable(m.ctx, newUUID("session"))
 	shutdownTracerProvider, err := NewTracerProvider(ctx)
 	if err != nil {
-		tvLog.Logger.Errorf("Infrasture->initDisc: NewTracerProvider error: %v", err)
+		tvLog.Logger.Errorf("TvBase->initDisc: NewTracerProvider error: %v", err)
 		return nil, err
 	}
 
@@ -225,7 +228,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 			OnStop: func(ctx context.Context) error {
 				err := shutdownTracerProvider.Shutdown(ctx)
 				if err != nil {
-					tvLog.Logger.Errorf("Infrasture->initDisc->OnStop: Shutdown error: %v", err)
+					tvLog.Logger.Errorf("TvBase->initDisc->OnStop: Shutdown error: %v", err)
 				}
 				return nil
 			},
@@ -239,7 +242,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 		var profileOpt fx.Option
 		stopProfilingFunc, err := profileIfEnabled()
 		if err != nil {
-			tvLog.Logger.Errorf("Infrasture->initDisc: %v", err)
+			tvLog.Logger.Errorf("TvBase->initDisc: %v", err)
 			return nil, err
 		}
 
@@ -337,65 +340,78 @@ func (m *TvBase) initFx(opt fx.Option) error {
 	return nil
 }
 
-func (m *TvBase) init(rootPath string) error {
-	var err error
-	fullPath, err := tvutil.GetRootPath(rootPath)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
-	err = m.initConfig(fullPath)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
-	privateKey, swamPsk, err := m.initKey(fullPath)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
-	m.nodeCfg.RootPath = fullPath
-
-	rand.Seed(time.Now().UnixNano())
-
-	// disc
-	fxOpt, err := m.initDisc()
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
-	// fx
-	err = m.initFx(fxOpt)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
-	// libp2p node
+func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pnet.PSK) (host.Host, error) {
 	var nodeOpts []libp2p.Option
-	nodeOpts, err = m.createOpts(m.ctx, privateKey, swamPsk)
+
+	nodeOpts, err := m.createOpts(privateKey, swamPsk)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
+		return nil, err
 	}
+
+	pstore, err := pstoremem.NewPeerstore()
+	if err != nil {
+		return nil, err
+	}
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			return pstore.Close()
+		},
+	})
+	nodeOpts = append(nodeOpts, libp2p.Peerstore(pstore))
 
 	m.host, err = libp2p.New(nodeOpts...)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
+		return nil, err
 	}
 
 	tvLog.Logger.Debugf("hostID:%s,Addresses:", m.host.ID())
 	for _, addr := range m.host.Addrs() {
 		tvLog.Logger.Debugf("\t%s/p2p/%s", addr, m.host.ID())
 	}
+	return m.host, nil
+}
 
+func (m *TvBase) init(rootPath string) error {
+	fullPath, err := tvutil.GetRootPath(rootPath)
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
+		return err
+	}
+	err = m.initConfig(fullPath)
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
+		return err
+	}
+
+	rand.Seed(time.Now().UnixNano())
+
+	var fxOpts []fx.Option
+	// disc
+	fxOpt, err := m.initDisc()
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
+		return err
+	}
+	fxOpts = append(fxOpts, fxOpt)
+	fxOpts = append(fxOpts, fx.Provide(m.initKey))
+
+	// libp2p node
+	fxOpts = append(fxOpts, fx.Provide(m.initHost))
+	fxOpts = append(fxOpts, fx.Invoke(m.netCheck))
+
+	// fx
+	err = m.initFx(fx.Options(fxOpts...))
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
+		return err
+	}
+
+	// dkvs service
 	m.DkvsService = dkvs.NewDkvs(m)
 
+	// dmsg service
 	switch m.nodeCfg.Mode {
 	case config.LightMode:
 		m.DmsgService, err = dmsgClient.CreateService(m)
@@ -403,7 +419,7 @@ func (m *TvBase) init(rootPath string) error {
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {
-		tvLog.Logger.Errorf("infrasture->init: error: %v", err)
+		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
 		return err
 	}
 	return nil
@@ -411,7 +427,7 @@ func (m *TvBase) init(rootPath string) error {
 
 func (m *TvBase) bootstrap() error {
 	// Bootstrap the persistence DHT. In the default configuration, this spawns a Background, thread that will refresh the peer table every five minutes.
-	tvLog.Logger.Info("Bootstrapping the persistence DHT")
+	tvLog.Logger.Info("tvBase->bootstrap: Bootstrapping the persistence DHT")
 	if err := m.dht.Bootstrap(m.ctx); err != nil {
 		return err
 	}
@@ -420,7 +436,7 @@ func (m *TvBase) bootstrap() error {
 	for _, peerInfo := range m.nodeCfg.Bootstrap.BootstrapPeers {
 		maddr, err := ma.NewMultiaddr(peerInfo)
 		if err != nil {
-			tvLog.Logger.Errorf("infrasture->bootstrap: fail to parse bootstrap peer:%v, error:%v", peerInfo, err)
+			tvLog.Logger.Errorf("TvBase->bootstrap: fail to parse bootstrap peer:%v, error:%v", peerInfo, err)
 			return err
 		}
 		addrInfo, _ := peer.AddrInfoFromP2pAddr(maddr)
@@ -433,10 +449,10 @@ func (m *TvBase) bootstrap() error {
 			defer wg.Done()
 			err := m.host.Connect(m.ctx, *addrInfo)
 			if err != nil {
-				tvLog.Logger.Warnf("Infrasture->bootstrap: fail connect boottrap addrInfo:%v, error:%v", addrInfo, err)
+				tvLog.Logger.Warnf("TvBase->bootstrap: fail connect boottrap addrInfo:%v, error:%v", addrInfo, err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
-				tvLog.Logger.Infof("Infrasture->bootstrap: succ connect bootstrap node:%v", addrInfo)
+				tvLog.Logger.Infof("TvBase->bootstrap: succ connect bootstrap node:%v", addrInfo)
 			}
 		}()
 	}
@@ -444,27 +460,38 @@ func (m *TvBase) bootstrap() error {
 	return nil
 }
 
-func (m *TvBase) netCheck() {
-	go func() {
-		t := time.NewTicker(30 * time.Second)
-		defer t.Stop()
+func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
+	done := make(chan struct{})
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			go func() {
+				t := time.NewTicker(30 * time.Second)
+				defer t.Stop()
 
-		<-t.C
-		for {
-			select {
-			case <-t.C:
-				if len(m.host.Network().Peers()) == 0 {
-					tvLog.Logger.Warn("Infrasture->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
-					err := m.bootstrap()
-					if err != nil {
-						tvLog.Logger.Warnf("tinverseInfrasture-netCheck: fail to connect bootstrap peer node, error: %v", err)
+				<-t.C // swallow one tick
+				for {
+					select {
+					case <-t.C:
+						if len(ph.Network().Peers()) == 0 {
+							tvLog.Logger.Warn("TvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
+							// err := m.bootstrap()
+							// if err != nil {
+							// 	tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
+							// }
+						}
+					case <-done:
+						return
 					}
 				}
-			case <-m.ctx.Done():
-				return
-			}
-		}
-	}()
+			}()
+			return nil
+		},
+		OnStop: func(_ context.Context) error {
+			close(done)
+			return nil
+		},
+	})
+	return nil
 }
 
 func (m *TvBase) GetClientDmsgService() *dmsgClient.DmsgService {

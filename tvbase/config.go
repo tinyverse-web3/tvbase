@@ -1,7 +1,6 @@
 package tvbase
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -29,6 +28,7 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	mamask "github.com/whyrusleeping/multiaddr-filter"
+	"go.uber.org/fx"
 )
 
 func (m *TvBase) initConfig(rootPath string) error {
@@ -42,19 +42,18 @@ func (m *TvBase) initConfig(rootPath string) error {
 	return nil
 }
 
-func (m *TvBase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
-	var err error
-	identityPath := rootPath + identity.IdentityFileName
-	_, err = os.Stat(identityPath)
+func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
+	identityPath := m.nodeCfg.RootPath + identity.IdentityFileName
+	_, err := os.Stat(identityPath)
 	if os.IsNotExist(err) {
-		identity.GenIdenityFile(rootPath)
+		identity.GenIdenityFile(m.nodeCfg.RootPath)
 	}
 	privteKey, err := identity.LoadIdentity(identityPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	swarmPsk, fprint, err := identity.LoadSwarmKey(rootPath + identity.SwarmPskFileName)
+	swarmPsk, fprint, err := identity.LoadSwarmKey(m.nodeCfg.RootPath + identity.SwarmPskFileName)
 	if err != nil {
 		tvLog.Logger.Infof("no private swarm key")
 	}
@@ -64,7 +63,7 @@ func (m *TvBase) initKey(rootPath string) (crypto.PrivKey, pnet.PSK, error) {
 	return privteKey, swarmPsk, nil
 }
 
-func (m *TvBase) createOpts(ctx context.Context, privateKey crypto.PrivKey, swamPsk pnet.PSK) ([]libp2p.Option, error) {
+func (m *TvBase) createOpts(privateKey crypto.PrivKey, swamPsk pnet.PSK) ([]libp2p.Option, error) {
 	var err error
 	var opts []libp2p.Option
 	opts, err = m.createCommonOpts(privateKey, swamPsk)
