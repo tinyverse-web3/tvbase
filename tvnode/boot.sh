@@ -17,7 +17,7 @@ fi
 # ./tvnode
 echo "Start tvnode..."
 
-pid_file="tvnode.pid"
+pid_file="~/.tvnode/tvnode.pid"
 isKillOldPid=0
 if [ -f "$pid_file" ]; then
     pid=$(cat "$pid_file")
@@ -48,7 +48,7 @@ if [ "$isKillOldPid" -eq 0 ]; then
 fi
 
 
-log_dir="."
+log_dir="~/.tvnode/"
 log_prefix="tvnode"
 log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S")_$log_prefix.log"
 nohup ./tvnode > "$log_filename" 2>&1 &
