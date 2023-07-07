@@ -110,7 +110,17 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 	case pb.DkvsRecord_EOL:
 		if newRecord.ValueType == _ValueType_Transfer {
 			// 处于转移状态的key，需要检查是否有权限接收该key
-			if !VerifyTransferCert(key, oldRecord.Value, newRecord.PubKey) {
+			var cert *pb.Cert = nil
+			if newRecord.Data != nil {
+				var c pb.Cert
+				err := c.Unmarshal(newRecord.Data)
+				if err != nil {
+					Logger.Error(err)
+					return -1, err
+				}
+				cert = &c
+			}
+			if !VerifyCertTransferConfirm(key, oldRecord.Value, cert, oldRecord.PubKey, newRecord.PubKey) {
 				Logger.Error(ErrSignature)
 				return -1, ErrPublicKeyMismatch
 			}

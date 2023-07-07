@@ -13,8 +13,8 @@ const MaxDKVPublicSNLength int = 8
 
 // maintained by DAO
 const KEY_NS_GUN = "gun"
-const KEY_NS_TX = "tx"
-const KEY_NS_WALLET = "wallet"
+const KEY_NS_TX = "tx"         // miner
+const KEY_NS_WALLET = "wallet" // miner
 const KEY_NS_DAUTH = "dauth"
 const KEY_NS_DMSG = "dmsg"
 
@@ -33,7 +33,7 @@ func IsPublicServiceName(sn string) bool {
 }
 
 func IsPublicServiceKey(pubkey []byte) bool {
-	v := bytesToHexString(pubkey)
+	v := BytesToHexString(pubkey)
 	for _, val := range dkvsServiceNameMap {
 		if val == v {
 			return true
@@ -43,7 +43,7 @@ func IsPublicServiceKey(pubkey []byte) bool {
 }
 
 func IsPublicServiceNameKey(sn string, pubkey []byte) bool {
-	v := bytesToHexString(pubkey)
+	v := BytesToHexString(pubkey)
 	value, ok := dkvsServiceNameMap[sn]
 	if ok {
 		if value == v {
@@ -56,7 +56,7 @@ func IsPublicServiceNameKey(sn string, pubkey []byte) bool {
 func IsGunService(pubkey []byte) bool {
 	key, ok := dkvsServiceNameMap[KEY_NS_GUN]
 	if ok {
-		if key == bytesToHexString(pubkey) {
+		if key == BytesToHexString(pubkey) {
 			return true
 		}
 	}
@@ -84,10 +84,10 @@ func GetGunKey(name string) string {
 
 func GetGUNPubKey() []byte {
 	pubkey := dkvsServiceNameMap[KEY_NS_GUN]
-	return hexStringToBytes(pubkey)
+	return HexStringToBytes(pubkey)
 }
 
-func bytesToHexString(input []byte) string {
+func BytesToHexString(input []byte) string {
 	hexString := "0x"
 	for _, b := range input {
 		hexString += fmt.Sprintf("%02x", b)
@@ -95,7 +95,7 @@ func bytesToHexString(input []byte) string {
 	return hexString
 }
 
-func hexStringToBytes(input string) []byte {
+func HexStringToBytes(input string) []byte {
 
 	var byteArray []byte
 	var err error
@@ -115,7 +115,7 @@ func hexStringToBytes(input string) []byte {
 func FindPublicServiceCert(cv []*pb.Cert) *pb.Cert {
 
 	for _, val := range dkvsServiceNameMap {
-		cert := SearchCertByPubkey(cv, hexStringToBytes(val))
+		cert := SearchCertByPubkey(cv, HexStringToBytes(val))
 		if cert != nil {
 			return cert
 		}
@@ -127,7 +127,7 @@ func FindPublicServiceCert(cv []*pb.Cert) *pb.Cert {
 func FindPublicServiceCertWithUserPubkey(cv []*pb.Cert, userPubkey []byte) *pb.Cert {
 
 	for _, val := range dkvsServiceNameMap {
-		cert := SearchCertByPubkey(cv, hexStringToBytes(val))
+		cert := SearchCertByPubkey(cv, HexStringToBytes(val))
 		if cert != nil && VerifyCert(cert) && bytes.Equal(cert.UserPubkey, userPubkey) {
 			return cert
 		}
@@ -143,7 +143,7 @@ func FindPublicServiceCertByServiceName(cv []*pb.Cert, name string) *pb.Cert {
 		return nil
 	}
 
-	cert := SearchCertByPubkey(cv, hexStringToBytes(pubkey))
+	cert := SearchCertByPubkey(cv, HexStringToBytes(pubkey))
 	if cert != nil && VerifyCert(cert) {
 		return cert
 	}

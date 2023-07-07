@@ -25,7 +25,7 @@ type DkvsService interface {
 	GetRecord(key string) (*dkvspb.DkvsRecord, error)
 	FastGetRecord(key string) (*dkvspb.DkvsRecord, error)
 	Has(key string) bool
-	TransferKey(key string, value1 []byte, pubkey1 []byte, sig1 []byte, value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte) error
+	TransferKey(key string, value1 []byte, pubkey1 []byte, sig1 []byte, value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *dkvspb.Cert) error
 	IsPublicService(sn string, pubkey []byte) bool
 	IsChildPubkey(child []byte, parent []byte) bool
 	IsApprovedService(sn string) bool
