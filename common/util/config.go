@@ -102,7 +102,7 @@ func LoadNodeConfig(options ...any) (*tvConfig.NodeConfig, error) {
 		fmt.Println("InitConfig: err:" + err.Error())
 		return nil, err
 	}
-	return nil, nil
+	return &config, nil
 }
 
 func SetLogModule(moduleLevels map[string]string) error {
