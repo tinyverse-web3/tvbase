@@ -15,16 +15,14 @@ import (
 )
 
 func init() {
-	// log.SetAllLoggers(log.LevelDebug) //设置所有日志为Debug
-	// dkvs.InitAPP(dkvs.LogDebug)
-	// dkvs.InitModule(dkvs.DKVS_NAMESPACE, dkvs.LogDebug)
-
-	err := tvUtil.InitConfig()
+	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
+		fmt.Printf("init error: %v", err)
 		return
 	}
-	err = tvUtil.InitLog()
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
+		fmt.Printf("init error: %v", err)
 		return
 	}
 }

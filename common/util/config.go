@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	"github.com/tinyverse-web3/tvbase/common/log"
@@ -35,7 +36,10 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 }
 
 func GetRootPath(path string) (string, error) {
-	fullPath := path
+	fullPath, err := homedir.Expand(path)
+	if err != nil {
+		return fullPath, err
+	}
 	if !filepath.IsAbs(fullPath) {
 		defaultRootPath, err := os.Getwd()
 		if err != nil {
@@ -49,44 +53,49 @@ func GetRootPath(path string) (string, error) {
 	return fullPath, nil
 }
 
-func InitConfig(options ...any) error {
+func LoadNodeConfig(options ...any) (*tvConfig.NodeConfig, error) {
 	rootPath := ""
 	if len(options) > 0 {
 		ok := false
 		rootPath, ok = options[0].(string)
 		if !ok {
-			fmt.Println("InitConfig: options[0](rootPath) is not string")
-			return fmt.Errorf("InitConfig: options[0](rootPath) is not string")
+			fmt.Println("LoadNodeConfig: options[0](rootPath) is not string")
+			return nil, fmt.Errorf("LoadNodeConfig: options[0](rootPath) is not string")
 		}
 	}
 	config := tvConfig.NewDefaultNodeConfig()
 
 	fullPath, err := GetRootPath(rootPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = tvConfig.InitConfig(fullPath, &config)
 	if err != nil {
 		fmt.Println("InitConfig: " + err.Error())
-		return err
+		return nil, err
+	}
+	return nil, nil
+}
+
+func SetLogModule(moduleLevels map[string]string) error {
+	// ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
+	for module, level := range moduleLevels {
+		ipfsLog.SetLogLevel(module, level)
 	}
 	return nil
 }
 
-func InitLog(options ...any) error {
-	config := tvConfig.NewDefaultNodeConfig()
-	if len(options) > 0 {
-		ok := false
-		config, ok = options[0].(tvConfig.NodeConfig)
-		if !ok {
-			fmt.Println("InitLog: options[0](rootPath) is not string")
-			return fmt.Errorf("InitLog: options[0](rootPath) is not string")
-		}
+func SetLogLevel(lv string, moreModuleList ...string) {
+	interalModuleList := []string{
+		"tvbase",
+		"dkvs",
+		"dmsg",
+		"customProtocol",
 	}
-
-	// ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
-	for module, level := range config.Log.ModuleLevels {
-		ipfsLog.SetLogLevel(module, level)
+	for _, module := range interalModuleList {
+		ipfsLog.SetLogLevel(module, lv)
 	}
-	return nil
+	for _, module := range moreModuleList {
+		ipfsLog.SetLogLevel(module, lv)
+	}
 }

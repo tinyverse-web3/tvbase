@@ -18,16 +18,14 @@ import (
 )
 
 func init() {
-	// log.SetAllLoggers(log.LevelDebug) //设置所有日志为Debug
-	// dkvs.InitAPP(dkvs.LogDebug)
-	// dkvs.InitModule(dkvs.DKVS_NAMESPACE, dkvs.LogDebug)
-
-	err := tvUtil.InitConfig()
+	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
+		fmt.Printf("init error: %v", err)
 		return
 	}
-	err = tvUtil.InitLog()
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
+		fmt.Printf("init error: %v", err)
 		return
 	}
 }
@@ -339,15 +337,15 @@ func TestGun(t *testing.T) {
 
 }
 
-func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte,[]byte, error) {
+func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err != nil {
-		return nil,nil, (err)
+		return nil, nil, (err)
 	}
 
 	rv := dkvs.DecodeCertsRecordValue(value1)
 	if rv == nil {
-		return nil,nil, errors.New("DecodeCertsRecordValue fail")
+		return nil, nil, errors.New("DecodeCertsRecordValue fail")
 	}
 
 	rv.UserData, _ = cert.Marshal()

@@ -2,13 +2,13 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
-	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/config"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
@@ -52,7 +52,6 @@ type DiscConfig struct {
 }
 
 type LogConfig struct {
-	AllLogLevel  ipfsLog.LogLevel
 	ModuleLevels map[string]string
 }
 
@@ -241,7 +240,6 @@ func NewDefaultNodeConfig() NodeConfig {
 			},
 		},
 		Log: LogConfig{
-			AllLogLevel: ipfsLog.LevelError,
 			ModuleLevels: map[string]string{
 				"autorelay":      "debug",
 				"tvbase":         "debug",
@@ -319,11 +317,20 @@ func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
 	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
 		rootPath = rootPath + string(filepath.Separator)
 	}
+	_, err := os.Stat(rootPath)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(rootPath, 0755)
+		if err != nil {
+			fmt.Println("InitConfig: Failed to create directory:", err)
+			return err
+		}
+	}
 	nodeCfgPath := rootPath + NodeConfigFileName
-	_, err := os.Stat(nodeCfgPath)
+	_, err = os.Stat(nodeCfgPath)
 	if os.IsNotExist(err) {
 		file, _ := json.MarshalIndent(nodeCfg, "", " ")
 		if err := os.WriteFile(rootPath+NodeConfigFileName, file, 0644); err != nil {
+			fmt.Println("InitConfig: Failed to WriteFile:", err)
 			return err
 		}
 	}

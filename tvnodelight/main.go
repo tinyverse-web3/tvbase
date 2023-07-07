@@ -98,12 +98,12 @@ func main() {
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, destSeed, rootPath := parseCmdParams()
 
-	err := tvUtil.InitConfig(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
 		tvcLog.Errorf("InitConfig error: %v", err)
 		return
 	}
-	err = tvUtil.InitLog()
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
 		tvcLog.Errorf("InitLog error: %v", err)
 		return

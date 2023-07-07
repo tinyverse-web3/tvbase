@@ -25,10 +25,16 @@ func TestMsgService(t *testing.T) {
 	// t.Skip()
 	rootPath := parseServiceCmdParams()
 
-	err := tvUtil.InitLog(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		t.Errorf("InitLog error: %v", err)
-		tvLog.Logger.Errorf("InitLog error: %v", err)
+		tvLog.Logger.Errorf("TestMsgService error: %v", err)
+		t.Errorf("TestMsgService error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvLog.Logger.Errorf("TestMsgService error: %v", err)
+		t.Errorf("TestMsgService error: %v", err)
 		return
 	}
 

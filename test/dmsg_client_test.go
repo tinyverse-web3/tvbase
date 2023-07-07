@@ -73,9 +73,14 @@ func TestPubsubMsg(t *testing.T) {
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, destSeed, rootPath := parseClientCmdParams()
 
-	err := tvUtil.InitLog(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		tvLog.Logger.Errorf("InitLog error: %v", err)
+		tvLog.Logger.Errorf("TestPubsubMsg error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvLog.Logger.Errorf("TestPubsubMsg error: %v", err)
 		return
 	}
 
@@ -228,9 +233,15 @@ func TestIpfsCmd(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := tvUtil.InitLog("")
+	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
-		tvLog.Logger.Fatalf("InitLog error: %v", err)
+		tvLog.Logger.Errorf("TestIpfsCmd error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvLog.Logger.Errorf("TestIpfsCmd error: %v", err)
+		return
 	}
 
 	err = tvIpfs.CheckIpfsCmd()
@@ -257,9 +268,15 @@ func TestPullCID(t *testing.T) {
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, _, rootPath := parseClientCmdParams()
 
-	err := tvUtil.InitLog(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
-		tvLog.Logger.Errorf("InitLog error: %v", err)
+		tvLog.Logger.Errorf("TestPullCID error: %v", err)
+		t.Errorf("InitLog error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvLog.Logger.Errorf("TestPullCID error: %v", err)
 		t.Errorf("InitLog error: %v", err)
 		return
 	}
@@ -309,10 +326,16 @@ func TesTinverseInfrasture(t *testing.T) {
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, _, rootPath := parseClientCmdParams()
 
-	err := tvUtil.InitLog(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		tvLog.Logger.Errorf("InitLog error: %v", err)
-		t.Errorf("InitLog error: %v", err)
+		tvLog.Logger.Errorf("TesTinverseInfrasture error: %v", err)
+		t.Errorf("TesTinverseInfrasture error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvLog.Logger.Errorf("TesTinverseInfrasture error: %v", err)
+		t.Errorf("TesTinverseInfrasture error: %v", err)
 		return
 	}
 

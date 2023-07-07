@@ -104,13 +104,13 @@ func parseCmdParams() string {
 func main() {
 	rootPath := parseCmdParams()
 
-	err := tvUtil.InitConfig(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		tvsLog.Errorf("InitConfig error: %v", err)
+		tvsLog.Errorf("tvnode->main: %v", err)
 		return
 	}
 
-	err = tvUtil.InitLog()
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: init log: %v", err)
 	}
