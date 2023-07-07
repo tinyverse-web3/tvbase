@@ -10,7 +10,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
-	"github.com/tinyverse-web3/tvbase/common/log"
 )
 
 func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
@@ -20,11 +19,13 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 	}
 	fullPath, err := homedir.Expand(rootPath)
 	if err != nil {
+		fmt.Println("GenConfig2IdentityFile->homedir.Expand: " + err.Error())
 		return err
 	}
 	if !filepath.IsAbs(fullPath) {
 		defaultRootPath, err := os.Getwd()
 		if err != nil {
+			fmt.Println("GenConfig2IdentityFile->Getwd: " + err.Error())
 			return err
 		}
 		fullPath = filepath.Join(defaultRootPath, fullPath)
@@ -37,7 +38,7 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 	if os.IsNotExist(err) {
 		err := os.MkdirAll(fullPath, 0755)
 		if err != nil {
-			fmt.Println("InitConfig: Failed to create directory:", err)
+			fmt.Println("GenConfig2IdentityFile->MkdirAll: " + err.Error())
 			return err
 		}
 	}
@@ -48,15 +49,17 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 	config.Mode = mode
 	err = tvConfig.GenConfigFile(fullPath, &config)
 	if err != nil {
-		log.Logger.Errorf("generate nodeConfig err: %v", err)
+		fmt.Println("GenConfig2IdentityFile->GenConfigFile: err:" + err.Error())
 	}
+	fmt.Println("GenConfig2IdentityFile->generate node config file: " + fullPath + tvConfig.NodeConfigFileName)
+
 	config.Mode = oldMode
-	log.Logger.Infof("already generate identityKey and config file, please run program again.")
 
 	err = identity.GenIdenityFile(fullPath)
 	if err != nil {
-		log.Logger.Errorf("generate identity err: %v", err)
+		fmt.Println("GenConfig2IdentityFile->GenIdenityFile: " + err.Error())
 	}
+	fmt.Println("GenConfig2IdentityFile->generate identity file: " + fullPath + identity.IdentityFileName)
 	return nil
 }
 

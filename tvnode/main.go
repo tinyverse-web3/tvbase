@@ -59,6 +59,7 @@ func parseCmdParams() string {
 		if err != nil {
 			tvsLog.Fatalf("Failed to generate config file: %v", err)
 		}
+		tvsLog.Infof("Generate config file successfully.")
 		os.Exit(0)
 	}
 
