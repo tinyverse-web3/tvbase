@@ -14,23 +14,41 @@ import (
 )
 
 func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
-	if rootPath != "" && !strings.HasSuffix(rootPath, string(os.PathSeparator)) {
-		rootPath += string(os.PathSeparator)
+	rootPath = strings.Trim(rootPath, " ")
+	if rootPath == "" {
+		rootPath = "."
 	}
+
+	fullPath, err := homedir.Expand(rootPath)
+	if err != nil {
+		return err
+	}
+	if !filepath.IsAbs(fullPath) {
+		defaultRootPath, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		fullPath = filepath.Join(defaultRootPath, fullPath)
+	}
+
+	if !strings.HasSuffix(fullPath, string(filepath.Separator)) {
+		fullPath += string(filepath.Separator)
+	}
+
 	config := tvConfig.NewDefaultNodeConfig()
 
 	oldMode := config.Mode
 	config.Mode = mode
-	err := tvConfig.GenConfigFile(rootPath, &config)
+	err = tvConfig.GenConfigFile(fullPath, &config)
 	if err != nil {
-		log.Logger.Info("generate nodeConfig err: " + err.Error())
+		log.Logger.Errorf("generate nodeConfig err: %v", err)
 	}
 	config.Mode = oldMode
-	log.Logger.Infof("already generate identityKey and config file, please run program again.\n")
+	log.Logger.Infof("already generate identityKey and config file, please run program again.")
 
-	err = identity.GenIdenityFile(rootPath)
+	err = identity.GenIdenityFile(fullPath)
 	if err != nil {
-		log.Logger.Info("generate identity err: " + err.Error())
+		log.Logger.Errorf("generate identity err: %v", err)
 	}
 	return nil
 }
