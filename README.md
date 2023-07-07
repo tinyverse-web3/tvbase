@@ -11,7 +11,7 @@ git clone git@github.com:tinyverse-web3/tvbase.git
 cd tvbase/tvnode
 go build
 # -init option will generate identity.bin and default config.json, -help optin if necessary more help
-./tvnode init
+./tvnode -init
 ./boot.sh
 
 
