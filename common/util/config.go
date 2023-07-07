@@ -18,7 +18,6 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 	if rootPath == "" {
 		rootPath = "."
 	}
-
 	fullPath, err := homedir.Expand(rootPath)
 	if err != nil {
 		return err
@@ -33,6 +32,14 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 
 	if !strings.HasSuffix(fullPath, string(filepath.Separator)) {
 		fullPath += string(filepath.Separator)
+	}
+	_, err = os.Stat(fullPath)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(fullPath, 0755)
+		if err != nil {
+			fmt.Println("InitConfig: Failed to create directory:", err)
+			return err
+		}
 	}
 
 	config := tvConfig.NewDefaultNodeConfig()
@@ -89,7 +96,7 @@ func LoadNodeConfig(options ...any) (*tvConfig.NodeConfig, error) {
 	}
 	err = tvConfig.InitConfig(fullPath, &config)
 	if err != nil {
-		fmt.Println("InitConfig: " + err.Error())
+		fmt.Println("InitConfig: err:" + err.Error())
 		return nil, err
 	}
 	return nil, nil
