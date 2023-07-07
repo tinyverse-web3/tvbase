@@ -51,7 +51,7 @@ fi
 log_dir="~/.tvnode/"
 log_prefix="tvnode"
 log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S")_$log_prefix.log"
-nohup ./tvnode > "$log_filename" 2>&1 &
+nohup tvnode > "$log_filename" 2>&1 &
 pid=$!
 if [ $? -eq 0 ]; then
     echo "tvnode is started, write to $pid_file, pid: $pid."
