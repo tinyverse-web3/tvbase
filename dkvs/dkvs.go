@@ -167,7 +167,7 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 // sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
 // record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
 func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
-	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte) error {
+	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *pb.Cert) error {
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
 		Logger.Error(err)
@@ -212,10 +212,25 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 		return err
 	}
 
-	if !VerifyTransferCert(key, value1, pubkey2) {
+	cert1 := GetCertTransferPrepare(value1)
+	if cert1 == nil {
+		err = errors.New("GetCertTransferPrepare failed")
+		Logger.Error(err)
+		return err
+	}
+
+	if !VerifyCertTransferPrepare(key, cert1, pubkey1, pubkey2) {
 		err = errors.New("VerifyTransferCert failed")
 		Logger.Error(err)
 		return err
+	}
+
+	if txcert != nil {
+		if !d.IsPublicService(KEY_NS_TX, txcert.IssuerPubkey) || !VerifyCertTxCompleted2(key, cert1, txcert, pubkey1, pubkey2) {
+			err := errors.New("invalid cert")
+			Logger.Error(err)
+			return err
+		}
 	}
 
 	recordKey := RecordKey(key)
@@ -239,6 +254,9 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
 	if err != nil {
 		return err
+	}
+	if txcert != nil {
+		tmpRec3.Data, _ = txcert.Marshal()
 	}
 
 	tmpRecBuf3, err := tmpRec3.Marshal()
@@ -269,7 +287,6 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 
 	return nil
 }
-
 
 func (d *Dkvs) putRecord(key string, record *pb.DkvsRecord) error {
 	if record == nil {
@@ -361,7 +378,7 @@ func (d *Dkvs) checkNameValidity(name string, pubkey []byte) bool {
 	} else {
 		if strings.HasPrefix(name, "0x") { // 公钥大概是74bytes
 			// 对于每一个用公钥作为key的put，都检查是否由公钥owner签名，除非是特定的公共服务
-			if name != bytesToHexString(pubkey) {
+			if name != BytesToHexString(pubkey) {
 				Logger.Error("not self")
 				return false
 			}
@@ -506,11 +523,11 @@ func (d *Dkvs) IsPublicService(sn string, pubkey []byte) bool {
 	}
 	key, ok := dkvsServiceNameMap[sn]
 	if ok {
-		if key == bytesToHexString(pubkey) {
+		if key == BytesToHexString(pubkey) {
 			return true
 		} else {
 			// 看看是否是派生出来的子公钥
-			if d.IsChildPubkey(pubkey, hexStringToBytes(key)) {
+			if d.IsChildPubkey(pubkey, HexStringToBytes(key)) {
 				return true
 			}
 		}
@@ -541,7 +558,7 @@ func (d *Dkvs) IsApprovedService(sn string) bool {
 		return false
 	}
 
-	rv := DecodeGunRecordValue(record.Value)
+	rv := DecodeCertsRecordValue(record.Value)
 	if rv == nil {
 		return false
 	}

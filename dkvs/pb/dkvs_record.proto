@@ -53,3 +53,17 @@ message CertsRecordValue {
     repeated Cert certVect = 2;
 }
 
+// Cert.data
+message CertDataTransferPrepare {
+	string key = 1;
+	uint64 fee = 2;
+}
+
+// Cert.data
+message CertDataTxCompleted {
+	string key = 1;
+	string tx = 2;
+	uint64 fee = 3;
+	bytes senderkey = 4;
+	bytes receiverkey = 5;
+}

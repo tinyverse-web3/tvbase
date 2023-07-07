@@ -339,15 +339,15 @@ func TestGun(t *testing.T) {
 
 }
 
-func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte,[]byte, error) {
+func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err != nil {
-		return nil,nil, (err)
+		return nil, nil, (err)
 	}
 
 	rv := dkvs.DecodeCertsRecordValue(value1)
 	if rv == nil {
-		return nil,nil, errors.New("DecodeCertsRecordValue fail")
+		return nil, nil, errors.New("DecodeCertsRecordValue fail")
 	}
 
 	rv.UserData, _ = cert.Marshal()
@@ -374,7 +374,13 @@ func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic
 	}
 
 	// owner sign a transfer record
-	cert := dkvs.IssueTransferCert(key, pubkey2, pubkey1)
+	fee := uint64(10)
+	var cert *dkvs_pb.Cert
+	if fee != 0 {
+		cert = dkvs.IssueCertTransferPrepare(key, fee, nil, pubkey1)
+	} else {
+		cert = dkvs.IssueCertTransferPrepare(key, fee, pubkey2, pubkey1)
+	}
 	signData1 := dkvs.GetCertSignData(cert)
 	if signData1 == nil {
 		return (err)
@@ -391,8 +397,26 @@ func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic
 		return (err)
 	}
 
+	var cert2 *dkvs_pb.Cert
+	if fee != 0 {
+		seed := "thsgMCRQoWIPwfxJ" //dkvs.RandString(16)
+		minerPrivKey, _:= dkvs.GetPriKeyBySeed(seed)
+		minerPubKey, _ := ic.MarshalPublicKey(minerPrivKey.GetPublic())
+
+		cert2 = dkvs.IssueCertTxCompleted(key, "txtxtx", fee, pubkey1, pubkey2, minerPubKey)
+		signData2 := dkvs.GetCertSignData(cert2)
+		if signData2 == nil {
+			return (err)
+		}
+		sign2, err := minerPrivKey.Sign(signData2)
+		if err != nil {
+			return (err)
+		}
+		cert2.IssuerSign = sign2
+	}
+
 	// then A tranfer a name to B
-	err = kv.TransferKey(key, value1, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
+	err = kv.TransferKey(key, value1, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2, cert2)
 	if err != nil {
 		return (err)
 	}
@@ -449,7 +473,7 @@ func testTransferRestore(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.P
 	}
 
 	// then A tranfer a name to B
-	err = kv.TransferKey(name, nil, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
+	err = kv.TransferKey(name, nil, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2, nil)
 	if err == nil {
 		return (err)
 	}
