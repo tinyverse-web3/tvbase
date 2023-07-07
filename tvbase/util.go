@@ -2,7 +2,7 @@ package tvbase
 
 import ipfsLog "github.com/ipfs/go-log/v2"
 
-func SetDeugMode(lv string, moreModuleList ...string) {
+func SetDebugMode(lv string, moreModuleList ...string) {
 	interalModuleList := []string{
 		"tvbase",
 		"dkvs",
