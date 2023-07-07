@@ -339,8 +339,21 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		})
 	}
 
+	// peerstore
 	pstore, err := pstoremem.NewPeerstore()
 	if err != nil {
+		return nil, err
+	}
+	// add self peer
+	publicKey := privateKey.GetPublic()
+	peerId, err := peer.IDFromPublicKey(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := pstore.AddPubKey(peerId, publicKey); err != nil {
+		return nil, err
+	}
+	if err := pstore.AddPrivKey(peerId, privateKey); err != nil {
 		return nil, err
 	}
 	lc.Append(fx.Hook{

@@ -5,18 +5,7 @@ import (
 
 	config "github.com/ipfs/kubo/config"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/peerstore"
 )
-
-func PstoreAddSelfKeys(id peer.ID, sk crypto.PrivKey, ps peerstore.Peerstore) error {
-	if err := ps.AddPubKey(id, sk.GetPublic()); err != nil {
-		return err
-	}
-
-	return ps.AddPrivKey(id, sk)
-}
 
 type priorityOption struct {
 	priority, defaultPriority config.Priority
