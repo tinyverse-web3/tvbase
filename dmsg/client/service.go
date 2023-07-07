@@ -739,12 +739,15 @@ func (d *DmsgService) OnSendMsgResquest(protoMsg protoreflect.ProtoMessage, prot
 		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgResquest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 		return nil, fmt.Errorf("DmsgService->OnSendMsgResquest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
-	pubkey := request.BasicData.DestPubkey
-	pubsub := d.getSrcUserInfo(pubkey)
-	if pubsub == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgResquest: cannot find src user public key %v", pubkey)
-		return nil, fmt.Errorf("DmsgService->OnSendMsgResquest: cannot find src user public key %v", pubkey)
-	}
+	/*
+		delete for receive public topic message, the receiver is topic ID, not user
+		pubkey := request.BasicData.DestPubkey
+		pubsub := d.getSrcUserInfo(pubkey)
+		if pubsub == nil {
+			dmsgLog.Logger.Errorf("DmsgService->OnSendMsgResquest: cannot find src user public key %v", pubkey)
+			return nil, fmt.Errorf("DmsgService->OnSendMsgResquest: cannot find src user public key %v", pubkey)
+		}
+	*/
 
 	//err := d.SaveUserMsg(protoMsg, dmsg.MsgDirection.From)
 	//sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
