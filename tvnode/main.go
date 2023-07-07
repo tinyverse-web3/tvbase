@@ -18,6 +18,11 @@ import (
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
+const (
+	defaultPathName = ".tvnode"
+	defaultPathRoot = "~/" + defaultPathName
+)
+
 const logName = "tvnode"
 
 var tvsLog = ipfsLog.Logger(logName)
@@ -37,7 +42,7 @@ func getPidFileName() (string, error) {
 
 func parseCmdParams() string {
 	generateCfg := flag.Bool("init", false, "init generate identity key and config file")
-	rootPath := flag.String("rootPath", "", "config file path")
+	rootPath := flag.String("rootPath", defaultPathRoot, "config file path")
 	shutDown := flag.Bool("shutdown", false, "shutdown daemon")
 	help := flag.Bool("help", false, "Display help")
 
