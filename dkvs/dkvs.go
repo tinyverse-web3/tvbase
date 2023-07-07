@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,6 +66,11 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 
 // sig 由发起者对key+val+pubkey+ttl的签名 (调用GetSignData)
 func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl uint64, sig []byte) error {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return err
+	}
 
 	valueType := 0
 	if IsGunName(key) {
@@ -80,8 +86,14 @@ func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl 
 	return d.putRecord(key, dr)
 }
 
-// value, pubkey, ttl, signature
+// value, pubkey, issuetime, ttl, signature
 func (d *Dkvs) Get(key string) ([]byte, []byte, uint64, uint64, []byte, error) {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return nil, nil, 0, 0, nil, err
+	}
+
 	record, err := d.dhtGetRecord(RecordKey(key))
 	if err != nil {
 		return nil, nil, 0, 0, nil, err
@@ -91,24 +103,33 @@ func (d *Dkvs) Get(key string) ([]byte, []byte, uint64, uint64, []byte, error) {
 }
 
 func (d *Dkvs) GetRecord(key string) (*pb.DkvsRecord, error) {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return nil, err
+	}
+
 	return d.dhtGetRecord(RecordKey(key))
 }
 
 func (d *Dkvs) FastGetRecord(key string) (*pb.DkvsRecord, error) {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return nil, err
+	}
 	// 需要实现一个快速查找，方便检查时调用，加快速度
 	return d.dhtGetRecord(RecordKey(key))
 }
 
 func (d *Dkvs) Has(key string) bool {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return false
+	}
 	_, err := d.idht.GetValue(context.Background(), RecordKey(key))
 	return err == nil
-}
-
-func (d *Dkvs) Delete(key string) bool {
-	// set ttl to now + 1
-	// need owner sign the value
-
-	return false
 }
 
 func GetTtlFromDuration(t time.Duration) uint64 {
@@ -145,8 +166,13 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 
 // sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
 // record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
-func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
+func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte) error {
+	if !isValidKey(key) {
+		err := errors.New("invalid key")
+		Logger.Error(err)
+		return err
+	}
 
 	// 检查发起者对key的所有权
 	oldRec, err := d.dhtGetRecord(RecordKey(key))
@@ -168,21 +194,33 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	}
 
 	// 提前检查数据的有效性
-	err = ValidateValue(key, pubkey2, pubkey1, issuetime, ttl, sig1, 0)
+	err = ValidateValue(key, value1, pubkey1, issuetime, ttl, sig1, int(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		Logger.Error("ValidateValue ", err)
 		return err
 	}
 
-	err = ValidateValue(key, value2, pubkey2, issuetime, ttl, sig2, 1)
+	err = ValidateValue(key, value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
 	if err != nil {
 		Logger.Error("ValidateValue ", err)
+		return err
+	}
+
+	err = ValidateValue(key, value2, pubkey2, issuetime, ttl, sig2, int(pb.DkvsRecord_GUN_SIGNATURE))
+	if err != nil {
+		Logger.Error("ValidateValue ", err)
+		return err
+	}
+
+	if !VerifyTransferCert(key, value1, pubkey2) {
+		err = errors.New("VerifyTransferCert failed")
+		Logger.Error(err)
 		return err
 	}
 
 	recordKey := RecordKey(key)
-	// 已经检查过有效性，直接调用dhtPut
-	tmpRec2, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
+	// 先放证书
+	tmpRec2, err := CreateRecordWithType(value1, pubkey1, issuetime, ttl, sig1, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		return err
 	}
@@ -195,9 +233,10 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
+		return err
 	}
-
-	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, 1)
+	// 转移
+	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
 	if err != nil {
 		return err
 	}
@@ -209,54 +248,28 @@ func (d *Dkvs) TransferKey(key string, pubkey1 []byte, sig1 []byte,
 	err = d.dhtPut(recordKey, tmpRecBuf3) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
-	}
-
-	return err
-}
-
-// 将这个key处于准备转移阶段
-func (d *Dkvs) PrepareTransferKey(key string, value []byte, pubkey []byte, sig []byte) error {
-
-	// 检查发起者对key的所有权
-	oldRec, err := d.dhtGetRecord(RecordKey(key))
-	if err != nil {
-		Logger.Error("dhtGetRecord ", err)
-		return ErrTranferFailed
-	}
-
-	if !bytes.Equal(pubkey, oldRec.PubKey) {
-		Logger.Error("Equal key")
-		return ErrTranferFailed
-	}
-
-	// 提前检查数据的有效性
-	issuetime := oldRec.Validity - oldRec.Ttl
-	ttl := oldRec.Ttl
-	err = ValidateValue(key, nil, pubkey, issuetime, ttl, sig, 0)
-	if err != nil {
-		Logger.Error("ValidateValue ", err)
 		return err
 	}
 
-	recordKey := RecordKey(key)
-	// 已经检查过有效性，直接调用dhtPut
-	tmpRec2, err := CreateRecordWithType(value, pubkey, issuetime, ttl, sig, _ValueType_Transfer)
+	// 重新设置正确的标志位
+	tmpRec4, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		return err
 	}
 
-	tmpRecBuf2, err := tmpRec2.Marshal()
+	tmpRecBuf4, err := tmpRec4.Marshal()
 	if err != nil {
 		return err
 	}
-
-	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
+	err = d.dhtPut(recordKey, tmpRecBuf4) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
+		return err
 	}
 
-	return err
+	return nil
 }
+
 
 func (d *Dkvs) putRecord(key string, record *pb.DkvsRecord) error {
 	if record == nil {
@@ -358,10 +371,7 @@ func (d *Dkvs) checkNameValidity(name string, pubkey []byte) bool {
 	return true
 }
 
-// key的格式：只关注前两个
-// /namespace/name 或者 /namespace/name/xxx
-func (d *Dkvs) checkKeyValidity(key string, pubkey []byte) bool {
-
+func isValidKey(key string) bool {
 	if tl := len(key); tl > MaxDKVSRecordKeyLength || tl == 0 {
 		Logger.Error("invalid length")
 		return false
@@ -371,6 +381,13 @@ func (d *Dkvs) checkKeyValidity(key string, pubkey []byte) bool {
 		Logger.Error("invalid key")
 		return false
 	}
+
+	return true
+}
+
+// key的格式：只关注前两个
+// /namespace/name 或者 /namespace/name/xxx
+func (d *Dkvs) checkKeyValidity(key string, pubkey []byte) bool {
 
 	subkeys := strings.Split(key, "/")
 	if len(subkeys) < 3 { // subkeys[0] = ""

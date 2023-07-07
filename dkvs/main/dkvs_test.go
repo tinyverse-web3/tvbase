@@ -10,9 +10,10 @@ import (
 	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
+	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -171,14 +172,13 @@ func bytesToHexString(input []byte) string {
 }
 
 func TestGun(t *testing.T) {
-	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
 	tvbase, err := tvbase.NewTvbase()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mtvNode tvCommon.TvBaseService = tvbase
-	kv := dkvs.NewDkvs(mtvNode) //.表示当前路径
+
+	kv := tvbase.GetDkvsService()
 
 	seed := "zjMGsKesWSlZnayK" //dkvs.RandString(16)
 	gunPrivKey, e := dkvs.GetPriKeyBySeed(seed)
@@ -254,7 +254,7 @@ func TestGun(t *testing.T) {
 	}
 
 	// gun service transfer a name to A
-	err = testTransfer(*kv, name, gunvalue, gunPrivKey, issuetime, ttl, privA)
+	err = testTransfer(kv, name, gunvalue, gunPrivKey, issuetime, ttl, privA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestGun(t *testing.T) {
 	// }
 
 	// transfer succ
-	err = testTransfer(*kv, name, newgunvalue, privA, issuetime, ttl, privB)
+	err = testTransfer(kv, name, newgunvalue, privA, issuetime, ttl, privB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,14 +332,36 @@ func TestGun(t *testing.T) {
 	}
 
 	// A can't transfer a non-owned name to B
-	err = testTransfer(*kv, name, gunvalue, privA, issuetime, ttl, privC)
+	err = testTransfer(kv, name, gunvalue, privA, issuetime, ttl, privC)
 	if err == nil {
 		t.Fatal(err)
 	}
 
 }
 
-func testTransfer(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
+func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte,[]byte, error) {
+	value1, _, issuetime, ttl, _, err := kv.Get(key)
+	if err != nil {
+		return nil,nil, (err)
+	}
+
+	rv := dkvs.DecodeCertsRecordValue(value1)
+	if rv == nil {
+		return nil,nil, errors.New("DecodeCertsRecordValue fail")
+	}
+
+	rv.UserData, _ = cert.Marshal()
+	value2, _ := rv.Marshal()
+
+	data := dkvs.GetRecordSignData(key, value2, pk, issuetime, ttl)
+	sign2, err := sk.Sign(data)
+
+	return value2, sign2, err
+
+	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
+}
+
+func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
 	pubkey1, _ := ic.MarshalPublicKey(privk1.GetPublic())
 	pubkey2, _ := ic.MarshalPublicKey(privk2.GetPublic())
 
@@ -352,7 +374,8 @@ func testTransfer(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.PrivKey,
 	}
 
 	// owner sign a transfer record
-	signData1 := dkvs.GetRecordSignData(key, pubkey2, pubkey1, issuetime, ttl)
+	cert := dkvs.IssueTransferCert(key, pubkey2, pubkey1)
+	signData1 := dkvs.GetCertSignData(cert)
 	if signData1 == nil {
 		return (err)
 	}
@@ -360,9 +383,16 @@ func testTransfer(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.PrivKey,
 	if err != nil {
 		return (err)
 	}
+	cert.IssuerSign = sign1
+	//value1 := dkvs.EncodeCert(cert)
+	// save cert to record
+	value1, sign1, err := getNewRecordValue(kv, key, privk1, pubkey1, cert)
+	if err != nil {
+		return (err)
+	}
 
 	// then A tranfer a name to B
-	err = kv.TransferKey(key, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
+	err = kv.TransferKey(key, value1, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
 	if err != nil {
 		return (err)
 	}
@@ -419,7 +449,7 @@ func testTransferRestore(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.P
 	}
 
 	// then A tranfer a name to B
-	err = kv.TransferKey(name, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
+	err = kv.TransferKey(name, nil, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2)
 	if err == nil {
 		return (err)
 	}
@@ -453,17 +483,4 @@ func hash(key string) (hashKey string) {
 	shaHash := sha512.Sum384([]byte(key))
 	hashKey = hex.EncodeToString(shaHash[:])
 	return
-}
-
-func TestLDB(t *testing.T) {
-	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
-
-	tvbase, err := tvbase.NewTvbase()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dkvs.NewDkvs(tvbase) //.表示当前路径
-
-	dkvs.TestSyncDB()
 }

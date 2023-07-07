@@ -14,7 +14,7 @@ import (
 // value: CertsRecordValue
 
 var DefaultCertTtl = uint64(time.Duration(time.Hour * 24 * 365 * 100).Milliseconds())
-const CertTransferData = "prepare for transfer"
+const CertTransferData = "transfer"
 
 func VerifyCert(cert *pb.Cert) bool {
 
@@ -80,6 +80,15 @@ func DecodeCert(value []byte) *pb.Cert {
 func SearchCertByPubkey(cv []*pb.Cert, pubkey []byte) *pb.Cert {
 	for _, c := range cv {
 		if bytes.Equal(pubkey, c.IssuerPubkey) {
+			return c
+		}
+	}
+	return nil
+}
+
+func SearchCertByName(cv []*pb.Cert, name string) *pb.Cert {
+	for _, c := range cv {
+		if c.Name == name {
 			return c
 		}
 	}
@@ -184,9 +193,51 @@ func VerifyGunRecordValue(key string, value []byte, issuetime uint64, ttl uint64
 }
 
 
-func VerifyTransferCert(key string, oldr *pb.DkvsRecord, newr *pb.DkvsRecord) bool {
+func FindTransferCert(cv []*pb.Cert) *pb.Cert {
+	cert := SearchCertByName(cv, CertTransferData)
+	if IsTransferCert(cert) {
+		return cert
+	}
+	return nil
+}
+
+func IsTransferCert(cert *pb.Cert) bool {
+	if cert != nil && VerifyCert(cert) {
+		return true
+	}
+	return false
+}
+
+
+func VerifyTransferRecordValue(key string, value []byte, pk []byte) bool {
+
+	rv := DecodeCertsRecordValue(value)
+	if rv == nil {
+		return false
+	}
+	var cert *pb.Cert
+	if rv.UserData != nil {
+		// try to decode it
+		cert = DecodeCert(rv.UserData)
+		if !IsTransferCert(cert) {
+			cert = nil
+		}
+	}
+
+	if cert == nil {
+		cert = FindTransferCert(rv.CertVect)
+		if cert == nil {
+			return false
+		}
+	}
+
+	return bytes.Equal(cert.IssuerPubkey, pk) && string(cert.Data) == key
+}
+
+
+func VerifyTransferCert(key string, oldvalue []byte, newpk []byte) bool {
 	// 
-	oldcerts := DecodeCertsRecordValue(oldr.Data)
+	oldcerts := DecodeCertsRecordValue(oldvalue)
 	if oldcerts == nil {
 		return false
 	}
@@ -200,7 +251,7 @@ func VerifyTransferCert(key string, oldr *pb.DkvsRecord, newr *pb.DkvsRecord) bo
 	if !VerifyCert(cert1) {
 		return false
 	}
-	if !bytes.Equal(cert1.UserPubkey, newr.PubKey) || cert1.Name != CertTransferData || string(cert1.Data) != key {
+	if !bytes.Equal(cert1.UserPubkey, newpk) || cert1.Name != CertTransferData || string(cert1.Data) != key {
 		return false
 	}
 
@@ -212,7 +263,7 @@ func IssueCert(name string, data []byte, issuePubkey []byte) *pb.Cert {
 
 	cert := pb.Cert{
 		Version:      1,
-		Name:         "",
+		Name:         name,
 		Type:         uint32(pb.CertType_Default),
 		UserPubkey:   nil,
 		Data:         data,

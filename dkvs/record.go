@@ -47,8 +47,13 @@ func (v Validator) Validate(fullkey string, value []byte) error {
 //
 // This function returns an error if any of the records fail to parse. Validate
 // your records first!
-func (v Validator) Select(k string, vals [][]byte) (int, error) {
-	vp, err := verifyPubKey(k, vals[0], vals[1])
+func (v Validator) Select(fullkey string, vals [][]byte) (int, error) {
+	ns, key, err := record.SplitKey(fullkey)
+	if err != nil || ns != DKVS_NAMESPACE {
+		return -1, ErrInvalidPath
+	}
+
+	vp, err := verifyPubKey("/"+key, vals[0], vals[1])
 	if vp != 0 {
 		Logger.Error(err)
 		return vp, err
@@ -104,11 +109,11 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 	switch oldRecord.ValidityType {
 	case pb.DkvsRecord_EOL:
 		if newRecord.ValueType == _ValueType_Transfer {
-			// 处于转移状态的key，需要检查是否有权限继承该key（新的value中有原来所有者颁发的证书）
-			// if !VerifyTransferCert(key, oldRecord, newRecord) {
-			// 	Logger.Error(ErrSignature)
-			// 	return -1, ErrPublicKeyMismatch
-			// }
+			// 处于转移状态的key，需要检查是否有权限接收该key
+			if !VerifyTransferCert(key, oldRecord.Value, newRecord.PubKey) {
+				Logger.Error(ErrSignature)
+				return -1, ErrPublicKeyMismatch
+			}
 		} else {
 			// 正常状态，只检查是否是公钥相同
 			cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
