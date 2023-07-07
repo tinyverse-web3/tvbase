@@ -37,7 +37,8 @@ enum CertType {
 message Cert {
 	uint32 version = 1;
 	string name = 2;       // 证书名称，如果有，必须是GUN申请过的名字，一般是""
-	uint32 type = 3;	   // 低16位：0，证书，1，合约，2，NFT。。。高16位，自定义
+	uint32 type = 3;	   // CertType
+	uint32 subType = 4;	   // 自定义
     bytes userPubkey = 5;  // 证书所有者
     bytes data = 6;        // 证书内容，可以自定义
     uint64 issueTime = 7;  // 发行时间
