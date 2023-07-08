@@ -121,18 +121,7 @@ func DecodeAndFindCertByPubkey(value []byte, pubkey []byte) *pb.Cert {
 // used to sign with private key
 func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64) []byte {
 
-	cert := pb.Cert{
-		Version:      1,
-		Name:         KEY_NS_GUN,
-		Type:         uint32(pb.CertType_Default),
-		SubType:      0,
-		UserPubkey:   nil,
-		Data:         []byte(name),
-		IssueTime:    issueTime,
-		Ttl:          ttl,
-		IssuerPubkey: gunPubkey,
-		IssuerSign:   nil,
-	}
+	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
 
 	b, err := cert.Marshal()
 	if err != nil {
@@ -144,22 +133,12 @@ func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64)
 
 // generate value for a GUN record
 func EncodeGunValue(name string, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
-	cert := pb.Cert{
-		Version:      1,
-		Name:         KEY_NS_GUN,
-		Type:         uint32(pb.CertType_Default),
-		SubType:      0,
-		UserPubkey:   nil,
-		Data:         []byte(name),
-		IssueTime:    issueTime,
-		Ttl:          ttl,
-		IssuerPubkey: gunPubkey,
-		IssuerSign:   gunSign,
-	}
+	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
+	cert.IssuerSign = gunSign
 
 	rv := pb.CertsRecordValue{
 		UserData: userData, // 在转移时放一个证书
-		CertVect: []*pb.Cert{&cert},
+		CertVect: []*pb.Cert{cert},
 	}
 
 	b, err := rv.Marshal()
@@ -367,6 +346,26 @@ func IssueCert(name string, data []byte, issuePubkey []byte) *pb.Cert {
 
 	return &cert
 }
+
+
+func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
+
+	cert := pb.Cert{
+		Version:      1,
+		Name:         KEY_NS_GUN,
+		Type:         uint32(pb.CertType_Default),
+		SubType:      0,
+		UserPubkey:   nil,
+		Data:         []byte(name),
+		IssueTime:    issueTime,
+		Ttl:          ttl,
+		IssuerPubkey: gunPubkey,
+		IssuerSign:   nil,
+	}
+
+	return &cert
+}
+
 
 func IssueCertTransferPrepare(key string, fee uint64, receiverpk, issuePubkey []byte) *pb.Cert {
 
