@@ -16,7 +16,7 @@ func (m *TvBase) initProtocol() error {
 }
 
 // regist custom stream client protocol
-func (m *TvBase) RegistCSCProtocol(protocol customProtocol.CustomProtocolClient) error {
+func (m *TvBase) RegistCSCProtocol(protocol customProtocol.CustomStreamProtocolClient) error {
 	if m.DmsgService == nil {
 		tvLog.Logger.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
 		return fmt.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
@@ -31,16 +31,16 @@ func (m *TvBase) RegistCSCProtocol(protocol customProtocol.CustomProtocolClient)
 }
 
 // regist custom stream service protocol
-func (m *TvBase) RegistCSSProtocol(protocolService customProtocol.CustomProtocolService) error {
+func (m *TvBase) RegistCSSProtocol(protocolService customProtocol.CustomStreamProtocolService) error {
 	if m.DmsgService == nil {
-		tvLog.Logger.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
-		return fmt.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is nil")
+		tvLog.Logger.Errorf("Infrasture->RegistCSSProtocol: m.DmsgService is nil")
+		return fmt.Errorf("Infrasture->RegistCSSProtocol: m.DmsgService is nil")
 	}
-	dmsgService, ok := m.DmsgService.(*dmsgService.DmsgService)
+	service, ok := m.DmsgService.(*dmsgService.DmsgService)
 	if !ok {
-		tvLog.Logger.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is not ServiceDmsgService")
-		return fmt.Errorf("Infrasture->RegistCSCProtocol: m.DmsgService is not ServiceDmsgService")
+		tvLog.Logger.Errorf("Infrasture->RegistCSSProtocol: m.DmsgService is not ServiceDmsgService")
+		return fmt.Errorf("Infrasture->RegistCSSProtocol: m.DmsgService is not ServiceDmsgService")
 	}
-	dmsgService.RegistCustomStreamProtocol(protocolService)
+	service.RegistCustomStreamProtocol(protocolService)
 	return nil
 }

@@ -110,7 +110,7 @@ func (adapter *CustomProtocolAdapter) CallProtocolResponseCallback() (interface{
 	return data, err
 }
 
-func NewCustomProtocol(ctx context.Context, host host.Host, customProtocolId string, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+func NewCustomStreamProtocol(ctx context.Context, host host.Host, customProtocolId string, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewCustomProtocolAdapter()
 	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
 	adapter.protocol = protocol

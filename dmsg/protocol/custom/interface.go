@@ -10,14 +10,14 @@ type ClientService interface {
 	RequestCustomProtocol(customProtocolId string, content []byte) error
 }
 
-type CustomProtocolClient interface {
+type CustomStreamProtocolClient interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
 	SetService(service ClientService)
 	HandleResponse(request *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
-type CustomProtocolService interface {
+type CustomStreamProtocolService interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
 	HandleRequest(req *pb.CustomProtocolReq) error

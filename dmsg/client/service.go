@@ -32,11 +32,11 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	CurSrcUserInfo         *dmsgClientCommon.SrcUserInfo
-	OnReceiveMsg           dmsgClientCommon.OnReceiveMsg
-	destUserInfoList       map[string]*dmsgClientCommon.DestUserInfo
-	srcUserInfoList        map[string]*dmsgClientCommon.SrcUserInfo
-	customProtocolInfoList map[string]*dmsgClientCommon.CustomProtocolInfo
+	CurSrcUserInfo               *dmsgClientCommon.SrcUserInfo
+	OnReceiveMsg                 dmsgClientCommon.OnReceiveMsg
+	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
+	srcUserInfoList              map[string]*dmsgClientCommon.SrcUserInfo
+	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -68,7 +68,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.srcUserInfoList = make(map[string]*dmsgClientCommon.SrcUserInfo)
 	d.destUserInfoList = make(map[string]*dmsgClientCommon.DestUserInfo)
 
-	d.customProtocolInfoList = make(map[string]*dmsgClientCommon.CustomProtocolInfo)
+	d.customStreamProtocolInfoList = make(map[string]*dmsgClientCommon.CustomStreamProtocolInfo)
 	return nil
 }
 
@@ -663,7 +663,7 @@ func (d *DmsgService) OnCustomProtocolResponse(reqProtoData protoreflect.ProtoMe
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 		return nil, fmt.Errorf("DmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
-	customProtocolInfo := d.customProtocolInfoList[response.CustomProtocolID]
+	customProtocolInfo := d.customStreamProtocolInfoList[response.CustomProtocolID]
 	if customProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomProtocolResponse: customProtocolInfo(%v) is nil", response.CustomProtocolID)
 		return nil, fmt.Errorf("DmsgService->OnCustomContentRequest: customProtocolInfo(%v) is nil", customProtocolInfo)
@@ -790,7 +790,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 // cmd protocol
 func (d *DmsgService) RequestCustomProtocol(customProtocolId string, content []byte) error {
 	find := false
-	protocolInfo := d.customProtocolInfoList[customProtocolId]
+	protocolInfo := d.customStreamProtocolInfoList[customProtocolId]
 	if protocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomProtocol: protocol %s is not exist", customProtocolId)
 		return fmt.Errorf("DmsgService->RequestCustomProtocol: protocol %s is not exist", customProtocolId)
@@ -820,14 +820,14 @@ func (d *DmsgService) RequestCustomProtocol(customProtocolId string, content []b
 	return nil
 }
 
-func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomProtocolClient) error {
+func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
-	if d.customProtocolInfoList[customProtocolID] != nil {
+	if d.customStreamProtocolInfoList[customProtocolID] != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomStreamProtocolInfo{
+		StreamProtocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Client:         client,
 	}
 	client.SetCtx(d.BaseService.GetCtx())
@@ -835,14 +835,14 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomPro
 	return nil
 }
 
-func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomProtocolClient) error {
+func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
-	if d.customProtocolInfoList[customProtocolID] == nil {
+	if d.customStreamProtocolInfoList[customProtocolID] == nil {
 		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
-	d.customProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomStreamProtocolInfo{
+		StreamProtocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Client:         client,
 	}
 	return nil

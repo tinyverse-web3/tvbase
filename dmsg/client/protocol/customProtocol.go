@@ -85,7 +85,7 @@ func (adapter *CustomProtocolAdapter) SetProtocolRequestSign(signature []byte) {
 	request.BasicData.Sign = signature
 }
 
-func NewCustomProtocol(ctx context.Context, host host.Host, customProtocolId string,
+func NewCustomStreamProtocol(ctx context.Context, host host.Host, customProtocolId string,
 	protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewCustomProtocolAdapter()
 	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)

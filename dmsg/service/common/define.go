@@ -83,7 +83,7 @@ type DestUserPubsub struct {
 }
 
 type CustomProtocolInfo struct {
-	Service        customProtocol.CustomProtocolService
+	Service        customProtocol.CustomStreamProtocolService
 	StreamProtocol *StreamProtocol
 }
 

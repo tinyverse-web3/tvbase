@@ -127,8 +127,8 @@ type UserMsgByTimeStamp []UserMsg
 
 type GetSigCallback func(protoData []byte) (sig []byte, err error)
 
-type CustomProtocolInfo struct {
-	Client         customProtocol.CustomProtocolClient
+type CustomStreamProtocolInfo struct {
+	Client         customProtocol.CustomStreamProtocolClient
 	StreamProtocol *StreamProtocol
 }
 
