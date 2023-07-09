@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -78,12 +77,12 @@ func initMsgClient(srcPubKey *ecdsa.PublicKey, rootPath string, ctx context.Cont
 	}
 
 	dmsgService := tvInfra.GetClientDmsgService()
-	srcPubkeyStr, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubKey)
+	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubKey)
 	if err != nil {
 		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
 	}
-	err = dmsgService.InitUser(srcPubkeyStr)
+	err = dmsgService.InitUser(srcPubkeyBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -119,6 +118,7 @@ func main() {
 	tvcLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
 	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
+
 	if err != nil {
 		tvcLog.Errorf("getKeyBySeed error: %v", err)
 		return
@@ -149,7 +149,7 @@ func main() {
 		return
 	}
 	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgService.SubscribeDestUser(destPubKeyStr)
+	err = dmsgService.SubscribeDestUser(destPubKeyStr, false)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		tvcLog.Errorf("SubscribeDestUser error: %v", err)
@@ -171,29 +171,23 @@ func main() {
 				tvcLog.Errorf("encrypt error: %v", err)
 				continue
 			}
-			// Prepare the message info for sending, requestMsg is struct data for sending, data is signning data
-			requestMsg, data, err := dmsgService.PreSendMsg(destPubKeyStr, encrypedContent)
-			if err != nil {
-				tvcLog.Errorf("preSendMsg error: %v", err)
-				continue
-			}
-			tvcLog.Debugf("sign content = %v", data)
-			// sign the message data by account center
 
-			signed, err := tvcrypto.SignDataByEcdsa(srcPriKey, data)
-			if err != nil {
-				tvcLog.Errorf("sign error: %v", err)
-				continue
+			getSigCallback := func(protoData []byte) ([]byte, error) {
+				sig, err := tvcrypto.SignDataByEcdsa(srcPriKey, protoData)
+				if err != nil {
+					tvcLog.Errorf("sign error: %v", err)
+				}
+				tvcLog.Debugf("sign = %v", sig)
+				return sig, nil
 			}
 
-			tvcLog.Debugf("sign = %v", signed)
-			// Send the message with sign
-			err = dmsgService.SendMsg(requestMsg, signed)
+			err = dmsgService.SendMsg(destPubKeyStr, encrypedContent, getSigCallback)
+
+			if err != nil {
+				tvcLog.Errorf("send msg error: %v", err)
+			}
+
 			tvcLog.Info("SendMsg done. ")
-
-			if err != nil {
-				fmt.Println("send msg error:", err)
-			}
 		}
 	}()
 

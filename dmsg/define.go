@@ -12,9 +12,10 @@ const (
 type SendMsgData struct {
 	SrcUserPubkeyHex  string
 	DestUserPubkeyHex string
-	SrcUserPrikey     *ecdsa.PrivateKey
-	SrcUserPubkey     *ecdsa.PublicKey
-	MsgContent        []byte
+	// SrcUserPrikey     *ecdsa.PrivateKey
+	SrcUserPubkey *ecdsa.PublicKey
+	Sign          []byte
+	MsgContent    []byte
 }
 
 const (

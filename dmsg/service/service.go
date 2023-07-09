@@ -11,6 +11,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
@@ -33,7 +34,8 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	DestUserPubsubs map[string]*common.DestUserPubsub
+	Datastore       db.Datastore
+	destUserPubsubs map[string]*common.DestUserPubsub
 	// service
 	protocolReqSubscribes  map[pb.ProtocolID]protocol.ReqSubscribe
 	protocolResSubscribes  map[pb.ProtocolID]protocol.ResSubscribe
@@ -55,6 +57,12 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 		return err
 	}
 
+	cfg := d.BaseService.GetConfig()
+	d.Datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+	if err != nil {
+		return err
+	}
+
 	// stream protocol
 	d.createMailboxProtocol = serviceProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
 	d.releaseMailboxPrtocol = serviceProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
@@ -64,7 +72,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
-	d.DestUserPubsubs = make(map[string]*common.DestUserPubsub)
+	d.destUserPubsubs = make(map[string]*common.DestUserPubsub)
 
 	d.protocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
 	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
@@ -175,7 +183,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	}
 	go d.BaseService.DiscoverRendezvousPeers()
 
-	d.DestUserPubsubs[userPubKey] = &common.DestUserPubsub{
+	d.destUserPubsubs[userPubKey] = &common.DestUserPubsub{
 		UserTopic:           userTopic,
 		UserSub:             userSub,
 		MsgRWMutex:          sync.RWMutex{},
@@ -185,7 +193,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 }
 
 func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
-	userPubsub := d.DestUserPubsubs[userPubKey]
+	userPubsub := d.destUserPubsubs[userPubKey]
 	if userPubsub == nil {
 		dmsgLog.Logger.Errorf("serviceDmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
 		return fmt.Errorf("serviceDmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
@@ -195,19 +203,19 @@ func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
 	if err != nil {
 		dmsgLog.Logger.Warnln(err)
 	}
-	delete(d.DestUserPubsubs, userPubKey)
+	delete(d.destUserPubsubs, userPubKey)
 	return nil
 }
 
 func (d *DmsgService) unSubscribeDestUsers() error {
-	for userPubKey := range d.DestUserPubsubs {
+	for userPubKey := range d.destUserPubsubs {
 		d.unSubscribeDestUser(userPubKey)
 	}
 	return nil
 }
 
 func (d *DmsgService) getDestUserPubsub(userPubkey string) *common.DestUserPubsub {
-	return d.DestUserPubsubs[userPubkey]
+	return d.destUserPubsubs[userPubkey]
 }
 
 func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent []byte) error {
@@ -237,7 +245,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent
 }
 
 func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
-	destUserCount := len(d.DestUserPubsubs)
+	destUserCount := len(d.destUserPubsubs)
 	cfg := d.BaseService.GetConfig()
 	if destUserCount >= cfg.DMsg.MaxMailboxPubsubCount {
 		dmsgLog.Logger.Warnf("serviceDmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", destUserCount)
@@ -263,6 +271,10 @@ func (d *DmsgService) Stop() error {
 
 	d.unSubscribeDestUsers()
 	return nil
+}
+
+func (d *DmsgService) GetDestUserPubsub(publicKey string) *common.DestUserPubsub {
+	return d.destUserPubsubs[publicKey]
 }
 
 // StreamProtocolCallback interface
@@ -424,7 +436,7 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 		tvLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 	}
-	pubsub := d.DestUserPubsubs[request.BasicData.DestPubkey]
+	pubsub := d.destUserPubsubs[request.BasicData.DestPubkey]
 	if pubsub == nil {
 		tvLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
 		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
@@ -432,17 +444,17 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 	return nil, nil
 }
 
-func (d *DmsgService) OnSendMsgResquest(protoMsg protoreflect.ProtoMessage, protoData []byte) (interface{}, error) {
+func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage, protoData []byte) (interface{}, error) {
 	request, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnSendMsgResquest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return nil, fmt.Errorf("serviceDmsgService->OnSendMsgResquest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return nil, fmt.Errorf("serviceDmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 	pubkey := request.BasicData.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnSendMsgResquest: public key %s is not exist", pubkey)
-		return nil, fmt.Errorf("serviceDmsgService->OnSendMsgResquest: public key %s is not exist", pubkey)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
+		return nil, fmt.Errorf("serviceDmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
 	}
 	pubsub.LastReciveTimestamp = time.Now().Unix()
 	d.saveUserMsg(protoMsg, protoData)

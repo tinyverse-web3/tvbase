@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"crypto/ecdsa"
-	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -70,25 +69,26 @@ type PubsubProtocol struct {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgResquest(protoreflect.ProtoMessage, []byte) (interface{}, error)
+	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
+	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
 
 type ClientService interface {
 	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
-	SaveUserMsg(protoMsg protoreflect.ProtoMessage, msgDirection string) error
 }
 
 type UserPubsub struct {
-	UserTopic *pubsub.Topic
-	UserSub   *pubsub.Subscription
+	UserTopic       *pubsub.Topic
+	UserSub         *pubsub.Subscription
+	IsReadPubsubMsg bool
+	CancelFunc      context.CancelFunc
 }
 type SrcUserInfo struct {
 	UserPubsub
 	MailboxPeerId       string
 	MailboxCreateSignal chan bool
-	MsgRWMutex          sync.RWMutex
 	UserKey             *SrcUserKey
 }
 
@@ -98,8 +98,6 @@ type DestUserInfo struct {
 
 type SrcUserKey struct {
 	PubkeyHex string
-	PrikeyHex string
-	Prikey    *ecdsa.PrivateKey
 	Pubkey    *ecdsa.PublicKey
 }
 
@@ -126,6 +124,8 @@ type UserMsg struct {
 }
 
 type UserMsgByTimeStamp []UserMsg
+
+type GetSigCallback func(protoData []byte) (sig []byte, err error)
 
 type CustomProtocolInfo struct {
 	Client         customProtocol.CustomProtocolClient

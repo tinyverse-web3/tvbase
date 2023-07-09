@@ -1,13 +1,12 @@
 package protocol
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
+	"github.com/tinyverse-web3/tvbase/dmsg"
+	dmsgCLientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -15,7 +14,7 @@ import (
 )
 
 type SendMsgProtocol struct {
-	common.PubsubProtocol
+	dmsgCLientCommon.PubsubProtocol
 	SendMsgRequest *pb.SendMsgReq
 }
 
@@ -49,7 +48,7 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		return
 	}
 
-	callbackData, err := p.Callback.OnSendMsgResquest(p.ProtocolRequest, protocolData)
+	callbackData, err := p.Callback.OnHandleSendMsgRequest(p.ProtocolRequest, protocolData)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->OnRequest: onRequest callback error %v", err))
 	}
@@ -57,72 +56,15 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: callback data: %v", callbackData)
 	}
 
-	// requestProtocolId := p.Adapter.GetRequestProtocolID()
 	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
 	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: received response from %s, topic:%s, requestProtocolId:%s,  Message:%v",
 		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-// Pre request for prepare message to send, before send, should be signed by user, so should return the final message data for sign
-func (p *SendMsgProtocol) PreRequest(senderID string, receiverID string, msgContent []byte) (*pb.SendMsgReq, []byte, error) {
-	dmsgLog.Logger.Info("PreRequest ...")
-	basicData, err := protocol.NewBasicData(p.Host,
-		receiverID, pb.ProtocolID_SEND_MSG_REQ)
-	basicData.SignPubKey = []byte(senderID)
+func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback dmsgCLientCommon.GetSigCallback) error {
+	dmsgLog.Logger.Debug("SendMsgProtocol->Request ...")
 
-	dmsgLog.Logger.Debugln("SignPubKey is %v", basicData.SignPubKey)
-	if err != nil {
-		dmsgLog.Logger.Error("PreRequest: NewBasicData error %v", err)
-		return nil, nil, err
-	}
-	requestData := &pb.SendMsgReq{
-		BasicData:  basicData,
-		SrcPubkey:  senderID,
-		MsgContent: nil,
-	}
-
-	requestData.MsgContent = msgContent
-	protocolData, err := proto.Marshal(requestData)
-	if err != nil {
-		dmsgLog.Logger.Error("PreRequest: marshal protocolData error %v", err)
-		return nil, nil, err
-	}
-
-	dmsgLog.Logger.Info("PreRequest done.")
-	return requestData, protocolData, nil
-}
-
-// Send message, the msgContent has been signed by user
-func (p *SendMsgProtocol) Request(requestMsg *pb.SendMsgReq, sign []byte) error {
-	dmsgLog.Logger.Info("Request ...")
-	requestMsg.BasicData.Sign = sign
-
-	// set the sign data to requeat msg, and marshal again
-	protocolData, err := proto.Marshal(requestMsg)
-	if err != nil {
-		dmsgLog.Logger.Error("Request: marshal protocolData error %v", err)
-		return err
-	}
-	err = p.ClientService.PublishProtocol(requestMsg.BasicData.ProtocolID,
-		requestMsg.BasicData.DestPubkey, protocolData, common.PubsubSource.DestUser)
-	if err != nil {
-		dmsgLog.Logger.Error("Request: publish protocol error %v", err)
-		return err
-	}
-	dmsgLog.Logger.Info("Request Done.")
-	return nil
-}
-
-/*
-func (p *SendMsgProtocol) Request(msgData interface{}) error {
-	sendMsgData, ok := msgData.(*dmsg.SendMsgData)
-	if !ok {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->OnRequest: failed to cast msgData to *dmsg.SendMsgData")
-		return fmt.Errorf("SendMsgProtocol->OnRequest: failed to cast msgData to *dmsg.SendMsgData")
-	}
-
-	basicData, err := protocol.NewBasicData(p.Host,
-		sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
+	basicData, err := protocol.NewBasicData(p.Host, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
 	basicData.SignPubKey = []byte(sendMsgData.SrcUserPubkeyHex)
 
 	if err != nil {
@@ -131,66 +73,44 @@ func (p *SendMsgProtocol) Request(msgData interface{}) error {
 	p.SendMsgRequest = &pb.SendMsgReq{
 		BasicData:  basicData,
 		SrcPubkey:  sendMsgData.SrcUserPubkeyHex,
-		MsgContent: nil,
+		MsgContent: sendMsgData.MsgContent,
 	}
 
-	pubkey, err := key.PubkeyFromEcdsaHex(sendMsgData.SrcUserPubkeyHex)
+	protoData, err := proto.Marshal(p.SendMsgRequest)
 	if err != nil {
+		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: marshal error %v", err)
 		return err
 	}
-	encryptMsgContent, err := key.EncryptWithPubkey(pubkey, sendMsgData.MsgContent)
+	sig, err := getSigCallback(protoData)
 	if err != nil {
-		return err
-	}
-	p.SendMsgRequest.MsgContent = encryptMsgContent
-	err = p.ClientService.SaveUserMsg(p.SendMsgRequest, dmsg.MsgDirection.To)
-	if err != nil {
+		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: get signature error %v", err)
 		return err
 	}
 
-	pubkey, err = key.PubkeyFromEcdsaHex(sendMsgData.DestUserPubkeyHex)
-	if err != nil {
-		return err
-	}
-	encryptMsgContent, err = key.EncryptWithPubkey(pubkey, sendMsgData.MsgContent)
-	if err != nil {
-		return err
-	}
-	p.SendMsgRequest.MsgContent = encryptMsgContent
-	protocolData, err := proto.Marshal(p.SendMsgRequest)
+	err = p.Callback.OnSendMsgBeforePublish(p.SendMsgRequest)
 	if err != nil {
 		return err
 	}
 
-	err = p.SetProtocolRequestSign(sendMsgData.SrcUserPrikey, protocolData)
+	p.SendMsgRequest.BasicData.Sign = sig
+	protoData, err = proto.Marshal(p.SendMsgRequest)
 	if err != nil {
-		return err
-	}
-
-	protocolData, err = proto.Marshal(p.SendMsgRequest)
-	if err != nil {
+		dmsgLog.Logger.Error("SendMsgProtocol->Request: marshal protocolData error %v", err)
 		return err
 	}
 
 	err = p.ClientService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
-		p.SendMsgRequest.BasicData.DestPubkey, protocolData, common.PubsubSource.DestUser)
+		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgCLientCommon.PubsubSource.DestUser)
 	if err != nil {
+		dmsgLog.Logger.Error("SendMsgProtocol->Request: publish protocol error %v", err)
 		return err
 	}
-	return nil
-}
-*/
 
-func (p *SendMsgProtocol) SetProtocolRequestSign(prikey *ecdsa.PrivateKey, protocolData []byte) error {
-	sign, err := key.Sign(prikey, protocolData)
-	if err != nil {
-		return err
-	}
-	p.SendMsgRequest.BasicData.Sign = sign
+	dmsgLog.Logger.Debug("SendMsgProtocol->Request Done.")
 	return nil
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback common.PubsubProtocolCallback, clientService common.ClientService) *SendMsgProtocol {
+func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.PubsubProtocolCallback, clientService dmsgCLientCommon.ClientService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
 	ret.SendMsgRequest = &pb.SendMsgReq{}
 	ret.ProtocolRequest = ret.SendMsgRequest

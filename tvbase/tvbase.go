@@ -441,7 +441,7 @@ func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 
 func (m *TvBase) bootstrap() error {
 	// Bootstrap the persistence DHT. In the default configuration, this spawns a Background, thread that will refresh the peer table every five minutes.
-	tvLog.Logger.Info("tvBase->bootstrap: Bootstrapping the persistence DHT")
+	tvLog.Logger.Info("####### tvBase->bootstrap: Bootstrapping the persistence DHT begin")
 	if err := m.dht.Bootstrap(m.ctx); err != nil {
 		return err
 	}
@@ -471,6 +471,7 @@ func (m *TvBase) bootstrap() error {
 		}()
 	}
 	wg.Wait()
+	tvLog.Logger.Info("####### tvBase->bootstrap: Bootstrapping the persistence DHT end")
 	return nil
 }
 

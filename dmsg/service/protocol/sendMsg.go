@@ -51,7 +51,7 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		return
 	}
 
-	callbackData, err := p.Callback.OnSendMsgResquest(p.ProtocolRequest, protocolData)
+	callbackData, err := p.Callback.OnHandleSendMsgRequest(p.ProtocolRequest, protocolData)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->OnRequest: onRequest callback error %v", err))
 	}

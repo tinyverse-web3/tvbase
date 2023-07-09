@@ -63,7 +63,7 @@ type PubsubProtocolAdapter interface {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgResquest(protoreflect.ProtoMessage, []byte) (interface{}, error)
+	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 }
 
 type PubsubProtocol struct {

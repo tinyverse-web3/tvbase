@@ -89,7 +89,7 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 
 	// wait tvnodelight connect
 	for {
-		pubsub := dmsgService.DestUserPubsubs[pk]
+		pubsub := dmsgService.GetDestUserPubsub(pk)
 		if pubsub != nil {
 			destPubsub = pubsub
 			break
