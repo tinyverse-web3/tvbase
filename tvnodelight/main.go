@@ -181,11 +181,11 @@ func main() {
 				return sig, nil
 			}
 
-			err = dmsgService.SendMsg(destPubKeyStr, encrypedContent, getSigCallback)
-
+			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent, getSigCallback)
 			if err != nil {
-				tvcLog.Errorf("send msg error: %v", err)
+				tvcLog.Errorf("send msg: error: %v", err)
 			}
+			tvcLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
 
 			tvcLog.Info("SendMsg done. ")
 		}

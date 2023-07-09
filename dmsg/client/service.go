@@ -408,7 +408,7 @@ func (d *DmsgService) SetReadAllSrcUserPubsubMsg(enable bool) {
 	}
 }
 
-func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte, getSigCallback dmsgClientCommon.GetSigCallback) error {
+func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte, getSigCallback dmsgClientCommon.GetSigCallback) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg: %v", destPubkey)
 	sendMsgData := &dmsg.SendMsgData{
 		SrcUserPubkeyHex:  d.CurSrcUserInfo.UserKey.PubkeyHex,
@@ -417,13 +417,13 @@ func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte, getSigCallba
 		MsgContent:        msgContent,
 	}
 
-	err := d.sendMsgPrtocol.Request(sendMsgData, getSigCallback)
+	sendMsgReq, err := d.sendMsgPrtocol.Request(sendMsgData, getSigCallback)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SendMsg: %v", err)
-		return err
+		return nil, err
 	}
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg done.")
-	return nil
+	return sendMsgReq, nil
 }
 
 func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg) {

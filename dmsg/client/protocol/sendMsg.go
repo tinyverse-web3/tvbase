@@ -61,14 +61,14 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback dmsgCLientCommon.GetSigCallback) error {
+func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback dmsgCLientCommon.GetSigCallback) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debug("SendMsgProtocol->Request ...")
 
 	basicData, err := protocol.NewBasicData(p.Host, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
 	basicData.SignPubKey = []byte(sendMsgData.SrcUserPubkeyHex)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 	p.SendMsgRequest = &pb.SendMsgReq{
 		BasicData:  basicData,
@@ -79,35 +79,35 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback 
 	protoData, err := proto.Marshal(p.SendMsgRequest)
 	if err != nil {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: marshal error %v", err)
-		return err
+		return nil, err
 	}
 	sig, err := getSigCallback(protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: get signature error %v", err)
-		return err
+		return nil, err
 	}
 
 	err = p.Callback.OnSendMsgBeforePublish(p.SendMsgRequest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p.SendMsgRequest.BasicData.Sign = sig
 	protoData, err = proto.Marshal(p.SendMsgRequest)
 	if err != nil {
 		dmsgLog.Logger.Error("SendMsgProtocol->Request: marshal protocolData error %v", err)
-		return err
+		return nil, err
 	}
 
 	err = p.ClientService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
 		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgCLientCommon.PubsubSource.DestUser)
 	if err != nil {
 		dmsgLog.Logger.Error("SendMsgProtocol->Request: publish protocol error %v", err)
-		return err
+		return nil, err
 	}
 
 	dmsgLog.Logger.Debug("SendMsgProtocol->Request Done.")
-	return nil
+	return p.SendMsgRequest, nil
 }
 
 func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.PubsubProtocolCallback, clientService dmsgCLientCommon.ClientService) *SendMsgProtocol {

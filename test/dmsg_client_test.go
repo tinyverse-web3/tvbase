@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -153,12 +152,17 @@ func TestPubsubMsg(t *testing.T) {
 				tvLog.Logger.Debugf("sign = %v", sig)
 				return sig, nil
 			}
-			err = dmsgService.SendMsg(destPubKeyStr, encrypedContent, getSigCallback)
-			tvLog.Logger.Info("SendMsg done. ")
+			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent, getSigCallback)
 
 			if err != nil {
-				fmt.Println("send msg error:", err)
+				tvLog.Logger.Errorf("send msg: error: %v", err)
 			}
+			tvLog.Logger.Infof("send msg: sendMsgReq: %v", sendMsgReq)
+
+			if err != nil {
+				tvLog.Logger.Infof("send msg error:", err)
+			}
+			tvLog.Logger.Info("SendMsg done. ")
 		}
 	}()
 
