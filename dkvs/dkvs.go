@@ -182,14 +182,14 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	}
 
 	if !bytes.Equal(pubkey1, oldRec.PubKey) {
-		Logger.Error("Equal key")
+		Logger.Error("Not equal key")
 		return ErrTranferFailed
 	}
 
 	// 检查接受者数据的有效性
 	if ttl != oldRec.Ttl ||
 		!bytes.Equal(oldRec.Value, value2) {
-		Logger.Error("Equal ttl or value")
+		Logger.Error("Not equal ttl or value")
 		return ErrTranferFailed
 	}
 
