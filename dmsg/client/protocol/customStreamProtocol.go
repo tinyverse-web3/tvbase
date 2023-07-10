@@ -12,44 +12,44 @@ import (
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
 
-type CustomProtocolAdapter struct {
+type CustomStreamProtocolAdapter struct {
 	common.CommonProtocolAdapter
 	protocol *common.StreamProtocol
 	pid      string
 }
 
-func NewCustomProtocolAdapter() *CustomProtocolAdapter {
-	ret := &CustomProtocolAdapter{}
+func NewCustomStreamProtocolAdapter() *CustomStreamProtocolAdapter {
+	ret := &CustomStreamProtocolAdapter{}
 	return ret
 }
 
-func (adapter *CustomProtocolAdapter) init(customProtocolId string) {
+func (adapter *CustomStreamProtocolAdapter) init(customProtocolId string) {
 	adapter.pid = customProtocolId
 	adapter.protocol.Host.SetStreamHandler(protocol.ID(dmsgProtocol.PidCustomProtocolRes+"/"+adapter.pid), adapter.protocol.OnResponse)
 	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
 
-func (adapter *CustomProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
+func (adapter *CustomStreamProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
 	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_RES
 }
 
-func (adapter *CustomProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
+func (adapter *CustomStreamProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
 	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_REQ
 }
 
-func (adapter *CustomProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+func (adapter *CustomStreamProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
 	return protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid)
 }
 
-func (adapter *CustomProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *CustomStreamProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
 	request := &pb.CustomProtocolReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
 }
 
-func (adapter *CustomProtocolAdapter) SetCustomContent(customProtocolID string, content []byte) error {
+func (adapter *CustomStreamProtocolAdapter) SetCustomContent(customProtocolID string, content []byte) error {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
 	if !ok {
 		dmsgLog.Logger.Error("ProtocolRequest is not CustomContentReq")
@@ -60,12 +60,12 @@ func (adapter *CustomProtocolAdapter) SetCustomContent(customProtocolID string, 
 	return nil
 }
 
-func (adapter *CustomProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *CustomStreamProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCustomProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *CustomProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
@@ -73,7 +73,7 @@ func (adapter *CustomProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicDa
 	return response.BasicData
 }
 
-func (adapter *CustomProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
@@ -81,7 +81,7 @@ func (adapter *CustomProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
 	return response.RetCode
 }
 
-func (adapter *CustomProtocolAdapter) SetProtocolRequestSign(signature []byte) {
+func (adapter *CustomStreamProtocolAdapter) SetProtocolRequestSign(signature []byte) {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
 	if !ok {
 		return
@@ -89,11 +89,16 @@ func (adapter *CustomProtocolAdapter) SetProtocolRequestSign(signature []byte) {
 	request.BasicData.Sign = signature
 }
 
-func NewCustomStreamProtocol(ctx context.Context, host host.Host, customProtocolId string,
-	protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
-	adapter := NewCustomProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
-	adapter.protocol = protocol
-	adapter.init(customProtocolId)
+func NewCustomStreamProtocol(
+	ctx context.Context,
+	host host.Host,
+	customProtocolId string,
+	protocolCallback common.StreamProtocolCallback,
+	protocolService common.ProtocolService,
+) *common.StreamProtocol {
+	ret := NewCustomStreamProtocolAdapter()
+	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, ret)
+	ret.protocol = protocol
+	ret.init(customProtocolId)
 	return protocol
 }

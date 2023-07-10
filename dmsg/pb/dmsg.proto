@@ -26,7 +26,7 @@ message BasicData {
     ProtocolID protocolID = 2;
     int64 timestamp = 3;
     string peerId = 4;
-    bytes signPubKey = 5;
+    string signPubKey = 5;
     string destPubkey = 6;
     bytes sign = 7;
     string ver = 8;

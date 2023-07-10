@@ -10,6 +10,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/protoio"
+	"google.golang.org/protobuf/proto"
 )
 
 func (p *StreamProtocol) OnResponse(stream network.Stream) {
@@ -30,7 +31,7 @@ func (p *StreamProtocol) OnResponse(stream network.Stream) {
 	}
 
 	basicData := p.Adapter.GetProtocolResponseBasicData()
-	valid := dmsgProtocol.AuthProtocolMsg(p.ProtocolResponse, basicData, true)
+	valid := dmsgProtocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->OnResponse: failed to authenticate message, response: %v", p.ProtocolResponse)
 		return
@@ -58,15 +59,21 @@ func (p *StreamProtocol) OnResponse(stream network.Stream) {
 		stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), requestProtocolId, sreamRequestProtocolId, p.ProtocolRequest)
 }
 
-func (p *StreamProtocol) Request(peerId peer.ID, userPubkey string) error {
+func (p *StreamProtocol) Request(peerId peer.ID, destUserPubkey string) error {
 	protocolID := p.Adapter.GetRequestProtocolID()
-	basicData, err := dmsgProtocol.NewBasicData(p.Host, userPubkey, protocolID)
+	srcUserPubkey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	basicData, err := dmsgProtocol.NewBasicData(p.Host, srcUserPubkey, destUserPubkey, protocolID)
 	if err != nil {
 		return err
 	}
 
 	p.Adapter.InitProtocolRequest(basicData)
-	signature, err := dmsgProtocol.SignProtocolMsg(p.ProtocolRequest, p.Host)
+
+	protoData, err := proto.Marshal(p.ProtocolRequest)
+	if err != nil {
+		return err
+	}
+	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
 		return err
 	}
@@ -86,9 +93,10 @@ func (p *StreamProtocol) Request(peerId peer.ID, userPubkey string) error {
 	return nil
 }
 
-func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, userPubkey string, protocolId string, requstContent []byte) error {
+func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, destUserPubkey string, protocolId string, requstContent []byte) error {
 	protocolID := p.Adapter.GetRequestProtocolID()
-	basicData, err := dmsgProtocol.NewBasicData(p.Host, userPubkey, protocolID)
+	srcUserPubkey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	basicData, err := dmsgProtocol.NewBasicData(p.Host, srcUserPubkey, destUserPubkey, protocolID)
 	if err != nil {
 		return err
 	}
@@ -100,7 +108,11 @@ func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, userPubkey string
 		return err
 	}
 
-	signature, err := dmsgProtocol.SignProtocolMsg(p.ProtocolRequest, p.Host)
+	protoData, err := proto.Marshal(p.ProtocolRequest)
+	if err != nil {
+		return err
+	}
+	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
 		return err
 	}
@@ -141,12 +153,18 @@ func (p *StreamProtocol) TickCleanRequest() {
 	}
 }
 
-func NewStreamProtocol(ctx context.Context, host host.Host, protocolCallback StreamProtocolCallback, adapter StreamProtocolAdapter) *StreamProtocol {
+func NewStreamProtocol(
+	ctx context.Context,
+	host host.Host,
+	protocolCallback StreamProtocolCallback,
+	protocolService ProtocolService,
+	adapter StreamProtocolAdapter) *StreamProtocol {
 	ret := &StreamProtocol{}
 	ret.Host = host
 	ret.Ctx = ctx
 	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Callback = protocolCallback
+	ret.ProtocolService = protocolService
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
 	return ret

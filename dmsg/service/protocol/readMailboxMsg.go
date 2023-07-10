@@ -85,12 +85,13 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolResponse(basicData *pb
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseSign(signature []byte) {
+func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxMsgRes)
 	if !ok {
-		return
+		return errors.New("failed to cast request to *pb.ReadMailboxMsgRes")
 	}
 	response.BasicData.Sign = signature
+	return nil
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
@@ -98,9 +99,9 @@ func (adapter *ReadMailboxMsgProtocolAdapter) CallProtocolRequestCallback() (int
 	return data, err
 }
 
-func NewReadMailboxMsgProtocol(ctx context.Context, host host.Host, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+func NewReadMailboxMsgProtocol(ctx context.Context, host host.Host, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewReadMailboxMsgProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
+	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	adapter.protocol = protocol
 	adapter.init()
 	return protocol

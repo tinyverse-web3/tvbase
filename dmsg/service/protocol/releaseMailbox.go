@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -78,12 +79,13 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolResponse(basicData *pb
 	return nil
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) SetProtocolResponseSign(signature []byte) {
+func (adapter *ReleaseMailboxProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReleaseMailboxRes)
 	if !ok {
-		return
+		return errors.New("failed to cast request to *pb.ReleaseMailboxRes")
 	}
 	response.BasicData.Sign = signature
+	return nil
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
@@ -91,9 +93,9 @@ func (adapter *ReleaseMailboxProtocolAdapter) CallProtocolRequestCallback() (int
 	return data, err
 }
 
-func NewReleaseMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+func NewReleaseMailboxProtocol(ctx context.Context, host host.Host, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewReleaseMailboxProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
+	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	adapter.protocol = protocol
 	adapter.init()
 	return protocol

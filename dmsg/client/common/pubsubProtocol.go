@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -39,7 +38,7 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 	}
 
 	basicData := p.Adapter.GetProtocolResponseBasicData()
-	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData, true)
+	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
 	if !valid {
 		dmsgLog.Logger.Warnf("PubsubProtocol->OnResponse: failed to authenticate message, response:%v", p.ProtocolResponse)
 		return
@@ -58,21 +57,26 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *PubsubProtocol) Request(pubkey interface{}) error {
-	userPubkey, ok := pubkey.(string)
-	if !ok {
-		dmsgLog.Logger.Errorf("PubsubProtocol->Request: pubkey %v is not string", pubkey)
-		return fmt.Errorf("PubsubProtocol->Request: pubic key %s is not exist", userPubkey)
-	}
-
+func (p *PubsubProtocol) Request(destUserPubKey string) error {
 	protocolID := p.Adapter.GetRequestProtocolID()
-	basicData, err := protocol.NewBasicData(p.Host, userPubkey, protocolID)
+	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, destUserPubKey, protocolID)
 	if err != nil {
 		return err
 	}
 	p.Adapter.InitProtocolRequest(basicData)
 
-	err = p.Adapter.SetProtocolRequestSign()
+	//sign data
+	protoData, err := proto.Marshal(p.ProtocolRequest)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request: marshal protocolData error: %v", err)
+		return err
+	}
+	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
+	if err != nil {
+		return err
+	}
+	err = p.Adapter.SetProtocolRequestSign(signature)
 	if err != nil {
 		return err
 	}
@@ -83,7 +87,7 @@ func (p *PubsubProtocol) Request(pubkey interface{}) error {
 	}
 
 	pubsubSource := p.Adapter.GetPubsubSource()
-	err = p.ProtocolService.PublishProtocol(basicData.ProtocolID, userPubkey, protocolData, pubsubSource)
+	err = p.ProtocolService.PublishProtocol(basicData.ProtocolID, destUserPubKey, protocolData, pubsubSource)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: pubsub publish error: %v", err)
 	}

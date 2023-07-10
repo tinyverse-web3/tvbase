@@ -26,7 +26,7 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 		pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 
 	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
-	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData, true)
+	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Warnf("PubsubProtocol->OnRequest: failed to authenticate message")
 		return
@@ -43,18 +43,29 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 
 	// generate response message
 	protocolID := p.Adapter.GetResponseProtocolID()
-	responseBasicData, err := protocol.NewBasicData(p.Host, requestBasicData.DestPubkey, protocolID)
+	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, requestBasicData.DestPubkey, protocolID)
 	responseBasicData.Id = requestBasicData.Id
 	if err != nil {
-		dmsgLog.Logger.Errorf(err.Error())
+		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: NewBasicData error: %v", err)
 		return
 	}
 	p.Adapter.InitProtocolResponse(responseBasicData)
 
 	// sign the data
-	err = p.Adapter.SetProtocolResponseSign()
+	protoData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf(err.Error())
+		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: marshal response error: %v", err)
+		return
+	}
+	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: GetCurSrcUserSign error: %v", err)
+		return
+	}
+	err = p.Adapter.SetProtocolResponseSign(signature)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: SetProtocolResponseSign error: %v", err)
 		return
 	}
 

@@ -7,7 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
 
 type SeekMailboxProtocolAdapter struct {
@@ -67,11 +66,7 @@ func (adapter *SeekMailboxProtocolAdapter) GetProtocolResponseRetCode() *pb.RetC
 	}
 	return response.RetCode
 }
-func (adapter *SeekMailboxProtocolAdapter) SetProtocolRequestSign() error {
-	signature, err := protocol.SignProtocolMsg(adapter.protocol.ProtocolRequest, adapter.protocol.Host)
-	if err != nil {
-		return err
-	}
+func (adapter *SeekMailboxProtocolAdapter) SetProtocolRequestSign(signature []byte) error {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.SeekMailboxReq)
 	if !ok {
 		return errors.New("failed to cast request to *pb.SeekMailboxReq")

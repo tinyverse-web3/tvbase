@@ -42,8 +42,9 @@ func (adapter *CommonProtocolAdapter) InitProtocolResponse(basicData *pb.BasicDa
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) SetProtocolResponseSign(signature []byte) {
+func (adapter *CommonProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
 	dmsgLog.Logger.Warnf("CommonProtocolAdapter->SetProtocolResponseSign: not implemented")
+	return nil
 }
 
 func (adapter *CommonProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {

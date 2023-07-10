@@ -12,7 +12,6 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
-	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -20,6 +19,8 @@ import (
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	serviceProtocol "github.com/tinyverse-web3/tvbase/dmsg/service/protocol"
+	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
+	keyUtil "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -34,9 +35,9 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	Datastore       db.Datastore
-	destUserPubsubs map[string]*dmsgServiceCommon.DestUserPubsub
-	// service
+	datastore                    db.Datastore
+	curSrcUserInfo               *dmsgServiceCommon.UserInfo
+	destUserPubsubs              map[string]*dmsgServiceCommon.DestUserPubsub
 	protocolReqSubscribes        map[pb.ProtocolID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.ProtocolID]protocol.ResSubscribe
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomProtocolInfo
@@ -58,15 +59,16 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	cfg := d.BaseService.GetConfig()
-	d.Datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+	d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
 	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->Init: create datastore error %v", err)
 		return err
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = serviceProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
-	d.releaseMailboxPrtocol = serviceProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
-	d.readMailboxMsgPrtocol = serviceProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.createMailboxProtocol = serviceProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.releaseMailboxPrtocol = serviceProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.readMailboxMsgPrtocol = serviceProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 
 	// pubsub protocol
 	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
@@ -80,7 +82,49 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
 
 	d.customStreamProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomProtocolInfo)
+
+	peerId := d.BaseService.GetHost().ID().String()
+	priKey, pubKey, err := keyUtil.GenerateEcdsaKey(peerId)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->Init: generate priKey error %v", err)
+		return err
+	}
+	priKeyData, err := keyUtil.ECDSAPrivateKeyToProtoBuf(priKey)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->Init: generate priKey_porto error %v", err)
+		return err
+	}
+	priKeyHex := keyUtil.TranslateKeyProtoBufToString(priKeyData)
+
+	pubKeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubKey)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->Init: generate pubKey_porto error %v", err)
+		return err
+	}
+	pubKeyHex := keyUtil.TranslateKeyProtoBufToString(pubKeyData)
+
+	d.curSrcUserInfo = &dmsgServiceCommon.UserInfo{
+		UserKey: &dmsgServiceCommon.UserKey{
+			PubKeyHex: pubKeyHex,
+			PriKeyHex: priKeyHex,
+			PubKey:    pubKey,
+			PriKey:    priKey,
+		},
+	}
 	return nil
+}
+
+func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
+	return d.curSrcUserInfo.UserKey.PubKeyHex
+}
+
+func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
+	sign, err := tvCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("GetCurUserSign: %v", err)
+		return sign, nil
+	}
+	return sign, nil
 }
 
 func (d *DmsgService) getMsgPrefix(srcUserPubkey string) string {
@@ -124,13 +168,13 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommo
 				Prefix:   d.getMsgPrefix(pubkey),
 				KeysOnly: true,
 			}
-			results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
+			results, err := d.datastore.Query(d.BaseService.GetCtx(), query)
 			if err != nil {
 				dmsgLog.Logger.Errorf("serviceDmsgService->readDestUserPubsub: query error: %v", err)
 			}
 
 			for result := range results.Next() {
-				d.Datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(result.Key))
+				d.datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(result.Key))
 				dmsgLog.Logger.Debugf("serviceDmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
 			}
 
@@ -238,7 +282,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent
 	defer pubsub.MsgRWMutex.RUnlock()
 
 	key := d.GetFullFromMsgPrefix(sendMsgReq)
-	err := d.Datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
+	err := d.datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
 	if err != nil {
 		return err
 	}
@@ -347,7 +391,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	var query = query.Query{
 		Prefix: d.getMsgPrefix(pubkey),
 	}
-	results, err := d.Datastore.Query(d.BaseService.GetCtx(), query)
+	results, err := d.datastore.Query(d.BaseService.GetCtx(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +412,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	}
 
 	for _, needDeleteKey := range needDeleteKeyList {
-		err := d.Datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(needDeleteKey))
+		err := d.datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(needDeleteKey))
 		if err != nil {
 			dmsgLog.Logger.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: delete msg happen err: %v", err)
 		}
@@ -435,12 +479,12 @@ func (d *DmsgService) OnCustomProtocolResponse(reqProtoData protoreflect.ProtoMe
 func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.SeekMailboxReq)
 	if !ok {
-		tvLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 	}
 	pubsub := d.destUserPubsubs[request.BasicData.DestPubkey]
 	if pubsub == nil {
-		tvLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
 		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
 	}
 	return nil, nil
@@ -494,7 +538,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomSt
 		return fmt.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
+		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Service:        service,
 	}
 	service.SetCtx(d.BaseService.GetCtx())
@@ -508,7 +552,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 		return nil
 	}
 	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
+		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Service:        callback,
 	}
 	return nil

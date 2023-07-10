@@ -70,9 +70,13 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolRequestSign(signature [
 	request.BasicData.Sign = signature
 }
 
-func NewReadMailboxMsgProtocol(ctx context.Context, host host.Host, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+func NewReadMailboxMsgProtocol(
+	ctx context.Context,
+	host host.Host,
+	protocolCallback common.StreamProtocolCallback,
+	protocolService common.ProtocolService) *common.StreamProtocol {
 	adapter := NewReadMailboxMsgProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
+	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, adapter)
 	adapter.protocol = protocol
 	adapter.init()
 	return protocol

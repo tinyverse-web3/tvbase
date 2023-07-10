@@ -65,12 +65,10 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback dmsgCLientCommon.GetSigCallback) (*pb.SendMsgReq, error) {
+func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debug("SendMsgProtocol->Request ...")
-
-	basicData, err := protocol.NewBasicData(p.Host, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
-	basicData.SignPubKey = []byte(sendMsgData.SrcUserPubkeyHex)
-
+	srcUserPubKeyHex := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKeyHex, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +83,8 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback 
 		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: marshal error %v", err)
 		return nil, err
 	}
-	sig, err := getSigCallback(protoData)
+
+	sign, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: get signature error %v", err)
 		return nil, err
@@ -96,7 +95,7 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback 
 		return nil, err
 	}
 
-	p.SendMsgRequest.BasicData.Sign = sig
+	p.SendMsgRequest.BasicData.Sign = sign
 	protoData, err = proto.Marshal(p.SendMsgRequest)
 	if err != nil {
 		dmsgLog.Logger.Error("SendMsgProtocol->Request: marshal protocolData error %v", err)

@@ -9,6 +9,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/protoio"
+	"google.golang.org/protobuf/proto"
 )
 
 func (p *StreamProtocol) OnRequest(stream network.Stream) {
@@ -32,7 +33,7 @@ func (p *StreamProtocol) OnRequest(stream network.Stream) {
 	dmsgLog.Logger.Infof("StreamProtocol->OnRequest: %s:before authMsg, received request from %s, Message:%v",
 		stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), p.ProtocolRequest)
 
-	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData, true)
+	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
 		p.sendResponseProtocol(stream, callbackData, fmt.Errorf("failed to authenticate message"))
 		return
@@ -56,7 +57,9 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 	// generate response message
 	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
 	protocolID := p.Adapter.GetResponseProtocolID()
-	responseBasicData, err := protocol.NewBasicData(p.Host, requestBasicData.DestPubkey, protocolID)
+
+	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, requestBasicData.DestPubkey, protocolID)
 	responseBasicData.Id = requestBasicData.Id
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: NewBasicData error: %v", err)
@@ -85,18 +88,23 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		}
 	}
 
-	signature, err := protocol.SignProtocolMsg(p.ProtocolResponse, p.Host)
+	// sign the data
+	protoData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: signProtocolMsg error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: marshal response error: %v", err)
 		return
 	}
-	p.Adapter.SetProtocolResponseSign(signature)
+	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: GetCurSrcUserSign error: %v", err)
+		return
+	}
 
-	// basicData := p.Adapter.GetProtocolResponseBasicData()
-	// valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData, true)
-	// if !valid {
-	// 	return
-	// }
+	err = p.Adapter.SetProtocolResponseSign(signature)
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: SetProtocolResponseSign error: %v", err)
+		return
+	}
 
 	err = protocol.SendProtocolMsg(p.Ctx, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponseProtocolID(), p.ProtocolResponse, p.Host)
 	responseProtocolId := p.Adapter.GetResponseProtocolID()
@@ -111,10 +119,11 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 
 }
 
-func NewStreamProtocol(ctx context.Context, host host.Host, protocolCallback StreamProtocolCallback, adapter StreamProtocolAdapter) *StreamProtocol {
+func NewStreamProtocol(ctx context.Context, host host.Host, protocolService ProtocolService, protocolCallback StreamProtocolCallback, adapter StreamProtocolAdapter) *StreamProtocol {
 	protocol := &StreamProtocol{}
 	protocol.Ctx = ctx
 	protocol.Host = host
+	protocol.ProtocolService = protocolService
 	protocol.Callback = protocolCallback
 	protocol.Adapter = adapter
 	return protocol

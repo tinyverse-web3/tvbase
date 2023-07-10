@@ -74,14 +74,10 @@ func (adapter *SeekMailboxProtocolAdapter) GetProtocolResponseRetCode() *pb.RetC
 	return response.RetCode
 }
 
-func (adapter *SeekMailboxProtocolAdapter) SetProtocolResponseSign() error {
+func (adapter *SeekMailboxProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.SeekMailboxRes)
 	if !ok {
 		return errors.New("failed to cast request to *pb.SeekMailboxRes")
-	}
-	signature, err := protocol.SignProtocolMsg(adapter.protocol.ProtocolResponse, adapter.protocol.Host)
-	if err != nil {
-		return err
 	}
 	response.BasicData.Sign = signature
 	return nil
