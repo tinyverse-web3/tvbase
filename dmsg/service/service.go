@@ -70,6 +70,8 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	// pubsub protocol
 	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
+
+	// sendMsgProtocol, special pubsub protocol
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
 	d.destUserPubsubs = make(map[string]*dmsgServiceCommon.DestUserPubsub)

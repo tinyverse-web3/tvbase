@@ -67,11 +67,11 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 	err = p.ProtocolService.PublishProtocol(responseBasicData.ProtocolID, responseBasicData.DestPubkey, responseProtocolData)
 
 	if err == nil {
-		dmsgLog.Logger.Infof("PubsubProtocol->OnRequest: pubulish response msg to %s, msgId:%s, topic:%s, requestProtocolId:%s,  Message:%v",
-			pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse)
+		dmsgLog.Logger.Infof("PubsubProtocol->OnRequest: pubulish response msg to %s, topic:%s, requestProtocolId:%s,  Message:%v",
+			pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse)
 	} else {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: pubulish response msg to %s, msgId:%s, topic:%s, requestProtocolId:%s,  Message:%v, error:%v",
-			pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse, err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: pubulish response msg to %s, topic:%s, requestProtocolId:%s,  Message:%v, error:%v",
+			pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse, err)
 	}
 }
 

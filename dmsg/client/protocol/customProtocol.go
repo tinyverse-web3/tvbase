@@ -30,8 +30,12 @@ func (adapter *CustomProtocolAdapter) init(customProtocolId string) {
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
 
+func (adapter *CustomProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
+	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_RES
+}
+
 func (adapter *CustomProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CUSTOM_PROTOCOL_REQ
+	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_REQ
 }
 
 func (adapter *CustomProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
