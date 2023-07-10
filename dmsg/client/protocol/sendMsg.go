@@ -32,6 +32,11 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		return
 	}
 
+	// requestProtocolId := p.Adapter.GetRequestProtocolID()
+	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
+	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: received request from %s, topic:%s, requestProtocolId:%s,  Message:%v",
+		pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
+
 	sendMsgReq, ok := p.ProtocolRequest.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->OnRequest: failed to cast msg to *pb.SendMsgReq")
@@ -40,7 +45,7 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 	basicData := sendMsgReq.BasicData
 	valid, err := protocol.EcdsaAuthProtocolMsg(p.ProtocolRequest, basicData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->OnRequest: authenticate message err:%v", err)
+		dmsgLog.Logger.Warnf("SendMsgProtocol->OnRequest: authenticate message err:%v", err)
 		return
 	}
 	if !valid {
@@ -56,7 +61,6 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: callback data: %v", callbackData)
 	}
 
-	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
 	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: received response from %s, topic:%s, requestProtocolId:%s,  Message:%v",
 		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
@@ -99,7 +103,7 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback 
 		return nil, err
 	}
 
-	err = p.ClientService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
+	err = p.ProtocolService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
 		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgCLientCommon.PubsubSource.DestUser)
 	if err != nil {
 		dmsgLog.Logger.Error("SendMsgProtocol->Request: publish protocol error %v", err)
@@ -110,14 +114,14 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData, getSigCallback 
 	return p.SendMsgRequest, nil
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.PubsubProtocolCallback, clientService dmsgCLientCommon.ClientService) *SendMsgProtocol {
+func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.PubsubProtocolCallback, protocolService dmsgCLientCommon.ProtocolService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
 	ret.SendMsgRequest = &pb.SendMsgReq{}
 	ret.ProtocolRequest = ret.SendMsgRequest
 	ret.Host = host
-	ret.ClientService = clientService
+	ret.ProtocolService = protocolService
 	ret.Callback = protocolCallback
 
-	ret.ClientService.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, ret)
+	ret.ProtocolService.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, ret)
 	return ret
 }

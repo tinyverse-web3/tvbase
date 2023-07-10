@@ -18,16 +18,16 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	serviceProtocol "github.com/tinyverse-web3/tvbase/dmsg/service/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ProtocolProxy struct {
-	createMailboxProtocol *common.StreamProtocol
-	releaseMailboxPrtocol *common.StreamProtocol
-	readMailboxMsgPrtocol *common.StreamProtocol
-	seekMailboxProtocol   *common.PubsubProtocol
+	createMailboxProtocol *dmsgServiceCommon.StreamProtocol
+	releaseMailboxPrtocol *dmsgServiceCommon.StreamProtocol
+	readMailboxMsgPrtocol *dmsgServiceCommon.StreamProtocol
+	seekMailboxProtocol   *dmsgServiceCommon.PubsubProtocol
 	sendMsgPrtocol        *serviceProtocol.SendMsgProtocol
 }
 
@@ -35,11 +35,11 @@ type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	Datastore       db.Datastore
-	destUserPubsubs map[string]*common.DestUserPubsub
+	destUserPubsubs map[string]*dmsgServiceCommon.DestUserPubsub
 	// service
 	protocolReqSubscribes        map[pb.ProtocolID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.ProtocolID]protocol.ResSubscribe
-	customStreamProtocolInfoList map[string]*common.CustomProtocolInfo
+	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomProtocolInfo
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -72,12 +72,12 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
-	d.destUserPubsubs = make(map[string]*common.DestUserPubsub)
+	d.destUserPubsubs = make(map[string]*dmsgServiceCommon.DestUserPubsub)
 
 	d.protocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
 	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
 
-	d.customStreamProtocolInfoList = make(map[string]*common.CustomProtocolInfo)
+	d.customStreamProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomProtocolInfo)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (d *DmsgService) unPublishDestUser(destPubkey string) error {
 	return nil
 }
 
-func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *common.DestUserPubsub) {
+func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommon.DestUserPubsub) {
 	for {
 		days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
 		// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default day is 30
@@ -183,7 +183,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	}
 	go d.BaseService.DiscoverRendezvousPeers()
 
-	d.destUserPubsubs[userPubKey] = &common.DestUserPubsub{
+	d.destUserPubsubs[userPubKey] = &dmsgServiceCommon.DestUserPubsub{
 		UserTopic:           userTopic,
 		UserSub:             userSub,
 		MsgRWMutex:          sync.RWMutex{},
@@ -214,7 +214,7 @@ func (d *DmsgService) unSubscribeDestUsers() error {
 	return nil
 }
 
-func (d *DmsgService) getDestUserPubsub(userPubkey string) *common.DestUserPubsub {
+func (d *DmsgService) getDestUserPubsub(userPubkey string) *dmsgServiceCommon.DestUserPubsub {
 	return d.destUserPubsubs[userPubkey]
 }
 
@@ -273,7 +273,7 @@ func (d *DmsgService) Stop() error {
 	return nil
 }
 
-func (d *DmsgService) GetDestUserPubsub(publicKey string) *common.DestUserPubsub {
+func (d *DmsgService) GetDestUserPubsub(publicKey string) *dmsgServiceCommon.DestUserPubsub {
 	return d.destUserPubsubs[publicKey]
 }
 
@@ -286,7 +286,7 @@ func (d *DmsgService) OnCreateMailboxRequest(protoData protoreflect.ProtoMessage
 	}
 	isAvailable := d.isAvailableMailbox(request.BasicData.DestPubkey)
 	if !isAvailable {
-		return nil, errors.New(common.MailboxLimitErr)
+		return nil, errors.New(dmsgServiceCommon.MailboxLimitErr)
 	}
 	err := d.publishDestUser(request.BasicData.DestPubkey)
 	if err != nil {
@@ -306,8 +306,8 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 	if pubsub != nil {
 		dmsgLog.Logger.Warnf("serviceDmsgService->OnCreateMailboxResponse: destPubkey %s already exist", response.BasicData.DestPubkey)
 		response.RetCode = &pb.RetCode{
-			Code:   common.MailboxAlreadyExistCode,
-			Result: common.MailboxAlreadyExistErr,
+			Code:   dmsgServiceCommon.MailboxAlreadyExistCode,
+			Result: dmsgServiceCommon.MailboxAlreadyExistErr,
 		}
 	}
 	return nil, nil
@@ -491,7 +491,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomSt
 		dmsgLog.Logger.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
 		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Service:        service,
 	}
@@ -505,7 +505,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 		dmsgLog.Logger.Warnf("serviceDmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &common.CustomProtocolInfo{
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
 		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
 		Service:        callback,
 	}

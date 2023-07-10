@@ -8,15 +8,16 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/proto"
 )
 
 type SendMsgProtocol struct {
-	common.PubsubProtocol
+	dmsgServiceCommon.PubsubProtocol
 	SendMsgRequest *pb.SendMsgReq
 }
 
+// Receive a message
 func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -32,7 +33,7 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 
 	// requestProtocolId := p.Adapter.GetRequestProtocolID()
 	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
-	dmsgLog.Logger.Infof("SendMsgProtocol->OnRequest: received request from %s, topic:%s, requestProtocolId:%s,  Message:%v",
+	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: received request from %s, topic:%s, requestProtocolId:%s,  Message:%v",
 		pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 
 	sendMsgReq, ok := p.ProtocolRequest.(*pb.SendMsgReq)
@@ -43,7 +44,7 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 	basicData := sendMsgReq.BasicData
 	valid, err := protocol.EcdsaAuthProtocolMsg(p.ProtocolRequest, basicData)
 	if err != nil {
-		dmsgLog.Logger.Errorf(err.Error())
+		dmsgLog.Logger.Warnf("SendMsgProtocol->OnRequest: authenticate message err:%v", err)
 		return
 	}
 	if !valid {
@@ -59,11 +60,11 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: callback data: %v", callbackData)
 	}
 
-	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: receive pubsub response msg to %s, msgId:%s, topic:%s, requestProtocolId:%s,  Message:%v",
-		pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse)
+	dmsgLog.Logger.Debugf("SendMsgProtocol->OnRequest: received response from %s, topic:%s, requestProtocolId:%s,  Message:%v",
+		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback common.PubsubProtocolCallback, protocolService common.ProtocolService) *SendMsgProtocol {
+func NewSendMsgProtocol(host host.Host, protocolCallback dmsgServiceCommon.PubsubProtocolCallback, protocolService dmsgServiceCommon.ProtocolService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
 	ret.SendMsgRequest = &pb.SendMsgReq{}
 	ret.ProtocolRequest = ret.SendMsgRequest

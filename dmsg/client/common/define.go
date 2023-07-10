@@ -61,7 +61,7 @@ type PubsubProtocol struct {
 	Host             host.Host
 	RequestInfoList  map[string]*RequestInfo
 	Callback         PubsubProtocolCallback
-	ClientService    ClientService
+	ProtocolService  ProtocolService
 	ProtocolRequest  protoreflect.ProtoMessage
 	ProtocolResponse protoreflect.ProtoMessage
 	Adapter          PubsubProtocolAdapter
@@ -73,7 +73,7 @@ type PubsubProtocolCallback interface {
 	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
 
-type ClientService interface {
+type ProtocolService interface {
 	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error

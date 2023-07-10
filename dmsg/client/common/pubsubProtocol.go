@@ -83,7 +83,7 @@ func (p *PubsubProtocol) Request(pubkey interface{}) error {
 	}
 
 	pubsubSource := p.Adapter.GetPubsubSource()
-	err = p.ClientService.PublishProtocol(basicData.ProtocolID, userPubkey, protocolData, pubsubSource)
+	err = p.ProtocolService.PublishProtocol(basicData.ProtocolID, userPubkey, protocolData, pubsubSource)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: pubsub publish error: %v", err)
 	}
@@ -118,12 +118,12 @@ func (p *PubsubProtocol) TickCleanRequest() {
 }
 
 func NewPubsubProtocol(ctx context.Context, host host.Host, protocolCallback PubsubProtocolCallback,
-	clientService ClientService, adapter PubsubProtocolAdapter) *PubsubProtocol {
+	clientService ProtocolService, adapter PubsubProtocolAdapter) *PubsubProtocol {
 	ret := &PubsubProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = protocolCallback
-	ret.ClientService = clientService
+	ret.ProtocolService = clientService
 	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()

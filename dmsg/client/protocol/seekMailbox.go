@@ -25,7 +25,7 @@ func (adapter *SeekMailboxProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.SeekMailboxRes{}
 
 	protocolID := adapter.GetResponseProtocolID()
-	adapter.protocol.ClientService.RegPubsubProtocolResCallback(protocolID, adapter.protocol)
+	adapter.protocol.ProtocolService.RegPubsubProtocolResCallback(protocolID, adapter.protocol)
 }
 
 func (adapter *SeekMailboxProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
@@ -80,7 +80,7 @@ func (adapter *SeekMailboxProtocolAdapter) SetProtocolRequestSign() error {
 	return nil
 }
 
-func NewSeekMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.ClientService) *common.PubsubProtocol {
+func NewSeekMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.ProtocolService) *common.PubsubProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
 	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
 	adapter.protocol = protocol
