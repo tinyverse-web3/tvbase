@@ -144,10 +144,10 @@ func main() {
 		tvsLog.Fatalf("tvnode->main: init log: %v", err)
 	}
 
-	pidFileName, err := getPidFileName(rootPath)
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
-	}
+	// pidFileName, err := getPidFileName(rootPath)
+	// if err != nil {
+	// 	tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
+	// }
 	// pidFileLockHandle, err := filelock.New(pidFileName)
 	tvsLog.Infof("tvnode->main: PID: %v", os.Getpid())
 	if err == filelock.ErrFileIsBeingUsed {
@@ -163,10 +163,10 @@ func main() {
 		// if err != nil {
 		// 	tvsLog.Errorf("tvnode->main: pid file unlock: %v", err)
 		// }
-		err = os.Remove(pidFileName)
-		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file remove: %v", err)
-		}
+		// err = os.Remove(pidFileName)
+		// if err != nil {
+		// 	tvsLog.Errorf("tvnode->main: pid file remove: %v", err)
+		// }
 	}()
 
 	ctx := context.Background()
