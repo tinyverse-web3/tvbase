@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	filelock "github.com/MichaelS11/go-file-lock"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
@@ -31,12 +33,38 @@ func init() {
 	ipfsLog.SetLogLevel(logName, "debug")
 }
 
-func getPidFileName() (string, error) {
-	cwd, err := os.Getwd()
+func getPidFileName(rootPath string) (string, error) {
+	rootPath = strings.Trim(rootPath, " ")
+	if rootPath == "" {
+		rootPath = "."
+	}
+	fullPath, err := homedir.Expand(rootPath)
 	if err != nil {
+		fmt.Println("GenConfig2IdentityFile->homedir.Expand: " + err.Error())
 		return "", err
 	}
-	pidFile := filepath.Base(cwd) + ".pid"
+	if !filepath.IsAbs(fullPath) {
+		defaultRootPath, err := os.Getwd()
+		if err != nil {
+			fmt.Println("GenConfig2IdentityFile->Getwd: " + err.Error())
+			return "", err
+		}
+		fullPath = filepath.Join(defaultRootPath, fullPath)
+	}
+
+	if !strings.HasSuffix(fullPath, string(filepath.Separator)) {
+		fullPath += string(filepath.Separator)
+	}
+	_, err = os.Stat(fullPath)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(fullPath, 0755)
+		if err != nil {
+			fmt.Println("GenConfig2IdentityFile->MkdirAll: " + err.Error())
+			return "", err
+		}
+	}
+
+	pidFile := fullPath + "tvnode.pid"
 	return pidFile, nil
 }
 
@@ -64,7 +92,7 @@ func parseCmdParams() string {
 	}
 
 	if *shutDown {
-		pidFile, err := getPidFileName()
+		pidFile, err := getPidFileName(*rootPath)
 		if err != nil {
 			tvsLog.Infof("Failed to get pidFileName: %v", err)
 			os.Exit(0)
@@ -116,7 +144,7 @@ func main() {
 		tvsLog.Fatalf("tvnode->main: init log: %v", err)
 	}
 
-	pidFileName, err := getPidFileName()
+	pidFileName, err := getPidFileName(rootPath)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
 	}

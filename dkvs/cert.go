@@ -329,7 +329,7 @@ func VerifyCertTransferConfirm(key string, oldvalue []byte, txcert *pb.Cert, pub
 }
 
 // used to sign with private key
-func IssueCert(name string, data []byte, issuePubkey []byte) *pb.Cert {
+func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cert {
 
 	cert := pb.Cert{
 		Version:      1,
@@ -339,7 +339,7 @@ func IssueCert(name string, data []byte, issuePubkey []byte) *pb.Cert {
 		UserPubkey:   nil,
 		Data:         data,
 		IssueTime:    TimeNow(),
-		Ttl:          DefaultCertTtl,
+		Ttl:          ttl,
 		IssuerPubkey: issuePubkey,
 		IssuerSign:   nil,
 	}
@@ -435,3 +435,19 @@ func DecodeCertsRecordValue(value []byte) *pb.CertsRecordValue {
 
 	return &rv
 }
+
+func EncodeCertsRecordValueWithCert(cr *pb.CertsRecordValue, cert *pb.Cert, userdata []byte) ([]byte, error) {
+
+	if cr == nil {
+		cr = &pb.CertsRecordValue{
+			UserData: userdata, // 在转移时放一个证书
+			CertVect: []*pb.Cert{cert},
+		}
+	} else {
+		cr.UserData = userdata
+		cr.CertVect = append(cr.CertVect, cert)
+	}
+	
+	return cr.Marshal()
+}
+
