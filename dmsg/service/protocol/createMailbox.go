@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -78,12 +79,13 @@ func (adapter *CreateMailboxProtocolAdapter) InitProtocolResponse(basicData *pb.
 	return nil
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseSign(signature []byte) {
+func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
 	if !ok {
-		return
+		return errors.New("failed to cast request to *pb.CreateMailboxRes")
 	}
 	response.BasicData.Sign = signature
+	return nil
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {

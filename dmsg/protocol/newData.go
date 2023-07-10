@@ -4,24 +4,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 )
 
-func NewBasicData(host host.Host, destPubkey string, protocolID pb.ProtocolID) (*pb.BasicData, error) {
-	var signPubKey []byte
-	var err error
-	signPubKey, err = crypto.MarshalPublicKey(host.Peerstore().PubKey(host.ID()))
-
-	if err != nil {
-		return nil, err
-	}
-
+func NewBasicData(host host.Host, signPubKey string, destPubkey string, protocolID pb.ProtocolID) (*pb.BasicData, error) {
 	ret := &pb.BasicData{
 		PeerId:     host.ID().String(),
-		DestPubkey: destPubkey,
 		SignPubKey: signPubKey,
+		DestPubkey: destPubkey,
 		Timestamp:  time.Now().Unix(),
 		Id:         uuid.New().String(),
 		ProtocolID: protocolID,
@@ -33,7 +24,8 @@ func NewBasicData(host host.Host, destPubkey string, protocolID pb.ProtocolID) (
 func NewEmptyBasicData(host host.Host, protocolID pb.ProtocolID) *pb.BasicData {
 	ret := &pb.BasicData{
 		PeerId:     host.ID().String(),
-		SignPubKey: nil,
+		SignPubKey: "",
+		DestPubkey: "",
 		Timestamp:  time.Now().Unix(),
 		Id:         "",
 		ProtocolID: protocolID,

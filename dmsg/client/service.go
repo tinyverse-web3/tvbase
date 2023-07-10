@@ -55,9 +55,9 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
-	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
-	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d)
+	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 
 	// pubsub protocol
 	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
@@ -282,11 +282,11 @@ func (d *DmsgService) Stop() error {
 	return nil
 }
 
-func (d *DmsgService) InitUser(userPubkeyData []byte) error {
+func (d *DmsgService) InitUser(userPubkeyData []byte, getSignCallback dmsgClientCommon.GetSignCallback) error {
 	dmsgLog.Logger.Debug("DmsgService->InitUser...")
 	curSrcUserPubkeyHex := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
 	var err error
-	d.CurSrcUserInfo, err = d.SubscribeSrcUser(curSrcUserPubkeyHex, true)
+	d.CurSrcUserInfo, err = d.SubscribeSrcUser(curSrcUserPubkeyHex, getSignCallback, true)
 	if err != nil {
 		return err
 	}
@@ -307,12 +307,11 @@ func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
 	return d.getDestUserInfo(userPubkey) != nil
 }
 
-func (d *DmsgService) GetCurUserKey() string {
-	// return d.CurSrcUserKey.PrikeyHex, d.CurSrcUserKey.PubkeyHex
+func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
 	return d.CurSrcUserInfo.UserKey.PubkeyHex
 }
 
-func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, isReadPubsubMsg bool) (*dmsgClientCommon.SrcUserInfo, error) {
+func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, getSignCallback dmsgClientCommon.GetSignCallback, isReadPubsubMsg bool) (*dmsgClientCommon.SrcUserInfo, error) {
 	srcUserInfo := d.getSrcUserInfo(srcUserPubkey)
 	if srcUserInfo != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user public key(%s) pubsub already exist", srcUserPubkey)
@@ -345,6 +344,7 @@ func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, isReadPubsubMsg boo
 
 	srcUserInfo = &dmsgClientCommon.SrcUserInfo{}
 	srcUserInfo.UserTopic = userTopic
+	srcUserInfo.GetSignCallback = getSignCallback
 	srcUserInfo.UserSub = userSub
 	srcUserInfo.MailboxCreateSignal = make(chan bool)
 	srcUserInfo.UserKey = &dmsgClientCommon.SrcUserKey{
@@ -408,7 +408,21 @@ func (d *DmsgService) SetReadAllSrcUserPubsubMsg(enable bool) {
 	}
 }
 
-func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte, getSigCallback dmsgClientCommon.GetSigCallback) (*pb.SendMsgReq, error) {
+func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
+	srcUserInfo := d.getSrcUserInfo(d.CurSrcUserInfo.UserKey.PubkeyHex)
+	if srcUserInfo == nil {
+		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSign: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+		return nil, fmt.Errorf("DmsgService->GetCurSrcUserSign: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+	}
+	sign, err := srcUserInfo.GetSignCallback(protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSign: %v", err)
+		return nil, err
+	}
+	return sign, nil
+}
+
+func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg: %v", destPubkey)
 	sendMsgData := &dmsg.SendMsgData{
 		SrcUserPubkeyHex:  d.CurSrcUserInfo.UserKey.PubkeyHex,
@@ -417,7 +431,7 @@ func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte, getSigCallba
 		MsgContent:        msgContent,
 	}
 
-	sendMsgReq, err := d.sendMsgPrtocol.Request(sendMsgData, getSigCallback)
+	sendMsgReq, err := d.sendMsgPrtocol.Request(sendMsgData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SendMsg: %v", err)
 		return nil, err
@@ -827,7 +841,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStr
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customStreamProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomStreamProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
+		StreamProtocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Client:         client,
 	}
 	client.SetCtx(d.BaseService.GetCtx())
@@ -841,9 +855,6 @@ func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomS
 		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomStreamProtocolInfo{
-		StreamProtocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d),
-		Client:         client,
-	}
+	d.customStreamProtocolInfoList[customProtocolID] = nil
 	return nil
 }

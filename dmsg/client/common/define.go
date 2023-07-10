@@ -41,6 +41,7 @@ type StreamProtocol struct {
 	Host             host.Host
 	RequestInfoList  map[string]*RequestInfo
 	Callback         StreamProtocolCallback
+	ProtocolService  ProtocolService
 	ProtocolRequest  protoreflect.ProtoMessage
 	ProtocolResponse protoreflect.ProtoMessage
 	Adapter          StreamProtocolAdapter
@@ -51,7 +52,7 @@ type PubsubProtocolAdapter interface {
 	GetRequestProtocolID() pb.ProtocolID
 	GetProtocolResponseBasicData() *pb.BasicData
 	GetProtocolResponseRetCode() *pb.RetCode
-	SetProtocolRequestSign() error
+	SetProtocolRequestSign(signature []byte) error
 	CallProtocolResponseCallback() (interface{}, error)
 	GetPubsubSource() PubsubSourceType
 }
@@ -69,11 +70,14 @@ type PubsubProtocol struct {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
 
 type ProtocolService interface {
+	GetCurSrcUserPubKeyHex() string
+	GetCurSrcUserSign(protoData []byte) ([]byte, error)
 	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
@@ -90,6 +94,7 @@ type SrcUserInfo struct {
 	MailboxPeerId       string
 	MailboxCreateSignal chan bool
 	UserKey             *SrcUserKey
+	GetSignCallback     GetSignCallback
 }
 
 type DestUserInfo struct {
@@ -125,7 +130,7 @@ type UserMsg struct {
 
 type UserMsgByTimeStamp []UserMsg
 
-type GetSigCallback func(protoData []byte) (sig []byte, err error)
+type GetSignCallback func(protoData []byte) (sig []byte, err error)
 
 type CustomStreamProtocolInfo struct {
 	Client         customProtocol.CustomStreamProtocolClient

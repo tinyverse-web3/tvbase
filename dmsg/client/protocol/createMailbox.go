@@ -70,9 +70,11 @@ func (adapter *CreateMailboxProtocolAdapter) SetProtocolRequestSign(signature []
 	request.BasicData.Sign = signature
 }
 
-func NewCreateMailboxProtocol(ctx context.Context, host host.Host, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+func NewCreateMailboxProtocol(
+	ctx context.Context,
+	host host.Host, protocolCallback common.StreamProtocolCallback, protocolService common.ProtocolService) *common.StreamProtocol {
 	adapter := NewCreateMailboxProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, adapter)
+	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, adapter)
 	adapter.protocol = protocol
 	adapter.init()
 	return protocol

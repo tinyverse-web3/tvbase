@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -14,6 +15,8 @@ import (
 )
 
 type ProtocolService interface {
+	GetCurSrcUserPubKeyHex() string
+	GetCurSrcUserSign(protoData []byte) ([]byte, error)
 	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte) error
@@ -36,13 +39,14 @@ type StreamProtocolAdapter interface {
 	GetProtocolResponseBasicData() *pb.BasicData
 	SetProtocolResponseRet(code int32, result string)
 	SetProtocolResponseFailRet(errMsg string)
-	SetProtocolResponseSign(signature []byte)
+	SetProtocolResponseSign(signature []byte) error
 	CallProtocolRequestCallback() (interface{}, error)
 	CallProtocolResponseCallback() (interface{}, error)
 }
 type StreamProtocol struct {
 	Ctx              context.Context
 	Host             host.Host
+	ProtocolService  ProtocolService
 	Callback         StreamProtocolCallback
 	ProtocolRequest  protoreflect.ProtoMessage
 	ProtocolResponse protoreflect.ProtoMessage
@@ -57,7 +61,7 @@ type PubsubProtocolAdapter interface {
 	GetProtocolRequestBasicData() *pb.BasicData
 	GetProtocolResponseBasicData() *pb.BasicData
 	GetProtocolResponseRetCode() *pb.RetCode
-	SetProtocolResponseSign() error
+	SetProtocolResponseSign(signature []byte) error
 	CallProtocolRequestCallback() (interface{}, error)
 }
 
@@ -90,3 +94,13 @@ type CustomProtocolInfo struct {
 const MailboxLimitErr = "mailbox is limited"
 const MailboxAlreadyExistErr = "dest pubkey already exists"
 const MailboxAlreadyExistCode = 1
+
+type UserInfo struct {
+	UserKey *UserKey
+}
+type UserKey struct {
+	PubKeyHex string
+	PriKeyHex string
+	PubKey    *ecdsa.PublicKey
+	PriKey    *ecdsa.PrivateKey
+}
