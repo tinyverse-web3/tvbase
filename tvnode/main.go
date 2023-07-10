@@ -148,7 +148,7 @@ func main() {
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
 	}
-	pidFileLockHandle, err := filelock.New(pidFileName)
+	// pidFileLockHandle, err := filelock.New(pidFileName)
 	tvsLog.Infof("tvnode->main: PID: %v", os.Getpid())
 	if err == filelock.ErrFileIsBeingUsed {
 		tvsLog.Errorf("tvnode->main: pid file is being locked: %v", err)
@@ -159,10 +159,10 @@ func main() {
 		return
 	}
 	defer func() {
-		err = pidFileLockHandle.Unlock()
-		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file unlock: %v", err)
-		}
+		// err = pidFileLockHandle.Unlock()
+		// if err != nil {
+		// 	tvsLog.Errorf("tvnode->main: pid file unlock: %v", err)
+		// }
 		err = os.Remove(pidFileName)
 		if err != nil {
 			tvsLog.Errorf("tvnode->main: pid file remove: %v", err)

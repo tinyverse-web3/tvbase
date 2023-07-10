@@ -58,7 +58,7 @@ nohup tvnode > "$log_filename" 2>&1 &
 pid=$!
 if [ $? -eq 0 ]; then
     echo "tvnode is started, write to $pid_file, pid: $pid."
-    echo "$pid" > $pid_file
+    # echo "$pid" > $pid_file
 else
     cat $log_filename
     echo "tvnode execution failed. check $log_filename for details."
