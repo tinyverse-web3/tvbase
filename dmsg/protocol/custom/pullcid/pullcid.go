@@ -197,7 +197,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		maxCheckTime = 3 * time.Hour
 	}
 
-	timer := time.NewTimer(500 * time.Millisecond)
+	timer := time.NewTimer(200 * time.Millisecond)
 	go func() {
 		CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
 		if err != nil {
