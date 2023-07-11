@@ -200,7 +200,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	defer close(startIpfsGetObjectChan)
 	endIpfsGetObjectChan := make(chan bool)
 	defer close(endIpfsGetObjectChan)
-	timer := time.NewTimer(1 * time.Millisecond)
+	timer := time.NewTimer(500 * time.Millisecond)
 
 	go func() {
 		startIpfsGetObjectChan <- true
@@ -218,6 +218,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	}()
 
 	<-startIpfsGetObjectChan
+	customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: received startIpfsGetObjectChan signal")
 	select {
 	case <-timer.C:
 		customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: timeout")
