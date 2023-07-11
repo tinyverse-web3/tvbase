@@ -171,7 +171,7 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 	isAlreadyPin, err := IpfsPinLs(cid, ctx)
 	if err != nil {
 		Logger.Errorf("IpfsGetObject: err: %v", err)
-		return 0, 0, PinStatus_UNKNOW, err
+		return 0, 0, PinStatus_ERR, err
 	}
 
 	cumulativeSize := int64(0)

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
-	"github.com/tinyverse-web3/tvbase/common/ipfs"
+	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
@@ -31,7 +31,7 @@ type PullCidResponse struct {
 	CID            string
 	CidContentSize int64
 	ElapsedTime    time.Duration
-	Status         ipfs.PidStatus
+	Status         tvIpfs.PidStatus
 }
 
 // client
@@ -57,7 +57,9 @@ func (p *PullCidClientProtocol) Init() {
 }
 
 func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	pullCidResponse := &PullCidResponse{}
+	pullCidResponse := &PullCidResponse{
+		Status: tvIpfs.PinStatus_UNKNOW,
+	}
 	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
@@ -167,7 +169,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		return err
 	}
 
-	err = ipfs.CheckIpfsCmd()
+	err = tvIpfs.CheckIpfsCmd()
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 		return err
@@ -199,7 +201,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 
 	timer := time.NewTimer(500 * time.Millisecond)
 	go func() {
-		CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
+		CidContentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
 		if err != nil {
 			customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 			return
@@ -242,8 +244,11 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 
 	switch pullCidResponse.Status {
-	case ipfs.PinStatus_ERR, ipfs.PinStatus_PINNED, ipfs.PinStatus_TIMEOUT:
+	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_TIMEOUT:
 		delete(p.commicateInfoList, pullCidRequest.CID)
+	default:
+		customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
+			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
 	}
 
 	return nil
