@@ -241,11 +241,13 @@ func NewDefaultNodeConfig() NodeConfig {
 		},
 		Log: LogConfig{
 			ModuleLevels: map[string]string{
-				"autorelay":      "debug",
 				"tvbase":         "debug",
 				"dkvs":           "debug",
 				"dmsg":           "debug",
 				"customProtocol": "debug",
+				"tvnode":         "debug",
+				"tvnodelight":    "debug",
+				"tvipfs":         "debug",
 			},
 		},
 		Disc: DiscConfig{

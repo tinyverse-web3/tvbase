@@ -29,10 +29,6 @@ const logName = "tvnode"
 
 var tvsLog = ipfsLog.Logger(logName)
 
-func init() {
-	ipfsLog.SetLogLevel(logName, "debug")
-}
-
 func getPidFileName(rootPath string) (string, error) {
 	rootPath = strings.Trim(rootPath, " ")
 	if rootPath == "" {

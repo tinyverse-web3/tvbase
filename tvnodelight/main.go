@@ -24,10 +24,6 @@ const logName = "tvnodelight"
 
 var tvcLog = ipfsLog.Logger(logName)
 
-func init() {
-	ipfsLog.SetLogLevel(logName, "debug")
-}
-
 func parseCmdParams() (string, string, string) {
 	help := flag.Bool("help", false, "Display help")
 	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
