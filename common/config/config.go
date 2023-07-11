@@ -43,6 +43,7 @@ type NodeConfig struct {
 	DHT          DHTConfig
 	DMsg         DMsgConfig
 	Metrics      MetricsConfig
+	CoreHttp     CoreHttpConfig
 	Log          LogConfig
 	Disc         DiscConfig
 }
@@ -156,6 +157,10 @@ type MetricsConfig struct {
 	ApiPort int
 }
 
+type CoreHttpConfig struct {
+	ApiPort int
+}
+
 // var DefaultNodeCfg NodeConfig = NewDefaultNodeConfig()
 
 // returns a default relay configuration using default resource
@@ -241,6 +246,7 @@ func NewDefaultNodeConfig() NodeConfig {
 		},
 		Log: LogConfig{
 			ModuleLevels: map[string]string{
+				"autorelay":      "debug",
 				"tvbase":         "debug",
 				"dkvs":           "debug",
 				"dmsg":           "debug",
@@ -255,6 +261,9 @@ func NewDefaultNodeConfig() NodeConfig {
 		},
 		Metrics: MetricsConfig{
 			ApiPort: 2112,
+		},
+		CoreHttp: CoreHttpConfig{
+			ApiPort: 9099,
 		},
 	}
 }

@@ -30,6 +30,7 @@ import (
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	tvutil "github.com/tinyverse-web3/tvbase/common/util"
+	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
@@ -154,6 +155,7 @@ func (m *TvBase) Start() error {
 		return logAndUnwrapFxError(err)
 	}
 
+	coreHttp.InitHttpServer(m)
 	return nil
 }
 

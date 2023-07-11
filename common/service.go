@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"time"
 
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -30,6 +31,7 @@ type DkvsService interface {
 	IsPublicService(sn string, pubkey []byte) bool
 	IsChildPubkey(child []byte, parent []byte) bool
 	IsApprovedService(sn string) bool
+	FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.ID
 }
 
 type TraceSpanCallback func(ctx context.Context)

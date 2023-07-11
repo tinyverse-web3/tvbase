@@ -202,16 +202,18 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 
 			err := d.protoMessenger.PutValue(ctx, p, rec)
 			if err != nil {
-				Logger.Warnf("putKeyToNetNode--> failed putting value to other peer--->{key: %v, pee: %v, err: %v} ", key, p, err)
+				Logger.Warnf("putKeyToNetNode--> failed putting value to this peer failed--->{key: %v, pee: %v, err: %v} ", key, p, err)
 			} else {
 				isInDhTNet = true
-				Logger.Debugf("putKeyToNetNode--> success putting value to other peer--->{key: %v}", key, p)
+				Logger.Debugf("putKeyToNetNode--> success putting value to this peer--->{key: %v, pee: %v, err: %v} ", key, p)
 			}
 		}(p)
 	}
 	wg.Wait()
 	if isInDhTNet {
 		d.enableProvider(ctx, key) //makes this node announce that it can provide a value for the given key
+	} else {
+		Logger.Errorf("putKeyToNetNode--> key not put any other node--->{key: %v}", key)
 	}
 	return nil
 }
@@ -222,7 +224,7 @@ func (d *Dkvs) mkDsKey(s string) ds.Key {
 }
 
 // 传入数据库的key的字符串格式（dsk字符串格式）可以decode到原来的业务的key
-func (d *Dkvs) mkDsKeyDcode(s string) ([]byte, error) {
+func (d *Dkvs) dsKeyDcode(s string) ([]byte, error) {
 	return base32.RawStdEncoding.DecodeString(s)
 }
 
@@ -316,21 +318,26 @@ func (d *Dkvs) putAllKeysToPeers() error {
 	return nil
 }
 
-func (d *Dkvs) findPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.ID {
+func (d *Dkvs) FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.ID {
 	ctxT, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	keyCid := ConvertKeyToCid(key)
 	var providers []peer.AddrInfo
 	var peers []peer.ID
-	provchan := d.idht.FindProvidersAsync(ctxT, keyCid, 2)
+	provchan := d.idht.FindProvidersAsync(ctxT, keyCid, 20)
 	select {
 	case prov, ok := <-provchan:
 		if !ok {
 			break
 		}
-		if prov.ID != d.idht.PeerID() {
-			peers = append(peers, prov.ID)
-		}
+		// if prov.ID != d.idht.PeerID() { //
+		// 	peers = append(peers, prov.ID)
+		// }
+		peers = append(peers, prov.ID) //The node itself also exists
+	}
+	select {
+	case <-time.After(5 * time.Second):
+		Logger.Debug("FindPeersByKey---> Find timeout occurred")
 	}
 	if providers == nil {
 		Logger.Warnf("findPeersByKey--> {key: %s} is not saved to any other node", key)
