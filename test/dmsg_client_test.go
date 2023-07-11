@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
-	nodeIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
@@ -295,13 +294,13 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 	switch pullCidResponse.Status {
-	case nodeIpfs.PinStatus_ERR:
+	case tvIpfs.PinStatus_ERR:
 		// TODO: handle error, retry pullcid
 		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponse)
-	case nodeIpfs.PinStatus_TIMEOUT:
+	case tvIpfs.PinStatus_TIMEOUT:
 		// TODO: handle timeout, retry pullcid
 		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponse)
-	case nodeIpfs.PinStatus_PINNED:
+	case tvIpfs.PinStatus_PINNED:
 		// TODO: handle pinned, record pinned
 		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponse)
 	default:
