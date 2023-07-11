@@ -27,7 +27,7 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 	}
 	result := m.nodeInfoService.Request(m.ctx, peerID)
 	if result == nil {
-		tvLog.Logger.Errorf("try get peer info: %v, result is nil", peerID)
+		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v, result is nil", peerID)
 		peerAddrs := m.host.Peerstore().Addrs(peerID)
 		for _, peerAddr := range peerAddrs {
 			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
@@ -35,14 +35,14 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 		return
 	}
 	if result.Error != nil {
-		tvLog.Logger.Errorf("try get peer info: %v happen error, result: %v", peerID, result)
+		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v happen error, result: %v", peerID, result)
 		return
 	} else {
-		tvLog.Logger.Infof("try get peer info: %v, result: %v", peerID, result)
+		tvLog.Logger.Infof("TvBase->registPeerInfo: try get peer info: %v, result: %v", peerID, result)
 	}
 
 	if result.NodeInfo == nil {
-		tvLog.Logger.Warnf("result node info is nil: %v", peerID)
+		tvLog.Logger.Warnf("TvBase->registPeerInfo: result node info is nil: pereID %v", peerID)
 		return
 	}
 	switch result.NodeInfo.NodeType {
