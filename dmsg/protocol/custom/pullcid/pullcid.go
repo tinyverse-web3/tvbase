@@ -200,7 +200,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	defer close(startIpfsGetObjectChan)
 	endIpfsGetObjectChan := make(chan bool)
 	defer close(endIpfsGetObjectChan)
-	timer := time.NewTimer(500 * time.Millisecond)
+	timer := time.NewTimer(5 * time.Millisecond)
 
 	go func() {
 		startIpfsGetObjectChan <- true
@@ -214,7 +214,13 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		pullCidResponse.ElapsedTime = elapsedTime
 		pullCidResponse.Status = pinStatus
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
-		endIpfsGetObjectChan <- true
+		_, ok := <-endIpfsGetObjectChan
+		if ok {
+			customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: endIpfsGetObjectChan is open")
+			endIpfsGetObjectChan <- true
+		} else {
+			customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: endIpfsGetObjectChan is closed")
+		}
 	}()
 
 	<-startIpfsGetObjectChan
