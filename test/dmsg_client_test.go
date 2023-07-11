@@ -270,7 +270,8 @@ func TestPullCID(t *testing.T) {
 		t.Errorf("node.RegistCSCProtocol error: %v", err)
 		return
 	}
-	pullCidResponse, err := pullCidProtocol.Request(&pullcid.PullCidRequest{
+	peerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
+	pullCidResponse, err := pullCidProtocol.Request(peerID, &pullcid.PullCidRequest{
 		CID:          "QmTX7d5vWYrmKzj35MwcEJYsrA6P7Uf6ieWWNJf7kdjdX4",
 		CheckTimeout: 5 * time.Minute,
 	})

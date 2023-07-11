@@ -75,7 +75,7 @@ func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, re
 	return nil
 }
 
-func (p *PullCidClientProtocol) Request(request *PullCidRequest, options ...any) (*PullCidResponse, error) {
+func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, options ...any) (*PullCidResponse, error) {
 	_, err := cid.Decode(request.CID)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
@@ -103,7 +103,7 @@ func (p *PullCidClientProtocol) Request(request *PullCidRequest, options ...any)
 	}
 	p.commicateInfoList[request.CID] = requestInfo
 
-	err = p.CustomStreamClientProtocol.Request(request)
+	err = p.CustomStreamClientProtocol.Request(peerId, request)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err

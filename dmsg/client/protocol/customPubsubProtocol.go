@@ -47,7 +47,7 @@ func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.Ba
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
@@ -75,7 +75,11 @@ func (adapter *CustomPubsubProtocolAdapter) SetProtocolRequestSign(signature []b
 	return nil
 }
 
-func NewCustomPubsubProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.ProtocolService) *common.PubsubProtocol {
+func NewCustomPubsubProtocol(
+	ctx context.Context,
+	host host.Host,
+	protocolCallback common.PubsubProtocolCallback,
+	dmsgService common.ProtocolService) *common.PubsubProtocol {
 	adapter := NewCustomPubsubProtocolAdapter()
 	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
 	adapter.protocol = protocol

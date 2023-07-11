@@ -126,7 +126,7 @@ func (p *DemoClientProtocol) HandleResponse(request *pb.CustomProtocolReq, respo
 // The function takes a DemoRequest as its first parameter and an optional list of
 // options. The options can include a time.Duration for setting the timeout.
 // The function returns a DemoResponse and an error type.
-func (p *DemoClientProtocol) Request(request *DemoRequest, options ...any) (*DemoResponse, error) {
+func (p *DemoClientProtocol) Request(peerID string, request *DemoRequest, options ...any) (*DemoResponse, error) {
 	var defaultTimeout time.Duration = 3 * time.Second
 	if len(options) > 0 {
 		var ok bool
@@ -143,7 +143,7 @@ func (p *DemoClientProtocol) Request(request *DemoRequest, options ...any) (*Dem
 	}
 	p.commicateInfoList[request.ID] = requestInfo
 
-	err := p.CustomStreamClientProtocol.Request(request)
+	err := p.CustomStreamClientProtocol.Request(peerID, request)
 	if err != nil {
 		customProtocol.Logger.Errorf("DemoClientProtocol->Request: err: %v", err)
 		return nil, fmt.Errorf("DemoClientProtocol->Request err: %v", err)

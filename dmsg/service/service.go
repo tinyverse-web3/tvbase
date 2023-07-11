@@ -40,7 +40,8 @@ type DmsgService struct {
 	destUserPubsubs              map[string]*dmsgServiceCommon.DestUserPubsub
 	protocolReqSubscribes        map[pb.ProtocolID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.ProtocolID]protocol.ResSubscribe
-	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomProtocolInfo
+	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
+	customPubsubProtocolInfoList map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -81,7 +82,8 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.protocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
 	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
 
-	d.customStreamProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomProtocolInfo)
+	d.customStreamProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomStreamProtocolInfo)
+	d.customPubsubProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo)
 
 	peerId := d.BaseService.GetHost().ID().String()
 	priKey, pubKey, err := keyUtil.GenerateEcdsaKey(peerId)
@@ -424,52 +426,52 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	return mailboxMsgDataList, nil
 }
 
-func (d *DmsgService) OnCustomProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
+func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
 	}
 
 	customProtocolInfo := d.customStreamProtocolInfoList[request.CustomProtocolID]
 	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolRequest: customProtocolInfo is nil, request: %v", request)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
 	}
 
 	if customProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolRequest: callback is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolRequest: callback is nil")
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: callback is nil")
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: callback is nil")
 	}
 	customProtocolInfo.Service.HandleRequest(request)
 	return request, nil
 }
 
-func (d *DmsgService) OnCustomProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
+func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := resProtoData.(*pb.CustomProtocolRes)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
 	customProtocolInfo := d.customStreamProtocolInfoList[response.CustomProtocolID]
 	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolResponse: customProtocolInfo is nil, response: %v", response)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
 	}
 	if customProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolResponse: callback is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolResponse: callback is nil")
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback is nil")
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback is nil")
 	}
 
 	request, ok := reqProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
 	}
 
 	err := customProtocolInfo.Service.HandleResponse(request, response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomProtocolResponse: callback happen err: %v", err)
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback happen err: %v", err)
 		return nil, err
 	}
 	return nil, nil
@@ -537,7 +539,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomSt
 		dmsgLog.Logger.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomStreamProtocolInfo{
 		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Service:        service,
 	}
@@ -551,7 +553,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 		dmsgLog.Logger.Warnf("serviceDmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomProtocolInfo{
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomStreamProtocolInfo{
 		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Service:        callback,
 	}

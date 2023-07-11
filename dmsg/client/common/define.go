@@ -18,7 +18,7 @@ type StreamProtocolCallback interface {
 	OnReadMailboxMsgResponse(protoreflect.ProtoMessage) (interface{}, error)
 	OnReleaseMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 type StreamProtocolAdapter interface {
 	InitProtocolRequest(basicData *pb.BasicData)
@@ -70,7 +70,7 @@ type PubsubProtocol struct {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
@@ -128,8 +128,6 @@ type UserMsg struct {
 	MsgContent     string
 }
 
-type UserMsgByTimeStamp []UserMsg
-
 type GetSignCallback func(protoData []byte) (sig []byte, err error)
 
 type CustomStreamProtocolInfo struct {
@@ -137,6 +135,7 @@ type CustomStreamProtocolInfo struct {
 	StreamProtocol *StreamProtocol
 }
 
-func (a UserMsgByTimeStamp) Len() int           { return len(a) }
-func (a UserMsgByTimeStamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a UserMsgByTimeStamp) Less(i, j int) bool { return a[i].TimeStamp < a[j].TimeStamp }
+type CustomPubsubProtocolInfo struct {
+	Client         customProtocol.CustomPubsubProtocolClient
+	StreamProtocol *PubsubProtocol
+}

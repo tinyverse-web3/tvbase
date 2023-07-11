@@ -61,7 +61,7 @@ func (adapter *CustomStreamProtocolAdapter) SetCustomContent(customProtocolID st
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

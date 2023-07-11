@@ -107,12 +107,12 @@ func (adapter *CustomStreamProtocolAdapter) SetProtocolResponseSign(signature []
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomProtocolRequest(adapter.protocol.ProtocolRequest)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolRequest(adapter.protocol.ProtocolRequest)
 	return data, err
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

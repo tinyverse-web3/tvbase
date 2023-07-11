@@ -89,7 +89,7 @@ func (p *CustomStreamClientProtocol) HandleResponse(protocolResponse *pb.CustomP
 	return nil
 }
 
-func (p *CustomStreamClientProtocol) Request(request any) error {
+func (p *CustomStreamClientProtocol) Request(peerId string, request any) error {
 	if p.Ctx == nil {
 		Logger.Errorf("CustomStreamClientProtocol->Request: context is nil")
 		return fmt.Errorf("CustomStreamClientProtocol->Request: context is nil")
@@ -110,7 +110,7 @@ func (p *CustomStreamClientProtocol) Request(request any) error {
 		return fmt.Errorf("CustomStreamProtocol->Request: marshal error: %v", err)
 	}
 
-	err = p.Service.RequestCustomProtocol(p.PID, content)
+	err = p.Service.RequestCustomStreamProtocol(p.PID, peerId, content)
 	if err != nil {
 		Logger.Errorf("CustomStreamProtocol->Request: %v", err)
 		return err

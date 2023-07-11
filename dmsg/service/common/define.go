@@ -27,8 +27,8 @@ type StreamProtocolCallback interface {
 	OnCreateMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
 	OnReadMailboxMsgRequest(protoreflect.ProtoMessage) (interface{}, error)
 	OnReleaseMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomStreamProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 
 type StreamProtocolAdapter interface {
@@ -86,9 +86,14 @@ type DestUserPubsub struct {
 	LastReciveTimestamp int64
 }
 
-type CustomProtocolInfo struct {
+type CustomStreamProtocolInfo struct {
 	Service        customProtocol.CustomStreamProtocolService
 	StreamProtocol *StreamProtocol
+}
+
+type CustomPubsubProtocolInfo struct {
+	Service        customProtocol.CustomPubsubProtocolService
+	PubsubProtocol *PubsubProtocol
 }
 
 const MailboxLimitErr = "mailbox is limited"
