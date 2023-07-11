@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	nodeIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
@@ -230,8 +231,10 @@ func TestPullCID(t *testing.T) {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, _, rootPath := parseClientCmdParams()
+	// srcSeed, _, rootPath := parseClientCmdParams()
 
+	rootPath := "."
+	srcSeed := "a"
 	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
 		tvLog.Logger.Errorf("TestPullCID error: %v", err)
@@ -270,18 +273,41 @@ func TestPullCID(t *testing.T) {
 		t.Errorf("node.RegistCSCProtocol error: %v", err)
 		return
 	}
-	peerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
-	pullCidResponse, err := pullCidProtocol.Request(peerID, &pullcid.PullCidRequest{
-		CID:          "QmTX7d5vWYrmKzj35MwcEJYsrA6P7Uf6ieWWNJf7kdjdX4",
+	// peerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
+	localPeerID := "12D3KooWT3DqHnCgt2za47Acpf5eVxRBYgDfDZoHp7bwXTttFg7m"
+	// CID_RANDOM_1K := "QmR8mCpoULXc2aZWFivz9G6pkcew1Nc1wETZEfRGtbNuEM"
+	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
+	CID_REMOTE_117_1k := "QmQTPoM66Fd9QmGgfKndx97BSnMm6oAUTKy1tjau591QVy"
+	pullCidResponse, err := pullCidProtocol.Request(localPeerID, &pullcid.PullCidRequest{
+		CID:          CID_REMOTE_117_1k,
 		CheckTimeout: 5 * time.Minute,
 	})
 	if err != nil {
 		tvLog.Logger.Errorf("pullCidProtocol.Request error: %v", err)
 		t.Errorf("pullCidProtocol.Request error: %v", err)
+		return
 	}
 	tvLog.Logger.Infof("pullCidResponse: %v", pullCidResponse)
 
-	<-ctx.Done()
+	if pullCidResponse == nil {
+		tvLog.Logger.Errorf("pullCidResponse is nil")
+		t.Errorf("pullCidResponse is nil")
+		return
+	}
+	switch pullCidResponse.Status {
+	case nodeIpfs.PinStatus_ERR:
+		// TODO: handle error, retry pullcid
+		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponse)
+	case nodeIpfs.PinStatus_TIMEOUT:
+		// TODO: handle timeout, retry pullcid
+		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponse)
+	case nodeIpfs.PinStatus_PINNED:
+		// TODO: handle pinned, record pinned
+		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponse)
+	default:
+		// TODO: handle error, retry pullcid
+		tvLog.Logger.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponse)
+	}
 }
 
 func TesTinverseInfrasture(t *testing.T) {
