@@ -133,21 +133,24 @@ func ValidateValue(key string, val []byte, pubKey []byte, issuetime uint64, ttl 
 		return ErrSignature
 	}
 
-	if valueType != 0 {
-		// 如果是0，说明是用户自己的key，不用继续检查value
-		// 目前只有public service发布的证书，检查证书的签名是否正确就可以
 
-		var bVerify bool
+	var bVerify bool
+	switch valueType {
+	case _ValueType_Transfer:
+		bVerify = true
+	case int(pb.DkvsRecord_GUN_SIGNATURE):
 		if IsGunName(key) {
 			bVerify = VerifyGunRecordValue(key, val, issuetime, ttl)
 		} else {
-			bVerify = VerifyTransferRecordValue(key, val, pubKey)
+			bVerify = true
 		}
+	case int(pb.DkvsRecord_DEFAULT):
+		bVerify = true
+	}
 
-		if !bVerify {
-			Logger.Error(ErrSignature)
-			return ErrSignature
-		}
+	if !bVerify {
+		Logger.Error(ErrSignature)
+		return ErrSignature
 	}
 
 	return nil

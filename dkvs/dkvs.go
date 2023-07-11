@@ -186,9 +186,12 @@ func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 	}
 
 	// 检查接受者数据的有效性
-	if ttl != oldRec.Ttl ||
-		!bytes.Equal(oldRec.Value, value2) {
-		Logger.Error("Not equal ttl or value")
+	if ttl != oldRec.Ttl {
+		Logger.Error("Not equal ttl")
+		return ErrTranferFailed
+	}
+	if !bytes.Equal(oldRec.Value, value2) {
+		Logger.Error("Not equal value")
 		return ErrTranferFailed
 	}
 
