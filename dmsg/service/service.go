@@ -469,9 +469,7 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
 	}
 
-	fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", response)
 	err := customProtocolInfo.Service.HandleResponse(request, response)
-	fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", response)
 	if err != nil {
 		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback happen err: %v", err)
 		return nil, err
