@@ -200,7 +200,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	defer close(startIpfsGetObjectChan)
 	endIpfsGetObjectChan := make(chan bool)
 	defer close(endIpfsGetObjectChan)
-	timer := time.NewTimer(5 * time.Millisecond)
+	timer := time.NewTimer(1000 * time.Millisecond)
 
 	go func() {
 		startIpfsGetObjectChan <- true
