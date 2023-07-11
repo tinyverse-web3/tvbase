@@ -27,6 +27,15 @@ func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	} else {
 		tvLog.Logger.Infof("success connect to mdns peer: %v", p)
 	}
+
+	refreshRouteErr := <-m.dht.RefreshRoutingTable()
+	if refreshRouteErr != nil {
+		tvLog.Logger.Errorf("fail to refresh routing table: %v", refreshRouteErr)
+	}
+	peerAddrs := m.host.Peerstore().Addrs(p.ID)
+	for _, peerAddr := range peerAddrs {
+		tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
+	}
 	go m.registPeerInfo(p.ID)
 }
 
