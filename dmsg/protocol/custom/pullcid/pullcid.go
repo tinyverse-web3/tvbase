@@ -196,14 +196,9 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		// max timeout is 3 hour
 		maxCheckTime = 3 * time.Hour
 	}
-	startIpfsGetObjectChan := make(chan bool)
-	defer close(startIpfsGetObjectChan)
-	endIpfsGetObjectChan := make(chan bool)
-	defer close(endIpfsGetObjectChan)
-	// timer := time.NewTimer(5 * time.Millisecond)
 
+	timer := time.NewTimer(50 * time.Millisecond)
 	go func() {
-		startIpfsGetObjectChan <- true
 		CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
 		if err != nil {
 			customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
@@ -214,18 +209,9 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		pullCidResponse.ElapsedTime = elapsedTime
 		pullCidResponse.Status = pinStatus
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
-		endIpfsGetObjectChan <- true
 	}()
 
-	<-startIpfsGetObjectChan
-	// customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: received startIpfsGetObjectChan signal")
-	// select {
-	// case <-timer.C:
-	// 	customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: timeout")
-	// case <-endIpfsGetObjectChan:
-	// 	customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: received endIpfsGetObjectChan signal")
-	// }
-
+	<-timer.C
 	return nil
 }
 
