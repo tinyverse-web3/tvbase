@@ -137,7 +137,14 @@ func ValidateValue(key string, val []byte, pubKey []byte, issuetime uint64, ttl 
 		// 如果是0，说明是用户自己的key，不用继续检查value
 		// 目前只有public service发布的证书，检查证书的签名是否正确就可以
 
-		if !VerifyGunRecordValue(key, val, issuetime, ttl) {
+		var bVerify bool
+		if IsGunName(key) {
+			bVerify = VerifyGunRecordValue(key, val, issuetime, ttl)
+		} else {
+			bVerify = VerifyTransferRecordValue(key, val, pubKey)
+		}
+
+		if !bVerify {
 			Logger.Error(ErrSignature)
 			return ErrSignature
 		}

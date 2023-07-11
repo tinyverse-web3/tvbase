@@ -444,8 +444,18 @@ func EncodeCertsRecordValueWithCert(cr *pb.CertsRecordValue, cert *pb.Cert, user
 			CertVect: []*pb.Cert{cert},
 		}
 	} else {
+		bFound := false
+		for i, c := range cr.CertVect {
+			if c.Name == cert.Name {
+				cr.CertVect[i] = cert
+				bFound = true
+				break
+			}
+		}
 		cr.UserData = userdata
-		cr.CertVect = append(cr.CertVect, cert)
+		if !bFound {
+			cr.CertVect = append(cr.CertVect, cert)
+		}
 	}
 	
 	return cr.Marshal()
