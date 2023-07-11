@@ -279,7 +279,7 @@ func TestPullCID(t *testing.T) {
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
 	pullCidResponse, err := pullCidProtocol.Request(bootPeerID, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
-		CheckTimeout: 5 * time.Minute,
+		MaxCheckTime: 5 * time.Minute,
 	})
 	if err != nil {
 		tvLog.Logger.Errorf("pullCidProtocol.Request error: %v", err)

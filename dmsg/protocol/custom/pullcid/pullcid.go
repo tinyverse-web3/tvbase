@@ -24,7 +24,7 @@ type serviceCommicateInfo struct {
 
 type PullCidRequest struct {
 	CID          string
-	CheckTimeout time.Duration
+	MaxCheckTime time.Duration
 }
 
 type PullCidResponse struct {
@@ -185,29 +185,42 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		data: pullCidResponse,
 	}
 
-	timeout := pullCidRequest.CheckTimeout
-
-	if timeout <= 0 {
+	maxCheckTime := pullCidRequest.MaxCheckTime
+	if maxCheckTime <= 0 {
 		// default timeout is 3 minute
-		timeout = 3 * time.Minute
-	} else if timeout < 10*time.Second {
+		maxCheckTime = 3 * time.Minute
+	} else if maxCheckTime < 10*time.Second {
 		// min timeout is 10 second
-		timeout = 10 * time.Second
-	} else if timeout > 3*time.Hour {
+		maxCheckTime = 10 * time.Second
+	} else if maxCheckTime > 3*time.Hour {
 		// max timeout is 3 hour
-		timeout = 3 * time.Hour
+		maxCheckTime = 3 * time.Hour
 	}
 
-	CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, timeout)
-	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
-		return err
-	}
+	doneChan := make(chan bool)
+	defer close(doneChan)
+	timer := time.NewTimer(1 * time.Second)
 
-	pullCidResponse.CidContentSize = CidContentSize
-	pullCidResponse.ElapsedTime = elapsedTime
-	pullCidResponse.Status = pinStatus
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
+	go func() {
+		CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
+			return
+		}
+
+		pullCidResponse.CidContentSize = CidContentSize
+		pullCidResponse.ElapsedTime = elapsedTime
+		pullCidResponse.Status = pinStatus
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
+		doneChan <- true
+	}()
+
+	select {
+	case <-timer.C:
+		customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: timeout")
+	case <-doneChan:
+		customProtocol.Logger.Debug("PullCidServiceProtocol->HandleRequest: received doneChan signal")
+	}
 
 	return nil
 }
