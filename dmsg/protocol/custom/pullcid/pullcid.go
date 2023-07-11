@@ -211,7 +211,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", pullCidResponse)
 
 		pullCidRes := p.commicateInfoList[pullCidRequest.CID]
-		fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", pullCidRes)
+		fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", pullCidRes.data)
 	}()
 
 	return nil
