@@ -139,7 +139,7 @@ func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
 func request(s network.Stream, randReader io.Reader, result chan *Result) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Logger.Errorf("nodeinfo->RequestNodeInfo: StreamProtocol->OnResponse: recovered from:", r)
+			log.Logger.Errorf("nodeinfo->RequestNodeInfo: StreamProtocol->OnResponse: recovered from: %v", r)
 		}
 	}()
 
