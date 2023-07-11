@@ -189,7 +189,7 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 		}
 		cumulativeSize = (*cidStat)[ObjectStatusField_CumulativeSize]
 		pinStatus = PinStatus_PINNED
-		tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+		Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		return cumulativeSize, allElapsedTime, pinStatus, lastErr
 	}
 
@@ -208,9 +208,9 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 		pinStatus = PinStatus_ERR
 		if strings.Contains(err.Error(), "context deadline exceeded") {
 			pinStatus = PinStatus_TIMEOUT
-			tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+			Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		} else {
-			tvLog.Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+			Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		}
 		return 0, allElapsedTime, pinStatus, lastErr
 	}
@@ -226,15 +226,15 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 			pinStatus = PinStatus_ERR
 			if strings.Contains(err.Error(), "context deadline exceeded") {
 				pinStatus = PinStatus_TIMEOUT
-				tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+				Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 			} else {
-				tvLog.Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+				Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 			}
 			return cumulativeSize, allElapsedTime, pinStatus, lastErr
 		}
 
 		pinStatus = PinStatus_PINNED
-		tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+		Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		return cumulativeSize, allElapsedTime, pinStatus, lastErr
 	}
 
@@ -246,9 +246,9 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 		pinStatus = PinStatus_ERR
 		if strings.Contains(err.Error(), "context deadline exceeded") {
 			pinStatus = PinStatus_TIMEOUT
-			tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+			Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		} else {
-			tvLog.Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+			Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		}
 		return cumulativeSize, allElapsedTime, pinStatus, lastErr
 	}
@@ -275,15 +275,15 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 			pinStatus = PinStatus_ERR
 			if strings.Contains(err.Error(), "context deadline exceeded") {
 				pinStatus = PinStatus_TIMEOUT
-				tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+				Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 			} else {
-				tvLog.Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+				Logger.Errorf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 			}
 			return cumulativeSize, allElapsedTime, pinStatus, lastErr
 		}
 	}
 	pinStatus = PinStatus_PINNED
-	tvLog.Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
+	Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 	return cumulativeSize, allElapsedTime, pinStatus, lastErr
 }
 
