@@ -114,7 +114,7 @@ func getValueFromLibp2pRec(libP2pVal []byte) (string, error) {
 	lbp2pRec := new(recpb.Record)
 	err := proto.Unmarshal(libP2pVal, lbp2pRec)
 	if err != nil {
-		Logger.Errorf("getValueFromRec---> proto.Unmarshal(result.Value, lbp2pRec) failed: ", err)
+		Logger.Errorf("getValueFromRec---> proto.Unmarshal(result.Value, lbp2pRec) failed: %v", err)
 		return "", err
 	}
 	return getValueFromDkvsRec(lbp2pRec.Value)
@@ -123,7 +123,7 @@ func getValueFromLibp2pRec(libP2pVal []byte) (string, error) {
 func getValueFromDkvsRec(dkvsVal []byte) (string, error) {
 	dkvsRec := new(dkvs_pb.DkvsRecord)
 	if err := proto.Unmarshal(dkvsVal, dkvsRec); err != nil {
-		Logger.Errorf("getValueFromDkvsRec---> proto.Unmarshal(rec.Value, dkvsRec) failed: ", err)
+		Logger.Errorf("getValueFromDkvsRec---> proto.Unmarshal(rec.Value, dkvsRec) failed: %v", err)
 		return "", err
 	}
 	return string(dkvsRec.Value), nil

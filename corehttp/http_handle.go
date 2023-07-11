@@ -72,7 +72,7 @@ func QueryAllKeyOption() ServeOption {
 			q := query.Query{}
 			results, err := db.Query(ctx, q)
 			if err != nil {
-				Logger.Errorf("queryAllKeys---> failed to querying dht datastore: ", err)
+				Logger.Errorf("queryAllKeys---> failed to querying dht datastore: %v", err)
 				handleError(w, "failed to querying dht datastore", err, 400)
 				return
 			}
@@ -83,18 +83,18 @@ func QueryAllKeyOption() ServeOption {
 				keyObj := ds.NewKey(result.Key)
 				key, err := dsKeyDcode(keyObj.List()[0])
 				if err != nil {
-					Logger.Errorf("queryAllKeys---> dsKeyDcode(keyObj.List()[0] failed: ", err)
+					Logger.Errorf("queryAllKeys---> dsKeyDcode(keyObj.List()[0] failed: %v", err)
 					continue
 				}
 				lbp2pRec := new(recpb.Record)
 				err = proto.Unmarshal(result.Value, lbp2pRec)
 				if err != nil {
-					Logger.Errorf("queryAllKeys---> proto.Unmarshal(result.Value, lbp2pRec) failed: ", err)
+					Logger.Errorf("queryAllKeys---> proto.Unmarshal(result.Value, lbp2pRec) failed: %v", err)
 					continue
 				}
 				dkvsRec := new(dkvs_pb.DkvsRecord)
 				if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
-					Logger.Errorf("queryAllKeys---> proto.Unmarshal(rec.Value, dkvsRec) failed: ", err)
+					Logger.Errorf("queryAllKeys---> proto.Unmarshal(rec.Value, dkvsRec) failed: %v", err)
 					continue
 				}
 				var kv DkvsKV
@@ -104,14 +104,14 @@ func QueryAllKeyOption() ServeOption {
 			}
 			jsonData, err := json.Marshal(keyList)
 			if err != nil {
-				Logger.Errorf("queryAllKeys---> json.Marshal(keyList) failed: ", err)
+				Logger.Errorf("queryAllKeys---> json.Marshal(keyList) failed: %v", err)
 				handleError(w, "failed to marshal keylist", err, 400)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(jsonData)
 			if err != nil {
-				Logger.Errorf("queryAllKeys---> failed to write json data to w http.ResponseWriter: ", err)
+				Logger.Errorf("queryAllKeys---> failed to write json data to w http.ResponseWriter: %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
@@ -132,7 +132,7 @@ func QueryKeyOption() ServeOption {
 			var localValue = ""
 			var netValue = ""
 			if len(queryKey) == 0 {
-				Logger.Errorf("queryKey---> key does not exist in the url parameter: ", fmt.Errorf("error"))
+				Logger.Errorf("queryKey---> key does not exist in the url parameter: %v", fmt.Errorf("error"))
 				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
 				return
 			}
@@ -140,14 +140,14 @@ func QueryKeyOption() ServeOption {
 			//From Local
 			results, err := db.Get(ctx, mkDsKey(dkvsKey))
 			if err != nil {
-				Logger.Errorf("queryKey---> key does not exist in dht datastore: ", err)
+				Logger.Errorf("queryKey---> key does not exist in dht datastore: %v", err)
 				handleError(w, "key does not exist in dht datastore", err, 400)
 				localValue = "key does not exist in dht datastore"
 
 			}
 			localValue, err = getValueFromLibp2pRec(results)
 			if err != nil {
-				Logger.Errorf("queryKey---> failed to call getValueFromRec(results): ", err)
+				Logger.Errorf("queryKey---> failed to call getValueFromRec(results): %v", err)
 				handleError(w, "failed to call getValueFromRec(results)", err, 400)
 				localValue = "failed to call getValueFromRec(results)"
 			}
@@ -158,13 +158,13 @@ func QueryKeyOption() ServeOption {
 
 			netResults, err := idht.GetValue(ctx, dkvsKey)
 			if err != nil {
-				Logger.Errorf("queryKey---> failed to call idht.GetValue(ctx, dkvsKey): ", err)
+				Logger.Errorf("queryKey---> failed to call idht.GetValue(ctx, dkvsKey): %v", err)
 				handleError(w, "failed to call idht.GetValue(ctx, dkvsKey)", err, 400)
 				netValue = "failed to call idht.GetValue(ctx, dkvsKey)"
 			}
 			netValue, err = getValueFromDkvsRec(netResults)
 			if err != nil {
-				Logger.Errorf("queryKey---> failed to call getValueFromRec(netResults): ", err)
+				Logger.Errorf("queryKey---> failed to call getValueFromRec(netResults): %v", err)
 				handleError(w, "failed to call getValueFromRec(netResults)", err, 400)
 				netValue = "failed to call getValueFromRec(netResults)"
 			}
@@ -175,14 +175,14 @@ func QueryKeyOption() ServeOption {
 
 			jsonData, err := json.Marshal(kvi)
 			if err != nil {
-				Logger.Errorf("queryKey---> json.Marshal(queryKey) failed: ", err)
+				Logger.Errorf("queryKey---> json.Marshal(queryKey) failed:  %v", err)
 				handleError(w, "failed to marshal queryKey", err, 400)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(jsonData)
 			if err != nil {
-				Logger.Errorf("queryKey---> failed to write json data to w http.ResponseWriter: ", err)
+				Logger.Errorf("queryKey---> failed to write json data to w http.ResponseWriter:  %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
@@ -199,7 +199,7 @@ func QueryProviders() ServeOption {
 			queryParams := r.URL.Query()
 			queryKey := queryParams.Get("key")
 			if len(queryKey) == 0 {
-				Logger.Errorf("queryProviders---> key does not exist in the url parameter: ", fmt.Errorf("error"))
+				Logger.Errorf("queryProviders---> key does not exist in the url parameter:  %v", fmt.Errorf("error"))
 				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
 				return
 			}
@@ -220,14 +220,14 @@ func QueryProviders() ServeOption {
 			}
 			jsonData, err := json.Marshal(nodeList)
 			if err != nil {
-				Logger.Errorf("queryProviders---> json.Marshal(nodeList) failed: ", err)
+				Logger.Errorf("queryProviders---> json.Marshal(nodeList) failed:  %v", err)
 				handleError(w, "failed to marshal nodeList", err, 400)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(jsonData)
 			if err != nil {
-				Logger.Errorf("queryProviders---> failed to write json data to w http.ResponseWriter: ", err)
+				Logger.Errorf("queryProviders---> failed to write json data to w http.ResponseWriter:  %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
@@ -256,14 +256,14 @@ func QueryAllConnectdPeers() ServeOption {
 			}
 			jsonData, err := json.Marshal(nodeList)
 			if err != nil {
-				Logger.Errorf("queryAllPeers---> json.Marshal(nodeList) failed: ", err)
+				Logger.Errorf("queryAllPeers---> json.Marshal(nodeList) failed:  %v", err)
 				handleError(w, "failed to marshal nodeList", err, 400)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(jsonData)
 			if err != nil {
-				Logger.Errorf("queryAllPeers---> failed to write json data to w http.ResponseWriter: ", err)
+				Logger.Errorf("queryAllPeers---> failed to write json data to w http.ResponseWriter:  %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
@@ -339,14 +339,14 @@ func QuerySystemResouce() ServeOption {
 
 			jsonData, err := json.Marshal(sysRes)
 			if err != nil {
-				Logger.Errorf("querySysRes---> json.Marshal(sysRes) failed: ", err)
+				Logger.Errorf("querySysRes---> json.Marshal(sysRes) failed: %v", err)
 				handleError(w, "failed to marshal sysRes", err, 400)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(jsonData)
 			if err != nil {
-				Logger.Errorf("querySysRes---> failed to write json data to w http.ResponseWriter: ", err)
+				Logger.Errorf("querySysRes---> failed to write json data to w http.ResponseWriter: %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
