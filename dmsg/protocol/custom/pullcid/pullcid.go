@@ -199,7 +199,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 
 	doneChan := make(chan bool)
 	defer close(doneChan)
-	timer := time.NewTimer(1 * time.Nanosecond)
+	timer := time.NewTimer(1 * time.Microsecond)
 
 	go func() {
 		CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
