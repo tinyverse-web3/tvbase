@@ -149,7 +149,7 @@ func (p *CustomStreamServiceProtocol) HandleResponse(protocolResponse *pb.Custom
 		Logger.Errorf("CustomStreamServiceProtocol->HandleResponse: request is nil")
 		return fmt.Errorf("CustomStreamServiceProtocol->HandleResponse: request is nil")
 	}
-	Logger.Debugf("CustomStreamServiceProtocol->HandleResponse: request: %v", protocolResponse)
+
 	if protocolResponse.CustomProtocolID != p.PID {
 		Logger.Errorf("CustomStreamServiceProtocol->HandleResponse: request.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
 		return fmt.Errorf("CustomStreamServiceProtocol->HandleResponse: request.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)

@@ -198,7 +198,6 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		timeout = 3 * time.Hour
 	}
 
-	// go func() {
 	CidContentSize, elapsedTime, pinStatus, err := ipfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, timeout)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
@@ -208,11 +207,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	pullCidResponse.CidContentSize = CidContentSize
 	pullCidResponse.ElapsedTime = elapsedTime
 	pullCidResponse.Status = pinStatus
-	// customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", pullCidResponse)
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, commicateInfo: %v",
-		pullCidRequest.CID,
-		p.commicateInfoList[pullCidRequest.CID].data)
-	// }()
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
 
 	return nil
 }
@@ -230,10 +225,6 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 		customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 		return fmt.Errorf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 	}
-
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, commicateInfo: %v",
-		pullCidRequest.CID,
-		p.commicateInfoList[pullCidRequest.CID].data)
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
 	if !ok {
