@@ -164,10 +164,9 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 	return GetRecordSignData(key, record.Value, record.PubKey, record.Validity-record.Ttl, record.Ttl)
 }
 
-// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
-// record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
-func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
+func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *pb.Cert) error {
+
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
 		Logger.Error(err)
@@ -187,9 +186,12 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	}
 
 	// 检查接受者数据的有效性
-	if ttl != oldRec.Ttl ||
-		!bytes.Equal(oldRec.Value, value2) {
-		Logger.Error("Not equal ttl or value")
+	if ttl != oldRec.Ttl {
+		Logger.Error("Not equal ttl")
+		return ErrTranferFailed
+	}
+	if !bytes.Equal(oldRec.Value, value2) {
+		Logger.Error("Not equal value")
 		return ErrTranferFailed
 	}
 
@@ -231,6 +233,20 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 			Logger.Error(err)
 			return err
 		}
+	}
+
+	return nil
+}
+
+// sig1 由发起者对key+pubkey1+pubkey2的签名 (调用GetRecordSignData)
+// record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
+func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
+	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *pb.Cert) error {
+	
+	err := d.CheckTransferPara(key, value1, pubkey1, sig1, value2, pubkey2, issuetime, ttl, sig2, txcert)
+	if err != nil {
+		Logger.Error(err)
+		return err
 	}
 
 	recordKey := RecordKey(key)

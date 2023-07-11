@@ -252,7 +252,7 @@ func TestGun(t *testing.T) {
 	}
 
 	// gun service transfer a name to A
-	err = testTransfer(kv, name, gunvalue, gunPrivKey, issuetime, ttl, privA)
+	err = testTransfer(kv, key, gunvalue, gunPrivKey, issuetime, ttl, privA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestGun(t *testing.T) {
 	// }
 
 	// transfer succ
-	err = testTransfer(kv, name, newgunvalue, privA, issuetime, ttl, privB)
+	err = testTransfer(kv, key, newgunvalue, privA, issuetime, ttl, privB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,101 @@ func TestGun(t *testing.T) {
 	}
 
 	// A can't transfer a non-owned name to B
-	err = testTransfer(kv, name, gunvalue, privA, issuetime, ttl, privC)
+	err = testTransfer(kv, key, gunvalue, privA, issuetime, ttl, privC)
+	if err == nil {
+		t.Fatal(err)
+	}
+
+}
+
+func TestTransferKey(t *testing.T) {
+
+	tvbase, err := tvbase.NewTvbase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kv := tvbase.GetDkvsService()
+
+	seed := dkvs.RandString(16)
+	PrivKey1, e := dkvs.GetPriKeyBySeed(seed)
+	if e != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("seed ", seed)
+
+	PubKey1, err := ic.MarshalPublicKey(PrivKey1.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("public key: ", bytesToHexString(PubKey1))
+	fmt.Println("public key length: ", len(bytesToHexString(PubKey1)))
+
+	// apply a name
+	name := dkvs.RandString(64)
+	for {
+		if !kv.Has(name) {
+			break
+		}
+		name = dkvs.RandString(64)
+	}
+	key := "/contract/" + (name)
+	fmt.Println("key ", key)
+
+	issueTime := dkvs.TimeNow()
+	ttl := dkvs.GetTtlFromDuration(10 * time.Hour)
+	issuetime := dkvs.TimeNow()
+	data1 := dkvs.GetGunSignData(name, PubKey1, issueTime, ttl)
+	sign1, err := PrivKey1.Sign(data1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gvalue := dkvs.EncodeGunValue(name, issueTime, ttl, PubKey1, sign1, nil)
+
+	data := dkvs.GetRecordSignData(key, gvalue, PubKey1, issuetime, ttl)
+	sigData1, err := PrivKey1.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put((key), gvalue, PubKey1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	privA, err := dkvs.GetPriKeyBySeed("AAA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+	//  transfer a name to A
+	err = testTransfer(kv, key, gvalue, PrivKey1, issuetime, ttl, privA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	
+
+	//  can be transfered.
+	privB, err := dkvs.GetPriKeyBySeed("BBB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+	// transfer succ
+	err = testTransfer(kv, key, gvalue, privA, issuetime, ttl, privB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	privC, err := dkvs.GetPriKeyBySeed("CCC")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A can't transfer a non-owned name to B
+	err = testTransfer(kv, key, gvalue, privA, issuetime, ttl, privC)
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -359,26 +453,20 @@ func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []by
 	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
 }
 
-func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
+func testTransfer(kv common.DkvsService, key string, gvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
 	pubkey1, _ := ic.MarshalPublicKey(privk1.GetPublic())
 	pubkey2, _ := ic.MarshalPublicKey(privk2.GetPublic())
 
 	// B sign the record
-	key := dkvs.GetGunKey(name)
-	data := dkvs.GetRecordSignData(key, gunvalue, pubkey2, issuetime, ttl)
+	data := dkvs.GetRecordSignData(key, gvalue, pubkey2, issuetime, ttl)
 	sign2, err := privk2.Sign(data)
 	if err != nil {
 		return (err)
 	}
 
 	// owner sign a transfer record
-	fee := uint64(10)
-	var cert *dkvs_pb.Cert
-	if fee != 0 {
-		cert = dkvs.IssueCertTransferPrepare(key, fee, nil, pubkey1)
-	} else {
-		cert = dkvs.IssueCertTransferPrepare(key, fee, pubkey2, pubkey1)
-	}
+	fee := uint64(0)
+	cert := dkvs.IssueCertTransferPrepare(key, fee, pubkey2, pubkey1)
 	signData1 := dkvs.GetCertSignData(cert)
 	if signData1 == nil {
 		return (err)
@@ -414,7 +502,7 @@ func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic
 	}
 
 	// then A tranfer a name to B
-	err = kv.TransferKey(key, value1, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2, cert2)
+	err = kv.TransferKey(key, value1, pubkey1, sign1, gvalue, pubkey2, issuetime, ttl, sign2, cert2)
 	if err != nil {
 		return (err)
 	}
@@ -425,7 +513,7 @@ func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic
 		return (err3)
 	}
 	err = errors.New("new error")
-	if !bytes.Equal(value3, gunvalue) {
+	if !bytes.Equal(value3, gvalue) {
 		return (err)
 	}
 	if !bytes.Equal(key3, pubkey2) {
@@ -444,62 +532,6 @@ func testTransfer(kv common.DkvsService, name string, gunvalue []byte, privk1 ic
 	return nil
 }
 
-func testTransferRestore(kv dkvs.Dkvs, name string, gunvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
-	pubkey1, _ := ic.MarshalPublicKey(privk1.GetPublic())
-	pubkey2, _ := ic.MarshalPublicKey(privk2.GetPublic())
-
-	// B sign the record
-	data := dkvs.GetRecordSignData(name, gunvalue, pubkey2, issuetime, ttl)
-	sign2, err := privk2.Sign(data)
-	if err != nil {
-		return (err)
-	}
-
-	// owner sign a transfer record
-	signData1 := dkvs.GetRecordSignData(name, pubkey2, pubkey1, issuetime, ttl)
-	if signData1 == nil {
-		return (err)
-	}
-	sign1, err := privk1.Sign(signData1)
-	if err != nil {
-		return (err)
-	}
-
-	value3, key3, issuetime3, ttl3, sign3, err3 := kv.Get(name)
-	if err3 != nil {
-		return (err)
-	}
-
-	// then A tranfer a name to B
-	err = kv.TransferKey(name, nil, pubkey1, sign1, gunvalue, pubkey2, issuetime, ttl, sign2, nil)
-	if err == nil {
-		return (err)
-	}
-
-	// check
-	err = errors.New("new error")
-	value4, key4, issue4, ttl4, sign4, err4 := kv.Get(name)
-	if err4 != nil {
-		return (err)
-	}
-	if !bytes.Equal(value3, value4) {
-		return (err)
-	}
-	if !bytes.Equal(key3, key4) {
-		return (err)
-	}
-	if !bytes.Equal(sign3, sign4) {
-		return (err)
-	}
-	if issuetime3 != issue4 {
-		return (err)
-	}
-	if ttl3 != ttl4 {
-		return (err)
-	}
-
-	return nil
-}
 
 func hash(key string) (hashKey string) {
 	shaHash := sha512.Sum384([]byte(key))

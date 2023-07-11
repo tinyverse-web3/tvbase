@@ -180,10 +180,10 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 		allElapsedTime += elapsedTime
 		if err != nil {
 			tvLog.Logger.Errorf("IpfsGetObject: err: %v", err)
-			return 0, allElapsedTime, PinStatus_PINNED, err
+			return 0, allElapsedTime, pinStatus, err
 		}
 		cumulativeSize = (*cidStat)[ObjectStatusField_CumulativeSize]
-		return cumulativeSize, allElapsedTime, pinStatus, lastErr
+		return cumulativeSize, allElapsedTime, PinStatus_PINNED, lastErr
 	}
 
 	pinStatus = PinStatus_WORK
