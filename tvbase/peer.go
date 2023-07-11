@@ -30,11 +30,11 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v, result is nil", peerID)
 		refreshRouteErr := <-m.dht.RefreshRoutingTable()
 		if refreshRouteErr != nil {
-			tvLog.Logger.Errorf("fail to refresh routing table: %v", refreshRouteErr)
+			tvLog.Logger.Warnf("fail to refresh routing table: %v", refreshRouteErr)
 		}
 		tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId: %v", peerID)
-		peerAddrs := m.host.Peerstore().Addrs(peerID)
-		for _, peerAddr := range peerAddrs {
+		peerAddrs := m.host.Peerstore().PeerInfo(peerID)
+		for _, peerAddr := range peerAddrs.Addrs {
 			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
 		}
 		return

@@ -118,16 +118,18 @@ func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
 
 	out := make(chan *Result)
 	var result *Result
-	defer close(out)
 	defer s.Reset()
+	defer close(out)
 
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
-	go request(s, mrand.New(mrand.NewSource(int64(binary.BigEndian.Uint64(b)))), out)
+	stopRquestSignal := make(chan bool)
+	go request(s, mrand.New(mrand.NewSource(int64(binary.BigEndian.Uint64(b)))), out, stopRquestSignal)
 
 	select {
 	case <-timer.C:
+		stopRquestSignal <- true
 		log.Logger.Debug("nodeinfo->RequestNodeInfo: nodeinfo timeout")
 	case result = <-out:
 		log.Logger.Debug(result)
@@ -136,45 +138,50 @@ func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
 	return result
 }
 
-func request(s network.Stream, randReader io.Reader, result chan *Result) {
+func request(s network.Stream, randReader io.Reader, result chan *Result, stopRquestSignal chan bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Logger.Errorf("nodeinfo->RequestNodeInfo: StreamProtocol->OnResponse: recovered from: %v", r)
 		}
 	}()
 
-	buf := make([]byte, RandInfoSize)
-	if _, err := io.ReadFull(randReader, buf); err != nil {
-		result <- &Result{nil, err}
+	select {
+	case <-stopRquestSignal:
 		return
-	}
+	default:
+		buf := make([]byte, RandInfoSize)
+		if _, err := io.ReadFull(randReader, buf); err != nil {
+			result <- &Result{nil, err}
+			return
+		}
 
-	if _, err := s.Write(buf); err != nil {
-		result <- &Result{nil, err}
-		return
-	}
+		if _, err := s.Write(buf); err != nil {
+			result <- &Result{nil, err}
+			return
+		}
 
-	rbuf := make([]byte, RandInfoSize)
-	if _, err := io.ReadFull(s, rbuf); err != nil {
-		result <- &Result{nil, err}
-		return
-	}
+		rbuf := make([]byte, RandInfoSize)
+		if _, err := io.ReadFull(s, rbuf); err != nil {
+			result <- &Result{nil, err}
+			return
+		}
 
-	if !bytes.Equal(buf, rbuf) {
-		result <- &Result{nil, errors.New("nodeinfo->request: nodeinfo packet was incorrect")}
-		return
-	}
+		if !bytes.Equal(buf, rbuf) {
+			result <- &Result{nil, errors.New("nodeinfo->request: nodeinfo packet was incorrect")}
+			return
+		}
 
-	nodeInfoBuf, err := io.ReadAll(s)
-	if err != nil {
-		result <- &Result{nil, err}
-		return
+		nodeInfoBuf, err := io.ReadAll(s)
+		if err != nil {
+			result <- &Result{nil, err}
+			return
+		}
+		nodeInfo := &pb.NodeInfo{}
+		err = proto.Unmarshal(nodeInfoBuf, nodeInfo)
+		if err != nil {
+			result <- &Result{nil, err}
+			return
+		}
+		result <- &Result{nodeInfo, err}
 	}
-	nodeInfo := &pb.NodeInfo{}
-	err = proto.Unmarshal(nodeInfoBuf, nodeInfo)
-	if err != nil {
-		result <- &Result{nil, err}
-		return
-	}
-	result <- &Result{nodeInfo, err}
 }
