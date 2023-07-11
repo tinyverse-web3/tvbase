@@ -210,8 +210,9 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		pullCidResponse.Status = pinStatus
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", pullCidResponse)
 
-		pullCidRes := p.commicateInfoList[pullCidRequest.CID]
-		fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", pullCidRes.data)
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, commicateInfo: %v",
+			pullCidRequest.CID,
+			p.commicateInfoList[pullCidRequest.CID].data)
 	}()
 
 	return nil
@@ -230,6 +231,10 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 		customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 		return fmt.Errorf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 	}
+
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, commicateInfo: %v",
+		pullCidRequest.CID,
+		p.commicateInfoList[pullCidRequest.CID].data)
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
 	if !ok {
