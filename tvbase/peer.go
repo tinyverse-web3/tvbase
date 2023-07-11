@@ -28,6 +28,15 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 	result := m.nodeInfoService.Request(m.ctx, peerID)
 	if result == nil {
 		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v, result is nil", peerID)
+		refreshRouteErr := <-m.dht.RefreshRoutingTable()
+		if refreshRouteErr != nil {
+			tvLog.Logger.Errorf("fail to refresh routing table: %v", refreshRouteErr)
+		}
+		tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId: %v", peerID)
+		peerAddrs := m.host.Peerstore().Addrs(peerID)
+		for _, peerAddr := range peerAddrs {
+			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
+		}
 		return
 	}
 	if result.Error != nil {

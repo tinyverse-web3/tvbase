@@ -45,15 +45,6 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			tvLog.Logger.Infof("Infrasture->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
 				time.Since(start).Seconds(), peer.ID.Pretty())
 
-			refreshRouteErr := <-m.dht.RefreshRoutingTable()
-			if refreshRouteErr != nil {
-				tvLog.Logger.Errorf("fail to refresh routing table: %v", refreshRouteErr)
-			}
-			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId: %v", peer.ID)
-			peerAddrs := m.host.Peerstore().Addrs(peer.ID)
-			for _, peerAddr := range peerAddrs {
-				tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
-			}
 			go m.registPeerInfo(peer.ID)
 		}
 		if anyConnected {
