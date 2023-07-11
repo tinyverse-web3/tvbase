@@ -180,6 +180,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	pullCidResponse := &PullCidResponse{
 		CID: pullCidRequest.CID,
 	}
+
 	p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
 		data: pullCidResponse,
 	}
@@ -208,6 +209,9 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		pullCidResponse.ElapsedTime = elapsedTime
 		pullCidResponse.Status = pinStatus
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", pullCidResponse)
+
+		pullCidRes := p.commicateInfoList[pullCidRequest.CID]
+		fmt.Printf("\n\n###SendProtocolMsg###:%v\n\n", pullCidRes)
 	}()
 
 	return nil
