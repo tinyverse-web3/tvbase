@@ -8,7 +8,7 @@ if [ "$(uname)" = "Darwin" ]; then
 elif [ "$(uname)" = "Linux" ]; then
     echo "Linux sysytem"
     sysctl -w net.core.rmem_max=2500000
-    sysctl -w net.core.rmem_max=2500000
+    sysctl -w net.core.wmem_max=2500000
 else
     echo "unknow system"
     exit -1
