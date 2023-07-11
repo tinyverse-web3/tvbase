@@ -184,7 +184,7 @@ func FindTransferCert(cv []*pb.Cert) *pb.Cert {
 }
 
 func IsTransferCert(cert *pb.Cert) bool {
-	if cert != nil && VerifyCert(cert) {
+	if cert != nil && cert.Name == CertTransferPrepare && VerifyCert(cert) {
 		return true
 	}
 	return false
@@ -212,7 +212,13 @@ func VerifyTransferRecordValue(key string, value []byte, pk []byte) bool {
 		}
 	}
 
-	return bytes.Equal(cert.IssuerPubkey, pk) && string(cert.Data) == key
+	var tp pb.CertDataTransferPrepare
+	err := tp.Unmarshal(cert.Data)
+	if err != nil {
+		return false
+	}
+
+	return bytes.Equal(cert.IssuerPubkey, pk) && tp.Key == key
 }
 
 func GetCertTransferPrepare(value []byte) *pb.Cert {
