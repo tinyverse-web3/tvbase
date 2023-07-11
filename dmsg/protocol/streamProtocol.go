@@ -12,7 +12,7 @@ import (
 )
 
 func SendProtocolMsg(ctx context.Context, id peer.ID, p protocol.ID, data proto.Message, host host.Host) error {
-	fmt.Printf("sendProtocolMsg:%v/n", data)
+	fmt.Printf("/n###SendProtocolMsg###:%v/n", data)
 	stream, err := host.NewStream(ctx, id, p)
 	if err != nil {
 		return err
