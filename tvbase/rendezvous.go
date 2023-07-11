@@ -49,6 +49,7 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			if refreshRouteErr != nil {
 				tvLog.Logger.Errorf("fail to refresh routing table: %v", refreshRouteErr)
 			}
+			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId: %v", peer.ID)
 			peerAddrs := m.host.Peerstore().Addrs(peer.ID)
 			for _, peerAddr := range peerAddrs {
 				tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
