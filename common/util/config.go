@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mitchellh/go-homedir"
+	ma "github.com/multiformats/go-multiaddr"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 )
@@ -126,4 +128,17 @@ func SetLogLevel(lv string, moreModuleList ...string) {
 	for _, module := range moreModuleList {
 		ipfsLog.SetLogLevel(module, lv)
 	}
+}
+
+// ParseBootstrapPeer parses a bootstrap list into a list of AddrInfos.
+func ParseBootstrapPeers(addrs []string) ([]peer.AddrInfo, error) {
+	maddrs := make([]ma.Multiaddr, len(addrs))
+	for i, addr := range addrs {
+		var err error
+		maddrs[i], err = ma.NewMultiaddr(addr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return peer.AddrInfosFromP2pAddrs(maddrs...)
 }

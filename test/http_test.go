@@ -35,8 +35,9 @@ func TestHttpServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	putSomeValue(tvbase)
-	// corehttp.InitHttpServer(tvbase)
+	//corehttp.InitHttpServer(tvbase)
 	select {}
+	//通过postman发送请求来测试http api
 }
 
 func putSomeValue(tvbase tvCommon.TvBaseService) error {
@@ -55,7 +56,7 @@ func putSomeValue(tvbase tvCommon.TvBaseService) error {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey1 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk001-000")
+	tKey1 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk001-003")
 	tValue1 := []byte("world1")
 	ttl := dkvs.GetTtlFromDuration(time.Hour)
 	issuetime := dkvs.TimeNow()
@@ -69,7 +70,7 @@ func putSomeValue(tvbase tvCommon.TvBaseService) error {
 		return err
 	}
 
-	tKey2 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk002-000")
+	tKey2 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk002-003")
 	data = dkvs.GetRecordSignData(tKey2, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -80,7 +81,7 @@ func putSomeValue(tvbase tvCommon.TvBaseService) error {
 		return err
 	}
 
-	tKey3 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk003-000")
+	tKey3 := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-tk003-003")
 	data = dkvs.GetRecordSignData(tKey3, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {

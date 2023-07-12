@@ -25,6 +25,7 @@ import (
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	mamask "github.com/whyrusleeping/multiaddr-filter"
 	"go.uber.org/fx"
@@ -278,8 +279,15 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 
 func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 	var err error
+	bsCfgPeers := m.GetConfig().Bootstrap.BootstrapPeers
+	bspeers, err := tvUtil.ParseBootstrapPeers(bsCfgPeers)
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->tvUtil.ParseBootstrapPeers(bsCfgPeers): error: %v", err)
+		return nil, err
+	}
 	opt := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 		var modeCfg kaddht.Option
+
 		switch m.nodeCfg.Mode {
 		case tvConfig.FullMode:
 			modeCfg = kaddht.Mode(kaddht.ModeServer)
@@ -301,6 +309,9 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 			// EXPERIMENTAL: This is an experimental option and might be removed in the future. Use at your own risk.
 			kaddht.EnableOptimisticProvide(), // enable optimistic provide
 			modeCfg,
+			// BootstrapPeers configures the bootstrapping nodes that we will connect to to seed
+			// and refresh our Routing Table if it becomes empty.
+			kaddht.BootstrapPeers(bspeers...),
 			kaddht.Datastore(m.dhtDatastore),
 		)
 

@@ -31,7 +31,7 @@ type DkvsService interface {
 	IsPublicService(sn string, pubkey []byte) bool
 	IsChildPubkey(child []byte, parent []byte) bool
 	IsApprovedService(sn string) bool
-	FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.ID
+	FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.AddrInfo
 }
 
 type TraceSpanCallback func(ctx context.Context)

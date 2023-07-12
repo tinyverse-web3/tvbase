@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -50,4 +51,9 @@ func RandString(n int) string {
 	}
 
 	return string(b)
+}
+
+// RemovePrefix returns the orginal key for a dksvs key.
+func RemovePrefix(dkvsKey string) string {
+	return strings.Replace(dkvsKey, DefaultKeyPrefix, "", -1)
 }

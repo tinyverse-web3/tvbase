@@ -10,6 +10,7 @@ import (
 
 	// "github.com/avast/retry-go"
 
+	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
 	u "github.com/ipfs/boxo/util"
 	"github.com/ipfs/go-cid"
@@ -182,9 +183,9 @@ func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 }
 
 func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Record) error {
-	peers, err := d.baseService.GetAvailableServicePeerList(key)
+	peers, err := d.getDhtClosestPeers(ctx, key)
 	if err != nil {
-		Logger.Error("d.baseService.GetAvailableServicePeerList(key) not return any connected node")
+		Logger.Error("d.getDhtClosestPeers(ctx, key) not return any connected node")
 		return err
 	}
 	isInDhTNet := false
@@ -205,7 +206,7 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 				Logger.Warnf("putKeyToNetNode--> failed putting value to this peer failed--->{key: %v, pee: %v, err: %v} ", key, p, err)
 			} else {
 				isInDhTNet = true
-				Logger.Debugf("putKeyToNetNode--> success putting value to this peer--->{key: %v, pee: %v, err: %v} ", key, p)
+				Logger.Debugf("putKeyToNetNode--> success putting value to this peer--->{key: %v, pee: %v} ", key, p)
 			}
 		}(p)
 	}
@@ -318,39 +319,29 @@ func (d *Dkvs) putAllKeysToPeers() error {
 	return nil
 }
 
-func (d *Dkvs) FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.ID {
+func (d *Dkvs) FindPeersByKey(ctx context.Context, key string, timeout time.Duration) []peer.AddrInfo {
 	ctxT, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	keyCid := ConvertKeyToCid(key)
+	dkvsKey := RecordKey(key)
+	keyCid := ConvertKeyToCid(dkvsKey)
 	var providers []peer.AddrInfo
-	var peers []peer.ID
-	provchan := d.idht.FindProvidersAsync(ctxT, keyCid, 20)
-	select {
-	case prov, ok := <-provchan:
-		if !ok {
-			break
-		}
-		// if prov.ID != d.idht.PeerID() { //
-		// 	peers = append(peers, prov.ID)
-		// }
-		peers = append(peers, prov.ID) //The node itself also exists
-	}
-	select {
-	case <-time.After(5 * time.Second):
-		Logger.Debug("FindPeersByKey---> Find timeout occurred")
+	providers, err := d.idht.FindProviders(ctxT, keyCid)
+	if err != nil {
+		Logger.Warnf("findPeersByKey--> d.idht.FindProviders failed{key: %s, err: %s}", key, err.Error())
 	}
 	if providers == nil {
-		Logger.Warnf("findPeersByKey--> {key: %s} is not saved to any other node", key)
+		Logger.Errorf("findPeersByKey--> {key: %s} is not saved to any node", key)
 	} else {
-		Logger.Infof("findPeersByKey--> {key: %s} in perr: %v", key, peers)
+		Logger.Debugf("findPeersByKey--> {key: %s} in {perrs: %v}", key, providers)
 	}
-	return peers
+	return providers
 }
 
 // makes this node announce that it can provide a value for the given key
 func (d *Dkvs) enableProvider(ctx context.Context, key string) {
 	keyCid := ConvertKeyToCid(key)
 	err := d.idht.Provide(ctx, keyCid, true)
+
 	if err != nil {
 		Logger.Warnf("failed to set key to node  provider list {key: %s, cid: %s}", key, keyCid, err)
 		return
@@ -362,4 +353,37 @@ func ConvertKeyToCid(key string) cid.Cid {
 	mhv := u.Hash([]byte(key))
 	keyCid := cid.NewCidV1(cid.Raw, mhv)
 	return keyCid
+}
+
+func (d *Dkvs) getDhtClosestPeers(ctx context.Context, key string) ([]peer.ID, error) {
+	var peers []peer.ID
+	retryStrategy := []retry.Option{
+		retry.Delay(500 * time.Millisecond), // delay 500 ms
+		retry.Attempts(3),                   // max retry times 3
+		retry.LastErrorOnly(true),           // Return last error only
+		retry.RetryIf(func(err error) bool { // Retries based on error type
+			switch err.Error() {
+			case ErrLookupFailure.Error():
+				return true
+			default:
+				return false
+			}
+		}),
+	}
+	err := retry.Do(
+		func() error {
+			var err error
+			peers, err = d.idht.GetClosestPeers(ctx, key) // 自定义的函数
+			if err != nil {
+				Logger.Errorf("d.idht.GetClosestPeers failed andr retry: %v", err)
+			}
+			return err // 返回错误
+		},
+		retryStrategy...,
+	)
+	if err != nil {
+		Logger.Errorf("d.idht.GetClosestPeers retry completed: %v", err)
+		return nil, err
+	}
+	return peers, nil
 }

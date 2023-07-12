@@ -83,22 +83,22 @@ func QueryAllKeyOption() ServeOption {
 				keyObj := ds.NewKey(result.Key)
 				key, err := dsKeyDcode(keyObj.List()[0])
 				if err != nil {
-					Logger.Errorf("queryAllKeys---> dsKeyDcode(keyObj.List()[0] failed: %v", err)
+					Logger.Debugf("queryAllKeys---> dsKeyDcode(keyObj.List()[0] failed: %v", err)
 					continue
 				}
 				lbp2pRec := new(recpb.Record)
 				err = proto.Unmarshal(result.Value, lbp2pRec)
 				if err != nil {
-					Logger.Errorf("queryAllKeys---> proto.Unmarshal(result.Value, lbp2pRec) failed: %v", err)
+					Logger.Debugf("queryAllKeys---> proto.Unmarshal(result.Value, lbp2pRec) failed: %v", err)
 					continue
 				}
 				dkvsRec := new(dkvs_pb.DkvsRecord)
 				if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
-					Logger.Errorf("queryAllKeys---> proto.Unmarshal(rec.Value, dkvsRec) failed: %v", err)
+					Logger.Debugf("queryAllKeys---> proto.Unmarshal(rec.Value, dkvsRec) failed: %v", err)
 					continue
 				}
 				var kv DkvsKV
-				kv.Key = string(key)
+				kv.Key = string(dkvs.RemovePrefix(string(key)))
 				kv.Value = string(dkvsRec.Value)
 				keyList = append(keyList, kv)
 			}
@@ -203,19 +203,12 @@ func QueryProviders() ServeOption {
 				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
 				return
 			}
-
-			host := t.GetHost()
-			peerstore := host.Peerstore()
 			peers := kvSevice.FindPeersByKey(ctx, queryKey, 5*time.Second)
 			var nodeList []Node
-			for _, peerId := range peers {
+			for _, peer := range peers {
 				var node Node
-				addrInfo := peerstore.PeerInfo(peerId)
-				if isPrivateNode(addrInfo) {
-					continue
-				}
-				node.NodeId = peerId.Pretty()
-				node.Addrs = addrInfo.String()
+				node.NodeId = peer.ID.Pretty()
+				node.Addrs = peer.String()
 				nodeList = append(nodeList, node)
 			}
 			jsonData, err := json.Marshal(nodeList)
