@@ -62,7 +62,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	cfg := d.BaseService.GetConfig()
 	d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->Init: create datastore error %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->Init: create datastore error %v", err)
 		return err
 	}
 
@@ -88,19 +88,19 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	peerId := d.BaseService.GetHost().ID().String()
 	priKey, pubKey, err := keyUtil.GenerateEcdsaKey(peerId)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->Init: generate priKey error %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->Init: generate priKey error %v", err)
 		return err
 	}
 	priKeyData, err := keyUtil.ECDSAPrivateKeyToProtoBuf(priKey)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->Init: generate priKey_porto error %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->Init: generate priKey_porto error %v", err)
 		return err
 	}
 	priKeyHex := keyUtil.TranslateKeyProtoBufToString(priKeyData)
 
 	pubKeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubKey)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->Init: generate pubKey_porto error %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->Init: generate pubKey_porto error %v", err)
 		return err
 	}
 	pubKeyHex := keyUtil.TranslateKeyProtoBufToString(pubKeyData)
@@ -136,8 +136,8 @@ func (d *DmsgService) getMsgPrefix(srcUserPubkey string) string {
 func (d *DmsgService) publishDestUser(pubkey string) error {
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->publishDestUser: user public key(%s) pubsub already exist", pubkey)
-		return fmt.Errorf("serviceDmsgService->publishDestUser: user public key(%s) pubsub already exist", pubkey)
+		dmsgLog.Logger.Errorf("dmsgService->publishDestUser: user public key(%s) pubsub already exist", pubkey)
+		return fmt.Errorf("dmsgService->publishDestUser: user public key(%s) pubsub already exist", pubkey)
 	}
 	err := d.subscribeDestUser(pubkey)
 	if err != nil {
@@ -172,12 +172,12 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommo
 			}
 			results, err := d.datastore.Query(d.BaseService.GetCtx(), query)
 			if err != nil {
-				dmsgLog.Logger.Errorf("serviceDmsgService->readDestUserPubsub: query error: %v", err)
+				dmsgLog.Logger.Errorf("dmsgService->readDestUserPubsub: query error: %v", err)
 			}
 
 			for result := range results.Next() {
 				d.datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(result.Key))
-				dmsgLog.Logger.Debugf("serviceDmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
+				dmsgLog.Logger.Debugf("dmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
 			}
 
 			d.unSubscribeDestUser(pubkey)
@@ -193,7 +193,7 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommo
 			continue
 		}
 
-		dmsgLog.Logger.Debugf("serviceDmsgService->readDestUserPubsub: receive pubsub msg, topic:%s, receivedFrom:%v", *m.Topic, m.ReceivedFrom)
+		dmsgLog.Logger.Debugf("dmsgService->readDestUserPubsub: receive pubsub msg, topic:%s, receivedFrom:%v", *m.Topic, m.ReceivedFrom)
 
 		protocolID, protocolIDLen, err := d.CheckPubsubData(m.Data)
 		if err != nil {
@@ -206,7 +206,7 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommo
 			reqSubscribe.OnRequest(m, contentData)
 			continue
 		} else {
-			dmsgLog.Logger.Warnf("serviceDmsgService->readDestUserPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
+			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
 		}
 		// no protocol for resSubScribe in service
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
@@ -214,7 +214,7 @@ func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommo
 			resSubScribe.OnResponse(m, contentData)
 			continue
 		} else {
-			dmsgLog.Logger.Warnf("serviceDmsgService->readDestUserPubsub: no find protocolId(%d) for resSubscribe", protocolID)
+			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for resSubscribe", protocolID)
 		}
 	}
 }
@@ -243,8 +243,8 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
 	userPubsub := d.destUserPubsubs[userPubKey]
 	if userPubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
-		return fmt.Errorf("serviceDmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
+		dmsgLog.Logger.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
+		return fmt.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
 	}
 	userPubsub.UserSub.Cancel()
 	err := userPubsub.UserTopic.Close()
@@ -269,15 +269,15 @@ func (d *DmsgService) getDestUserPubsub(userPubkey string) *dmsgServiceCommon.De
 func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent []byte) error {
 	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return fmt.Errorf("serviceDmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
 	pubkey := sendMsgReq.BasicData.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
-		return fmt.Errorf("serviceDmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
+		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
+		return fmt.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
 	}
 
 	pubsub.MsgRWMutex.RLock()
@@ -296,7 +296,7 @@ func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
 	destUserCount := len(d.destUserPubsubs)
 	cfg := d.BaseService.GetConfig()
 	if destUserCount >= cfg.DMsg.MaxMailboxPubsubCount {
-		dmsgLog.Logger.Warnf("serviceDmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", destUserCount)
+		dmsgLog.Logger.Warnf("dmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", destUserCount)
 		return false
 	}
 	return true
@@ -329,8 +329,8 @@ func (d *DmsgService) GetDestUserPubsub(publicKey string) *dmsgServiceCommon.Des
 func (d *DmsgService) OnCreateMailboxRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.CreateMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
 	}
 	isAvailable := d.isAvailableMailbox(request.BasicData.DestPubkey)
 	if !isAvailable {
@@ -338,7 +338,7 @@ func (d *DmsgService) OnCreateMailboxRequest(protoData protoreflect.ProtoMessage
 	}
 	err := d.publishDestUser(request.BasicData.DestPubkey)
 	if err != nil {
-		dmsgLog.Logger.Warnf("serviceDmsgService->OnCreateMailboxResponse: destPubkey %s already exist", request.BasicData.DestPubkey)
+		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", request.BasicData.DestPubkey)
 	}
 	return nil, nil
 }
@@ -346,13 +346,13 @@ func (d *DmsgService) OnCreateMailboxRequest(protoData protoreflect.ProtoMessage
 func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := protoData.(*pb.CreateMailboxRes)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
+		return nil, fmt.Errorf("dmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
 	}
 
 	pubsub := d.getDestUserPubsub(response.BasicData.DestPubkey)
 	if pubsub != nil {
-		dmsgLog.Logger.Warnf("serviceDmsgService->OnCreateMailboxResponse: destPubkey %s already exist", response.BasicData.DestPubkey)
+		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", response.BasicData.DestPubkey)
 		response.RetCode = &pb.RetCode{
 			Code:   dmsgServiceCommon.MailboxAlreadyExistCode,
 			Result: dmsgServiceCommon.MailboxAlreadyExistErr,
@@ -364,8 +364,8 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 func (d *DmsgService) OnReleaseMailboxRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.ReleaseMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnReleaseMailboxRequest: cannot convert %v to *pb.ReleaseMailboxReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnReleaseMailboxRequest: cannot convert %v to *pb.ReleaseMailboxReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnReleaseMailboxRequest: cannot convert %v to *pb.ReleaseMailboxReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: cannot convert %v to *pb.ReleaseMailboxReq", protoData)
 	}
 
 	err := d.unPublishDestUser(request.BasicData.DestPubkey)
@@ -377,15 +377,15 @@ func (d *DmsgService) OnReleaseMailboxRequest(protoData protoreflect.ProtoMessag
 func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.ReadMailboxMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
 	}
 
 	pubkey := request.BasicData.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
-		return nil, fmt.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
+		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
+		return nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
 	}
 	pubsub.MsgRWMutex.RLock()
 	defer pubsub.MsgRWMutex.RUnlock()
@@ -407,7 +407,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 			Key:        string(result.Key),
 			MsgContent: result.Value,
 		}
-		dmsgLog.Logger.Debugf("serviceDmsgService->OnReadMailboxMsgRequest key:%v, value:%v", string(result.Key), string(result.Value))
+		dmsgLog.Logger.Debugf("dmsgService->OnReadMailboxMsgRequest key:%v, value:%v", string(result.Key), string(result.Value))
 		mailboxMsgDataList = append(mailboxMsgDataList, mailboxMsgData)
 		needDeleteKeyList = append(needDeleteKeyList, string(result.Key))
 		find = true
@@ -416,12 +416,12 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	for _, needDeleteKey := range needDeleteKeyList {
 		err := d.datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(needDeleteKey))
 		if err != nil {
-			dmsgLog.Logger.Errorf("serviceDmsgService->OnReadMailboxMsgRequest: delete msg happen err: %v", err)
+			dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: delete msg happen err: %v", err)
 		}
 	}
 
 	if !find {
-		dmsgLog.Logger.Debug("serviceDmsgService->OnReadMailboxMsgRequest: user msgs is empty")
+		dmsgLog.Logger.Debug("dmsgService->OnReadMailboxMsgRequest: user msgs is empty")
 	}
 	return mailboxMsgDataList, nil
 }
@@ -429,19 +429,19 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
 	}
 
 	customProtocolInfo := d.customStreamProtocolInfoList[request.CustomProtocolID]
 	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
 	}
 
 	if customProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: callback is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolRequest: callback is nil")
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: callback is nil")
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: callback is nil")
 	}
 	customProtocolInfo.Service.HandleRequest(request)
 	return request, nil
@@ -450,28 +450,28 @@ func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.Proto
 func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := resProtoData.(*pb.CustomProtocolRes)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
 	customProtocolInfo := d.customStreamProtocolInfoList[response.CustomProtocolID]
 	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
 	}
 	if customProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback is nil")
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: callback is nil")
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: callback is nil")
 	}
 
 	request, ok := reqProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
 	}
 
 	err := customProtocolInfo.Service.HandleResponse(request, response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomStreamProtocolResponse: callback happen err: %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: callback happen err: %v", err)
 		return nil, err
 	}
 	return nil, nil
@@ -480,19 +480,19 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 func (d *DmsgService) OnCustomPubsubProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
 	}
 
 	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[request.CustomProtocolID]
 	if customPubsubProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
 	}
 
 	if customPubsubProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: Service is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: Service is nil")
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolRequest: Service is nil")
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolRequest: Service is nil")
 	}
 	customPubsubProtocolInfo.Service.HandleRequest(request)
 	return request, nil
@@ -501,28 +501,28 @@ func (d *DmsgService) OnCustomPubsubProtocolRequest(protoData protoreflect.Proto
 func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := resProtoData.(*pb.CustomProtocolRes)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
 	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.CustomProtocolID]
 	if customPubsubProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
 	}
 	if customPubsubProtocolInfo.Service == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: Service is nil")
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: Service is nil")
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: Service is nil")
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: Service is nil")
 	}
 
 	request, ok := reqProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
 	}
 
 	err := customPubsubProtocolInfo.Service.HandleResponse(request, response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: HandleResponse happen err: %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: HandleResponse happen err: %v", err)
 		return nil, err
 	}
 	return nil, nil
@@ -532,13 +532,13 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.P
 func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.SeekMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
-		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 	}
 	pubsub := d.destUserPubsubs[request.BasicData.DestPubkey]
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
-		return nil, fmt.Errorf("serviceDmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
+		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
+		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
 	}
 	return nil, nil
 }
@@ -546,14 +546,14 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage, protoData []byte) (interface{}, error) {
 	request, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return nil, fmt.Errorf("serviceDmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		dmsgLog.Logger.Errorf("dmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return nil, fmt.Errorf("dmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 	pubkey := request.BasicData.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
-		return nil, fmt.Errorf("serviceDmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
+		dmsgLog.Logger.Errorf("dmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
+		return nil, fmt.Errorf("dmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
 	}
 	pubsub.LastReciveTimestamp = time.Now().Unix()
 	d.saveUserMsg(protoMsg, protoData)
@@ -563,8 +563,8 @@ func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage,
 func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte) error {
 	userPubsub := d.getDestUserPubsub(userPubkey)
 	if userPubsub == nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)
-		return fmt.Errorf("serviceDmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)
+		dmsgLog.Logger.Errorf("dmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)
+		return fmt.Errorf("dmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)
 	}
 	pubsubBuf := new(bytes.Buffer)
 	err := binary.Write(pubsubBuf, binary.LittleEndian, protocolID)
@@ -577,8 +577,8 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 	}
 	pubsubData := pubsubBuf.Bytes()
 	if err := userPubsub.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData); err != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->PublishProtocol: publish protocol err: %v", err)
-		return fmt.Errorf("serviceDmsgService->PublishProtocol: publish protocol err: %v", err)
+		dmsgLog.Logger.Errorf("dmsgService->PublishProtocol: publish protocol err: %v", err)
+		return fmt.Errorf("dmsgService->PublishProtocol: publish protocol err: %v", err)
 	}
 	return nil
 }
@@ -587,12 +587,12 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomStreamProtocolService) error {
 	customProtocolID := service.GetProtocolID()
 	if d.customStreamProtocolInfoList[customProtocolID] != nil {
-		dmsgLog.Logger.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
-		return fmt.Errorf("serviceDmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
+		dmsgLog.Logger.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
+		return fmt.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
 	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomStreamProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
-		Service:        service,
+		Protocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+		Service:  service,
 	}
 	service.SetCtx(d.BaseService.GetCtx())
 	return nil
@@ -601,12 +601,39 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomSt
 func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.CustomStreamProtocolService) error {
 	customProtocolID := callback.GetProtocolID()
 	if d.customStreamProtocolInfoList[customProtocolID] == nil {
-		dmsgLog.Logger.Warnf("serviceDmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
+		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
 	d.customStreamProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomStreamProtocolInfo{
-		StreamProtocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
-		Service:        callback,
+		Protocol: serviceProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+		Service:  callback,
+	}
+	return nil
+}
+
+func (d *DmsgService) RegistCustomPubsubProtocol(service customProtocol.CustomStreamProtocolService) error {
+	customProtocolID := service.GetProtocolID()
+	if d.customPubsubProtocolInfoList[customProtocolID] != nil {
+		dmsgLog.Logger.Errorf("dmsgService->RegistCustomPubsubProtocol: customProtocolID %s is already exist", customProtocolID)
+		return fmt.Errorf("dmsgService->RegistCustomPubsubProtocol: customProtocolID %s is already exist", customProtocolID)
+	}
+	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomPubsubProtocolInfo{
+		Protocol: serviceProtocol.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+		Service:  service,
+	}
+	service.SetCtx(d.BaseService.GetCtx())
+	return nil
+}
+
+func (d *DmsgService) UnregistCustomPubsubProtocol(callback customProtocol.CustomStreamProtocolService) error {
+	customProtocolID := callback.GetProtocolID()
+	if d.customPubsubProtocolInfoList[customProtocolID] == nil {
+		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
+		return nil
+	}
+	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomPubsubProtocolInfo{
+		Protocol: serviceProtocol.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+		Service:  callback,
 	}
 	return nil
 }

@@ -266,7 +266,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			for _, addr := range m.nodeCfg.Swarm.AddrFilters {
 				f, err := mamask.NewMask(addr)
 				if err != nil {
-					tvLog.Logger.Errorf("Infrasture->createCommonOpts: incorrectly formatted address filter in config: %s", addr)
+					tvLog.Logger.Errorf("tvBase->createCommonOpts: incorrectly formatted address filter in config: %s", addr)
 					return nil, err
 				}
 				filter.AddFilter(*f, ma.ActionDeny)

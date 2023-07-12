@@ -38,15 +38,15 @@ var ErrNoResourceMgr = fmt.Errorf("missing ResourceMgr: make sure the daemon is 
 func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 	var manager network.ResourceManager
 
-	tvLog.Logger.Debug("Infrasture->initResourceManager: libp2p resource manager is enabled")
+	tvLog.Logger.Debug("tvBase->initResourceManager: libp2p resource manager is enabled")
 	limitConfig, msg, err := LimitConfig(m.nodeCfg.Swarm, m.nodeCfg.PartialLimit)
 	if err != nil {
-		tvLog.Logger.Errorf("Infrasture->initResourceManager: creating final Resource Manager config: %w", err)
+		tvLog.Logger.Errorf("tvBase->initResourceManager: creating final Resource Manager config: %w", err)
 		return nil, err
 	}
 
 	if !isPartialConfigEmpty(m.nodeCfg.PartialLimit) {
-		tvLog.Logger.Warn(`Infrasture->initResourceManager: libp2p-resource-limit-overrides.json has been loaded, "default" fields will be filled in with autocomputed defaults.`)
+		tvLog.Logger.Warn(`tvBase->initResourceManager: libp2p-resource-limit-overrides.json has been loaded, "default" fields will be filled in with autocomputed defaults.`)
 	}
 
 	// We want to see this message on startup, that's why we are using fmt instead of log.
@@ -58,7 +58,7 @@ func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 
 	str, err := rcmgrObs.NewStatsTraceReporter()
 	if err != nil {
-		tvLog.Logger.Errorf("Infrasture->initResourceManager: rcmgrObs.NewStatsTraceReporter(): %v", err)
+		tvLog.Logger.Errorf("tvBase->initResourceManager: rcmgrObs.NewStatsTraceReporter(): %v", err)
 		return nil, err
 	}
 
@@ -69,13 +69,13 @@ func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 		for _, maStr := range m.nodeCfg.Swarm.ResourceMgr.Allowlist {
 			ma, err := ma.NewMultiaddr(maStr)
 			if err != nil {
-				tvLog.Logger.Warnf("Infrasture->initResourceManager: failed to parse multiaddr=%v for allowlist, skipping. err=%v", maStr, err)
+				tvLog.Logger.Warnf("tvBase->initResourceManager: failed to parse multiaddr=%v for allowlist, skipping. err=%v", maStr, err)
 				continue
 			}
 			mas = append(mas, ma)
 		}
 		ropts = append(ropts, rcmgr.WithAllowlistedMultiaddrs(mas))
-		tvLog.Logger.Infof("Infrasture->initResourceManager: Setting allowlist to: %v", mas)
+		tvLog.Logger.Infof("tvBase->initResourceManager: Setting allowlist to: %v", mas)
 	}
 
 	if os.Getenv("LIBP2P_DEBUG_RCMGR") != "" {

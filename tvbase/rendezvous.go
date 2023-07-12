@@ -20,11 +20,11 @@ func (m *TvBase) initRendezvous() error {
 func (m *TvBase) DiscoverRendezvousPeers() {
 	start := time.Now()
 	anyConnected := false
-	tvLog.Logger.Info("Infrasture->DiscoverRendezvousPeers: Searching for rendezvous peers...")
+	tvLog.Logger.Info("tvBase->DiscoverRendezvousPeers: Searching for rendezvous peers...")
 	for !anyConnected {
 		peerChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TinverseInfrastureRendezvous)
 		if err != nil {
-			tvLog.Logger.Errorf("Infrasture->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
+			tvLog.Logger.Errorf("tvBase->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
 			continue
 		}
 
@@ -38,21 +38,21 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 
 			err := m.host.Connect(m.ctx, peer)
 			if err != nil {
-				tvLog.Logger.Warnf("Infrasture->DiscoverRendezvousPeers: Fail connect to the rendezvous peerID: %v, error: %v", peer.ID, err)
+				tvLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers: Fail connect to the rendezvous peerID: %v, error: %v", peer.ID, err)
 				addrInfo := m.host.Peerstore().PeerInfo(peer.ID)
 				for _, peerAddr := range addrInfo.Addrs {
-					tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
+					tvLog.Logger.Errorf("tvBase->registPeerInfo: peerId addr: %v", peerAddr)
 				}
 				continue
 			}
 			anyConnected = true
-			tvLog.Logger.Infof("Infrasture->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
+			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
 				time.Since(start).Seconds(), peer.ID.Pretty())
 
 			go m.registPeerInfo(peer.ID)
 		}
 		if anyConnected {
-			tvLog.Logger.Infof("Infrasture->DiscoverRendezvousPeers: It took %v seconds connect to all rendezvous peers\n", time.Since(start).Seconds())
+			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: It took %v seconds connect to all rendezvous peers\n", time.Since(start).Seconds())
 		}
 	}
 }

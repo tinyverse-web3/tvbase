@@ -40,19 +40,19 @@ func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {
 		OnStart: func(_ context.Context) error {
 			err := mdnsService.Start()
 			if err != nil {
-				tvLog.Logger.Errorf("TvBase->initMdns: mdns start error: %v", err)
+				tvLog.Logger.Errorf("tvBase->initMdns: mdns start error: %v", err)
 				return err
 			}
-			tvLog.Logger.Info("TvBase->initMdns: mdns start...")
+			tvLog.Logger.Info("tvBase->initMdns: mdns start...")
 			return nil
 		},
 		OnStop: func(_ context.Context) error {
 			err := mdnsService.Close()
 			if err != nil {
-				tvLog.Logger.Errorf("TvBase->initMdns: mdns close error: %v", err)
+				tvLog.Logger.Errorf("tvBase->initMdns: mdns close error: %v", err)
 				return err
 			}
-			tvLog.Logger.Info("TvBase->initMdns: mdns is closed")
+			tvLog.Logger.Info("tvBase->initMdns: mdns is closed")
 			return nil
 		},
 	})

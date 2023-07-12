@@ -163,7 +163,7 @@ func (m *TvBase) Stop() {
 	if m.launch != nil {
 		stopErr := m.launch.Stop(context.Background())
 		if stopErr != nil {
-			tvLog.Logger.Errorf("TvBase->Stop: failure on stop: %v", stopErr)
+			tvLog.Logger.Errorf("tvBase->Stop: failure on stop: %v", stopErr)
 		}
 	}
 }
@@ -175,7 +175,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	ctx := logging.ContextWithLoggable(m.ctx, newUUID("session"))
 	shutdownTracerProvider, err := NewTracerProvider(ctx)
 	if err != nil {
-		tvLog.Logger.Errorf("TvBase->initDisc: NewTracerProvider error: %v", err)
+		tvLog.Logger.Errorf("tvBase->initDisc: NewTracerProvider error: %v", err)
 		return nil, err
 	}
 
@@ -187,7 +187,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 			OnStop: func(ctx context.Context) error {
 				err := shutdownTracerProvider.Shutdown(ctx)
 				if err != nil {
-					tvLog.Logger.Errorf("TvBase->initDisc->OnStop: Shutdown error: %v", err)
+					tvLog.Logger.Errorf("tvBase->initDisc->OnStop: Shutdown error: %v", err)
 				}
 				return nil
 			},
@@ -201,7 +201,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 		var profileOpt fx.Option
 		stopProfilingFunc, err := profileIfEnabled()
 		if err != nil {
-			tvLog.Logger.Errorf("TvBase->initDisc: %v", err)
+			tvLog.Logger.Errorf("tvBase->initDisc: %v", err)
 			return nil, err
 		}
 
@@ -452,7 +452,7 @@ func (m *TvBase) bootstrap() error {
 	for _, peerInfo := range m.nodeCfg.Bootstrap.BootstrapPeers {
 		maddr, err := ma.NewMultiaddr(peerInfo)
 		if err != nil {
-			tvLog.Logger.Errorf("TvBase->bootstrap: fail to parse bootstrap peer:%v, error:%v", peerInfo, err)
+			tvLog.Logger.Errorf("tvBase->bootstrap: fail to parse bootstrap peer:%v, error:%v", peerInfo, err)
 			return err
 		}
 		addrInfo, _ := peer.AddrInfoFromP2pAddr(maddr)
@@ -465,10 +465,10 @@ func (m *TvBase) bootstrap() error {
 			defer wg.Done()
 			err := m.host.Connect(m.ctx, *addrInfo)
 			if err != nil {
-				tvLog.Logger.Warnf("TvBase->bootstrap: fail connect boottrap addrInfo:%v, error:%v", addrInfo, err)
+				tvLog.Logger.Warnf("tvBase->bootstrap: fail connect boottrap addrInfo:%v, error:%v", addrInfo, err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
-				tvLog.Logger.Infof("TvBase->bootstrap: succ connect bootstrap node:%v", addrInfo)
+				tvLog.Logger.Infof("tvBase->bootstrap: succ connect bootstrap node:%v", addrInfo)
 			}
 		}()
 	}
@@ -490,7 +490,7 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 					select {
 					case <-t.C:
 						if len(ph.Network().Peers()) == 0 {
-							tvLog.Logger.Warn("TvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
+							tvLog.Logger.Warn("tvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
 							err := m.bootstrap()
 							if err != nil {
 								tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)

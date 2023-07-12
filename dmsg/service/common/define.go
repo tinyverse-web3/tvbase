@@ -89,13 +89,13 @@ type DestUserPubsub struct {
 }
 
 type CustomStreamProtocolInfo struct {
-	Service        customProtocol.CustomStreamProtocolService
-	StreamProtocol *StreamProtocol
+	Service  customProtocol.CustomStreamProtocolService
+	Protocol *StreamProtocol
 }
 
 type CustomPubsubProtocolInfo struct {
-	Service        customProtocol.CustomPubsubProtocolService
-	PubsubProtocol *PubsubProtocol
+	Service  customProtocol.CustomPubsubProtocolService
+	Protocol *PubsubProtocol
 }
 
 const MailboxLimitErr = "mailbox is limited"

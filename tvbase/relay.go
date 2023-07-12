@@ -70,7 +70,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					tvLog.Logger.Debugf("Infrasture->createRelayOpts: recovering from unexpected error in AutoRelayFeeder:", r)
+					tvLog.Logger.Debugf("tvBase->createRelayOpts: recovering from unexpected error in AutoRelayFeeder:", r)
 				}
 			}()
 

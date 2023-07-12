@@ -49,13 +49,13 @@ func (m *TvBase) TraceSpan(componentName string, spanName string, options ...any
 	if len(options) >= 2 {
 		key, ok = options[0].(string)
 		if !ok {
-			tvLog.Logger.Errorf("Infrasture->TraceSpan: options[0](key) is not string")
-			return fmt.Errorf("Infrasture->TraceSpan: options[0](key) is not string")
+			tvLog.Logger.Errorf("tvBase->TraceSpan: options[0](key) is not string")
+			return fmt.Errorf("tvBase->TraceSpan: options[0](key) is not string")
 		}
 		value, ok = options[1].(string)
 		if !ok {
-			tvLog.Logger.Errorf("Infrasture->TraceSpan: options[1](value) is not string")
-			return fmt.Errorf("Infrasture->TraceSpan: options[1](value) is not string")
+			tvLog.Logger.Errorf("tvBase->TraceSpan: options[1](value) is not string")
+			return fmt.Errorf("tvBase->TraceSpan: options[1](value) is not string")
 		}
 		ctx, span = Span(m.ctx, componentName, spanName, trace.WithAttributes(attribute.String(key, value)))
 	} else {
@@ -67,8 +67,8 @@ func (m *TvBase) TraceSpan(componentName string, spanName string, options ...any
 	if len(options) >= 3 {
 		traceSpanCallback, ok := options[1].(tvCommon.TraceSpanCallback)
 		if !ok {
-			tvLog.Logger.Errorf("Infrasture->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
-			return fmt.Errorf("Infrasture->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
+			tvLog.Logger.Errorf("tvBase->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
+			return fmt.Errorf("tvBase->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
 		}
 		traceSpanCallback(ctx)
 	}
@@ -78,7 +78,7 @@ func (m *TvBase) TraceSpan(componentName string, spanName string, options ...any
 
 func (m *TvBase) SetTracerStatus(err error) {
 	if m.TracerSpan == nil {
-		tvLog.Logger.Warnf("Infrasture->SetTracerStatus: span is nil")
+		tvLog.Logger.Warnf("tvBase->SetTracerStatus: span is nil")
 		return
 	}
 	m.TracerSpan.SetStatus(codes.Error, err.Error())

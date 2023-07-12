@@ -27,27 +27,27 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 	}
 	result := m.nodeInfoService.Request(m.ctx, peerID)
 	if result == nil {
-		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v, result is nil", peerID)
+		tvLog.Logger.Errorf("tvBase->registPeerInfo: try get peer info: %v, result is nil", peerID)
 		refreshRouteErr := <-m.dht.RefreshRoutingTable()
 		if refreshRouteErr != nil {
 			tvLog.Logger.Warnf("fail to refresh routing table: %v", refreshRouteErr)
 		}
-		tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId: %v", peerID)
+		tvLog.Logger.Errorf("tvBase->registPeerInfo: peerId: %v", peerID)
 		addrInfo := m.host.Peerstore().PeerInfo(peerID)
 		for _, peerAddr := range addrInfo.Addrs {
-			tvLog.Logger.Errorf("TvBase->registPeerInfo: peerId addr: %v", peerAddr)
+			tvLog.Logger.Errorf("tvBase->registPeerInfo: peerId addr: %v", peerAddr)
 		}
 		return
 	}
 	if result.Error != nil {
-		tvLog.Logger.Errorf("TvBase->registPeerInfo: try get peer info: %v happen error, result: %v", peerID, result)
+		tvLog.Logger.Errorf("tvBase->registPeerInfo: try get peer info: %v happen error, result: %v", peerID, result)
 		return
 	} else {
-		tvLog.Logger.Infof("TvBase->registPeerInfo: try get peer info: %v, result: %v", peerID, result)
+		tvLog.Logger.Infof("tvBase->registPeerInfo: try get peer info: %v, result: %v", peerID, result)
 	}
 
 	if result.NodeInfo == nil {
-		tvLog.Logger.Warnf("TvBase->registPeerInfo: result node info is nil: pereID %v", peerID)
+		tvLog.Logger.Warnf("tvBase->registPeerInfo: result node info is nil: pereID %v", peerID)
 		return
 	}
 	switch result.NodeInfo.NodeType {
@@ -90,7 +90,7 @@ func (m *TvBase) getAvailablePeerList(key string, nodeMode tvConfig.NodeMode) ([
 	var findedPeerList []libp2pPeer.ID
 	closestPeerList, err := m.dht.GetClosestPeers(m.ctx, key)
 	if err != nil {
-		tvLog.Logger.Errorf("Infrasture->getAvailablePeerList: no find peers, err :%v", err)
+		tvLog.Logger.Errorf("tvBase->getAvailablePeerList: no find peers, err :%v", err)
 		return findedPeerList, err
 	}
 
@@ -101,27 +101,27 @@ func (m *TvBase) getAvailablePeerList(key string, nodeMode tvConfig.NodeMode) ([
 	case tvConfig.LightMode:
 		peerList = m.lightPeerList
 	default:
-		return nil, fmt.Errorf("Infrasture->getAvailablePeerList: invalid node mode")
+		return nil, fmt.Errorf("tvBase->getAvailablePeerList: invalid node mode")
 	}
 
 	for _, closestPeer := range closestPeerList {
 		closestPeerId := closestPeer.String()
 		peerInfo := peerList[closestPeerId]
 		if peerInfo == nil {
-			tvLog.Logger.Debugf("Infrasture->getAvailablePeerList: peer %v is not exist in peerList", closestPeer)
+			tvLog.Logger.Debugf("tvBase->getAvailablePeerList: peer %v is not exist in peerList", closestPeer)
 			continue
 		}
 		if peerInfo.PeerID == m.host.ID() {
 			continue
 		}
 		if peerInfo.ConnectStatus != network.Connected {
-			tvLog.Logger.Debugf("Infrasture->getAvailablePeerList: peer %v is not connected", closestPeer)
+			tvLog.Logger.Debugf("tvBase->getAvailablePeerList: peer %v is not connected", closestPeer)
 		}
 		findedPeerList = append(findedPeerList, closestPeer)
 	}
 	if len(findedPeerList) == 0 {
-		tvLog.Logger.Error("Infrasture->getAvailablePeerList: no available peer found")
-		return findedPeerList, fmt.Errorf("Infrasture->getAvailablePeerList: no available peer found")
+		tvLog.Logger.Error("tvBase->getAvailablePeerList: no available peer found")
+		return findedPeerList, fmt.Errorf("tvBase->getAvailablePeerList: no available peer found")
 	}
 	return findedPeerList, nil
 }

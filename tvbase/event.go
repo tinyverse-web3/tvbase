@@ -26,7 +26,7 @@ func (m *TvBase) initEvent() error {
 					tvLog.Logger.Errorf("unexpected event:%v", v)
 					continue
 				}
-				tvLog.Logger.Debugf("Infrasture->initEvent: peer connectedness changed-> connectedness:%v, peer:%v",
+				tvLog.Logger.Debugf("tvBase->initEvent: peer connectedness changed-> connectedness:%v, peer:%v",
 					evt.Connectedness, evt.Peer)
 				switch evt.Connectedness {
 				case network.NotConnected:
@@ -37,17 +37,17 @@ func (m *TvBase) initEvent() error {
 					m.NotifyConnected(evt.Peer)
 				case network.CanConnect:
 					// never happen
-					tvLog.Logger.Debug("Infrasture->initEvent: never happen CanConnect")
+					tvLog.Logger.Debug("tvBase->initEvent: never happen CanConnect")
 				case network.CannotConnect:
 					// never happen
-					tvLog.Logger.Debug("Infrasture->initEvent: never happen CannotConnect")
+					tvLog.Logger.Debug("tvBase->initEvent: never happen CannotConnect")
 				}
 				continue
 			case <-m.ctx.Done():
 				if evtPeerConnectednessChanged != nil {
 					err := evtPeerConnectednessChanged.Close()
 					if err != nil {
-						tvLog.Logger.Errorf("Infrasture->initEvent: evtPeerConnectednessChanged.Close() error: %v", err)
+						tvLog.Logger.Errorf("tvBase->initEvent: evtPeerConnectednessChanged.Close() error: %v", err)
 					}
 					evtPeerConnectednessChanged = nil
 				}
@@ -71,7 +71,7 @@ func (m *TvBase) NotifyConnected(peerID libp2pPeer.ID) {
 	for _, callback := range m.connectedCbList {
 		err := callback(peerID)
 		if err != nil {
-			tvLog.Logger.Errorf("Infrasture->NotifyConnected: callback error: %v", err)
+			tvLog.Logger.Errorf("tvBase->NotifyConnected: callback error: %v", err)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func (m *TvBase) NotifyNotConnected(peerID libp2pPeer.ID) {
 	for _, callback := range m.notConnectedCbList {
 		err := callback(peerID)
 		if err != nil {
-			tvLog.Logger.Errorf("Infrasture->NotifyNotConnected: callback error: %v", err)
+			tvLog.Logger.Errorf("tvBase->NotifyNotConnected: callback error: %v", err)
 		}
 	}
 }
