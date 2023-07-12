@@ -274,7 +274,16 @@ func TestPullCID(t *testing.T) {
 	}
 	bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
 	// localPeerID := "12D3KooWT3DqHnCgt2za47Acpf5eVxRBYgDfDZoHp7bwXTttFg7m"
-	CID_RANDOM_1K := "QmegD4J9FLhW9FTJL6d9mdsNSg7aB8XHgQJDjztYJGDRHz"
+	/*
+		## shell for generate random cid file
+		dd if=/dev/urandom of=random-file bs=1k  count=1
+		## add random file to ipfs
+		ipfs add ./random-file
+		## check cid
+		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
+
+	*/
+	CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
 	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
 	pullCidResponse, err := pullCidProtocol.Request(bootPeerID, &pullcid.PullCidRequest{
