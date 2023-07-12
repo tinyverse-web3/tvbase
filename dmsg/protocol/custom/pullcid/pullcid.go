@@ -2,6 +2,7 @@ package pullcid
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -145,7 +146,8 @@ func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration)
 // service
 type PullCidServiceProtocol struct {
 	customProtocol.CustomStreamServiceProtocol
-	commicateInfoList map[string]*serviceCommicateInfo
+	commicateInfoList      map[string]*serviceCommicateInfo
+	commicateInfoListMutex sync.Mutex
 }
 
 func GetPullCidServiceProtocol() *PullCidServiceProtocol {
@@ -179,14 +181,6 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		return nil
 	}
 
-	pullCidResponse := &PullCidResponse{
-		CID: pullCidRequest.CID,
-	}
-
-	p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
-		data: pullCidResponse,
-	}
-
 	maxCheckTime := pullCidRequest.MaxCheckTime
 	if maxCheckTime <= 0 {
 		// default timeout is 3 minute
@@ -201,16 +195,25 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 
 	timer := time.NewTimer(500 * time.Millisecond)
 	go func() {
-		CidContentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
+		cidContentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
 		if err != nil {
 			customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 			return
 		}
 
-		pullCidResponse.CidContentSize = CidContentSize
-		pullCidResponse.ElapsedTime = elapsedTime
-		pullCidResponse.Status = pinStatus
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v", pullCidRequest.CID, pullCidResponse)
+		pullCidResponse := &PullCidResponse{
+			CID:            pullCidRequest.CID,
+			CidContentSize: cidContentSize,
+			ElapsedTime:    elapsedTime,
+			Status:         pinStatus,
+		}
+		p.commicateInfoListMutex.Lock()
+		defer p.commicateInfoListMutex.Unlock()
+		p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
+			data: pullCidResponse,
+		}
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v",
+			pullCidRequest.CID, pullCidResponse)
 	}()
 
 	<-timer.C
