@@ -127,7 +127,7 @@ func (d *Dkvs) getRecordFromDatastore(ctx context.Context, key string) (*recpb.R
 	dht := d.idht
 	buf, err := d.dhtDatastore.Get(ctx, dskey)
 	if err == ds.ErrNotFound {
-		Logger.Debugf("finding value in datastore key: %s, error: ", dskey, "error: %s", err)
+		Logger.Debugf("finding value in datastore {key: %s, error: %s}", dskey, err.Error())
 		return nil, nil
 	}
 	if err != nil {
@@ -183,9 +183,9 @@ func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 }
 
 func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Record) error {
-	peers, err := d.getDhtClosestPeers(ctx, key)
+	peers, err := d.baseService.GetAvailableServicePeerList(key)
 	if err != nil {
-		Logger.Error("d.getDhtClosestPeers(ctx, key) not return any connected node")
+		Logger.Error("d.baseService.GetAvailableServicePeerList(key) not return any connected node")
 		return err
 	}
 	isInDhTNet := false
@@ -207,6 +207,10 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 			} else {
 				isInDhTNet = true
 				Logger.Debugf("putKeyToNetNode--> success putting value to this peer--->{key: %v, pee: %v} ", key, p)
+				err := d.updateProvider(ctx, p, key)
+				if err != nil {
+					Logger.Debugf("putKeyToNetNode--> d.updateProvider(ctx, p, key) failed--->{key: %v, pee: %v, err: %v} ", key, p, err)
+				}
 			}
 		}(p)
 	}
@@ -341,7 +345,6 @@ func (d *Dkvs) FindPeersByKey(ctx context.Context, key string, timeout time.Dura
 func (d *Dkvs) enableProvider(ctx context.Context, key string) {
 	keyCid := ConvertKeyToCid(key)
 	err := d.idht.Provide(ctx, keyCid, true)
-
 	if err != nil {
 		Logger.Warnf("failed to set key to node  provider list {key: %s, cid: %s}", key, keyCid, err)
 		return
@@ -386,4 +389,17 @@ func (d *Dkvs) getDhtClosestPeers(ctx context.Context, key string) ([]peer.ID, e
 		return nil, err
 	}
 	return peers, nil
+}
+
+// updateProvider asks a peer to store that we are a provider for the given key.
+func (d *Dkvs) updateProvider(ctx context.Context, p peer.ID, key string) error {
+	keyCid := ConvertKeyToCid(key)
+	keyMH := keyCid.Hash()
+	Logger.Debugf("updateProvider---> {peer: %v}", p)
+	err := d.idht.ProviderStore().AddProvider(ctx, keyMH, peer.AddrInfo{ID: p})
+	if err != nil {
+		Logger.Debugf("updateProvider--->d.idht.ProviderStore().AddProvider failed {key: %s, peer: %s, err: %s}", key, p.Pretty(), err.Error())
+		return err
+	}
+	return nil
 }
