@@ -123,7 +123,8 @@ func NewCustomStreamProtocol(
 	protocolService common.ProtocolService,
 	protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewCustomStreamProtocolAdapter()
+	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
+	adapter.protocol = protocol
 	adapter.init(customProtocolId)
-	adapter.protocol = common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	return adapter.protocol
 }
