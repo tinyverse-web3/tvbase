@@ -70,7 +70,7 @@ type PubsubProtocol struct {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
@@ -131,11 +131,11 @@ type UserMsg struct {
 type GetSignCallback func(protoData []byte) (sig []byte, err error)
 
 type CustomStreamProtocolInfo struct {
-	Client         customProtocol.CustomStreamProtocolClient
-	StreamProtocol *StreamProtocol
+	Client   customProtocol.CustomStreamProtocolClient
+	Protocol *StreamProtocol
 }
 
 type CustomPubsubProtocolInfo struct {
-	Client         customProtocol.CustomPubsubProtocolClient
-	StreamProtocol *PubsubProtocol
+	Client   customProtocol.CustomPubsubProtocolClient
+	Protocol *PubsubProtocol
 }

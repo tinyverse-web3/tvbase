@@ -55,7 +55,7 @@ type StreamProtocol struct {
 
 // pubsubProtocol
 type PubsubProtocolAdapter interface {
-	InitProtocolResponse(basicData *pb.BasicData)
+	InitProtocolResponse(basicData *pb.BasicData, data interface{}) error
 	GetRequestProtocolID() pb.ProtocolID
 	GetResponseProtocolID() pb.ProtocolID
 	GetProtocolRequestBasicData() *pb.BasicData
@@ -67,6 +67,8 @@ type PubsubProtocolAdapter interface {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
 }
 

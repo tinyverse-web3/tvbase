@@ -50,7 +50,7 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: NewBasicData error: %v", err)
 		return
 	}
-	p.Adapter.InitProtocolResponse(responseBasicData)
+	p.Adapter.InitProtocolResponse(responseBasicData, p.ProtocolRequest)
 
 	// sign the data
 	protoData, err := proto.Marshal(p.ProtocolResponse)
@@ -86,7 +86,11 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 	}
 }
 
-func NewPubsubProtocol(host host.Host, protocolCallback PubsubProtocolCallback, protocolService ProtocolService, adapter PubsubProtocolAdapter) *PubsubProtocol {
+func NewPubsubProtocol(
+	host host.Host,
+	protocolService ProtocolService,
+	protocolCallback PubsubProtocolCallback,
+	adapter PubsubProtocolAdapter) *PubsubProtocol {
 	protocol := &PubsubProtocol{}
 	protocol.Host = host
 	protocol.ProtocolService = protocolService

@@ -279,20 +279,19 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 
 func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 	var err error
-	bsCfgPeers := m.GetConfig().Bootstrap.BootstrapPeers
-	bspeers, err := tvUtil.ParseBootstrapPeers(bsCfgPeers)
+	bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(m.nodeCfg.Bootstrap.BootstrapPeers)
 	if err != nil {
-		tvLog.Logger.Errorf("tvbase->tvUtil.ParseBootstrapPeers(bsCfgPeers): error: %v", err)
+		tvLog.Logger.Errorf("tvbase->createRouteOpt: tvUtil.ParseBootstrapPeers(bsCfgPeers): error: %v", err)
 		return nil, err
 	}
 	opt := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-		var modeCfg kaddht.Option
+		var modeOption kaddht.Option
 
 		switch m.nodeCfg.Mode {
 		case tvConfig.FullMode:
-			modeCfg = kaddht.Mode(kaddht.ModeServer)
+			modeOption = kaddht.Mode(kaddht.ModeServer)
 		case tvConfig.LightMode:
-			modeCfg = kaddht.Mode(kaddht.ModeAuto)
+			modeOption = kaddht.Mode(kaddht.ModeAuto)
 		}
 		m.dht, err = kaddht.New(m.ctx,
 			h,
@@ -308,10 +307,10 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 			//
 			// EXPERIMENTAL: This is an experimental option and might be removed in the future. Use at your own risk.
 			kaddht.EnableOptimisticProvide(), // enable optimistic provide
-			modeCfg,
+			modeOption,
 			// BootstrapPeers configures the bootstrapping nodes that we will connect to to seed
 			// and refresh our Routing Table if it becomes empty.
-			kaddht.BootstrapPeers(bspeers...),
+			kaddht.BootstrapPeers(bootstrapPeerAddrInfoList...),
 			kaddht.Datastore(m.dhtDatastore),
 		)
 

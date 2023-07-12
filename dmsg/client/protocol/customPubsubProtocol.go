@@ -47,7 +47,7 @@ func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.Ba
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

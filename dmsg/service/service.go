@@ -477,6 +477,57 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 	return nil, nil
 }
 
+func (d *DmsgService) OnCustomPubsubProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
+	request, ok := protoData.(*pb.CustomProtocolReq)
+	if !ok {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
+	}
+
+	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[request.CustomProtocolID]
+	if customPubsubProtocolInfo == nil {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
+	}
+
+	if customPubsubProtocolInfo.Service == nil {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: Service is nil")
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolRequest: Service is nil")
+	}
+	customPubsubProtocolInfo.Service.HandleRequest(request)
+	return request, nil
+}
+
+func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	response, ok := resProtoData.(*pb.CustomProtocolRes)
+	if !ok {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
+	}
+	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.CustomProtocolID]
+	if customPubsubProtocolInfo == nil {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
+	}
+	if customPubsubProtocolInfo.Service == nil {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: Service is nil")
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: Service is nil")
+	}
+
+	request, ok := reqProtoData.(*pb.CustomProtocolReq)
+	if !ok {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+		return nil, fmt.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", reqProtoData)
+	}
+
+	err := customPubsubProtocolInfo.Service.HandleResponse(request, response)
+	if err != nil {
+		dmsgLog.Logger.Errorf("serviceDmsgService->OnCustomPubsubProtocolResponse: HandleResponse happen err: %v", err)
+		return nil, err
+	}
+	return nil, nil
+}
+
 // PubsubProtocolCallback interface
 func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoData.(*pb.SeekMailboxReq)

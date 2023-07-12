@@ -18,7 +18,7 @@ type CustomStreamProtocolAdapter struct {
 	pid      string
 }
 
-func NewCustomProtocolAdapter() *CustomStreamProtocolAdapter {
+func NewCustomStreamProtocolAdapter() *CustomStreamProtocolAdapter {
 	ret := &CustomStreamProtocolAdapter{}
 	return ret
 }
@@ -116,10 +116,14 @@ func (adapter *CustomStreamProtocolAdapter) CallProtocolResponseCallback() (inte
 	return data, err
 }
 
-func NewCustomStreamProtocol(ctx context.Context, host host.Host, customProtocolId string, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
-	adapter := NewCustomProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
-	adapter.protocol = protocol
+func NewCustomStreamProtocol(
+	ctx context.Context,
+	host host.Host,
+	customProtocolId string,
+	protocolService common.ProtocolService,
+	protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
+	adapter := NewCustomStreamProtocolAdapter()
 	adapter.init(customProtocolId)
-	return protocol
+	adapter.protocol = common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
+	return adapter.protocol
 }
