@@ -10,7 +10,6 @@ import (
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/corehttp"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -26,7 +25,6 @@ func init() {
 		fmt.Printf("init error: %v", err)
 		return
 	}
-	corehttp.InitLog()
 }
 
 func TestHttpServer(t *testing.T) {

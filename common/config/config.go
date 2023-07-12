@@ -253,6 +253,7 @@ func NewDefaultNodeConfig() NodeConfig {
 				"tvnode":         "debug",
 				"tvnodelight":    "debug",
 				"tvipfs":         "debug",
+				"core_http":      "debug",
 			},
 		},
 		Disc: DiscConfig{
