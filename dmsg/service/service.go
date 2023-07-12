@@ -38,6 +38,7 @@ type DmsgService struct {
 	datastore                    db.Datastore
 	curSrcUserInfo               *dmsgServiceCommon.UserInfo
 	destUserPubsubs              map[string]*dmsgServiceCommon.DestUserPubsub
+	customProtocolPubsubs        map[string]*dmsgServiceCommon.CustomProtocolPubsub
 	protocolReqSubscribes        map[pb.ProtocolID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.ProtocolID]protocol.ResSubscribe
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
@@ -78,6 +79,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 
 	d.destUserPubsubs = make(map[string]*dmsgServiceCommon.DestUserPubsub)
+	d.customProtocolPubsubs = make(map[string]*dmsgServiceCommon.CustomProtocolPubsub)
 
 	d.protocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
 	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
@@ -163,7 +165,7 @@ func (d *DmsgService) unPublishDestUser(destPubkey string) error {
 func (d *DmsgService) readDestUserPubsub(pubkey string, pubsub *dmsgServiceCommon.DestUserPubsub) {
 	for {
 		days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
-		// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default day is 30
+		// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
 		cfg := d.BaseService.GetConfig()
 		if days >= cfg.DMsg.KeepMailboxMsgDay {
 			var query = query.Query{
@@ -232,8 +234,10 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	go d.BaseService.DiscoverRendezvousPeers()
 
 	d.destUserPubsubs[userPubKey] = &dmsgServiceCommon.DestUserPubsub{
-		UserTopic:           userTopic,
-		UserSub:             userSub,
+		CommonPubsub: dmsgServiceCommon.CommonPubsub{
+			UserTopic: userTopic,
+			UserSub:   userSub,
+		},
 		MsgRWMutex:          sync.RWMutex{},
 		LastReciveTimestamp: time.Now().Unix(),
 	}
@@ -611,7 +615,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 	return nil
 }
 
-func (d *DmsgService) RegistCustomPubsubProtocol(service customProtocol.CustomStreamProtocolService) error {
+func (d *DmsgService) RegistCustomPubsubProtocol(service customProtocol.CustomStreamProtocolService, destPubkey string) error {
 	customProtocolID := service.GetProtocolID()
 	if d.customPubsubProtocolInfoList[customProtocolID] != nil {
 		dmsgLog.Logger.Errorf("dmsgService->RegistCustomPubsubProtocol: customProtocolID %s is already exist", customProtocolID)
@@ -622,6 +626,12 @@ func (d *DmsgService) RegistCustomPubsubProtocol(service customProtocol.CustomSt
 		Service:  service,
 	}
 	service.SetCtx(d.BaseService.GetCtx())
+	// TODO
+	// err := d.publishDestUser(destPubkey)
+	// if err != nil {
+	// 	dmsgLog.Logger.Errorf("dmsgService->RegistCustomPubsubProtocol: publish dest user err: %v", err)
+	// 	return err
+	// }
 	return nil
 }
 
