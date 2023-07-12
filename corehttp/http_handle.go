@@ -69,6 +69,11 @@ func QueryAllKeyOption() ServeOption {
 		db := t.GetDhtDatabase()
 		ctx := context.Background()
 		mux.HandleFunc("/tvbase/queryAllKeys", func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if r := recover(); r != nil {
+					Logger.Errorf("QueryAllKeyOption-mux.HandleFunc: recovered from: %v", r)
+				}
+			}()
 			q := query.Query{}
 			results, err := db.Query(ctx, q)
 			if err != nil {
