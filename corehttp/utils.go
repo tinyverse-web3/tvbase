@@ -74,14 +74,13 @@ func isPrivateNode(addInfo peer.AddrInfo) bool {
 
 func getTvBaseDataDir() string {
 	relPath := defaultPathRoot
-	_, err := os.Stat(relPath)
+	absPath, _ := filepath.Abs(relPath)
+	_, err := os.Stat(absPath)
 	if err != nil || os.IsNotExist(err) {
-		relPath = "./"
-	}
-	absPath, err := filepath.Abs(relPath)
-	if err != nil {
-		Logger.Errorf("getTvBaseDataDir()--->Failed to get absolute path: %v", err)
-		return relPath
+		absPath, err = os.Getwd()
+		if err != nil {
+			absPath, _ = filepath.Abs("./")
+		}
 	}
 	return absPath
 }
