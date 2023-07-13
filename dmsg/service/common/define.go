@@ -82,8 +82,9 @@ type PubsubProtocol struct {
 }
 
 type CommonPubsub struct {
-	UserTopic *pubsub.Topic
-	UserSub   *pubsub.Subscription
+	Topic        *pubsub.Topic
+	CancelFunc   context.CancelFunc
+	Subscription *pubsub.Subscription
 }
 
 type DestUserPubsub struct {

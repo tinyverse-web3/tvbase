@@ -167,8 +167,8 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	go d.BaseService.DiscoverRendezvousPeers()
 
 	pubsub := &dmsgClientCommon.DestUserInfo{}
-	pubsub.UserTopic = userTopic
-	pubsub.UserSub = userSub
+	pubsub.Topic = userTopic
+	pubsub.Subscription = userSub
 	d.destUserInfoList[userPubKey] = pubsub
 
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser: done.")
@@ -179,11 +179,13 @@ func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser ...")
 	userInfo := d.destUserInfoList[userPubKey]
 	if userInfo != nil {
-		err := userInfo.UserTopic.Close()
+		err := userInfo.Topic.Close()
 		if err != nil {
-			dmsgLog.Logger.Warnln(err)
+			dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
 		}
-		userInfo.UserSub.Cancel()
+		userInfo.CancelFunc()
+		userInfo.Subscription.Cancel()
+
 		delete(d.destUserInfoList, userPubKey)
 	}
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser done")
@@ -201,11 +203,12 @@ func (d *DmsgService) unSubscribeSrcUser(userPubKey string) error {
 	pubsub := d.srcUserInfoList[userPubKey]
 	if pubsub != nil {
 		close(pubsub.MailboxCreateSignal)
-		err := pubsub.UserTopic.Close()
+		err := pubsub.Topic.Close()
 		if err != nil {
-			dmsgLog.Logger.Warnln(err)
+			dmsgLog.Logger.Warnf("DmsgService->unSubscribeSrcUser: userTopic.Close error: %v", err)
 		}
-		pubsub.UserSub.Cancel()
+		pubsub.CancelFunc()
+		pubsub.Subscription.Cancel()
 		delete(d.srcUserInfoList, userPubKey)
 	}
 	return nil
@@ -230,7 +233,7 @@ func (d *DmsgService) readUserPubsub(userPubsub *dmsgClientCommon.UserPubsub) {
 	ctx, cancel := context.WithCancel(d.BaseService.GetCtx())
 	userPubsub.CancelFunc = cancel
 	for {
-		m, err := userPubsub.UserSub.Next(ctx)
+		m, err := userPubsub.Subscription.Next(ctx)
 		if err != nil {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: subscription.Next happen err, %v", err)
 			return
@@ -345,9 +348,9 @@ func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, getSignCallback dms
 	go d.BaseService.DiscoverRendezvousPeers()
 
 	srcUserInfo = &dmsgClientCommon.SrcUserInfo{}
-	srcUserInfo.UserTopic = userTopic
+	srcUserInfo.Topic = userTopic
 	srcUserInfo.GetSignCallback = getSignCallback
-	srcUserInfo.UserSub = userSub
+	srcUserInfo.Subscription = userSub
 	srcUserInfo.MailboxCreateSignal = make(chan bool)
 	srcUserInfo.UserKey = &dmsgClientCommon.SrcUserKey{
 		Pubkey:    srcUserPubkeyObj,
@@ -394,17 +397,17 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg(srcUserPubkey string) error {
 
 func (d *DmsgService) SetReadAllSrcUserPubsubMsg(enable bool) {
 	if enable {
-		for destUserPubkey, srcUserInfo := range d.srcUserInfoList {
-			if !srcUserInfo.IsReadPubsubMsg {
-				srcUserInfo.IsReadPubsubMsg = true
-				d.StartReadSrcUserPubsubMsg(destUserPubkey)
+		for userPubkey, userInfo := range d.srcUserInfoList {
+			if !userInfo.IsReadPubsubMsg {
+				userInfo.IsReadPubsubMsg = true
+				d.StartReadSrcUserPubsubMsg(userPubkey)
 			}
 		}
 	} else {
-		for destUserPubkey, srcUserInfo := range d.srcUserInfoList {
-			if srcUserInfo.IsReadPubsubMsg {
-				srcUserInfo.IsReadPubsubMsg = false
-				d.StopReadSrcUserPubsubMsg(destUserPubkey)
+		for userPubkey, userInfo := range d.destUserInfoList {
+			if userInfo.IsReadPubsubMsg {
+				userInfo.IsReadPubsubMsg = false
+				d.StopReadSrcUserPubsubMsg(userPubkey)
 			}
 		}
 	}
@@ -809,7 +812,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 		}
-		err := userInfo.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData)
+		err := userInfo.Topic.Publish(d.BaseService.GetCtx(), pubsubData)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
 			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
@@ -820,7 +823,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 		}
-		err := userInfo.UserTopic.Publish(d.BaseService.GetCtx(), pubsubData)
+		err := userInfo.Topic.Publish(d.BaseService.GetCtx(), pubsubData)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
 			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)

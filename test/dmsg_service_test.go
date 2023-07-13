@@ -98,10 +98,10 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 	}
 	ctx := context.Background()
 
-	go streamConsoleTo(ctx, destPubsub.UserTopic)
+	go streamConsoleTo(ctx, destPubsub.Topic)
 
 	go func() {
-		m, err := destPubsub.UserSub.Next(ctx)
+		m, err := destPubsub.Subscription.Next(ctx)
 		if err != nil {
 			panic(err)
 		}
