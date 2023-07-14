@@ -9,7 +9,7 @@ import (
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
-const _ValueType_Transfer = 0xffffffff
+const _ValueType_Transfer = 0xffff
 
 var _ record.Validator = Validator{}
 
