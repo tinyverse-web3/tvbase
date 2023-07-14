@@ -84,8 +84,8 @@ type ProtocolService interface {
 }
 
 type UserPubsub struct {
-	UserTopic       *pubsub.Topic
-	UserSub         *pubsub.Subscription
+	Topic           *pubsub.Topic
+	Subscription    *pubsub.Subscription
 	IsReadPubsubMsg bool
 	CancelFunc      context.CancelFunc
 }
