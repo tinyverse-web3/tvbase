@@ -14,6 +14,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
@@ -28,24 +29,26 @@ type DkvsKV struct {
 }
 
 type Node struct {
-	NodeId string `json:"node_id"`
-	Addrs  string `json:"address"`
+	NodeId   string `json:"node_id"`
+	Addrs    string `json:"addrs"`
+	PublicIp string `json:"public_ip"`
 }
 
 type SysRes struct {
-	CpuPercent string  `json:"cpu_percent"`
-	Mem        MemInfo `json:"mem"`
-	SysDisk    SysDisk `json:"sys_disk"`
-	AppDir     AppDir  `json:"app_dir"`
+	CpuInfo CpuInfo `json:"cpu_info"`
+	Mem     MemInfo `json:"mem"`
+	SysDisk SysDisk `json:"sys_disk"`
+	AppDir  AppDir  `json:"app_dir"`
 }
 
 type AppDir struct {
-	DirSize   string `json:"dir_size"`
-	FileCount string `json:"file_count"`
+	Path        string `json:"path"`
+	FileCount   string `json:"file_count"`
+	DirSize     string `json:"dir_size"`
+	UsedPercent string `json:"used_percent"`
 }
 
 type SysDisk struct {
-	Path        string `json:"path"`
 	Fstype      string `json:"fstype"`
 	Total       string `json:"total"`
 	Free        string `json:"free"`
@@ -62,6 +65,11 @@ type MemInfo struct {
 type KvInfo struct {
 	LocalKV *DkvsKV `json:"local_kv"`
 	NetKV   *DkvsKV `json:"net_kv"`
+}
+
+type CpuInfo struct {
+	CpuPercent string         `json:"cpu_percent"`
+	CpuDetails []cpu.InfoStat `json:"cpu_details"`
 }
 
 func QueryAllKeyOption() ServeOption {
@@ -245,11 +253,13 @@ func QueryAllConnectdPeers() ServeOption {
 			for _, peerId := range peers {
 				var node Node
 				addrInfo := peerstore.PeerInfo(peerId)
-				if isPrivateNode(addrInfo) {
+				isPrivateIP, publicIp := isPrivateNode(addrInfo)
+				if isPrivateIP {
 					continue
 				}
 				node.NodeId = peerId.Pretty()
 				node.Addrs = addrInfo.String()
+				node.PublicIp = publicIp
 				nodeList = append(nodeList, node)
 			}
 			jsonData, err := json.Marshal(nodeList)
@@ -282,12 +292,20 @@ func QuerySystemResouce() ServeOption {
 			}
 
 			//CPU
+			var cpuInfo = new(CpuInfo)
 			cpuPercent, err := p.CPUPercentWithContext(ctx)
 			if err != nil {
 				Logger.Errorf("Failed to get CPU percent: %v", err)
 				return
 			}
-			sysRes.CpuPercent = fmt.Sprintf("%s%%", humanize.FtoaWithDigits(cpuPercent, 2))
+			cpuInfo.CpuPercent = humanize.FtoaWithDigits(cpuPercent, 2)
+			cpuDetails, err := cpu.Info()
+			if err != nil {
+				Logger.Errorf("Failed to get CPU Details: %v", err)
+				return
+			}
+			cpuInfo.CpuDetails = cpuDetails
+			sysRes.CpuInfo = *cpuInfo
 
 			//Memory
 			mi, err := p.MemoryInfoWithContext(ctx)
@@ -308,7 +326,7 @@ func QuerySystemResouce() ServeOption {
 			totalMem := machineMemory.Total
 			var memInfo = new(MemInfo)
 			memInfo.MemUsage = humanize.Bytes(mi.RSS)
-			memInfo.MemPercent = fmt.Sprintf("%s%%", humanize.FtoaWithDigits(float64(memPercent), 2))
+			memInfo.MemPercent = humanize.FtoaWithDigits(float64(memPercent), 2)
 			memInfo.SysTotalMem = humanize.Bytes(totalMem)
 			sysRes.Mem = *memInfo
 
@@ -320,19 +338,21 @@ func QuerySystemResouce() ServeOption {
 				Logger.Errorf("Failed to get disk usage info: %v", err)
 				return
 			}
-			sysDisk.Path = dataPath
 			sysDisk.Fstype = sysDiskStat.Fstype
 			sysDisk.Free = humanize.Bytes(sysDiskStat.Free)
 			sysDisk.Total = humanize.Bytes(sysDiskStat.Total)
 			sysDisk.Used = humanize.Bytes(sysDiskStat.Used)
-			sysDisk.UsedPercent = fmt.Sprintf("%s%%", humanize.FtoaWithDigits(float64(sysDiskStat.UsedPercent), 2))
+			sysDisk.UsedPercent = humanize.FtoaWithDigits(float64(sysDiskStat.UsedPercent), 2)
 			sysRes.SysDisk = *sysDisk
 
 			//AppDir
 			var appDir = new(AppDir)
 			dirSize, fileCount := getDirSizeAndFileCount(dataPath)
+			dirUsedPercent := float64(dirSize) / float64(sysDiskStat.Total) * 100
+			appDir.Path = dataPath
 			appDir.DirSize = humanize.Bytes(uint64(dirSize))
 			appDir.FileCount = fmt.Sprint(fileCount)
+			appDir.UsedPercent = fmt.Sprintf("%.3f", dirUsedPercent)
 			sysRes.AppDir = *appDir
 
 			jsonData, err := json.Marshal(sysRes)

@@ -50,6 +50,8 @@ func makeHandler(n tvCommon.TvBaseService, l net.Listener, options ...ServeOptio
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+		//cros
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		topMux.ServeHTTP(w, r)
 	})
 	return handler, nil

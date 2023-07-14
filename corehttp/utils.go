@@ -59,17 +59,19 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func isPrivateNode(addInfo peer.AddrInfo) bool {
+func isPrivateNode(addInfo peer.AddrInfo) (bool, string) {
 	addrs := addInfo.Addrs
 	isPrivate := false
+	publicIp := ""
 	for _, addr := range addrs {
 		ip, err := manet.ToIP(addr)
 		if err == nil && isPrivateIP(ip) {
 			isPrivate = true
 			break
 		}
+		publicIp = ip.String()
 	}
-	return isPrivate
+	return isPrivate, publicIp
 }
 
 func getTvBaseDataDir() string {
