@@ -259,7 +259,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	if err != nil {
 		return err
 	}
-	go d.BaseService.DiscoverRendezvousPeers()
+	// go d.BaseService.DiscoverRendezvousPeers()
 
 	d.destUserPubsubs[userPubKey] = &dmsgServiceCommon.DestUserPubsub{
 		CommonPubsub: dmsgServiceCommon.CommonPubsub{
@@ -704,7 +704,7 @@ func (d *DmsgService) subscribeCustomProtocol(pubKey string) error {
 	if err != nil {
 		return err
 	}
-	go d.BaseService.DiscoverRendezvousPeers()
+	// go d.BaseService.DiscoverRendezvousPeers()
 
 	d.customProtocolPubsubs[pubKey] = &dmsgServiceCommon.CustomProtocolPubsub{
 		CommonPubsub: dmsgServiceCommon.CommonPubsub{
