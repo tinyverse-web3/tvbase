@@ -132,7 +132,7 @@ func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
 		stopRquestSignal <- true
 		log.Logger.Debug("nodeinfo->RequestNodeInfo: nodeinfo timeout")
 	case result = <-out:
-		log.Logger.Debug(result)
+		// log.Logger.Debug(result)
 	}
 
 	return result

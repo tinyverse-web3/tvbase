@@ -43,7 +43,7 @@ func (m *TvBase) registPeerInfo(peerID libp2pPeer.ID) {
 		tvLog.Logger.Errorf("tvBase->registPeerInfo: try get peer info: %v happen error, result: %v", peerID, result)
 		return
 	} else {
-		tvLog.Logger.Infof("tvBase->registPeerInfo: try get peer info: %v, result: %v", peerID, result)
+		// tvLog.Logger.Infof("tvBase->registPeerInfo: try get peer info: %v, result: %v", peerID, result)
 	}
 
 	if result.NodeInfo == nil {

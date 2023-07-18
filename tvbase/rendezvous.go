@@ -39,10 +39,10 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			err := m.host.Connect(m.ctx, peer)
 			if err != nil {
 				tvLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers: Fail connect to the rendezvous peerID: %v, error: %v", peer.ID, err)
-				addrInfo := m.host.Peerstore().PeerInfo(peer.ID)
-				for _, peerAddr := range addrInfo.Addrs {
-					tvLog.Logger.Errorf("tvBase->registPeerInfo: peerId addr: %v", peerAddr)
-				}
+				// addrInfo := m.host.Peerstore().PeerInfo(peer.ID)
+				// for _, peerAddr := range addrInfo.Addrs {
+				// 	tvLog.Logger.Errorf("tvBase->registPeerInfo: peerId addr: %v", peerAddr)
+				// }
 				continue
 			}
 			anyConnected = true
@@ -54,5 +54,6 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 		if anyConnected {
 			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: It took %v seconds connect to all rendezvous peers\n", time.Since(start).Seconds())
 		}
+		time.Sleep(time.Second)
 	}
 }
