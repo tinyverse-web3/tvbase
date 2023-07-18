@@ -40,9 +40,13 @@ func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			err := mdnsService.Start()
-			if err != nil && !strings.Contains(err.Error(), "netlinkrib") {
-				tvLog.Logger.Errorf("tvBase->initMdns: mdns start error: %v", err)
-				return err
+			if err != nil {
+				if strings.Contains(err.Error(), "netlinkrib") {
+					tvLog.Logger.Debug("tvBase->initMdns: ignore android 11 permission error netlinkrib")
+				} else {
+					tvLog.Logger.Errorf("tvBase->initMdns: mdns start error: %v", err)
+					return err
+				}
 			}
 			tvLog.Logger.Info("tvBase->initMdns: mdns start...")
 			return nil
