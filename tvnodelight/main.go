@@ -122,13 +122,13 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	tvcLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
+	destPrikey, destPubKey, err := getKeyBySeed(destSeed)
 
 	if err != nil {
 		tvcLog.Errorf("getKeyBySeed error: %v", err)
 		return
 	}
-	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
+	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPrikey))
 	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
 
 	tvcLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
@@ -148,10 +148,20 @@ func main() {
 		timeStamp int64,
 		msgID string,
 		direction string) {
-		decrypedContent, err := tvCrypto.DecryptWithPrikey(destPriKey, msgContent)
-		if err != nil {
-			decrypedContent = []byte(err.Error())
-			tvcLog.Errorf("decrypt error: %v", err)
+		decrypedContent := []byte("")
+		switch direction {
+		case "to":
+			decrypedContent, err = tvCrypto.DecryptWithPrikey(destPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				tvcLog.Errorf("decrypt error: %v", err)
+			}
+		case "from":
+			decrypedContent, err = tvCrypto.DecryptWithPrikey(srcPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				tvcLog.Errorf("decrypt error: %v", err)
+			}
 		}
 		tvcLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
