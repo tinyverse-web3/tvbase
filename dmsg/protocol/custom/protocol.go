@@ -29,7 +29,6 @@ func (p *CustomProtocol) Marshal(content any) ([]byte, error) {
 	data, err := json.Marshal(content)
 	if err != nil {
 		Logger.Errorf("CustomProtocol->Marshal: json marshal error: %v", err)
-		fmt.Println("CustomProtocol->Marshal: json unmarshal error:", err)
 		return nil, nil
 	}
 	return data, nil

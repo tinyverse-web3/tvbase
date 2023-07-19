@@ -14,7 +14,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tinyverse-web3/tvutil v0.0.0-20230703044827-838181996c4b
+	github.com/tinyverse-web3/tvutil v0.0.0-20230719073602-eff568f409f6
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
@@ -30,6 +30,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230719072756-ee4c878e71b8 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect

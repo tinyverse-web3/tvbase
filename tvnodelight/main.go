@@ -148,8 +148,12 @@ func main() {
 		timeStamp int64,
 		msgID string,
 		direction string) {
-		tvcLog.Infof("OnReceiveMsg-> srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
-			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+		decrypedContent, err := tvCrypto.DecryptWithPrikey(destPriKey, msgContent)
+		if err != nil {
+			tvcLog.Errorf("decrypt error: %v", err)
+		}
+		tvcLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 	}
 
 	// publish dest user
@@ -176,7 +180,7 @@ func main() {
 				tvcLog.Errorf("read string error: %v", err)
 				continue
 			}
-
+			sendContent = sendContent[:len(sendContent)-1]
 			encrypedContent, err := tvCrypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
 			if err != nil {
 				tvcLog.Errorf("encrypt error: %v", err)
