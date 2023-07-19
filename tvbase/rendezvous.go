@@ -47,7 +47,7 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
 				time.Since(start).Seconds(), peer.ID.Pretty())
 
-			m.registPeerInfo(peer.ID)
+			go m.registPeerInfo(peer.ID)
 		}
 
 		if rendezvousPeerCount == 0 {

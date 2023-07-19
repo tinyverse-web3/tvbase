@@ -197,10 +197,7 @@ func main() {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	// srcSeed, destSeed, rootPath := parseCmdParams()
-	rootPath := "./"
-	srcSeed := "e"
-	destSeed := "b"
+	srcSeed, destSeed, rootPath := parseCmdParams()
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
