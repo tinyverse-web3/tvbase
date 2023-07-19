@@ -71,6 +71,20 @@ func (m *TvBase) RegistLightPeer(peerID libp2pPeer.ID) error {
 	return nil
 }
 
+func (m *TvBase) IsExistConnectedPeer() bool {
+	for _, peerInfo := range m.lightPeerList {
+		if peerInfo.ConnectStatus == network.Connected {
+			return true
+		}
+	}
+	for _, peerInfo := range m.servicePeerList {
+		if peerInfo.ConnectStatus == network.Connected {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *TvBase) GetServicePeerList() tvPeer.PeerInfoList {
 	return d.servicePeerList
 }

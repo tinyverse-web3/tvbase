@@ -3,6 +3,7 @@ package tvbase
 import (
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
@@ -11,16 +12,26 @@ import (
 const TinverseInfrastureRendezvous = "tinverseInfrasture/discover-rendzvous/common"
 
 func (m *TvBase) initRendezvous() error {
-	var err error
-	m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
-	tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TinverseInfrastureRendezvous)
-	return err
+	if m.pubRoutingDiscovery == nil {
+		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
+		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TinverseInfrastureRendezvous)
+
+		handleNoNet := func(peerID peer.ID) error {
+			if !m.IsExistConnectedPeer() {
+				m.IsRendezvous = false
+			}
+			return nil
+		}
+
+		m.RegistNotConnectedCallback(handleNoNet)
+	}
+	return nil
 }
 
 func (m *TvBase) DiscoverRendezvousPeers() {
-	anyConnected := false
+	// anyConnected := false
 	tvLog.Logger.Info("tvBase->DiscoverRendezvousPeers: Searching for rendezvous peers...")
-	for !anyConnected {
+	for !m.IsRendezvous {
 		rendezvousPeerCount := 0
 		start := time.Now()
 		peerChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TinverseInfrastureRendezvous)
@@ -43,7 +54,7 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			}
 
 			rendezvousPeerCount++
-			anyConnected = true
+			m.IsRendezvous = true
 			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
 				time.Since(start).Seconds(), peer.ID.Pretty())
 
@@ -55,7 +66,6 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			time.Sleep(10 * time.Second)
 		} else {
 			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: The number of rendezvous peer is %v", rendezvousPeerCount)
-			time.Sleep(10 * time.Minute)
 		}
 	}
 }
