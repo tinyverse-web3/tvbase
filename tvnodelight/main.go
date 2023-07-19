@@ -95,7 +95,7 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 	return tvInfra, dmsgService, nil
 }
 
-func main() {
+func main1() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -190,4 +190,103 @@ func main() {
 	<-ctx.Done()
 	tvcLog.Info("tvnodelight->main: Gracefully shut down")
 	tvbase.Stop()
+}
+
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// init srcSeed, destSeed, rootPath from cmd params
+	// srcSeed, destSeed, rootPath := parseCmdParams()
+	rootPath := "./"
+	srcSeed := "e"
+	destSeed := "b"
+
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	if err != nil {
+		tvcLog.Errorf("TestPubsubMsg error: %v", err)
+		return
+	}
+	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	if err != nil {
+		tvcLog.Errorf("TestPubsubMsg error: %v", err)
+		return
+	}
+
+	srcPrikey, srcPubkey, err := getKeyBySeed(srcSeed)
+	if err != nil {
+		tvcLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
+	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	tvcLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
+
+	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
+	if err != nil {
+		tvcLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
+	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
+
+	tvcLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
+
+	// init dmsg client
+	_, dmsgService, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
+	if err != nil {
+		tvcLog.Errorf("init acceptable error: %v", err)
+		return
+	}
+
+	// set src user msg receive callback
+	dmsgService.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
+		tvcLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
+			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+	}
+
+	// publish dest user
+	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
+	if err != nil {
+		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+		return
+	}
+	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
+	err = dmsgService.SubscribeDestUser(destPubKeyStr, false)
+	if err != nil {
+		tvcLog.Errorf("SubscribeDestUser error: %v", err)
+		return
+	}
+
+	// send msg to dest user with read from stdin
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			sendContent, err := reader.ReadString('\n')
+			if err != nil {
+				tvcLog.Errorf("read string error: %v", err)
+				continue
+			}
+
+			encrypedContent, err := tvCrypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
+			if err != nil {
+				tvcLog.Errorf("encrypt error: %v", err)
+				continue
+			}
+
+			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent)
+
+			if err != nil {
+				tvcLog.Errorf("send msg: error: %v", err)
+			}
+			tvcLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
+
+			if err != nil {
+				tvcLog.Infof("send msg error:", err)
+			}
+			tvcLog.Info("SendMsg done. ")
+		}
+	}()
+
+	<-ctx.Done()
 }
