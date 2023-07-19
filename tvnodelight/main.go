@@ -202,9 +202,15 @@ func main() {
 			if err != nil {
 				tvcLog.Errorf("send msg: error: %v", err)
 			}
-			tvcLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
-
-			tvcLog.Info("SendMsg done. ")
+			// tvcLog.Infof("sendMsgReq:%v", sendMsgReq)
+			tvcLog.Infof("send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
+				sendMsgReq.BasicData.SignPubKey,
+				sendMsgReq.BasicData.DestPubkey,
+				sendMsgReq.BasicData.Id,
+				sendMsgReq.BasicData.ProtocolID,
+				sendMsgReq.BasicData.Timestamp,
+				sendContent,
+			)
 		}
 	}()
 
