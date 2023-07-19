@@ -19,16 +19,15 @@ func (m *TvBase) initRendezvous() error {
 
 func (m *TvBase) DiscoverRendezvousPeers() {
 	anyConnected := false
-	rendezvousPeerCount := 0
 	tvLog.Logger.Info("tvBase->DiscoverRendezvousPeers: Searching for rendezvous peers...")
 	for !anyConnected {
+		rendezvousPeerCount := 0
 		start := time.Now()
 		peerChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TinverseInfrastureRendezvous)
 		if err != nil {
 			tvLog.Logger.Errorf("tvBase->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
 			continue
 		}
-
 		for peer := range peerChan {
 			if peer.ID == m.host.ID() {
 				continue
@@ -48,7 +47,7 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: It took %v seconds succcess connect to the rendezvous peer:%v",
 				time.Since(start).Seconds(), peer.ID.Pretty())
 
-			go m.registPeerInfo(peer.ID)
+			m.registPeerInfo(peer.ID)
 		}
 
 		if rendezvousPeerCount == 0 {

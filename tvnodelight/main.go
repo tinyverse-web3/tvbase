@@ -84,7 +84,7 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 		if err != nil {
 			tvcLog.Errorf("sign error: %v", err)
 		}
-		tvcLog.Debugf("sign = %v", sig)
+		// tvcLog.Debugf("sign = %v", sig)
 		return sig, nil
 	}
 	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback)
