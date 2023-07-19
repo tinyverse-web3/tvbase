@@ -54,8 +54,8 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: The number of peers is equal to 0, wait 10 second to search again")
 			time.Sleep(10 * time.Second)
 		} else {
-			time.Sleep(10 * time.Minute)
 			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: The number of rendezvous peer is %v", rendezvousPeerCount)
+			time.Sleep(10 * time.Minute)
 		}
 	}
 }
