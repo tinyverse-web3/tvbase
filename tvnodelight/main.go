@@ -150,6 +150,7 @@ func main() {
 		direction string) {
 		decrypedContent, err := tvCrypto.DecryptWithPrikey(destPriKey, msgContent)
 		if err != nil {
+			decrypedContent = []byte(err.Error())
 			tvcLog.Errorf("decrypt error: %v", err)
 		}
 		tvcLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
