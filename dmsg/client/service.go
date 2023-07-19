@@ -164,7 +164,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
 		return err
 	}
-	go d.BaseService.DiscoverRendezvousPeers()
+	// go d.BaseService.DiscoverRendezvousPeers()
 
 	pubsub := &dmsgClientCommon.DestUserInfo{}
 	pubsub.Topic = userTopic
@@ -345,7 +345,7 @@ func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, getSignCallback dms
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: SubscribeSrcUser error: %v", err)
 		return nil, err
 	}
-	go d.BaseService.DiscoverRendezvousPeers()
+	// go d.BaseService.DiscoverRendezvousPeers()
 
 	srcUserInfo = &dmsgClientCommon.SrcUserInfo{}
 	srcUserInfo.Topic = userTopic
