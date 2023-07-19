@@ -381,9 +381,9 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		},
 	})
 
-	tvLog.Logger.Debugf("hostID:%s,Addresses:", m.host.ID())
+	tvLog.Logger.Infof("hostID:%s,Addresses:", m.host.ID())
 	for _, addr := range m.host.Addrs() {
-		tvLog.Logger.Debugf("\t%s/p2p/%s", addr, m.host.ID())
+		tvLog.Logger.Infof("\t%s/p2p/%s", addr, m.host.ID())
 	}
 	return m.host, nil
 }
