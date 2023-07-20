@@ -106,7 +106,11 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		return
 	}
 
-	err = protocol.SendProtocolMsg(p.Ctx, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponseProtocolID(), p.ProtocolResponse, p.Host)
+	err = protocol.SendProtocolMsg(p.Ctx,
+		stream.Conn().RemotePeer(),
+		p.Adapter.GetStreamResponseProtocolID(),
+		p.ProtocolResponse,
+		p.Host)
 	responseProtocolId := p.Adapter.GetResponseProtocolID()
 	sreamResponseProtocolId := p.Adapter.GetStreamResponseProtocolID()
 	if err == nil {

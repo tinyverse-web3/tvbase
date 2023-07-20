@@ -86,7 +86,7 @@ func (d *DmsgService) initMailbox() error {
 		return fmt.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", curUserPubkey)
 	}
 
-	err = d.seekMailboxProtocol.Request(curUserPubkey, curUserPubkey)
+	_, err = d.seekMailboxProtocol.Request(curUserPubkey, curUserPubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtocol.Request err: %v", err)
 		return err
@@ -430,20 +430,22 @@ func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
 }
 
 func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsgReq, error) {
-	dmsgLog.Logger.Debugf("DmsgService->SendMsg: %v", destPubkey)
-	sendMsgData := &dmsg.SendMsgData{
-		SrcUserPubkeyHex:  d.CurSrcUserInfo.UserKey.PubkeyHex,
-		DestUserPubkeyHex: destPubkey,
-		SrcUserPubkey:     d.CurSrcUserInfo.UserKey.Pubkey,
-		MsgContent:        msgContent,
-	}
-
-	sendMsgReq, err := d.sendMsgPrtocol.Request(sendMsgData)
+	dmsgLog.Logger.Debugf("DmsgService->SendMsg begin: destPubkey: %v", destPubkey)
+	data, err := d.sendMsgPrtocol.Request(
+		d.CurSrcUserInfo.UserKey.PubkeyHex,
+		destPubkey,
+		msgContent,
+	)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SendMsg: %v", err)
 		return nil, err
 	}
-	dmsgLog.Logger.Debugf("DmsgService->SendMsg done.")
+	sendMsgReq, ok := data.(*pb.SendMsgReq)
+	if !ok {
+		dmsgLog.Logger.Errorf("DmsgService->SendMsg: data is not SendMsgReq")
+		return nil, fmt.Errorf("DmsgService->SendMsg: data is not SendMsgReq")
+	}
+	dmsgLog.Logger.Debugf("DmsgService->SendMsg end")
 	return sendMsgReq, nil
 }
 
@@ -813,7 +815,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 }
 
 // cmd protocol
-func (d *DmsgService) RequestCustomStreamProtocol(customProtocolId string, peerId string, content []byte) error {
+func (d *DmsgService) RequestCustomStreamProtocol(peerId string, customProtocolId string, content []byte) error {
 	protocolInfo := d.customStreamProtocolInfoList[customProtocolId]
 	if protocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", customProtocolId)

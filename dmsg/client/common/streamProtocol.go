@@ -73,7 +73,7 @@ func (p *StreamProtocol) Request(
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
-	err = p.Adapter.InitProtocolRequest(basicData, dataList)
+	err = p.Adapter.InitProtocolRequest(basicData, dataList...)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitProtocolRequest error: %v", err)
 		return err

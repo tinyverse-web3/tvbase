@@ -5,7 +5,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -64,17 +63,21 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ReceivedFrom, *pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq, error) {
-	dmsgLog.Logger.Debug("SendMsgProtocol->Request ...")
-	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
+func (p *SendMsgProtocol) Request(
+	signUserPubKey string,
+	destUserPubKey string,
+	dataList ...any) (any, error) {
+	dmsgLog.Logger.Debug("SendMsgProtocol->Request begin:\nsignPubKey:%s\ndestUserPubKey:%s\ndata:%v",
+		signUserPubKey, destUserPubKey, dataList)
+
+	basicData, err := protocol.NewBasicData(p.Host, signUserPubKey, destUserPubKey, pb.ProtocolID_SEND_MSG_REQ)
 	if err != nil {
 		return nil, err
 	}
 	p.SendMsgRequest = &pb.SendMsgReq{
 		BasicData:  basicData,
-		SrcPubkey:  sendMsgData.SrcUserPubkeyHex,
-		MsgContent: sendMsgData.MsgContent,
+		SrcPubkey:  signUserPubKey,
+		MsgContent: dataList[0].([]byte),
 	}
 
 	protoData, err := proto.Marshal(p.SendMsgRequest)
@@ -103,7 +106,7 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq
 		return nil, err
 	}
 
-	dmsgLog.Logger.Debug("SendMsgProtocol->Request Done.")
+	dmsgLog.Logger.Debug("SendMsgProtocol->Request end")
 	return p.SendMsgRequest, nil
 }
 

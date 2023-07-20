@@ -1,22 +1,12 @@
 package dmsg
 
 import (
-	"crypto/ecdsa"
 	"time"
 )
 
 const (
 	DiscoveryConnTimeout = time.Second * 30
 )
-
-type SendMsgData struct {
-	SrcUserPubkeyHex  string
-	DestUserPubkeyHex string
-	// SrcUserPrikey     *ecdsa.PrivateKey
-	SrcUserPubkey *ecdsa.PublicKey
-	Sign          []byte
-	MsgContent    []byte
-}
 
 const (
 	MsgPrefix              = "/dmsg/"
