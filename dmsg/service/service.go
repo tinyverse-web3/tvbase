@@ -164,7 +164,7 @@ func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub)
 		contentData := m.Data[protocolIDLen:]
 		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
 		if reqSubscribe != nil {
-			reqSubscribe.OnRequest(m, contentData)
+			reqSubscribe.HandleRequestData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
@@ -172,7 +172,7 @@ func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub)
 		// no protocol for resSubScribe in service
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
 		if resSubScribe != nil {
-			resSubScribe.OnResponse(m, contentData)
+			resSubScribe.HandleResponseData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for resSubscribe", protocolID)

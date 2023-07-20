@@ -1,34 +1,33 @@
 package common
 
 import (
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) {
+func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: recovered from:", r)
+			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from:", r)
 		}
 	}()
 
 	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: unmarshal protocolData err: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: unmarshal protocolData err: %v", err)
 		return
 	}
 
 	requestProtocolId := p.Adapter.GetRequestProtocolID()
-	dmsgLog.Logger.Infof("received request from %s, topic:%s, requestProtocolId:%s,  Message:%v",
-		pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
+	dmsgLog.Logger.Debugf("received request: requestProtocolId:%s, protocolRequest:%v",
+		requestProtocolId, p.ProtocolRequest)
 
 	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
 	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
-		dmsgLog.Logger.Warnf("PubsubProtocol->OnRequest: failed to authenticate message")
+		dmsgLog.Logger.Warnf("PubsubProtocol->HandleRequestData: failed to authenticate message")
 		return
 	}
 
@@ -38,7 +37,7 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 		return
 	}
 	if callbackData != nil {
-		dmsgLog.Logger.Infof("PubsubProtocol->OnRequest: callback data: %s", callbackData)
+		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: callback data: %s", callbackData)
 	}
 
 	// generate response message
@@ -47,7 +46,7 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, requestBasicData.DestPubkey, protocolID)
 	responseBasicData.Id = requestBasicData.Id
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: NewBasicData error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: NewBasicData error: %v", err)
 		return
 	}
 	p.Adapter.InitProtocolResponse(responseBasicData, p.ProtocolRequest)
@@ -55,34 +54,34 @@ func (p *PubsubProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) 
 	// sign the data
 	protoData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: marshal response error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 		return
 	}
 	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: GetCurSrcUserSign error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: GetCurSrcUserSign error: %v", err)
 		return
 	}
 	err = p.Adapter.SetProtocolResponseSign(signature)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: SetProtocolResponseSign error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: SetProtocolResponseSign error: %v", err)
 		return
 	}
 
 	responseProtocolData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: marshal response error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 	}
 
 	// send the response
 	err = p.ProtocolService.PublishProtocol(responseBasicData.ProtocolID, responseBasicData.DestPubkey, responseProtocolData)
 
 	if err == nil {
-		dmsgLog.Logger.Infof("PubsubProtocol->OnRequest: pubulish response msg to %s, topic:%s, requestProtocolId:%s,  Message:%v",
-			pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse)
+		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v",
+			requestProtocolId, p.ProtocolResponse)
 	} else {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnRequest: pubulish response msg to %s, topic:%s, requestProtocolId:%s,  Message:%v, error:%v",
-			pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolResponse, err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v, error:%v",
+			requestProtocolId, p.ProtocolResponse, err)
 	}
 }
 

@@ -21,6 +21,11 @@ func (adapter *CommonProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
 	return protocol.ID("noimplement")
 }
 
+func (adapter *CommonProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+	dmsgLog.Logger.Warnf("CommonProtocolAdapter->GetStreamResponseProtocolID: not implemented")
+	return protocol.ID("noimplement")
+}
+
 func (adapter *CommonProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
 	dmsgLog.Logger.Warnf("CommonProtocolAdapter->InitProtocolRequest: not implemented")
 	return nil

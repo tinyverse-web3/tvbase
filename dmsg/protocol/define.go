@@ -2,8 +2,6 @@ package protocol
 
 import (
 	"time"
-
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 const (
@@ -24,9 +22,9 @@ const (
 )
 
 type ReqSubscribe interface {
-	OnRequest(pubMsg *pubsub.Message, protocolData []byte)
+	HandleRequestData(protocolData []byte)
 }
 
 type ResSubscribe interface {
-	OnResponse(pubMsg *pubsub.Message, protocolData []byte)
+	HandleResponseData(protocolData []byte)
 }

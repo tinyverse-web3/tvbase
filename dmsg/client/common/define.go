@@ -23,6 +23,7 @@ type StreamProtocolAdapter interface {
 	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
 	GetRequestProtocolID() pb.ProtocolID
 	GetStreamRequestProtocolID() protocol.ID
+	GetStreamResponseProtocolID() protocol.ID
 	GetProtocolResponseBasicData() *pb.BasicData
 	GetProtocolResponseRetCode() *pb.RetCode
 	SetProtocolRequestSign(signature []byte)

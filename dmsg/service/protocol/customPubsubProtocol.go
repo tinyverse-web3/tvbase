@@ -37,10 +37,6 @@ func (adapter *CustomPubsubProtocolAdapter) GetRequestProtocolID() pb.ProtocolID
 	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_REQ
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
-	return protocol.ID(dmsgProtocol.PidCustomProtocolRes + "/" + adapter.pid)
-}
-
 func (adapter *CustomPubsubProtocolAdapter) DestoryProtocol() {
 	adapter.protocol.Host.RemoveStreamHandler(protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid))
 }

@@ -21,7 +21,6 @@ func NewCreateMailboxProtocolAdapter() *CreateMailboxProtocolAdapter {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) init() {
-	adapter.protocol.Host.SetStreamHandler(dmsgProtocol.PidCreateMailboxRes, adapter.protocol.OnResponse)
 	adapter.protocol.ProtocolRequest = &pb.CreateMailboxReq{}
 	adapter.protocol.ProtocolResponse = &pb.CreateMailboxRes{}
 }
@@ -32,6 +31,10 @@ func (adapter *CreateMailboxProtocolAdapter) GetRequestProtocolID() pb.ProtocolI
 
 func (adapter *CreateMailboxProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
 	return dmsgProtocol.PidCreateMailboxReq
+}
+
+func (adapter *CreateMailboxProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+	return dmsgProtocol.PidCreateMailboxRes
 }
 
 func (adapter *CreateMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {

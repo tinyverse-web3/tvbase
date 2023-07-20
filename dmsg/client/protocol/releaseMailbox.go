@@ -21,7 +21,6 @@ func NewReleaseMailboxProtocolAdapter() *ReleaseMailboxProtocolAdapter {
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) init() {
-	adapter.protocol.Host.SetStreamHandler(dmsgProtocol.PidReleaseMailboxRes, adapter.protocol.OnResponse)
 	adapter.protocol.ProtocolRequest = &pb.ReleaseMailboxReq{}
 	adapter.protocol.ProtocolResponse = &pb.ReleaseMailboxRes{}
 }
@@ -32,6 +31,10 @@ func (adapter *ReleaseMailboxProtocolAdapter) GetRequestProtocolID() pb.Protocol
 
 func (adapter *ReleaseMailboxProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
 	return dmsgProtocol.PidReleaseMailboxReq
+}
+
+func (adapter *ReleaseMailboxProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+	return dmsgProtocol.PidReleaseMailboxRes
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {

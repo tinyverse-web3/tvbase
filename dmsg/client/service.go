@@ -77,7 +77,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 }
 
 func (d *DmsgService) initMailbox() error {
-	dmsgLog.Logger.Debug("DmsgService->initMailbox: ...")
+	dmsgLog.Logger.Debug("DmsgService->initMailbox begin:")
 	var err error
 	curUserPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
 	userInfo := d.getSrcUserInfo(curUserPubkey)
@@ -107,12 +107,12 @@ func (d *DmsgService) initMailbox() error {
 		return nil
 	}
 
-	dmsgLog.Logger.Debug("DmsgService->initMailbox: done")
+	dmsgLog.Logger.Debug("DmsgService->initMailbox: end")
 	return nil
 }
 
 func (d *DmsgService) createMailbox(userPubkey string) {
-	dmsgLog.Logger.Debug("DmsgService->createMailbox: ...")
+	dmsgLog.Logger.Debug("DmsgService->createMailbox begin:")
 	find := false
 	userInfo := d.getSrcUserInfo(userPubkey)
 	if userInfo == nil {
@@ -150,11 +150,11 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 		dmsgLog.Logger.Error("DmsgService->createMailbox: no available mailbox service peers found")
 		return
 	}
-	dmsgLog.Logger.Debug("DmsgService->createMailbox: done.")
+	dmsgLog.Logger.Debug("DmsgService->createMailbox: end")
 }
 
 func (d *DmsgService) subscribeDestUser(userPubKey string) error {
-	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser: ...")
+	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin:")
 	var err error
 	userTopic, err := d.Pubsub.Join(userPubKey)
 	if err != nil {
@@ -173,12 +173,12 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	pubsub.Subscription = userSub
 	d.destUserInfoList[userPubKey] = pubsub
 
-	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser: done.")
+	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser: end")
 	return nil
 }
 
 func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
-	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser ...")
+	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser begin:")
 	userInfo := d.destUserInfoList[userPubKey]
 	if userInfo != nil {
 		err := userInfo.Topic.Close()
@@ -190,7 +190,7 @@ func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
 
 		delete(d.destUserInfoList, userPubKey)
 	}
-	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser done")
+	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser end")
 	return nil
 }
 
@@ -255,14 +255,14 @@ func (d *DmsgService) readUserPubsub(userPubsub *dmsgClientCommon.UserPubsub) {
 		contentData := m.Data[protocolIDLen:]
 		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
 		if reqSubscribe != nil {
-			reqSubscribe.OnRequest(m, contentData)
+			reqSubscribe.HandleRequestData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find protocolID(%d) for reqSubscribe", protocolID)
 		}
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
 		if resSubScribe != nil {
-			resSubScribe.OnResponse(m, contentData)
+			resSubScribe.HandleResponseData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find protocolID(%d) for resSubscribe", protocolID)
@@ -290,7 +290,7 @@ func (d *DmsgService) Stop() error {
 }
 
 func (d *DmsgService) InitUser(userPubkeyData []byte, getSignCallback dmsgClientCommon.GetSignCallback) error {
-	dmsgLog.Logger.Debug("DmsgService->InitUser...")
+	dmsgLog.Logger.Debug("DmsgService->InitUser begin:")
 	curSrcUserPubkeyHex := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
 	var err error
 	d.CurSrcUserInfo, err = d.SubscribeSrcUser(curSrcUserPubkeyHex, getSignCallback, true)
@@ -302,7 +302,7 @@ func (d *DmsgService) InitUser(userPubkeyData []byte, getSignCallback dmsgClient
 	if err != nil {
 		return err
 	}
-	dmsgLog.Logger.Debug("DmsgService->InitUser done.")
+	dmsgLog.Logger.Debug("DmsgService->InitUser end")
 	return err
 }
 
@@ -371,19 +371,19 @@ func (d *DmsgService) SubscribeSrcUser(srcUserPubkey string, getSignCallback dms
 }
 
 func (d *DmsgService) StartReadSrcUserPubsubMsg(srcUserPubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StartReadSrcUserPubsubMsg, srcUserPubkey: %v", srcUserPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->StartReadSrcUserPubsubMsg begin: srcUserPubkey: %v", srcUserPubkey)
 	srcUserInfo := d.getSrcUserInfo(srcUserPubkey)
 	if srcUserInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->StartReadSrcUserPubsubMsg: src user info(%v) pubsub is not exist", srcUserInfo)
 		return fmt.Errorf("dmsgService->StartReadSrcUserPubsubMsg: src user info(%v) pubsub is not exist", srcUserInfo)
 	}
 	go d.readUserPubsub(&srcUserInfo.UserPubsub)
-	dmsgLog.Logger.Debug("DmsgService->StartReadSrcUserPubsubMsg done.")
+	dmsgLog.Logger.Debug("DmsgService->StartReadSrcUserPubsubMsg end")
 	return nil
 }
 
 func (d *DmsgService) StopReadSrcUserPubsubMsg(srcUserPubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StopReadSrcUserPubsubMsg, srcUserPubkey: %v", srcUserPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->StopReadSrcUserPubsubMsg begin: srcUserPubkey: %v", srcUserPubkey)
 	srcUserInfo := d.getSrcUserInfo(srcUserPubkey)
 	if srcUserInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->StopReadSrcUserPubsubMsg: src user info(%v) pubsub is not exist", srcUserInfo)
@@ -393,7 +393,7 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg(srcUserPubkey string) error {
 		srcUserInfo.CancelFunc()
 		srcUserInfo.IsReadPubsubMsg = false
 	}
-	dmsgLog.Logger.Debug("DmsgService->StopReadSrcUserPubsubMsg done.")
+	dmsgLog.Logger.Debug("DmsgService->StopReadSrcUserPubsubMsg end")
 	return nil
 }
 
@@ -489,19 +489,19 @@ func (d *DmsgService) UnSubscribeDestUser(destPubkey string) error {
 }
 
 func (d *DmsgService) StartReadDestUserPubsubMsg(destUserPubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StartReadDestUserPubsubMsg: %v", destUserPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->StartReadDestUserPubsubMsg begin: destUserPubkey: %v", destUserPubkey)
 	destUserInfo := d.getDestUserInfo(destUserPubkey)
 	if destUserInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: user public key(%s) pubsub already exist", destUserPubkey)
 		return fmt.Errorf("DmsgService->SubscribeDestUser: user public key(%s) pubsub already exist", destUserPubkey)
 	}
 	go d.readUserPubsub(&destUserInfo.UserPubsub)
-	dmsgLog.Logger.Debug("DmsgService->StartReadDestUserPubsubMsg done.")
+	dmsgLog.Logger.Debug("DmsgService->StartReadDestUserPubsubMsg end")
 	return nil
 }
 
 func (d *DmsgService) StopReadDestUserPubsubMsg(destUserPubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StopReadDestUserPubsubMsg, srcUserPubkey: %v", destUserPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->StopReadDestUserPubsubMsg begin: srcUserPubkey: %v", destUserPubkey)
 	destUserInfo := d.getDestUserInfo(destUserPubkey)
 	if destUserInfo == nil {
 		return fmt.Errorf("DmsgService->StopDestUserPubsubMsg: cannot find dest user pubsub key %s", destUserPubkey)
@@ -510,7 +510,7 @@ func (d *DmsgService) StopReadDestUserPubsubMsg(destUserPubkey string) error {
 		destUserInfo.CancelFunc()
 		destUserInfo.IsReadPubsubMsg = false
 	}
-	dmsgLog.Logger.Debug("DmsgService->StopReadDestUserPubsubMsg done.")
+	dmsgLog.Logger.Debug("DmsgService->StopReadDestUserPubsubMsg end")
 	return nil
 }
 

@@ -19,6 +19,11 @@ func (adapter *CommonProtocolAdapter) GetStreamResponseProtocolID() protocol.ID 
 	return protocol.ID("noimplement")
 }
 
+func (adapter *CommonProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamRequestProtocolID: not implemented")
+	return protocol.ID("noimplement")
+}
+
 func (adapter *CommonProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetProtocolResponseFailRet: not implemented")
 }

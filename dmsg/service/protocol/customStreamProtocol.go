@@ -23,9 +23,7 @@ func NewCustomStreamProtocolAdapter() *CustomStreamProtocolAdapter {
 	return ret
 }
 
-func (adapter *CustomStreamProtocolAdapter) init(customProtocolId string) {
-	adapter.pid = customProtocolId
-	adapter.protocol.Host.SetStreamHandler(protocol.ID(dmsgProtocol.PidCustomProtocolReq+"/"+adapter.pid), adapter.protocol.OnRequest)
+func (adapter *CustomStreamProtocolAdapter) init() {
 	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
@@ -40,6 +38,10 @@ func (adapter *CustomStreamProtocolAdapter) GetRequestProtocolID() pb.ProtocolID
 
 func (adapter *CustomStreamProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
 	return protocol.ID(dmsgProtocol.PidCustomProtocolRes + "/" + adapter.pid)
+}
+
+func (adapter *CustomStreamProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+	return protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid)
 }
 
 func (adapter *CustomStreamProtocolAdapter) DestoryProtocol() {
@@ -125,6 +127,7 @@ func NewCustomStreamProtocol(
 	adapter := NewCustomStreamProtocolAdapter()
 	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	adapter.protocol = protocol
-	adapter.init(customProtocolId)
+	adapter.init()
+	adapter.pid = customProtocolId
 	return adapter.protocol
 }

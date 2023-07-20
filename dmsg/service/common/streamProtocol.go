@@ -3,53 +3,71 @@ package common
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/protoio"
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *StreamProtocol) OnRequest(stream network.Stream) {
+func (p *StreamProtocol) RequestHandler(stream network.Stream) {
+	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler begin:\nLocalPeer: %s, RemotePeer: %s",
+		stream.Conn().LocalPeer(), stream.Conn().RemotePeer())
+	protoData, err := io.ReadAll(stream)
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error: %v", err)
+		err = stream.Reset()
+		if err != nil {
+			dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error: %v", err)
+		}
+		return
+	}
 	defer func() {
-		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: recovered from:", r)
+		err = stream.Close()
+		if err != nil {
+			dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error %v", err)
 		}
 	}()
-	var callbackData interface{}
-	reader := protoio.NewFullReader(stream)
-	err := reader.ReadMsg(p.ProtocolRequest)
-	stream.Close()
+	p.stream = stream
+	p.HandleRequestData(protoData)
+	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler: end")
+}
 
+func (p *StreamProtocol) HandleRequestData(protoData []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: recovered from:", r)
+		}
+	}()
+
+	err := proto.Unmarshal(protoData, p.ProtocolRequest)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: read protoRequest error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error %v", err)
 		return
 	}
 
+	var callbackData interface{}
 	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
-
-	dmsgLog.Logger.Infof("StreamProtocol->OnRequest: %s:before authMsg, received request from %s, Message:%v",
-		stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), p.ProtocolRequest)
 
 	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
-		p.sendResponseProtocol(stream, callbackData, fmt.Errorf("failed to authenticate message"))
+		p.sendResponseProtocol(p.stream, callbackData, fmt.Errorf("failed to authenticate message"))
 		return
 	}
 
 	// callback
 	callbackData, err = p.Adapter.CallProtocolRequestCallback()
 	if err != nil {
-		p.sendResponseProtocol(stream, callbackData, err)
+		p.sendResponseProtocol(p.stream, callbackData, err)
 		return
 	}
 	if callbackData != nil {
-		dmsgLog.Logger.Infof("StreamProtocol->OnRequest: callback data: %s", callbackData)
+		dmsgLog.Logger.Infof("StreamProtocol->HandleRequestData: callback data: %s", callbackData)
 	}
 
-	p.sendResponseProtocol(stream, callbackData, nil)
+	p.sendResponseProtocol(p.stream, callbackData, nil)
 
 }
 
@@ -91,34 +109,36 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 	// sign the data
 	protoData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: marshal response error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: marshal response error: %v", err)
 		return
 	}
 	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: GetCurSrcUserSign error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: GetCurSrcUserSign error: %v", err)
 		return
 	}
 
 	err = p.Adapter.SetProtocolResponseSign(signature)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->OnRequest: SetProtocolResponseSign error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: SetProtocolResponseSign error: %v", err)
 		return
 	}
 
-	err = protocol.SendProtocolMsg(p.Ctx,
+	err = protocol.SendProtocolMsg(
+		p.Ctx,
+		p.Host,
 		stream.Conn().RemotePeer(),
 		p.Adapter.GetStreamResponseProtocolID(),
 		p.ProtocolResponse,
-		p.Host)
+	)
 	responseProtocolId := p.Adapter.GetResponseProtocolID()
 	sreamResponseProtocolId := p.Adapter.GetStreamResponseProtocolID()
 	if err == nil {
-		dmsgLog.Logger.Infof("StreamProtocol->OnRequest: %s:response to %s sent. responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
-			stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
+		dmsgLog.Logger.Infof("StreamProtocol->sendResponseProtocol: responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
+			responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
 	} else {
-		dmsgLog.Logger.Warnf("StreamProtocol->OnRequest: %s:response to %s sent is err:%v/n.responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
-			stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), err, responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
+		dmsgLog.Logger.Warnf("StreamProtocol->sendResponseProtocol: err:%v/n.responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
+			err, responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
 	}
 
 }
@@ -130,5 +150,6 @@ func NewStreamProtocol(ctx context.Context, host host.Host, protocolService Prot
 	protocol.ProtocolService = protocolService
 	protocol.Callback = protocolCallback
 	protocol.Adapter = adapter
+	protocol.Host.SetStreamHandler(adapter.GetStreamRequestProtocolID(), protocol.RequestHandler)
 	return protocol
 }

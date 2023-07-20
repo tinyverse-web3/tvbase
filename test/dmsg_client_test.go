@@ -159,7 +159,7 @@ func TestPubsubMsg(t *testing.T) {
 			if err != nil {
 				tvcLog.Infof("send msg error:", err)
 			}
-			tvcLog.Info("SendMsg done. ")
+			tvcLog.Info("SendMsg end")
 		}
 	}()
 

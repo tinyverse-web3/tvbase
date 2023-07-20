@@ -4,17 +4,16 @@ import (
 	"context"
 	"time"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte) {
+func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("PubsubProtocol->OnResponse: recovered from:%v", r)
+			dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: recovered from:%v", r)
 		}
 
 		basicData := p.Adapter.GetProtocolResponseBasicData()
@@ -25,14 +24,14 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 		if ok {
 			delete(p.RequestInfoList, basicData.Id)
 		} else {
-			dmsgLog.Logger.Warnf("PubsubProtocol->OnResponse: failed to locate requests, pubMsg:%v, response:%v",
-				pubMsg, p.ProtocolResponse)
+			dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: failed to locate requests, response:%v",
+				p.ProtocolResponse)
 		}
 	}()
 
 	err := proto.Unmarshal(protocolData, p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnResponse: unmarshal data error %v, response:%v",
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: unmarshal data error %v, response:%v",
 			err, p.ProtocolResponse)
 		return
 	}
@@ -40,21 +39,21 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 	basicData := p.Adapter.GetProtocolResponseBasicData()
 	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
 	if !valid {
-		dmsgLog.Logger.Warnf("PubsubProtocol->OnResponse: failed to authenticate message, response:%v", p.ProtocolResponse)
+		dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: failed to authenticate message, response:%v", p.ProtocolResponse)
 		return
 	}
 
 	callbackData, err := p.Adapter.CallProtocolResponseCallback()
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->OnResponse: response %v callback happen error: %v", p.ProtocolResponse, err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: response %v callback happen error: %v", p.ProtocolResponse, err)
 	}
 	if callbackData != nil {
 		dmsgLog.Logger.Debugf("callback data: %v", callbackData)
 	}
 
 	requestProtocolId := p.Adapter.GetRequestProtocolID()
-	dmsgLog.Logger.Debugf("PubsubProtocol->OnResponse: received response from %s, msgId:%s, topic:%s, requestProtocolId:%s,  Message:%v",
-		pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: received response from requestProtocolId:%s, protocolRequest:%v",
+		requestProtocolId, p.ProtocolRequest)
 }
 
 func (p *PubsubProtocol) Request(

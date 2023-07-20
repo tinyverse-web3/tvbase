@@ -22,7 +22,6 @@ func NewReleaseMailboxProtocolAdapter() *ReleaseMailboxProtocolAdapter {
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) init() {
-	adapter.protocol.Host.SetStreamHandler(dmsgProtocol.PidReleaseMailboxReq, adapter.protocol.OnRequest)
 	adapter.protocol.ProtocolRequest = &pb.ReleaseMailboxReq{}
 }
 

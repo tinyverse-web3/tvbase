@@ -21,7 +21,6 @@ func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) init() {
-	adapter.protocol.Host.SetStreamHandler(dmsgProtocol.PidReadMailboxMsgRes, adapter.protocol.OnResponse)
 	adapter.protocol.ProtocolRequest = &pb.ReadMailboxMsgReq{}
 	adapter.protocol.ProtocolResponse = &pb.ReadMailboxMsgRes{}
 }
@@ -32,6 +31,10 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestProtocolID() pb.Protocol
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
 	return dmsgProtocol.PidReadMailboxMsgReq
+}
+
+func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+	return dmsgProtocol.PidReadMailboxMsgRes
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
