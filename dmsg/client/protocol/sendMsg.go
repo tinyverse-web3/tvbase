@@ -120,7 +120,5 @@ func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.Pubsub
 	ret.Host = host
 	ret.ProtocolService = protocolService
 	ret.Callback = protocolCallback
-
-	ret.ProtocolService.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, ret)
 	return ret
 }

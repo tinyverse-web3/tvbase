@@ -22,17 +22,14 @@ func NewCustomPubsubProtocolAdapter() *CustomPubsubProtocolAdapter {
 func (adapter *CustomPubsubProtocolAdapter) init() {
 	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
-
-	protocolID := adapter.GetResponseProtocolID()
-	adapter.protocol.ProtocolService.RegPubsubProtocolResCallback(protocolID, adapter.protocol)
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEEK_MAILBOX_REQ
+	return pb.ProtocolID_CUSTOM_PUBSUB_PROTOCOL_REQ
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEEK_MAILBOX_RES
+	return pb.ProtocolID_CUSTOM_PUBSUB_PROTOCOL_RES
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetPubsubSource() common.PubsubSourceType {

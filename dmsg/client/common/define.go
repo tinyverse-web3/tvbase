@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -50,6 +49,7 @@ type StreamProtocol struct {
 type PubsubProtocolAdapter interface {
 	InitProtocolRequest(basicData *pb.BasicData)
 	GetRequestProtocolID() pb.ProtocolID
+	GetResponseProtocolID() pb.ProtocolID
 	GetProtocolResponseBasicData() *pb.BasicData
 	GetProtocolResponseRetCode() *pb.RetCode
 	SetProtocolRequestSign(signature []byte) error
@@ -78,8 +78,6 @@ type PubsubProtocolCallback interface {
 type ProtocolService interface {
 	GetCurSrcUserPubKeyHex() string
 	GetCurSrcUserSign(protoData []byte) ([]byte, error)
-	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
-	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
 }
 

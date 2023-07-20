@@ -62,9 +62,11 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	// pubsub protocol
 	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponseProtocolID(), d.seekMailboxProtocol)
 
 	// sendMsgProtocol, special pubsub protocol
 	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
+	d.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, d.sendMsgPrtocol)
 
 	d.srcUserInfoList = make(map[string]*dmsgClientCommon.SrcUserInfo)
 	d.destUserInfoList = make(map[string]*dmsgClientCommon.DestUserInfo)

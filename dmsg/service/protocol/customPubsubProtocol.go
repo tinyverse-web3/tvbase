@@ -25,7 +25,6 @@ func NewCustomPubsubProtocolAdapter() *CustomPubsubProtocolAdapter {
 
 func (adapter *CustomPubsubProtocolAdapter) init(customProtocolId string) {
 	adapter.pid = customProtocolId
-	// TODO
 	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
