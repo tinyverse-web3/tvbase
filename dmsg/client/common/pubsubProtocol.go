@@ -58,6 +58,7 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 }
 
 func (p *PubsubProtocol) Request(destUserPubKey string) error {
+	dmsgLog.Logger.Debug("PubsubProtocol->Request ...")
 	protocolID := p.Adapter.GetRequestProtocolID()
 	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
 	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, destUserPubKey, protocolID)
