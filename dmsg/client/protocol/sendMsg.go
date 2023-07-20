@@ -66,8 +66,8 @@ func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte)
 
 func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debug("SendMsgProtocol->Request ...")
-	srcUserPubKeyHex := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKeyHex, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
+	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, sendMsgData.DestUserPubkeyHex, pb.ProtocolID_SEND_MSG_REQ)
 	if err != nil {
 		return nil, err
 	}

@@ -57,12 +57,11 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *PubsubProtocol) Request(destUserPubKey string) error {
+func (p *PubsubProtocol) Request(srcUserPubKey string, destUserPubKey string, content []byte) error {
 	dmsgLog.Logger.Debug("PubsubProtocol->Request ...")
-	protocolID := p.Adapter.GetRequestProtocolID()
-	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, destUserPubKey, protocolID)
+	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, destUserPubKey, p.Adapter.GetRequestProtocolID())
 	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
 	p.Adapter.InitProtocolRequest(basicData)
@@ -79,18 +78,20 @@ func (p *PubsubProtocol) Request(destUserPubKey string) error {
 	}
 	err = p.Adapter.SetProtocolRequestSign(signature)
 	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request: set protocol request sign error: %v", err)
 		return err
 	}
 
 	protocolData, err := proto.Marshal(p.ProtocolRequest)
 	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request: marshal protocolData error: %v", err)
 		return err
 	}
 
-	pubsubSource := p.Adapter.GetPubsubSource()
-	err = p.ProtocolService.PublishProtocol(basicData.ProtocolID, destUserPubKey, protocolData, pubsubSource)
+	err = p.ProtocolService.PublishProtocol(basicData.ProtocolID, destUserPubKey, protocolData, p.Adapter.GetPubsubSource())
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: pubsub publish error: %v", err)
+		return err
 	}
 
 	p.RequestInfoList[basicData.Id] = &RequestInfo{

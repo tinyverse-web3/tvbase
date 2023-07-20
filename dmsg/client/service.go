@@ -83,10 +83,10 @@ func (d *DmsgService) initMailbox() error {
 	userInfo := d.getSrcUserInfo(userPubkey)
 	if userInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", userPubkey)
-		return err
+		return fmt.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", userPubkey)
 	}
 
-	err = d.seekMailboxProtocol.Request(userPubkey)
+	err = d.seekMailboxProtocol.Request(userPubkey, userPubkey, nil)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtocol.Request err: %v", err)
 		return err
@@ -126,8 +126,8 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 		dmsgLog.Logger.Error(err)
 	}
 
-	for _, servicePeer := range servicePeerList {
-		err := d.createMailboxProtocol.Request(servicePeer, userPubkey)
+	for _, servicePeerID := range servicePeerList {
+		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
 		if err != nil {
 			dmsgLog.Logger.Warnf("DmsgService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
