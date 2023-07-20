@@ -27,12 +27,12 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	var err error
 	d.Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
 	if err != nil {
+		dmsgLog.Logger.Errorf("Init: failed to create pubsub: %v", err)
 		return err
 	}
 
 	d.PubsubProtocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
 	d.PubsubProtocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
-
 	return nil
 }
 
@@ -51,7 +51,6 @@ func (d *DmsgService) Start() error {
 }
 
 func (d *DmsgService) Stop() error {
-
 	return nil
 }
 
