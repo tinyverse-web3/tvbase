@@ -122,12 +122,12 @@ func (p *PubsubProtocol) TickCleanRequest() {
 }
 
 func NewPubsubProtocol(ctx context.Context, host host.Host, protocolCallback PubsubProtocolCallback,
-	clientService ProtocolService, adapter PubsubProtocolAdapter) *PubsubProtocol {
+	protocolService ProtocolService, adapter PubsubProtocolAdapter) *PubsubProtocol {
 	ret := &PubsubProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = protocolCallback
-	ret.ProtocolService = clientService
+	ret.ProtocolService = protocolService
 	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
