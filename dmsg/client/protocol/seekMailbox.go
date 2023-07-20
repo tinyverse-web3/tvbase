@@ -36,7 +36,7 @@ func (adapter *SeekMailboxProtocolAdapter) GetPubsubSource() common.PubsubSource
 	return common.PubsubSource.SrcUser
 }
 
-func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
+func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.SeekMailboxReq{
 		BasicData: basicData,
 	}

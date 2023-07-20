@@ -34,7 +34,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestProtocolID() proto
 	return dmsgProtocol.PidReadMailboxMsgReq
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
+func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.ReadMailboxMsgReq{
 		BasicData: basicData,
 	}

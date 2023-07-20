@@ -79,14 +79,14 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 func (d *DmsgService) initMailbox() error {
 	dmsgLog.Logger.Debug("DmsgService->initMailbox: ...")
 	var err error
-	userPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
-	userInfo := d.getSrcUserInfo(userPubkey)
+	curUserPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
+	userInfo := d.getSrcUserInfo(curUserPubkey)
 	if userInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", userPubkey)
-		return fmt.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", userPubkey)
+		dmsgLog.Logger.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", curUserPubkey)
+		return fmt.Errorf("DmsgService->initMailbox: current user pubic key %v is not exist", curUserPubkey)
 	}
 
-	err = d.seekMailboxProtocol.Request(userPubkey, userPubkey, nil)
+	err = d.seekMailboxProtocol.Request(curUserPubkey, curUserPubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtocol.Request err: %v", err)
 		return err
@@ -100,7 +100,7 @@ func (d *DmsgService) initMailbox() error {
 		}
 	case <-time.After(time.Second * 3):
 		dmsgLog.Logger.Debug("DmsgService->initMailbox: After 3s, no seek info, will create a new mailbox")
-		go d.createMailbox(userPubkey)
+		go d.createMailbox(curUserPubkey)
 		return nil
 	case <-d.BaseService.GetCtx().Done():
 		dmsgLog.Logger.Debug("DmsgService->initMailbox: NodeService.GetCtx().Done()")
@@ -127,7 +127,7 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 	}
 
 	for _, servicePeerID := range servicePeerList {
-		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
+		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey, userPubkey)
 		if err != nil {
 			dmsgLog.Logger.Warnf("DmsgService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
@@ -551,14 +551,20 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 		fallthrough
 	case 1: // exist mailbox
 		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		err = d.readMailboxMsgPrtocol.Request(peerId, response.BasicData.DestPubkey)
+		err = d.readMailboxMsgPrtocol.Request(
+			peerId,
+			response.BasicData.DestPubkey,
+			response.BasicData.DestPubkey)
 		if err != nil {
 			return nil, err
 		}
 		if userInfo.MailboxPeerId == "" {
 			userInfo.MailboxPeerId = response.BasicData.PeerId
 		} else if response.BasicData.PeerId != userInfo.MailboxPeerId {
-			err = d.releaseMailboxPrtocol.Request(peerId, response.BasicData.DestPubkey)
+			err = d.releaseMailboxPrtocol.Request(
+				peerId,
+				response.BasicData.DestPubkey,
+				response.BasicData.DestPubkey)
 			if err != nil {
 				return nil, err
 			}
@@ -650,18 +656,18 @@ func (d *DmsgService) OnSeekMailboxResponse(protoData protoreflect.ProtoMessage)
 		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: RetCode(%v) fail", response.RetCode)
 	}
 
-	pubkey := response.BasicData.DestPubkey
-	userInfo := d.getSrcUserInfo(pubkey)
+	destUserPubKey := response.BasicData.DestPubkey
+	userInfo := d.getSrcUserInfo(destUserPubKey)
 	if userInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", pubkey)
-		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", pubkey)
+		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", destUserPubKey)
+		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", destUserPubKey)
 	}
 	peerId, err := peer.Decode(response.PeerId)
 	if err != nil {
 		return nil, err
 	}
 	dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: mailbox has existed, read message from mailbox...")
-	err = d.readMailboxMsgPrtocol.Request(peerId, pubkey)
+	err = d.readMailboxMsgPrtocol.Request(peerId, destUserPubKey, destUserPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -670,7 +676,7 @@ func (d *DmsgService) OnSeekMailboxResponse(protoData protoreflect.ProtoMessage)
 		userInfo.MailboxCreateSignal <- true
 		return nil, nil
 	} else if response.PeerId != userInfo.MailboxPeerId {
-		err = d.releaseMailboxPrtocol.Request(peerId, pubkey)
+		err = d.releaseMailboxPrtocol.Request(peerId, destUserPubKey, destUserPubKey)
 		if err != nil {
 			return nil, err
 		}

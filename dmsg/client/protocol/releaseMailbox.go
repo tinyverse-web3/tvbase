@@ -34,7 +34,7 @@ func (adapter *ReleaseMailboxProtocolAdapter) GetStreamRequestProtocolID() proto
 	return dmsgProtocol.PidReleaseMailboxReq
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
+func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.ReleaseMailboxReq{
 		BasicData: basicData,
 	}

@@ -59,16 +59,15 @@ func (p *StreamProtocol) OnResponse(stream network.Stream) {
 		stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), requestProtocolId, sreamRequestProtocolId, p.ProtocolRequest)
 }
 
-func (p *StreamProtocol) Request(peerId peer.ID, destUserPubkey string) error {
+func (p *StreamProtocol) Request(peerId peer.ID, signUserPubkey string, destUserPubkey string) error {
 	protocolID := p.Adapter.GetRequestProtocolID()
-	srcUserPubkey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	basicData, err := dmsgProtocol.NewBasicData(p.Host, srcUserPubkey, destUserPubkey, protocolID)
+	basicData, err := dmsgProtocol.NewBasicData(p.Host, signUserPubkey, destUserPubkey, protocolID)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
 
-	err = p.Adapter.InitProtocolRequest(basicData, nil)
+	err = p.Adapter.InitProtocolRequest(basicData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitProtocolRequest error: %v", err)
 		return err
@@ -106,7 +105,7 @@ func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, destUserPubkey st
 		return err
 	}
 
-	err = p.Adapter.InitProtocolRequest(basicData, nil)
+	err = p.Adapter.InitProtocolRequest(basicData)
 	if err != nil {
 		return err
 	}

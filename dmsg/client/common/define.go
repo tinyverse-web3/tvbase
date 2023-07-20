@@ -20,7 +20,7 @@ type StreamProtocolCallback interface {
 	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 type StreamProtocolAdapter interface {
-	InitProtocolRequest(basicData *pb.BasicData, content any) error
+	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
 	SetCustomContent(customProtocolId string, requestContent []byte) error
 	GetRequestProtocolID() pb.ProtocolID
 	GetStreamRequestProtocolID() protocol.ID
@@ -47,7 +47,7 @@ type StreamProtocol struct {
 }
 
 type PubsubProtocolAdapter interface {
-	InitProtocolRequest(basicData *pb.BasicData, content any) error
+	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
 	GetRequestProtocolID() pb.ProtocolID
 	GetResponseProtocolID() pb.ProtocolID
 	GetProtocolResponseBasicData() *pb.BasicData

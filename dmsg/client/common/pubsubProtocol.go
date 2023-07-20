@@ -57,15 +57,16 @@ func (p *PubsubProtocol) OnResponse(pubMsg *pubsub.Message, protocolData []byte)
 		pubMsg.ID, pubMsg.ReceivedFrom, pubMsg.Topic, requestProtocolId, p.ProtocolRequest)
 }
 
-func (p *PubsubProtocol) Request(srcUserPubKey string, destUserPubKey string, content any) error {
-	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsrcUserPubKey:%s\ndestUserPubKey:%s\ncontent:%v",
-		srcUserPubKey, destUserPubKey, content)
-	basicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, destUserPubKey, p.Adapter.GetRequestProtocolID())
+func (p *PubsubProtocol) Request(signUserPubKey string, destUserPubKey string, dataList ...any) error {
+
+	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsignPubKey:%s\ndestUserPubKey:%s\ndata:%v",
+		signUserPubKey, destUserPubKey, dataList)
+	basicData, err := protocol.NewBasicData(p.Host, signUserPubKey, destUserPubKey, p.Adapter.GetRequestProtocolID())
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
-	err = p.Adapter.InitProtocolRequest(basicData, content)
+	err = p.Adapter.InitProtocolRequest(basicData, dataList)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: InitProtocolRequest error: %v", err)
 		return err
