@@ -59,32 +59,45 @@ func (p *StreamProtocol) OnResponse(stream network.Stream) {
 		stream.Conn().LocalPeer(), stream.Conn().RemotePeer(), requestProtocolId, sreamRequestProtocolId, p.ProtocolRequest)
 }
 
-func (p *StreamProtocol) Request(peerId peer.ID, signUserPubkey string, destUserPubkey string) error {
-	protocolID := p.Adapter.GetRequestProtocolID()
-	basicData, err := dmsgProtocol.NewBasicData(p.Host, signUserPubkey, destUserPubkey, protocolID)
+func (p *StreamProtocol) Request(
+	peerId peer.ID,
+	signUserPubkey string,
+	destUserPubkey string,
+	dataList ...any) error {
+	basicData, err := dmsgProtocol.NewBasicData(
+		p.Host,
+		signUserPubkey,
+		destUserPubkey,
+		p.Adapter.GetRequestProtocolID())
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
-
-	err = p.Adapter.InitProtocolRequest(basicData)
+	err = p.Adapter.InitProtocolRequest(basicData, dataList)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitProtocolRequest error: %v", err)
 		return err
 	}
-
 	protoData, err := proto.Marshal(p.ProtocolRequest)
 	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return err
 	}
 	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
 	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: GetCurSrcUserSign error: %v", err)
 		return err
 	}
 	p.Adapter.SetProtocolRequestSign(signature)
 
-	err = dmsgProtocol.SendProtocolMsg(p.Ctx, peerId, p.Adapter.GetStreamRequestProtocolID(), p.ProtocolRequest, p.Host)
+	err = dmsgProtocol.SendProtocolMsg(
+		p.Ctx,
+		peerId,
+		p.Adapter.GetStreamRequestProtocolID(),
+		p.ProtocolRequest,
+		p.Host)
 	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: SendProtocolMsg error: %v", err)
 		return err
 	}
 
@@ -94,48 +107,6 @@ func (p *StreamProtocol) Request(peerId peer.ID, signUserPubkey string, destUser
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->Request: request: %v", p.ProtocolRequest)
-	return nil
-}
-
-func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, destUserPubkey string, protocolId string, requstContent []byte) error {
-	protocolID := p.Adapter.GetRequestProtocolID()
-	srcUserPubkey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	basicData, err := dmsgProtocol.NewBasicData(p.Host, srcUserPubkey, destUserPubkey, protocolID)
-	if err != nil {
-		return err
-	}
-
-	err = p.Adapter.InitProtocolRequest(basicData)
-	if err != nil {
-		return err
-	}
-
-	err = p.Adapter.SetCustomContent(protocolId, requstContent)
-	if err != nil {
-		return err
-	}
-
-	protoData, err := proto.Marshal(p.ProtocolRequest)
-	if err != nil {
-		return err
-	}
-	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
-	if err != nil {
-		return err
-	}
-	p.Adapter.SetProtocolRequestSign(signature)
-
-	err = dmsgProtocol.SendProtocolMsg(p.Ctx, peerId, p.Adapter.GetStreamRequestProtocolID(), p.ProtocolRequest, p.Host)
-	if err != nil {
-		return err
-	}
-
-	p.RequestInfoList[basicData.Id] = &RequestInfo{
-		ProtoMessage:    p.ProtocolRequest,
-		CreateTimestamp: basicData.Timestamp,
-	}
-
-	dmsgLog.Logger.Debugf("StreamProtocol->RequestCustomProtocol: pubsub request msg: %v", p.ProtocolRequest)
 	return nil
 }
 

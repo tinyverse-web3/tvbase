@@ -38,22 +38,22 @@ func (adapter *CustomPubsubProtocolAdapter) GetPubsubSource() common.PubsubSourc
 
 func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 2 {
-		content, ok := dataList[0].([]byte)
+		customProtocolID, ok := dataList[0].(string)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast content to []byte")
+			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast datalist[0] to string for get customProtocolID")
 		}
-		customProtocolID, ok := dataList[1].(string)
+		content, ok := dataList[1].([]byte)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast customProtocolID to string")
+			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get content")
 		}
-		request := &pb.CustomProtocolReq{
+
+		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
 			BasicData:        basicData,
-			Content:          content,
 			CustomProtocolID: customProtocolID,
+			Content:          content,
 		}
-		adapter.protocol.ProtocolRequest = request
 	} else {
-		return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: dataList need contain parameters content and customProtocolID")
+		return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: parameter dataList need contain customProtocolID and content")
 	}
 	return nil
 }

@@ -2,12 +2,11 @@ package protocol
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
-	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
@@ -43,21 +42,23 @@ func (adapter *CustomStreamProtocolAdapter) GetStreamRequestProtocolID() protoco
 }
 
 func (adapter *CustomStreamProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
-	request := &pb.CustomProtocolReq{
-		BasicData: basicData,
+	if len(dataList) == 2 {
+		customProtocolID, ok := dataList[0].(string)
+		if !ok {
+			return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: failed to cast datalist[0] to string for get customProtocolID")
+		}
+		content, ok := dataList[1].([]byte)
+		if !ok {
+			return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get content")
+		}
+		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
+			BasicData:        basicData,
+			CustomProtocolID: customProtocolID,
+			Content:          content,
+		}
+	} else {
+		return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: parameter dataList need contain customProtocolID and content")
 	}
-	adapter.protocol.ProtocolRequest = request
-	return nil
-}
-
-func (adapter *CustomStreamProtocolAdapter) SetCustomContent(customProtocolID string, content []byte) error {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
-	if !ok {
-		dmsgLog.Logger.Error("ProtocolRequest is not CustomContentReq")
-		return fmt.Errorf("ProtocolRequest is not CustomContentReq")
-	}
-	request.CustomProtocolID = customProtocolID
-	request.Content = content
 	return nil
 }
 

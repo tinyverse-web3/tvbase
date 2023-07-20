@@ -42,10 +42,6 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.
 	return nil
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) SetCustomContent(protocolId string, requestContent []byte) error {
-	return nil
-}
-
 func (adapter *ReleaseMailboxProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnReleaseMailboxResponse(adapter.protocol.ProtocolResponse)
 	return data, err

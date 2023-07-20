@@ -21,7 +21,6 @@ type StreamProtocolCallback interface {
 }
 type StreamProtocolAdapter interface {
 	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
-	SetCustomContent(customProtocolId string, requestContent []byte) error
 	GetRequestProtocolID() pb.ProtocolID
 	GetStreamRequestProtocolID() protocol.ID
 	GetProtocolResponseBasicData() *pb.BasicData

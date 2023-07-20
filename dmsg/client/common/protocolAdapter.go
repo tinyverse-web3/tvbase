@@ -26,11 +26,6 @@ func (adapter *CommonProtocolAdapter) InitProtocolRequest(basicData *pb.BasicDat
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) SetCustomContent(protocolId string, requestContent []byte) error {
-	dmsgLog.Logger.Warnf("CommonProtocolAdapter->SetCustomContent: not implemented")
-	return fmt.Errorf("CommonProtocolAdapter->SetCustomContent: not implemented")
-}
-
 func (adapter *CommonProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
 	dmsgLog.Logger.Warnf("CommonProtocolAdapter->CallProtocolResponseCallback: not implemented")
 	return nil, fmt.Errorf("CommonProtocolAdapter->CallProtocolResponseCallback: not implemented")

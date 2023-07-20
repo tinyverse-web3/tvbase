@@ -814,7 +814,6 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 
 // cmd protocol
 func (d *DmsgService) RequestCustomStreamProtocol(customProtocolId string, peerId string, content []byte) error {
-	// find := false
 	protocolInfo := d.customStreamProtocolInfoList[customProtocolId]
 	if protocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", customProtocolId)
@@ -826,7 +825,12 @@ func (d *DmsgService) RequestCustomStreamProtocol(customProtocolId string, peerI
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v", err)
 		return err
 	}
-	err = protocolInfo.Protocol.RequestCustomProtocol(pid, d.CurSrcUserInfo.UserKey.PubkeyHex, customProtocolId, content)
+	err = protocolInfo.Protocol.Request(
+		pid,
+		d.CurSrcUserInfo.UserKey.PubkeyHex,
+		d.CurSrcUserInfo.UserKey.PubkeyHex,
+		customProtocolId,
+		content)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
 			err, pid, d.CurSrcUserInfo.UserKey.PubkeyHex, content)

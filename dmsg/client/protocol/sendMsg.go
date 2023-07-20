@@ -21,7 +21,7 @@ type SendMsgProtocol struct {
 func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("SendMsgProtocol->OnRequest: recovered from:", r)
+			dmsgLog.Logger.Errorf("SendMsgProtocol->OnRequest: recovered from: err: %v", r)
 		}
 	}()
 
