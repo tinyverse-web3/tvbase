@@ -17,7 +17,6 @@ type SendMsgProtocol struct {
 	SendMsgRequest *pb.SendMsgReq
 }
 
-// Receive a message
 func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {

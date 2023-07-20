@@ -6,7 +6,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg"
-	dmsgCLientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
+	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -14,11 +14,10 @@ import (
 )
 
 type SendMsgProtocol struct {
-	dmsgCLientCommon.PubsubProtocol
+	dmsgClientCommon.PubsubProtocol
 	SendMsgRequest *pb.SendMsgReq
 }
 
-// Receive a message
 func (p *SendMsgProtocol) OnRequest(pubMsg *pubsub.Message, protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -103,7 +102,7 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq
 	}
 
 	err = p.ProtocolService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
-		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgCLientCommon.PubsubSource.DestUser)
+		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgClientCommon.PubsubSource.DestUser)
 	if err != nil {
 		dmsgLog.Logger.Error("SendMsgProtocol->Request: publish protocol error %v", err)
 		return nil, err
@@ -113,12 +112,16 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq
 	return p.SendMsgRequest, nil
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback dmsgCLientCommon.PubsubProtocolCallback, protocolService dmsgCLientCommon.ProtocolService) *SendMsgProtocol {
+func NewSendMsgProtocol(
+	host host.Host,
+	protocolCallback dmsgClientCommon.PubsubProtocolCallback,
+	protocolService dmsgClientCommon.ProtocolService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
+	ret.Host = host
+	ret.Callback = protocolCallback
+	ret.ProtocolService = protocolService
+
 	ret.SendMsgRequest = &pb.SendMsgReq{}
 	ret.ProtocolRequest = ret.SendMsgRequest
-	ret.Host = host
-	ret.ProtocolService = protocolService
-	ret.Callback = protocolCallback
 	return ret
 }

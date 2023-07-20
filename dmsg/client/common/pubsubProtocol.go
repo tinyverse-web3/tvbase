@@ -121,8 +121,12 @@ func (p *PubsubProtocol) TickCleanRequest() {
 	}
 }
 
-func NewPubsubProtocol(ctx context.Context, host host.Host, protocolCallback PubsubProtocolCallback,
-	protocolService ProtocolService, adapter PubsubProtocolAdapter) *PubsubProtocol {
+func NewPubsubProtocol(
+	ctx context.Context,
+	host host.Host,
+	protocolCallback PubsubProtocolCallback,
+	protocolService ProtocolService,
+	adapter PubsubProtocolAdapter) *PubsubProtocol {
 	ret := &PubsubProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
