@@ -89,11 +89,6 @@ func (p *SendMsgProtocol) Request(sendMsgData *dmsg.SendMsgData) (*pb.SendMsgReq
 		return nil, err
 	}
 
-	err = p.Callback.OnSendMsgBeforePublish(p.SendMsgRequest)
-	if err != nil {
-		return nil, err
-	}
-
 	p.SendMsgRequest.BasicData.Sign = sign
 	protoData, err = proto.Marshal(p.SendMsgRequest)
 	if err != nil {

@@ -72,7 +72,6 @@ type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
 	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnHandleSendMsgRequest(protoreflect.ProtoMessage, []byte) (interface{}, error)
-	OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error
 }
 
 type ProtocolService interface {

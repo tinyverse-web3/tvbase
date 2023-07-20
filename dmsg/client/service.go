@@ -765,29 +765,6 @@ func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage,
 	return nil, nil
 }
 
-func (d *DmsgService) OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage) error {
-	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->HandleMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return fmt.Errorf("DmsgService->HandleMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-	}
-
-	srcPubkey := sendMsgReq.SrcPubkey
-	destPubkey := sendMsgReq.BasicData.DestPubkey
-	if d.onReceiveMsg != nil {
-		d.onReceiveMsg(
-			srcPubkey,
-			destPubkey,
-			sendMsgReq.MsgContent,
-			sendMsgReq.BasicData.Timestamp,
-			sendMsgReq.BasicData.Id,
-			dmsg.MsgDirection.To)
-	} else {
-		dmsgLog.Logger.Debugf("DmsgService->OnSendMsgBeforePublish: %v send msg to %v, msgContent:%v", srcPubkey, destPubkey, sendMsgReq.MsgContent)
-	}
-	return nil
-}
-
 // ClientService interface
 func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey string,
 	protocolData []byte, pubsubSource dmsgClientCommon.PubsubSourceType) error {
