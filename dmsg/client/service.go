@@ -489,7 +489,7 @@ func (d *DmsgService) UnSubscribeDestUser(destPubkey string) error {
 func (d *DmsgService) StartReadDestUserPubsubMsg(destUserPubkey string) error {
 	dmsgLog.Logger.Debugf("DmsgService->StartReadDestUserPubsubMsg: %v", destUserPubkey)
 	destUserInfo := d.getDestUserInfo(destUserPubkey)
-	if destUserInfo != nil {
+	if destUserInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: user public key(%s) pubsub already exist", destUserPubkey)
 		return fmt.Errorf("DmsgService->SubscribeDestUser: user public key(%s) pubsub already exist", destUserPubkey)
 	}
@@ -832,29 +832,6 @@ func (d *DmsgService) RequestCustomStreamProtocol(customProtocolId string, peerI
 			err, pid, d.CurSrcUserInfo.UserKey.PubkeyHex, content)
 		return err
 	}
-
-	// hostId := d.BaseService.GetHost().ID().String()
-	// servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
-	// if err != nil {
-	// 	dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v", err)
-	// 	return err
-	// }
-	// for _, pid := range servicePeerList {
-
-	// 	err := protocolInfo.StreamProtocol.RequestCustomProtocol(pid, d.CurSrcUserInfo.UserKey.PubkeyHex, customProtocolId, content)
-	// 	if err != nil {
-	// 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
-	// 			err, pid, d.CurSrcUserInfo.UserKey.PubkeyHex, content)
-	// 		// TODO: need broadcast?
-	// 		continue
-	// 	}
-	// 	find = true
-	// 	break
-	// }
-	// if !find {
-	// 	dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: no available service peers found")
-	// 	return fmt.Errorf("DmsgService->RequestCustomStreamProtocol: no available service peers found")
-	// }
 	return nil
 }
 
