@@ -114,10 +114,11 @@ func TestPubsubMsg(t *testing.T) {
 	}
 
 	// set src user msg receive callback
-	dmsgService.OnReceiveMsg = func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
+
+	dmsgService.SetOnReceiveMsg(func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
 		tvcLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
-	}
+	})
 
 	// publish dest user
 	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)

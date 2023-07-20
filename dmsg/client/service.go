@@ -33,7 +33,7 @@ type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	CurSrcUserInfo               *dmsgClientCommon.SrcUserInfo
-	OnReceiveMsg                 dmsgClientCommon.OnReceiveMsg
+	onReceiveMsg                 dmsgClientCommon.OnReceiveMsg
 	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
 	srcUserInfoList              map[string]*dmsgClientCommon.SrcUserInfo
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
@@ -446,7 +446,7 @@ func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsg
 }
 
 func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg) {
-	d.OnReceiveMsg = onReceiveMsg
+	d.onReceiveMsg = onReceiveMsg
 }
 
 func (d *DmsgService) SubscribeDestUser(destUserPubkey string, isReadPubsubMsg bool) error {
@@ -621,7 +621,7 @@ func (d *DmsgService) OnReadMailboxMsgResponse(protoData protoreflect.ProtoMessa
 
 		dmsgLog.Logger.Debug("DmsgService->OnReadMailboxMsgResponse: From = ", srcPubkey)
 		dmsgLog.Logger.Debug("DmsgService->OnReadMailboxMsgResponse: To = ", destPubkey)
-		d.OnReceiveMsg(
+		d.onReceiveMsg(
 			srcPubkey,
 			destPubkey,
 			msgContent,
@@ -743,18 +743,10 @@ func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage,
 		return nil, fmt.Errorf("DmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
-	// TODO, no need to check src and dest, delete this code after test
-	isExistSrc := d.IsExistSrcUser(sendMsgReq.BasicData.DestPubkey)
-	isExistDest := d.IsExistDestUser(sendMsgReq.BasicData.DestPubkey)
-	if !isExistSrc && !isExistDest {
-		dmsgLog.Logger.Errorf("DmsgService->OnHandleSendMsgRequest: cannot find src user public key %v", sendMsgReq.BasicData.DestPubkey)
-		return nil, fmt.Errorf("DmsgService->OnHandleSendMsgRequest: cannot find src user public key %v", sendMsgReq.BasicData.DestPubkey)
-	}
-
 	srcPubkey := sendMsgReq.SrcPubkey
 	destPubkey := sendMsgReq.BasicData.DestPubkey
 	msgDirection := dmsg.MsgDirection.From
-	d.OnReceiveMsg(
+	d.onReceiveMsg(
 		srcPubkey,
 		destPubkey,
 		sendMsgReq.MsgContent,
@@ -772,13 +764,10 @@ func (d *DmsgService) OnSendMsgBeforePublish(protoMsg protoreflect.ProtoMessage)
 		return fmt.Errorf("DmsgService->HandleMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
-	if !d.IsExistSrcUser(sendMsgReq.SrcPubkey) {
-		return fmt.Errorf("DmsgService->OnSendMsgBeforePublish: not find src user public key %v", sendMsgReq.SrcPubkey)
-	}
 	srcPubkey := sendMsgReq.SrcPubkey
 	destPubkey := sendMsgReq.BasicData.DestPubkey
-	if d.OnReceiveMsg != nil {
-		d.OnReceiveMsg(
+	if d.onReceiveMsg != nil {
+		d.onReceiveMsg(
 			srcPubkey,
 			destPubkey,
 			sendMsgReq.MsgContent,
@@ -797,14 +786,17 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 	pubsubBuf := new(bytes.Buffer)
 	err := binary.Write(pubsubBuf, binary.LittleEndian, protocolID)
 	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: error: %v", err)
 		return err
 	}
 	err = binary.Write(pubsubBuf, binary.LittleEndian, protocolData)
 	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: error: %v", err)
 		return err
 	}
 
 	pubsubData := pubsubBuf.Bytes()
+	var userPubsub *dmsgClientCommon.UserPubsub = nil
 	switch pubsubSource {
 	case dmsgClientCommon.PubsubSource.DestUser:
 		userInfo := d.getDestUserInfo(userPubkey)
@@ -812,25 +804,25 @@ func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey strin
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find dest user pubsub key %s", userPubkey)
 		}
-		err := userInfo.Topic.Publish(d.BaseService.GetCtx(), pubsubData)
-		if err != nil {
-			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
-			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
-		}
+		userPubsub = &userInfo.UserPubsub
 	case dmsgClientCommon.PubsubSource.SrcUser:
 		userInfo := d.getSrcUserInfo(userPubkey)
 		if userInfo == nil {
 			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 			return fmt.Errorf("DmsgService->PublishProtocol: cannot find src user pubsub key %s", userPubkey)
 		}
-		err := userInfo.Topic.Publish(d.BaseService.GetCtx(), pubsubData)
-		if err != nil {
-			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
-			return fmt.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
-		}
-	default:
-		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: no find userPubkey %s for pubsubSource %v", userPubkey, pubsubSource)
-		return fmt.Errorf("DmsgService->PublishProtocol: no find userPubkey %s for pubsubSource %v", userPubkey, pubsubSource)
+		userPubsub = &userInfo.UserPubsub
+	}
+
+	if userPubsub == nil {
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: userPubsub is nil")
+		return fmt.Errorf("DmsgService->PublishProtocol: userPubsub is nil")
+	}
+
+	err = userPubsub.Topic.Publish(d.BaseService.GetCtx(), pubsubData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
+		return err
 	}
 	return nil
 }
