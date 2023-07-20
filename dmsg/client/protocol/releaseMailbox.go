@@ -34,11 +34,12 @@ func (adapter *ReleaseMailboxProtocolAdapter) GetStreamRequestProtocolID() proto
 	return dmsgProtocol.PidReleaseMailboxReq
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *ReleaseMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
 	request := &pb.ReleaseMailboxReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
+	return nil
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) SetCustomContent(protocolId string, requestContent []byte) error {

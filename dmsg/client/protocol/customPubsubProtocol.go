@@ -36,11 +36,12 @@ func (adapter *CustomPubsubProtocolAdapter) GetPubsubSource() common.PubsubSourc
 	return common.PubsubSource.SrcUser
 }
 
-func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
 	request := &pb.CustomProtocolReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
+	return nil
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {

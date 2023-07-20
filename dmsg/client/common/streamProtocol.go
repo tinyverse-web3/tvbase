@@ -64,10 +64,15 @@ func (p *StreamProtocol) Request(peerId peer.ID, destUserPubkey string) error {
 	srcUserPubkey := p.ProtocolService.GetCurSrcUserPubKeyHex()
 	basicData, err := dmsgProtocol.NewBasicData(p.Host, srcUserPubkey, destUserPubkey, protocolID)
 	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
 
-	p.Adapter.InitProtocolRequest(basicData)
+	err = p.Adapter.InitProtocolRequest(basicData, nil)
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitProtocolRequest error: %v", err)
+		return err
+	}
 
 	protoData, err := proto.Marshal(p.ProtocolRequest)
 	if err != nil {
@@ -89,7 +94,7 @@ func (p *StreamProtocol) Request(peerId peer.ID, destUserPubkey string) error {
 		CreateTimestamp: basicData.Timestamp,
 	}
 
-	dmsgLog.Logger.Debugf("StreamProtocol->Request: pubsub request msg: %v", p.ProtocolRequest)
+	dmsgLog.Logger.Debugf("StreamProtocol->Request: request: %v", p.ProtocolRequest)
 	return nil
 }
 
@@ -101,7 +106,10 @@ func (p *StreamProtocol) RequestCustomProtocol(peerId peer.ID, destUserPubkey st
 		return err
 	}
 
-	p.Adapter.InitProtocolRequest(basicData)
+	err = p.Adapter.InitProtocolRequest(basicData, nil)
+	if err != nil {
+		return err
+	}
 
 	err = p.Adapter.SetCustomContent(protocolId, requstContent)
 	if err != nil {

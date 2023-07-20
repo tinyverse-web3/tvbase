@@ -42,11 +42,12 @@ func (adapter *CustomStreamProtocolAdapter) GetStreamRequestProtocolID() protoco
 	return protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid)
 }
 
-func (adapter *CustomStreamProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *CustomStreamProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
 	request := &pb.CustomProtocolReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
+	return nil
 }
 
 func (adapter *CustomStreamProtocolAdapter) SetCustomContent(customProtocolID string, content []byte) error {

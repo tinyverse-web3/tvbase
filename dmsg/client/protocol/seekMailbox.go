@@ -36,11 +36,12 @@ func (adapter *SeekMailboxProtocolAdapter) GetPubsubSource() common.PubsubSource
 	return common.PubsubSource.SrcUser
 }
 
-func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
 	request := &pb.SeekMailboxReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
+	return nil
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {

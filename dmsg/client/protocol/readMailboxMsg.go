@@ -34,11 +34,12 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestProtocolID() proto
 	return dmsgProtocol.PidReadMailboxMsgReq
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData) {
+func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, content any) error {
 	request := &pb.ReadMailboxMsgReq{
 		BasicData: basicData,
 	}
 	adapter.protocol.ProtocolRequest = request
+	return nil
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
