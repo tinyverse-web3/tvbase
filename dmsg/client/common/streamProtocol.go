@@ -16,7 +16,7 @@ import (
 func (p *StreamProtocol) OnResponse(stream network.Stream) {
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("StreamProtocol->OnResponse: recovered from:", r)
+			dmsgLog.Logger.Errorf("StreamProtocol->OnResponse: recovered from: r: %v", r)
 		}
 	}()
 
