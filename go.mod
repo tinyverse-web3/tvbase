@@ -30,7 +30,6 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230719072756-ee4c878e71b8 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
