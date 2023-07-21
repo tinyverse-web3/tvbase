@@ -43,6 +43,13 @@ message SendMsgReq {
     bytes msgContent = 3;
 }
 
+message SendMsgRes {
+    BasicData basicData = 1;
+    string srcPubkey = 2;
+    bytes msgContent = 3;
+    RetCode retCode = 4;
+}
+
 message ReadMailboxMsgReq {
     BasicData basicData = 1;
 }

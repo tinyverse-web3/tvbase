@@ -50,7 +50,7 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
 		return
 	}
 
-	callbackData, err := p.Callback.OnHandleSendMsgRequest(p.ProtocolRequest, protocolData)
+	callbackData, err := p.Callback.OnSendMsgRequest(p.ProtocolRequest)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: callback error %v", err))
 	}

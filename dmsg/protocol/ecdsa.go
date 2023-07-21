@@ -12,17 +12,17 @@ import (
 func EcdsaAuthProtocolMsg(message proto.Message, basicData *pb.BasicData) (bool, error) {
 	sign := basicData.Sign
 	basicData.Sign = nil
-	msgData, err := proto.Marshal(message)
+	protoData, err := proto.Marshal(message)
 	if err != nil {
 		dmsgLog.Logger.Errorf("EcdsaAuthProtocolMsg: failed to marshal pb message %v", err)
 		return false, nil
 	}
 	basicData.Sign = sign
-	publicKey, err := key.PubkeyFromEcdsaHex(string(basicData.SignPubKey))
+	pubkey, err := key.PubkeyFromEcdsaHex(basicData.SignPubKey)
 	if err != nil {
 		return false, err
 	}
-	return key.Verify(publicKey, msgData, sign)
+	return key.Verify(pubkey, protoData, sign)
 }
 
 func EcdsaSignProtocolMsg(message proto.Message, privateKey *ecdsa.PrivateKey) ([]byte, error) {

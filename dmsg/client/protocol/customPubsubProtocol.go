@@ -58,6 +58,11 @@ func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.Ba
 	return nil
 }
 
+func (adapter *CustomPubsubProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	return data, err
+}
+
 func (adapter *CustomPubsubProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err

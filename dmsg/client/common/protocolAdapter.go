@@ -31,9 +31,19 @@ func (adapter *CommonProtocolAdapter) InitProtocolRequest(basicData *pb.BasicDat
 	return nil
 }
 
+func (adapter *CommonProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallProtocolRequestCallback: not implemented")
+	return nil, fmt.Errorf("CommonProtocolAdapter->CallProtocolRequestCallback: not implemented")
+}
+
 func (adapter *CommonProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallProtocolResponseCallback: not implemented")
 	return nil, fmt.Errorf("CommonProtocolAdapter->CallProtocolResponseCallback: not implemented")
+}
+
+func (adapter *CommonProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicData {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetProtocolRequestBasicData: not implemented")
+	return nil
 }
 
 func (adapter *CommonProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {

@@ -301,7 +301,7 @@ func (d *DmsgService) getDestUserPubsub(destUserPubsub string) *dmsgServiceCommo
 	return d.destUserPubsubs[destUserPubsub]
 }
 
-func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage, msgContent []byte) error {
+func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
 	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
@@ -580,20 +580,20 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 	return nil, nil
 }
 
-func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage, protoData []byte) (interface{}, error) {
+func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (interface{}, error) {
 	request, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("dmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return nil, fmt.Errorf("dmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 	pubkey := request.BasicData.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("dmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
-		return nil, fmt.Errorf("dmsgService->OnHandleSendMsgRequest: public key %s is not exist", pubkey)
+		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
+		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
 	}
 	pubsub.LastReciveTimestamp = time.Now().Unix()
-	d.saveUserMsg(protoMsg, protoData)
+	d.saveUserMsg(protoMsg)
 	return nil, nil
 }
 

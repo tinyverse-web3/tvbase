@@ -10,10 +10,47 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
+func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData begin\nrequestProtocolId: %v", p.Adapter.GetRequestProtocolID())
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: recovered from:%v", r)
+			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from: err: %v", r)
+		}
+	}()
+
+	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: unmarshal error: %v", err)
+		return
+	}
+
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData: protocolRequest: %v", p.ProtocolRequest)
+
+	basicData := p.Adapter.GetProtocolRequestBasicData()
+	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, basicData)
+	if !valid {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: failed to authenticate message")
+		return
+	}
+
+	callbackData, err := p.Adapter.CallProtocolRequestCallback()
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: CallProtocolRequestCallback error: %v", err)
+		return
+	}
+	if callbackData != nil {
+		dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData: callbackData: %v", callbackData)
+	}
+
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData end")
+}
+
+func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData begin\nresquestProtocolId: %v", p.Adapter.GetResponseProtocolID())
+
+	defer func() {
+		if r := recover(); r != nil {
+			dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: recovered from: r: %v", r)
 		}
 
 		basicData := p.Adapter.GetProtocolResponseBasicData()
@@ -31,29 +68,29 @@ func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
 
 	err := proto.Unmarshal(protocolData, p.ProtocolResponse)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: unmarshal data error %v, response:%v",
-			err, p.ProtocolResponse)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: unmarshal error: %v", err)
 		return
 	}
+
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: protocolResponse: %v", p.ProtocolResponse)
 
 	basicData := p.Adapter.GetProtocolResponseBasicData()
 	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
 	if !valid {
-		dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: failed to authenticate message, response:%v", p.ProtocolResponse)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: failed to authenticate message")
 		return
 	}
 
 	callbackData, err := p.Adapter.CallProtocolResponseCallback()
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: response %v callback happen error: %v", p.ProtocolResponse, err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: CallProtocolResponseCallback error: %v", err)
+		return
 	}
 	if callbackData != nil {
-		dmsgLog.Logger.Debugf("callback data: %v", callbackData)
+		dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: callbackData: %v", callbackData)
 	}
 
-	requestProtocolId := p.Adapter.GetRequestProtocolID()
-	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: received response from requestProtocolId:%s, protocolRequest:%v",
-		requestProtocolId, p.ProtocolRequest)
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData end")
 }
 
 func (p *PubsubProtocol) Request(

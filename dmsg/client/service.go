@@ -26,7 +26,8 @@ type ProtocolProxy struct {
 	createMailboxProtocol *dmsgClientCommon.StreamProtocol
 	releaseMailboxPrtocol *dmsgClientCommon.StreamProtocol
 	seekMailboxProtocol   *dmsgClientCommon.PubsubProtocol
-	sendMsgPrtocol        *clientProtocol.SendMsgProtocol
+	sendMsgPrtocol        *dmsgClientCommon.PubsubProtocol
+	// sendMsgPrtocol        *dmsgClientCommon.SendMsgProtocol
 }
 
 type DmsgService struct {
@@ -65,8 +66,9 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponseProtocolID(), d.seekMailboxProtocol)
 
 	// sendMsgProtocol, special pubsub protocol
-	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, d.sendMsgPrtocol)
+	// d.sendMsgPrtocol = dmsgClientCommon.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
+	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetResponseProtocolID(), d.sendMsgPrtocol)
 
 	d.srcUserInfoList = make(map[string]*dmsgClientCommon.SrcUserInfo)
 	d.destUserInfoList = make(map[string]*dmsgClientCommon.DestUserInfo)
@@ -686,6 +688,40 @@ func (d *DmsgService) OnSeekMailboxResponse(protoData protoreflect.ProtoMessage)
 	return nil, nil
 }
 
+func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (interface{}, error) {
+	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
+	if !ok {
+		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+	}
+
+	srcPubkey := sendMsgReq.SrcPubkey
+	destPubkey := sendMsgReq.BasicData.DestPubkey
+	msgDirection := dmsg.MsgDirection.From
+	d.onReceiveMsg(
+		srcPubkey,
+		destPubkey,
+		sendMsgReq.MsgContent,
+		sendMsgReq.BasicData.Timestamp,
+		sendMsgReq.BasicData.Id,
+		msgDirection)
+
+	return nil, nil
+}
+
+func (d *DmsgService) OnSendMsgResponse(protoData protoreflect.ProtoMessage) (interface{}, error) {
+	response, ok := protoData.(*pb.SendMsgRes)
+	if !ok {
+		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgResponse: cannot convert %v to *pb.SendMsgRes", protoData)
+		return nil, fmt.Errorf("DmsgService->OnSendMsgResponse: cannot convert %v to *pb.SendMsgRes", protoData)
+	}
+	if response.RetCode.Code != 0 {
+		dmsgLog.Logger.Warnf("DmsgService->OnSendMsgResponse: RetCode(%v) fail", response.RetCode)
+		return nil, fmt.Errorf("DmsgService->OnSendMsgResponse: RetCode(%v) fail", response.RetCode)
+	}
+	return nil, nil
+}
+
 func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := resProtoData.(*pb.CustomProtocolRes)
 	if !ok {
@@ -716,6 +752,10 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 	return nil, nil
 }
 
+func (d *DmsgService) OnCustomPubsubProtocolRequest(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	return nil, nil
+}
+
 func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
 	response, ok := resProtoData.(*pb.CustomProtocolRes)
 	if !ok {
@@ -743,27 +783,6 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.P
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: HandleResponse error: %v", err)
 		return nil, err
 	}
-	return nil, nil
-}
-
-func (d *DmsgService) OnHandleSendMsgRequest(protoMsg protoreflect.ProtoMessage, protoData []byte) (interface{}, error) {
-	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return nil, fmt.Errorf("DmsgService->OnHandleSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-	}
-
-	srcPubkey := sendMsgReq.SrcPubkey
-	destPubkey := sendMsgReq.BasicData.DestPubkey
-	msgDirection := dmsg.MsgDirection.From
-	d.onReceiveMsg(
-		srcPubkey,
-		destPubkey,
-		sendMsgReq.MsgContent,
-		sendMsgReq.BasicData.Timestamp,
-		sendMsgReq.BasicData.Id,
-		msgDirection)
-
 	return nil, nil
 }
 

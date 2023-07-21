@@ -27,7 +27,7 @@ func Sign(privateKey *ecdsa.PrivateKey, message []byte) ([]byte, error) {
 	return signature, err
 }
 
-func Verify(publicKey *ecdsa.PublicKey, message, sig []byte) (bool, error) {
-	hash := sha256.Sum256(message)
+func Verify(publicKey *ecdsa.PublicKey, data, sig []byte) (bool, error) {
+	hash := sha256.Sum256(data)
 	return ecdsa.VerifyASN1(publicKey, hash[:], sig), nil
 }

@@ -5,7 +5,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvutil/crypto"
-	keyUtil "github.com/tinyverse-web3/tvutil/key"
+	"github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,20 +21,20 @@ func AuthProtocolMsg(message proto.Message, basicData *pb.BasicData) bool {
 	return verifyData(protoData, basicData.SignPubKey, sign)
 }
 
-func verifyData(protoData []byte, userPubkeyHex string, sign []byte) bool {
-	srcUserPubkeyData, err := keyUtil.TranslateKeyStringToProtoBuf(userPubkeyHex)
+func verifyData(protoData []byte, pubkeyHex string, sign []byte) bool {
+	pubkeyData, err := key.TranslateKeyStringToProtoBuf(pubkeyHex)
 	if err != nil {
 		dmsgLog.Logger.Errorf("verifyData: TranslateKeyStringToProtoBuf error: %v", err)
 		return false
 	}
-	srcUserPubkey, err := keyUtil.ECDSAProtoBufToPublicKey(srcUserPubkeyData)
+	pubkey, err := key.ECDSAProtoBufToPublicKey(pubkeyData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("verifyData: Public key is not ECDSA KEY")
+		dmsgLog.Logger.Errorf("verifyData: Public key is not ECDSA KEY, error: %v", err)
 		return false
 	}
-	isVerify, err := crypto.VerifyDataSignByEcdsa(srcUserPubkey, protoData, sign)
+	isVerify, err := crypto.VerifyDataSignByEcdsa(pubkey, protoData, sign)
 	if err != nil {
-		dmsgLog.Logger.Error(err)
+		dmsgLog.Logger.Errorf("verifyData: VerifyDataSignByEcdsa error: %v", err)
 		return false
 	}
 	return isVerify

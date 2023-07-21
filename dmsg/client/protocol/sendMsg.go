@@ -1,124 +1,99 @@
 package protocol
 
 import (
-	"fmt"
+	"context"
+	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
-	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	"google.golang.org/protobuf/proto"
 )
 
-type SendMsgProtocol struct {
-	dmsgClientCommon.PubsubProtocol
-	SendMsgRequest *pb.SendMsgReq
+type SendMsgProtocolAdapter struct {
+	common.CommonProtocolAdapter
+	protocol *common.PubsubProtocol
 }
 
-func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
-	defer func() {
-		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: recovered from: err: %v", r)
-		}
-	}()
+func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
+	ret := &SendMsgProtocolAdapter{}
+	return ret
+}
 
-	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
-	if err != nil {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: unmarshal protocolData error %v", err)
-		return
+func (adapter *SendMsgProtocolAdapter) init() {
+	adapter.protocol.ProtocolRequest = &pb.SendMsgReq{}
+	adapter.protocol.ProtocolResponse = &pb.SendMsgRes{}
+}
+
+func (adapter *SendMsgProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
+	return pb.ProtocolID_SEND_MSG_REQ
+}
+
+func (adapter *SendMsgProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
+	return pb.ProtocolID_SEND_MSG_RES
+}
+
+func (adapter *SendMsgProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
+	return common.PubsubSource.SrcUser
+}
+
+func (adapter *SendMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+	request := &pb.SendMsgReq{
+		BasicData: basicData,
 	}
+	adapter.protocol.ProtocolRequest = request
+	return nil
+}
 
-	// requestProtocolId := p.Adapter.GetRequestProtocolID()
-	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
-	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
-		requestProtocolId, p.ProtocolRequest)
+func (adapter *SendMsgProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest)
+	return data, err
+}
 
-	sendMsgReq, ok := p.ProtocolRequest.(*pb.SendMsgReq)
+func (adapter *SendMsgProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSendMsgResponse(adapter.protocol.ProtocolResponse)
+	return data, err
+}
+
+func (adapter *SendMsgProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicData {
+	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: failed to cast msg to *pb.SendMsgReq")
-		return
+		return nil
 	}
-	basicData := sendMsgReq.BasicData
-	valid, err := protocol.EcdsaAuthProtocolMsg(p.ProtocolRequest, basicData)
-	if err != nil {
-		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: authenticate message err:%v", err)
-		return
-	}
-	if !valid {
-		dmsgLog.Logger.Warn("SendMsgProtocol->HandleRequestData: authenticate message fail")
-		return
-	}
-
-	callbackData, err := p.Callback.OnHandleSendMsgRequest(p.ProtocolRequest, protocolData)
-	if err != nil {
-		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: callback error %v", err))
-	}
-	if callbackData != nil {
-		dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: callback data: %v", callbackData)
-	}
-
-	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
-		requestProtocolId, p.ProtocolRequest)
+	return request.BasicData
 }
 
-func (p *SendMsgProtocol) Request(
-	signUserPubKey string,
-	destUserPubKey string,
-	dataList ...any) (any, error) {
-	dmsgLog.Logger.Debug("SendMsgProtocol->Request begin:\nsignPubKey:%s\ndestUserPubKey:%s\ndata:%v",
-		signUserPubKey, destUserPubKey, dataList)
-
-	basicData, err := protocol.NewBasicData(p.Host, signUserPubKey, destUserPubKey, pb.ProtocolID_SEND_MSG_REQ)
-	if err != nil {
-		return nil, err
+func (adapter *SendMsgProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	if !ok {
+		return nil
 	}
-	p.SendMsgRequest = &pb.SendMsgReq{
-		BasicData:  basicData,
-		SrcPubkey:  signUserPubKey,
-		MsgContent: dataList[0].([]byte),
-	}
+	return response.BasicData
+}
 
-	protoData, err := proto.Marshal(p.SendMsgRequest)
-	if err != nil {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: marshal error %v", err)
-		return nil, err
+func (adapter *SendMsgProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	if !ok {
+		return nil
 	}
-
-	sign, err := p.ProtocolService.GetCurSrcUserSign(protoData)
-	if err != nil {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->Request: get signature error %v", err)
-		return nil, err
+	return response.RetCode
+}
+func (adapter *SendMsgProtocolAdapter) SetProtocolRequestSign(signature []byte) error {
+	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
+	if !ok {
+		return errors.New("failed to cast request to *pb.SendMsgReq")
 	}
-
-	p.SendMsgRequest.BasicData.Sign = sign
-	protoData, err = proto.Marshal(p.SendMsgRequest)
-	if err != nil {
-		dmsgLog.Logger.Error("SendMsgProtocol->Request: marshal protocolData error %v", err)
-		return nil, err
-	}
-
-	err = p.ProtocolService.PublishProtocol(p.SendMsgRequest.BasicData.ProtocolID,
-		p.SendMsgRequest.BasicData.DestPubkey, protoData, dmsgClientCommon.PubsubSource.DestUser)
-	if err != nil {
-		dmsgLog.Logger.Error("SendMsgProtocol->Request: publish protocol error %v", err)
-		return nil, err
-	}
-
-	dmsgLog.Logger.Debug("SendMsgProtocol->Request end")
-	return p.SendMsgRequest, nil
+	request.BasicData.Sign = signature
+	return nil
 }
 
 func NewSendMsgProtocol(
+	ctx context.Context,
 	host host.Host,
-	protocolCallback dmsgClientCommon.PubsubProtocolCallback,
-	protocolService dmsgClientCommon.ProtocolService) *SendMsgProtocol {
-	ret := &SendMsgProtocol{}
-	ret.Host = host
-	ret.Callback = protocolCallback
-	ret.ProtocolService = protocolService
-
-	ret.SendMsgRequest = &pb.SendMsgReq{}
-	ret.ProtocolRequest = ret.SendMsgRequest
-	return ret
+	protocolCallback common.PubsubProtocolCallback,
+	dmsgService common.ProtocolService) *common.PubsubProtocol {
+	adapter := NewSendMsgProtocolAdapter()
+	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
+	adapter.protocol = protocol
+	adapter.init()
+	return protocol
 }
