@@ -39,15 +39,13 @@ message RetCode {
 
 message SendMsgReq {
     BasicData basicData = 1;
-    string srcPubkey = 2;
-    bytes msgContent = 3;
+    bytes msgContent = 2;
+    bool needResponse = 3;
 }
 
 message SendMsgRes {
     BasicData basicData = 1;
-    string srcPubkey = 2;
-    bytes msgContent = 3;
-    RetCode retCode = 4;
+    RetCode retCode = 2;
 }
 
 message ReadMailboxMsgReq {

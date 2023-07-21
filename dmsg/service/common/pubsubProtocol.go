@@ -10,7 +10,7 @@ import (
 func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from:", r)
+			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from: r: %v", r)
 		}
 	}()
 
@@ -68,13 +68,13 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		return
 	}
 
-	responseProtocolData, err := proto.Marshal(p.ProtocolResponse)
+	protoData, err = proto.Marshal(p.ProtocolResponse)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 	}
 
 	// send the response
-	err = p.ProtocolService.PublishProtocol(responseBasicData.ProtocolID, responseBasicData.DestPubkey, responseProtocolData)
+	err = p.ProtocolService.PublishProtocol(responseBasicData.ProtocolID, responseBasicData.DestPubkey, protoData)
 
 	if err == nil {
 		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v",

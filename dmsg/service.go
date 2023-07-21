@@ -63,7 +63,7 @@ func (d *DmsgService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey
 }
 
 func (d *DmsgService) GetFullToMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicToMsgPrefix(sendMsgReq.SrcPubkey, sendMsgReq.BasicData.DestPubkey)
+	basicPrefix := d.GetBasicToMsgPrefix(sendMsgReq.BasicData.SignPubKey, sendMsgReq.BasicData.DestPubkey)
 	direction := MsgDirection.To
 	return basicPrefix + MsgKeyDelimiter +
 		direction + MsgKeyDelimiter +
@@ -72,7 +72,7 @@ func (d *DmsgService) GetFullToMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
 }
 
 func (d *DmsgService) GetFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.SrcPubkey, sendMsgReq.BasicData.DestPubkey)
+	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.BasicData.SignPubKey, sendMsgReq.BasicData.DestPubkey)
 	direction := MsgDirection.From
 	return basicPrefix + MsgKeyDelimiter +
 		direction + MsgKeyDelimiter +

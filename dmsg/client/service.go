@@ -239,7 +239,7 @@ func (d *DmsgService) readUserPubsub(userPubsub *dmsgClientCommon.UserPubsub) {
 	for {
 		m, err := userPubsub.Subscription.Next(ctx)
 		if err != nil {
-			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: subscription.Next happen err, %v", err)
+			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: subscription.Next error: %v", err)
 			return
 		}
 
@@ -698,7 +698,8 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
-	srcPubkey := sendMsgReq.SrcPubkey
+	srcPubkey := sendMsgReq.BasicData.SignPubKey
+	needResponse := sendMsgReq.NeedResponse
 	destPubkey := sendMsgReq.BasicData.DestPubkey
 	msgDirection := dmsg.MsgDirection.From
 	d.onReceiveMsg(
@@ -709,6 +710,10 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 		sendMsgReq.BasicData.Id,
 		msgDirection)
 
+	if d.IsExistSrcUser(srcPubkey) && needResponse {
+
+		return nil, nil
+	}
 	return nil, nil
 }
 
