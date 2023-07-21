@@ -434,11 +434,9 @@ func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
 func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg begin:\ndestPubkey: %v", destPubkey)
 	signPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
-	srcPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
 	data, err := d.sendMsgPrtocol.Request(
 		signPubkey,
 		destPubkey,
-		srcPubkey,
 		msgContent,
 	)
 	if err != nil {
