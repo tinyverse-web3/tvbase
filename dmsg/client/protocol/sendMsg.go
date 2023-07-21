@@ -37,10 +37,24 @@ func (adapter *SendMsgProtocolAdapter) GetPubsubSource() common.PubsubSourceType
 }
 
 func (adapter *SendMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
-	request := &pb.SendMsgReq{
-		BasicData: basicData,
+	if len(dataList) == 2 {
+		srcPubkey, ok := dataList[0].(string)
+		if !ok {
+			return errors.New("SendMsgProtocolAdapter->InitProtocolRequest: failed to cast datalist[0] to string for get srcPubkey")
+		}
+		msgContent, ok := dataList[1].([]byte)
+		if !ok {
+			return errors.New("SendMsgProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get msgContent")
+		}
+
+		adapter.protocol.ProtocolRequest = &pb.SendMsgReq{
+			BasicData:  basicData,
+			SrcPubkey:  srcPubkey,
+			MsgContent: msgContent,
+		}
+	} else {
+		return errors.New("SendMsgProtocolAdapter->InitProtocolRequest: parameter dataList need contain srcPubkey and msgContent")
 	}
-	adapter.protocol.ProtocolRequest = request
 	return nil
 }
 
