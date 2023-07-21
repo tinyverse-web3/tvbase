@@ -33,7 +33,7 @@ func (adapter *SendMsgProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
 }
 
 func (adapter *SendMsgProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
-	return common.PubsubSource.SrcUser
+	return common.PubsubSource.DestUser
 }
 
 func (adapter *SendMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
