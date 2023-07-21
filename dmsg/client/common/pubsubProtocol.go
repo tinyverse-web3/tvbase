@@ -109,7 +109,7 @@ func (p *PubsubProtocol) Request(
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: InitProtocolRequest error: %v", err)
 		return nil, err
 	}
-	dmsgLog.Logger.Debugf("PubsubProtocol->Request: init protocol request: %v", p.ProtocolRequest)
+	dmsgLog.Logger.Debugf("PubsubProtocol->Request: init protocol request:\n%v", p.ProtocolRequest)
 
 	//sign data
 	protoData, err := proto.Marshal(p.ProtocolRequest)
