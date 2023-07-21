@@ -206,11 +206,11 @@ func main() {
 			}
 			// tvcLog.Infof("sendMsgReq:%v", sendMsgReq)
 			tvcLog.Infof("send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
-				sendMsgReq.BasicData.SignPubKey,
-				sendMsgReq.BasicData.DestPubkey,
-				sendMsgReq.BasicData.Id,
-				sendMsgReq.BasicData.ProtocolID,
-				sendMsgReq.BasicData.Timestamp,
+				sendMsgReq.BasicData.Pubkey,
+				sendMsgReq.DestPubkey,
+				sendMsgReq.BasicData.ID,
+				sendMsgReq.BasicData.PID,
+				sendMsgReq.BasicData.TS,
 				sendContent,
 			)
 		}

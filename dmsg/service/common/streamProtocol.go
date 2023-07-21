@@ -49,7 +49,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 	}
 
 	var callbackData interface{}
-	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
+	requestBasicData := p.Adapter.GetRequestBasicData()
 
 	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
@@ -58,7 +58,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 	}
 
 	// callback
-	callbackData, err = p.Adapter.CallProtocolRequestCallback()
+	callbackData, err = p.Adapter.CallRequestCallback()
 	if err != nil {
 		p.sendResponseProtocol(p.stream, callbackData, err)
 		return
@@ -73,20 +73,20 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 
 func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackData interface{}, codeErr error) {
 	// generate response message
-	requestBasicData := p.Adapter.GetProtocolRequestBasicData()
-	protocolID := p.Adapter.GetResponseProtocolID()
+	requestBasicData := p.Adapter.GetRequestBasicData()
+	protocolID := p.Adapter.GetResponsePID()
 
 	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, requestBasicData.DestPubkey, protocolID)
-	responseBasicData.Id = requestBasicData.Id
+	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, protocolID)
+	responseBasicData.ID = requestBasicData.ID
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: NewBasicData error: %v", err)
 		return
 	}
 
-	err = p.Adapter.InitProtocolResponse(responseBasicData, callbackData)
+	err = p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: InitProtocolResponse error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: InitResponse error: %v", err)
 		return
 	}
 
@@ -95,9 +95,9 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		p.Adapter.SetProtocolResponseFailRet(errMsg)
 		dmsgLog.Logger.Errorf(errMsg)
 	} else {
-		callbackData, err = p.Adapter.CallProtocolResponseCallback()
+		callbackData, err = p.Adapter.CallResponseCallback()
 		if err != nil {
-			calbackErr := fmt.Errorf("StreamProtocol->sendResponseProtocol: CallProtocolResponseCallback error: %v", err)
+			calbackErr := fmt.Errorf("StreamProtocol->sendResponseProtocol: CallResponseCallback error: %v", err)
 			dmsgLog.Logger.Error(calbackErr)
 			p.Adapter.SetProtocolResponseFailRet(calbackErr.Error())
 		}
@@ -112,15 +112,15 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: marshal response error: %v", err)
 		return
 	}
-	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
+	signature, err := p.ProtocolService.GetCurSrcUserSig(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: GetCurSrcUserSign error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: GetCurSrcUserSig error: %v", err)
 		return
 	}
 
-	err = p.Adapter.SetProtocolResponseSign(signature)
+	err = p.Adapter.SetResponseSig(signature)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: SetProtocolResponseSign error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: SetResponseSig error: %v", err)
 		return
 	}
 
@@ -128,11 +128,11 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		p.Ctx,
 		p.Host,
 		stream.Conn().RemotePeer(),
-		p.Adapter.GetStreamResponseProtocolID(),
+		p.Adapter.GetStreamResponsePID(),
 		p.ProtocolResponse,
 	)
-	responseProtocolId := p.Adapter.GetResponseProtocolID()
-	sreamResponseProtocolId := p.Adapter.GetStreamResponseProtocolID()
+	responseProtocolId := p.Adapter.GetResponsePID()
+	sreamResponseProtocolId := p.Adapter.GetStreamResponsePID()
 	if err == nil {
 		dmsgLog.Logger.Infof("StreamProtocol->sendResponseProtocol: responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
 			responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
@@ -150,6 +150,6 @@ func NewStreamProtocol(ctx context.Context, host host.Host, protocolService Prot
 	protocol.ProtocolService = protocolService
 	protocol.Callback = protocolCallback
 	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamRequestProtocolID(), protocol.RequestHandler)
+	protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	return protocol
 }

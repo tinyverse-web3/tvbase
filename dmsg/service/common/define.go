@@ -17,10 +17,10 @@ import (
 
 type ProtocolService interface {
 	GetCurSrcUserPubKeyHex() string
-	GetCurSrcUserSign(protoData []byte) ([]byte, error)
-	RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ResSubscribe) error
-	RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe dmsgProtocol.ReqSubscribe) error
-	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte) error
+	GetCurSrcUserSig(protoData []byte) ([]byte, error)
+	RegPubsubProtocolResCallback(protocolID pb.PID, subscribe dmsgProtocol.ResSubscribe) error
+	RegPubsubProtocolReqCallback(protocolID pb.PID, subscribe dmsgProtocol.ReqSubscribe) error
+	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte) error
 }
 
 type StreamProtocolCallback interface {
@@ -33,17 +33,17 @@ type StreamProtocolCallback interface {
 }
 
 type StreamProtocolAdapter interface {
-	InitProtocolResponse(basicData *pb.BasicData, data interface{}) error
-	GetResponseProtocolID() pb.ProtocolID
-	GetStreamResponseProtocolID() protocol.ID
-	GetStreamRequestProtocolID() protocol.ID
-	GetProtocolRequestBasicData() *pb.BasicData
-	GetProtocolResponseBasicData() *pb.BasicData
+	InitResponse(basicData *pb.BasicData, data interface{}) error
+	GetResponsePID() pb.PID
+	GetStreamResponsePID() protocol.ID
+	GetStreamRequestPID() protocol.ID
+	GetRequestBasicData() *pb.BasicData
+	GetResponseBasicData() *pb.BasicData
 	SetProtocolResponseRet(code int32, result string)
 	SetProtocolResponseFailRet(errMsg string)
-	SetProtocolResponseSign(signature []byte) error
-	CallProtocolRequestCallback() (interface{}, error)
-	CallProtocolResponseCallback() (interface{}, error)
+	SetResponseSig(signature []byte) error
+	CallRequestCallback() (interface{}, error)
+	CallResponseCallback() (interface{}, error)
 }
 type StreamProtocol struct {
 	Ctx              context.Context
@@ -58,14 +58,14 @@ type StreamProtocol struct {
 
 // pubsubProtocol
 type PubsubProtocolAdapter interface {
-	InitProtocolResponse(basicData *pb.BasicData, data interface{}) error
-	GetRequestProtocolID() pb.ProtocolID
-	GetResponseProtocolID() pb.ProtocolID
-	GetProtocolRequestBasicData() *pb.BasicData
-	GetProtocolResponseBasicData() *pb.BasicData
-	GetProtocolResponseRetCode() *pb.RetCode
-	SetProtocolResponseSign(signature []byte) error
-	CallProtocolRequestCallback() (interface{}, error)
+	InitResponse(basicData *pb.BasicData, data interface{}) error
+	GetRequestPID() pb.PID
+	GetResponsePID() pb.PID
+	GetRequestBasicData() *pb.BasicData
+	GetResponseBasicData() *pb.BasicData
+	GetResponseRetCode() *pb.RetCode
+	SetResponseSig(signature []byte) error
+	CallRequestCallback() (interface{}, error)
 }
 
 type PubsubProtocolCallback interface {

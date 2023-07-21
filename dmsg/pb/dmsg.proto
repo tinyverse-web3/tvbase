@@ -4,7 +4,7 @@ package pb;
 
 option go_package = "dmsg/pb";
 
-enum ProtocolID {
+enum PID {
     CREATE_MAILBOX_RES = 0;
     CREATE_MAILBOX_REQ = 1;
     RELEASE_MAILBOX_RES = 2;
@@ -22,14 +22,13 @@ enum ProtocolID {
 }
 
 message BasicData {
-    string id = 1;
-    ProtocolID protocolID = 2;
-    int64 timestamp = 3;
-    string peerId = 4;
-    string signPubKey = 5;
-    string destPubkey = 6;
-    bytes sign = 7;
-    string ver = 8;
+    string ID = 1;
+    PID PID = 2;
+    int64 TS = 3;
+    string peerID = 4;
+    string pubkey = 5;
+    bytes sig = 7;
+    string ver = 8; 
 }
 
 message RetCode {
@@ -39,8 +38,9 @@ message RetCode {
 
 message SendMsgReq {
     BasicData basicData = 1;
-    bytes msgContent = 2;
-    bool needResponse = 3;
+    string destPubkey = 2;
+    bytes content = 3;
+    bool needResponse = 4;
 }
 
 message SendMsgRes {
@@ -48,18 +48,18 @@ message SendMsgRes {
     RetCode retCode = 2;
 }
 
-message ReadMailboxMsgReq {
+message ReadMailboxReq {
     BasicData basicData = 1;
 }
 
-message MailboxMsgData {
+message MailboxItem {
     string key = 1;
-    bytes msgContent = 2;
+    bytes content = 2;
 }
 
-message ReadMailboxMsgRes {
+message ReadMailboxRes {
     BasicData basicData = 1;
-    repeated MailboxMsgData mailboxMsgDatas = 2;
+    repeated MailboxItem contentList = 2;
     RetCode retCode = 3;
 }
 
@@ -87,19 +87,18 @@ message SeekMailboxReq {
 
 message SeekMailboxRes {
     BasicData basicData = 1;
-    string peerId = 2;
     RetCode retCode = 3;
 }
 
 message CustomProtocolReq {
     BasicData basicData = 1;
-    string customProtocolID = 2;
+    string pID = 2;
     bytes content = 3;
 }
 
 message CustomProtocolRes {
     BasicData basicData = 1;
-    string customProtocolID = 2;
+    string pID = 2;
     bytes content = 3;
     RetCode retCode = 4;
 }

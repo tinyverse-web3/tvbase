@@ -71,9 +71,9 @@ func (p *CustomStreamClientProtocol) HandleResponse(protocolResponse *pb.CustomP
 		return fmt.Errorf("CustomStreamClientProtocol->HandleResponse: response is nil")
 	}
 	Logger.Debugf("CustomStreamClientProtocol->HandleResponse: response: %v", protocolResponse)
-	if protocolResponse.CustomProtocolID != p.PID {
-		Logger.Errorf("CustomStreamClientProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
-		return fmt.Errorf("CustomStreamClientProtocol->HandleResponse: response.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
+	if protocolResponse.PID != p.PID {
+		Logger.Errorf("CustomStreamClientProtocol->HandleResponse: response.PID: %v != %v", protocolResponse.PID, p.PID)
+		return fmt.Errorf("CustomStreamClientProtocol->HandleResponse: response.PID: %v != %v", protocolResponse.PID, p.PID)
 	}
 	if protocolResponse.RetCode.Code < 0 {
 		Logger.Warnf("CustomStreamClientProtocol->HandleResponse: response.RetCode Code < 0: %v", protocolResponse.RetCode)
@@ -129,9 +129,9 @@ func (p *CustomStreamServiceProtocol) HandleRequest(protocolRequest *pb.CustomPr
 		return fmt.Errorf("CustomStreamServiceProtocol->HandleRequest: request is nil")
 	}
 	Logger.Debugf("CustomStreamServiceProtocol->HandleRequest: request: %v", protocolRequest)
-	if protocolRequest.CustomProtocolID != p.PID {
-		Logger.Errorf("CustomStreamServiceProtocol->HandleRequest: request.CustomProtocolID: %v != %v", protocolRequest.CustomProtocolID, p.PID)
-		return fmt.Errorf("CustomStreamServiceProtocol->HandleRequest: request.CustomProtocolID: %v != %v", protocolRequest.CustomProtocolID, p.PID)
+	if protocolRequest.PID != p.PID {
+		Logger.Errorf("CustomStreamServiceProtocol->HandleRequest: request.PID: %v != %v", protocolRequest.PID, p.PID)
+		return fmt.Errorf("CustomStreamServiceProtocol->HandleRequest: request.PID: %v != %v", protocolRequest.PID, p.PID)
 	}
 
 	err := p.Unmarshal(protocolRequest.Content, requestObject)
@@ -149,9 +149,9 @@ func (p *CustomStreamServiceProtocol) HandleResponse(protocolResponse *pb.Custom
 		return fmt.Errorf("CustomStreamServiceProtocol->HandleResponse: request is nil")
 	}
 
-	if protocolResponse.CustomProtocolID != p.PID {
-		Logger.Errorf("CustomStreamServiceProtocol->HandleResponse: request.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
-		return fmt.Errorf("CustomStreamServiceProtocol->HandleResponse: request.CustomProtocolID: %v != %v", protocolResponse.CustomProtocolID, p.PID)
+	if protocolResponse.PID != p.PID {
+		Logger.Errorf("CustomStreamServiceProtocol->HandleResponse: request.PID: %v != %v", protocolResponse.PID, p.PID)
+		return fmt.Errorf("CustomStreamServiceProtocol->HandleResponse: request.PID: %v != %v", protocolResponse.PID, p.PID)
 	}
 
 	var err error

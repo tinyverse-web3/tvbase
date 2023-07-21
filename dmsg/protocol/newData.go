@@ -8,30 +8,16 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 )
 
-func NewBasicData(host host.Host, signPubKey string, destPubkey string, protocolID pb.ProtocolID) (*pb.BasicData, error) {
+func NewBasicData(host host.Host, pubKey string, pid pb.PID) (*pb.BasicData, error) {
 	ret := &pb.BasicData{
-		PeerId:     host.ID().String(),
-		SignPubKey: signPubKey,
-		DestPubkey: destPubkey,
-		Timestamp:  time.Now().Unix(),
-		Id:         uuid.New().String(),
-		ProtocolID: protocolID,
-		Ver:        ProtocolVersion,
+		PeerID: host.ID().String(),
+		Pubkey: pubKey,
+		TS:     time.Now().Unix(),
+		ID:     uuid.New().String(),
+		PID:    pid,
+		Ver:    ProtocolVersion,
 	}
 	return ret, nil
-}
-
-func NewEmptyBasicData(host host.Host, protocolID pb.ProtocolID) *pb.BasicData {
-	ret := &pb.BasicData{
-		PeerId:     host.ID().String(),
-		SignPubKey: "",
-		DestPubkey: "",
-		Timestamp:  time.Now().Unix(),
-		Id:         "",
-		ProtocolID: protocolID,
-		Ver:        ProtocolVersion,
-	}
-	return ret
 }
 
 func NewSuccRetCode() *pb.RetCode {

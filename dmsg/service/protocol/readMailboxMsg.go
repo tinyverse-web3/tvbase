@@ -23,18 +23,18 @@ func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.ReadMailboxMsgReq{}
+	adapter.protocol.ProtocolRequest = &pb.ReadMailboxReq{}
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_READ_MAILBOX_MSG_RES
+func (adapter *ReadMailboxMsgProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_READ_MAILBOX_MSG_RES
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamResponsePID() protocol.ID {
 	return dmsgProtocol.PidReadMailboxMsgRes
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidReadMailboxMsgReq
 }
 
@@ -43,7 +43,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) DestoryProtocol() {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxMsgRes)
+	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
 	if !ok {
 		return
 	}
@@ -51,53 +51,53 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseFailRet(errMsg 
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxMsgRes)
+	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
 	if !ok {
 		return
 	}
 	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.ReadMailboxMsgReq)
+func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
+	request, ok := adapter.protocol.ProtocolRequest.(*pb.ReadMailboxReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxMsgRes)
+func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
+	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitProtocolResponse(basicData *pb.BasicData, data interface{}) error {
-	mailboxMsgDatas, ok := data.([]*pb.MailboxMsgData)
+func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
+	contentList, ok := data.([]*pb.MailboxItem)
 	if !ok {
 		return errors.New("fail to cast mailboxMsgDatas to []*pb.MailboxMsgData")
 	}
-	response := &pb.ReadMailboxMsgRes{
-		BasicData:       basicData,
-		RetCode:         dmsgProtocol.NewSuccRetCode(),
-		MailboxMsgDatas: mailboxMsgDatas,
+	response := &pb.ReadMailboxRes{
+		BasicData:   basicData,
+		RetCode:     dmsgProtocol.NewSuccRetCode(),
+		ContentList: contentList,
 	}
 	adapter.protocol.ProtocolResponse = response
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxMsgRes)
+func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(sig []byte) error {
+	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
 	if !ok {
 		return errors.New("failed to cast request to *pb.ReadMailboxMsgRes")
 	}
-	response.BasicData.Sign = signature
+	response.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.ProtocolRequest)
 	return data, err
 }

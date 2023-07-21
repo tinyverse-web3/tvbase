@@ -24,46 +24,46 @@ func (adapter *SendMsgProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.SendMsgRes{}
 }
 
-func (adapter *SendMsgProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEND_MSG_REQ
+func (adapter *SendMsgProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_SEND_MSG_REQ
 }
 
-func (adapter *SendMsgProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEND_MSG_RES
+func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_SEND_MSG_RES
 }
 
 func (adapter *SendMsgProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
 	return common.PubsubSource.DestUser
 }
 
-func (adapter *SendMsgProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 1 {
-		msgContent, ok := dataList[0].([]byte)
+		content, ok := dataList[0].([]byte)
 		if !ok {
-			return errors.New("SendMsgProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get msgContent")
+			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get msgContent")
 		}
 
 		adapter.protocol.ProtocolRequest = &pb.SendMsgReq{
-			BasicData:  basicData,
-			MsgContent: msgContent,
+			BasicData: basicData,
+			Content:   content,
 		}
 	} else {
-		return errors.New("SendMsgProtocolAdapter->InitProtocolRequest: parameter dataList need contain srcPubkey and msgContent")
+		return errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain srcPubkey and msgContent")
 	}
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest)
 	return data, err
 }
 
-func (adapter *SendMsgProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *SendMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnSendMsgResponse(adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *SendMsgProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicData {
+func (adapter *SendMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
 	if !ok {
 		return nil
@@ -71,7 +71,7 @@ func (adapter *SendMsgProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicDa
 	return request.BasicData
 }
 
-func (adapter *SendMsgProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *SendMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
 	if !ok {
 		return nil
@@ -79,19 +79,19 @@ func (adapter *SendMsgProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicD
 	return response.BasicData
 }
 
-func (adapter *SendMsgProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *SendMsgProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
-func (adapter *SendMsgProtocolAdapter) SetProtocolRequestSign(signature []byte) error {
+func (adapter *SendMsgProtocolAdapter) SetRequestSig(sig []byte) error {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
 	if !ok {
 		return errors.New("failed to cast request to *pb.SendMsgReq")
 	}
-	request.BasicData.Sign = signature
+	request.BasicData.Sig = sig
 	return nil
 }
 

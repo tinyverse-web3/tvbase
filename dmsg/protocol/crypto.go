@@ -10,15 +10,15 @@ import (
 )
 
 func AuthProtocolMsg(message proto.Message, basicData *pb.BasicData) bool {
-	sign := basicData.Sign
-	basicData.Sign = nil
+	sign := basicData.Sig
+	basicData.Sig = nil
 	protoData, err := proto.Marshal(message)
 	if err != nil {
 		dmsgLog.Logger.Errorf("AuthProtocolMsg: failed to marshal pb message %v", err)
 		return false
 	}
-	basicData.Sign = sign
-	return verifyData(protoData, basicData.SignPubKey, sign)
+	basicData.Sig = sign
+	return verifyData(protoData, basicData.Pubkey, sign)
 }
 
 func verifyData(protoData []byte, pubkeyHex string, sign []byte) bool {

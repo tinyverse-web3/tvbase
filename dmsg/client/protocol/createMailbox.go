@@ -25,19 +25,19 @@ func (adapter *CreateMailboxProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.CreateMailboxRes{}
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CREATE_MAILBOX_REQ
+func (adapter *CreateMailboxProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CREATE_MAILBOX_REQ
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+func (adapter *CreateMailboxProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidCreateMailboxReq
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+func (adapter *CreateMailboxProtocolAdapter) GetStreamResponsePID() protocol.ID {
 	return dmsgProtocol.PidCreateMailboxRes
 }
 
-func (adapter *CreateMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *CreateMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.CreateMailboxReq{
 		BasicData: basicData,
 	}
@@ -45,12 +45,12 @@ func (adapter *CreateMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.B
 	return nil
 }
 
-func (adapter *CreateMailboxProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
@@ -58,7 +58,7 @@ func (adapter *CreateMailboxProtocolAdapter) GetProtocolResponseBasicData() *pb.
 	return response.BasicData
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *CreateMailboxProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
@@ -66,12 +66,12 @@ func (adapter *CreateMailboxProtocolAdapter) GetProtocolResponseRetCode() *pb.Re
 	return response.RetCode
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetProtocolRequestSign(signature []byte) {
+func (adapter *CreateMailboxProtocolAdapter) SetRequestSig(sig []byte) {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.CreateMailboxReq)
 	if !ok {
 		return
 	}
-	request.BasicData.Sign = signature
+	request.BasicData.Sig = sig
 }
 
 func NewCreateMailboxProtocol(

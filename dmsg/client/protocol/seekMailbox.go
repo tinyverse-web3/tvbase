@@ -24,19 +24,19 @@ func (adapter *SeekMailboxProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.SeekMailboxRes{}
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEEK_MAILBOX_REQ
+func (adapter *SeekMailboxProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_SEEK_MAILBOX_REQ
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_SEEK_MAILBOX_RES
+func (adapter *SeekMailboxProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_SEEK_MAILBOX_RES
 }
 
 func (adapter *SeekMailboxProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
 	return common.PubsubSource.SrcUser
 }
 
-func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *SeekMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.SeekMailboxReq{
 		BasicData: basicData,
 	}
@@ -44,12 +44,12 @@ func (adapter *SeekMailboxProtocolAdapter) InitProtocolRequest(basicData *pb.Bas
 	return nil
 }
 
-func (adapter *SeekMailboxProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *SeekMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.SeekMailboxRes)
 	if !ok {
 		return nil
@@ -57,19 +57,19 @@ func (adapter *SeekMailboxProtocolAdapter) GetProtocolResponseBasicData() *pb.Ba
 	return response.BasicData
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *SeekMailboxProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.SeekMailboxRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
-func (adapter *SeekMailboxProtocolAdapter) SetProtocolRequestSign(signature []byte) error {
+func (adapter *SeekMailboxProtocolAdapter) SetRequestSig(sig []byte) error {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.SeekMailboxReq)
 	if !ok {
 		return errors.New("failed to cast request to *pb.SeekMailboxReq")
 	}
-	request.BasicData.Sign = signature
+	request.BasicData.Sig = sig
 	return nil
 }
 

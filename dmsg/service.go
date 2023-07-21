@@ -17,8 +17,8 @@ type DmsgService struct {
 	BaseService tvCommon.TvBaseService
 	Pubsub      *pubsub.PubSub
 
-	PubsubProtocolResSubscribes map[pb.ProtocolID]protocol.ResSubscribe
-	PubsubProtocolReqSubscribes map[pb.ProtocolID]protocol.ReqSubscribe
+	PubsubProtocolResSubscribes map[pb.PID]protocol.ResSubscribe
+	PubsubProtocolReqSubscribes map[pb.PID]protocol.ReqSubscribe
 }
 
 func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
@@ -31,18 +31,18 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 		return err
 	}
 
-	d.PubsubProtocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
-	d.PubsubProtocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
+	d.PubsubProtocolReqSubscribes = make(map[pb.PID]protocol.ReqSubscribe)
+	d.PubsubProtocolResSubscribes = make(map[pb.PID]protocol.ResSubscribe)
 	return nil
 }
 
-func (d *DmsgService) RegPubsubProtocolReqCallback(protocolID pb.ProtocolID, subscribe protocol.ReqSubscribe) error {
-	d.PubsubProtocolReqSubscribes[protocolID] = subscribe
+func (d *DmsgService) RegPubsubProtocolReqCallback(pid pb.PID, subscribe protocol.ReqSubscribe) error {
+	d.PubsubProtocolReqSubscribes[pid] = subscribe
 	return nil
 }
 
-func (d *DmsgService) RegPubsubProtocolResCallback(protocolID pb.ProtocolID, subscribe protocol.ResSubscribe) error {
-	d.PubsubProtocolResSubscribes[protocolID] = subscribe
+func (d *DmsgService) RegPubsubProtocolResCallback(pid pb.PID, subscribe protocol.ResSubscribe) error {
+	d.PubsubProtocolResSubscribes[pid] = subscribe
 	return nil
 }
 
@@ -63,32 +63,32 @@ func (d *DmsgService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey
 }
 
 func (d *DmsgService) GetFullToMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicToMsgPrefix(sendMsgReq.BasicData.SignPubKey, sendMsgReq.BasicData.DestPubkey)
+	basicPrefix := d.GetBasicToMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
 	direction := MsgDirection.To
 	return basicPrefix + MsgKeyDelimiter +
 		direction + MsgKeyDelimiter +
-		sendMsgReq.BasicData.Id + MsgKeyDelimiter +
-		strconv.FormatInt(sendMsgReq.BasicData.Timestamp, 10)
+		sendMsgReq.BasicData.ID + MsgKeyDelimiter +
+		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
 }
 
 func (d *DmsgService) GetFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.BasicData.SignPubKey, sendMsgReq.BasicData.DestPubkey)
+	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
 	direction := MsgDirection.From
 	return basicPrefix + MsgKeyDelimiter +
 		direction + MsgKeyDelimiter +
-		sendMsgReq.BasicData.Id + MsgKeyDelimiter +
-		strconv.FormatInt(sendMsgReq.BasicData.Timestamp, 10)
+		sendMsgReq.BasicData.ID + MsgKeyDelimiter +
+		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
 }
 
-func (d *DmsgService) CheckPubsubData(pubsubData []byte) (pb.ProtocolID, int, error) {
-	var protocolID pb.ProtocolID
+func (d *DmsgService) CheckPubsubData(pubsubData []byte) (pb.PID, int, error) {
+	var protocolID pb.PID
 	protocolIDLen := int(unsafe.Sizeof(protocolID))
 	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->CheckPubsubData: protocolID parse error: %v", err)
 		return protocolID, protocolIDLen, err
 	}
-	maxProtocolId := pb.ProtocolID(len(pb.ProtocolID_name) - 1)
+	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
 	if protocolID > maxProtocolId {
 		dmsgLog.Logger.Errorf("DmsgService->CheckPubsubData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
 		return protocolID, protocolIDLen, err

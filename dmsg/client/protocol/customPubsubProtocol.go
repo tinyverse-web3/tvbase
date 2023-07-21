@@ -24,51 +24,51 @@ func (adapter *CustomPubsubProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CUSTOM_PUBSUB_PROTOCOL_REQ
+func (adapter *CustomPubsubProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_REQ
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CUSTOM_PUBSUB_PROTOCOL_RES
+func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_RES
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
 	return common.PubsubSource.SrcUser
 }
 
-func (adapter *CustomPubsubProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 2 {
-		customProtocolID, ok := dataList[0].(string)
+		pid, ok := dataList[0].(string)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast datalist[0] to string for get customProtocolID")
+			return errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for get customProtocolID")
 		}
 		content, ok := dataList[1].([]byte)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get content")
+			return errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
 
 		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
-			BasicData:        basicData,
-			CustomProtocolID: customProtocolID,
-			Content:          content,
+			BasicData: basicData,
+			PID:       pid,
+			Content:   content,
 		}
 	} else {
-		return errors.New("CustomPubsubProtocolAdapter->InitProtocolRequest: parameter dataList need contain customProtocolID and content")
+		return errors.New("CustomPubsubProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
 	}
 	return nil
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
+func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
@@ -76,19 +76,19 @@ func (adapter *CustomPubsubProtocolAdapter) GetProtocolResponseBasicData() *pb.B
 	return response.BasicData
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *CustomPubsubProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
-func (adapter *CustomPubsubProtocolAdapter) SetProtocolRequestSign(signature []byte) error {
+func (adapter *CustomPubsubProtocolAdapter) SetRequestSig(sig []byte) error {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
 	if !ok {
 		return errors.New("failed to cast request to *pb.CustomProtocolReq")
 	}
-	request.BasicData.Sign = signature
+	request.BasicData.Sig = sig
 	return nil
 }
 

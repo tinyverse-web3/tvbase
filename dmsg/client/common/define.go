@@ -20,14 +20,14 @@ type StreamProtocolCallback interface {
 	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 type StreamProtocolAdapter interface {
-	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
-	GetRequestProtocolID() pb.ProtocolID
-	GetStreamRequestProtocolID() protocol.ID
-	GetStreamResponseProtocolID() protocol.ID
-	GetProtocolResponseBasicData() *pb.BasicData
-	GetProtocolResponseRetCode() *pb.RetCode
-	SetProtocolRequestSign(signature []byte)
-	CallProtocolResponseCallback() (interface{}, error)
+	InitRequest(basicData *pb.BasicData, dataList ...any) error
+	GetRequestPID() pb.PID
+	GetStreamRequestPID() protocol.ID
+	GetStreamResponsePID() protocol.ID
+	GetResponseBasicData() *pb.BasicData
+	GetResponseRetCode() *pb.RetCode
+	SetRequestSig(signature []byte)
+	CallResponseCallback() (interface{}, error)
 }
 
 type RequestInfo struct {
@@ -47,15 +47,15 @@ type StreamProtocol struct {
 }
 
 type PubsubProtocolAdapter interface {
-	InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error
-	GetRequestProtocolID() pb.ProtocolID
-	GetResponseProtocolID() pb.ProtocolID
-	GetProtocolRequestBasicData() *pb.BasicData
-	GetProtocolResponseBasicData() *pb.BasicData
-	GetProtocolResponseRetCode() *pb.RetCode
-	SetProtocolRequestSign(signature []byte) error
-	CallProtocolRequestCallback() (interface{}, error)
-	CallProtocolResponseCallback() (interface{}, error)
+	InitRequest(basicData *pb.BasicData, dataList ...any) error
+	GetRequestPID() pb.PID
+	GetResponsePID() pb.PID
+	GetRequestBasicData() *pb.BasicData
+	GetResponseBasicData() *pb.BasicData
+	GetResponseRetCode() *pb.RetCode
+	SetRequestSig(signature []byte) error
+	CallRequestCallback() (interface{}, error)
+	CallResponseCallback() (interface{}, error)
 	GetPubsubSource() PubsubSourceType
 }
 
@@ -80,8 +80,8 @@ type PubsubProtocolCallback interface {
 
 type ProtocolService interface {
 	GetCurSrcUserPubKeyHex() string
-	GetCurSrcUserSign(protoData []byte) ([]byte, error)
-	PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
+	GetCurSrcUserSig(protoData []byte) ([]byte, error)
+	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
 }
 
 type UserPubsub struct {
@@ -92,7 +92,7 @@ type UserPubsub struct {
 }
 type SrcUserInfo struct {
 	UserPubsub
-	MailboxPeerId       string
+	MailboxPeerID       string
 	MailboxCreateSignal chan bool
 	UserKey             *SrcUserKey
 	GetSignCallback     GetSignCallback

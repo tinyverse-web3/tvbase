@@ -37,7 +37,7 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 
 func (p *StreamProtocol) HandleResponseData(protoData []byte) {
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleResponseData begin:\nrequestProtocolId:%s, sreamRequestProtocolId:%s",
-		p.Adapter.GetRequestProtocolID(), p.Adapter.GetStreamRequestProtocolID())
+		p.Adapter.GetRequestPID(), p.Adapter.GetStreamRequestPID())
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("StreamProtocol->HandleResponseData: recovered from: r: %v", r)
@@ -50,21 +50,21 @@ func (p *StreamProtocol) HandleResponseData(protoData []byte) {
 		return
 	}
 
-	basicData := p.Adapter.GetProtocolResponseBasicData()
+	basicData := p.Adapter.GetResponseBasicData()
 	valid := dmsgProtocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleResponseData: failed to authenticate message, response: %v", p.ProtocolResponse)
 		return
 	}
 
-	_, ok := p.RequestInfoList[basicData.Id]
+	_, ok := p.RequestInfoList[basicData.ID]
 	if ok {
-		delete(p.RequestInfoList, basicData.Id)
+		delete(p.RequestInfoList, basicData.ID)
 	} else {
 		dmsgLog.Logger.Warnf("StreamProtocol->HandleResponseData: failed to locate request data object for response:%v", p.ProtocolResponse)
 	}
 
-	callbackData, err := p.Adapter.CallProtocolResponseCallback()
+	callbackData, err := p.Adapter.CallResponseCallback()
 	if err != nil {
 		dmsgLog.Logger.Warnf("StreamProtocol->HandleResponseData: OnCreateMailboxResponse error %v, response:%v, callbackData:%v",
 			err, p.ProtocolResponse, callbackData)
@@ -78,21 +78,19 @@ func (p *StreamProtocol) HandleResponseData(protoData []byte) {
 
 func (p *StreamProtocol) Request(
 	peerId peer.ID,
-	signUserPubkey string,
-	destUserPubkey string,
+	userPubkey string,
 	dataList ...any) error {
 	basicData, err := dmsgProtocol.NewBasicData(
 		p.Host,
-		signUserPubkey,
-		destUserPubkey,
-		p.Adapter.GetRequestProtocolID())
+		userPubkey,
+		p.Adapter.GetRequestPID())
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewBasicData error: %v", err)
 		return err
 	}
-	err = p.Adapter.InitProtocolRequest(basicData, dataList...)
+	err = p.Adapter.InitRequest(basicData, dataList...)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitProtocolRequest error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: InitRequest error: %v", err)
 		return err
 	}
 	protoData, err := proto.Marshal(p.ProtocolRequest)
@@ -100,18 +98,18 @@ func (p *StreamProtocol) Request(
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return err
 	}
-	signature, err := p.ProtocolService.GetCurSrcUserSign(protoData)
+	signature, err := p.ProtocolService.GetCurSrcUserSig(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->Request: GetCurSrcUserSign error: %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: GetCurSrcUserSig error: %v", err)
 		return err
 	}
-	p.Adapter.SetProtocolRequestSign(signature)
+	p.Adapter.SetRequestSig(signature)
 
 	err = dmsgProtocol.SendProtocolMsg(
 		p.Ctx,
 		p.Host,
 		peerId,
-		p.Adapter.GetStreamRequestProtocolID(),
+		p.Adapter.GetStreamRequestPID(),
 		p.ProtocolRequest,
 	)
 	if err != nil {
@@ -119,9 +117,9 @@ func (p *StreamProtocol) Request(
 		return err
 	}
 
-	p.RequestInfoList[basicData.Id] = &RequestInfo{
+	p.RequestInfoList[basicData.ID] = &RequestInfo{
 		ProtoMessage:    p.ProtocolRequest,
-		CreateTimestamp: basicData.Timestamp,
+		CreateTimestamp: basicData.TS,
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->Request: request: %v", p.ProtocolRequest)
@@ -162,7 +160,7 @@ func NewStreamProtocol(
 	streamProtocol.Callback = protocolCallback
 	streamProtocol.ProtocolService = protocolService
 	streamProtocol.Adapter = adapter
-	streamProtocol.Host.SetStreamHandler(adapter.GetStreamResponseProtocolID(), streamProtocol.ResponseHandler)
+	streamProtocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), streamProtocol.ResponseHandler)
 	go streamProtocol.TickCleanRequest()
 	return streamProtocol
 }

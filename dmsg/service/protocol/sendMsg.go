@@ -29,8 +29,8 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
 		return
 	}
 
-	// requestProtocolId := p.Adapter.GetRequestProtocolID()
-	requestProtocolId := pb.ProtocolID_SEND_MSG_REQ
+	// requestProtocolId := p.Adapter.GetRequestPID()
+	requestProtocolId := pb.PID_SEND_MSG_REQ
 	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
 		requestProtocolId, p.ProtocolRequest)
 

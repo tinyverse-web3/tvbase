@@ -10,19 +10,19 @@ import (
 )
 
 func EcdsaAuthProtocolMsg(message proto.Message, basicData *pb.BasicData) (bool, error) {
-	sign := basicData.Sign
-	basicData.Sign = nil
+	sig := basicData.Sig
+	basicData.Sig = nil
 	protoData, err := proto.Marshal(message)
 	if err != nil {
 		dmsgLog.Logger.Errorf("EcdsaAuthProtocolMsg: failed to marshal pb message %v", err)
 		return false, nil
 	}
-	basicData.Sign = sign
-	pubkey, err := key.PubkeyFromEcdsaHex(basicData.SignPubKey)
+	basicData.Sig = sig
+	pubkey, err := key.PubkeyFromEcdsaHex(basicData.Pubkey)
 	if err != nil {
 		return false, err
 	}
-	return key.Verify(pubkey, protoData, sign)
+	return key.Verify(pubkey, protoData, sig)
 }
 
 func EcdsaSignProtocolMsg(message proto.Message, privateKey *ecdsa.PrivateKey) ([]byte, error) {

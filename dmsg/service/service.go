@@ -40,8 +40,8 @@ type DmsgService struct {
 	curSrcUserInfo               *dmsgServiceCommon.UserInfo
 	destUserPubsubs              map[string]*dmsgServiceCommon.DestUserPubsub
 	customProtocolPubsubs        map[string]*dmsgServiceCommon.CustomProtocolPubsub
-	protocolReqSubscribes        map[pb.ProtocolID]protocol.ReqSubscribe
-	protocolResSubscribes        map[pb.ProtocolID]protocol.ResSubscribe
+	protocolReqSubscribes        map[pb.PID]protocol.ReqSubscribe
+	protocolResSubscribes        map[pb.PID]protocol.ResSubscribe
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo
 	stopCheckDestPubsubs         chan bool
@@ -76,17 +76,17 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	// pubsub protocol
 	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(d.seekMailboxProtocol.Adapter.GetRequestProtocolID(), d.seekMailboxProtocol)
+	d.RegPubsubProtocolReqCallback(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 
 	// sendMsgProtocol, special pubsub protocol
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(pb.ProtocolID_SEND_MSG_REQ, d.sendMsgPrtocol)
+	d.RegPubsubProtocolReqCallback(pb.PID_SEND_MSG_REQ, d.sendMsgPrtocol)
 
 	d.destUserPubsubs = make(map[string]*dmsgServiceCommon.DestUserPubsub)
 	d.customProtocolPubsubs = make(map[string]*dmsgServiceCommon.CustomProtocolPubsub)
 
-	d.protocolReqSubscribes = make(map[pb.ProtocolID]protocol.ReqSubscribe)
-	d.protocolResSubscribes = make(map[pb.ProtocolID]protocol.ResSubscribe)
+	d.protocolReqSubscribes = make(map[pb.PID]protocol.ReqSubscribe)
+	d.protocolResSubscribes = make(map[pb.PID]protocol.ResSubscribe)
 
 	d.customStreamProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomStreamProtocolInfo)
 	d.customPubsubProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo)
@@ -128,7 +128,7 @@ func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
 	return d.curSrcUserInfo.UserKey.PubKeyHex
 }
 
-func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
+func (d *DmsgService) GetCurSrcUserSig(protoData []byte) ([]byte, error) {
 	sign, err := tvCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("GetCurUserSign: %v", err)
@@ -308,7 +308,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
 		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
-	pubkey := sendMsgReq.BasicData.DestPubkey
+	pubkey := sendMsgReq.BasicData.Pubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
@@ -319,7 +319,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
 	defer pubsub.MsgRWMutex.RUnlock()
 
 	key := d.GetFullFromMsgPrefix(sendMsgReq)
-	err := d.datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.MsgContent)
+	err := d.datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.Content)
 	if err != nil {
 		return err
 	}
@@ -369,13 +369,13 @@ func (d *DmsgService) OnCreateMailboxRequest(protoData protoreflect.ProtoMessage
 		dmsgLog.Logger.Errorf("dmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
 		return nil, fmt.Errorf("dmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", protoData)
 	}
-	isAvailable := d.isAvailableMailbox(request.BasicData.DestPubkey)
+	isAvailable := d.isAvailableMailbox(request.BasicData.Pubkey)
 	if !isAvailable {
 		return nil, errors.New(dmsgServiceCommon.MailboxLimitErr)
 	}
-	err := d.publishDestUser(request.BasicData.DestPubkey)
+	err := d.publishDestUser(request.BasicData.Pubkey)
 	if err != nil {
-		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", request.BasicData.DestPubkey)
+		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", request.BasicData.Pubkey)
 	}
 	return nil, nil
 }
@@ -387,9 +387,9 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 		return nil, fmt.Errorf("dmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
 	}
 
-	pubsub := d.getDestUserPubsub(response.BasicData.DestPubkey)
+	pubsub := d.getDestUserPubsub(response.BasicData.Pubkey)
 	if pubsub != nil {
-		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", response.BasicData.DestPubkey)
+		dmsgLog.Logger.Warnf("dmsgService->OnCreateMailboxResponse: destPubkey %s already exist", response.BasicData.Pubkey)
 		response.RetCode = &pb.RetCode{
 			Code:   dmsgServiceCommon.MailboxAlreadyExistCode,
 			Result: dmsgServiceCommon.MailboxAlreadyExistErr,
@@ -405,20 +405,20 @@ func (d *DmsgService) OnReleaseMailboxRequest(protoData protoreflect.ProtoMessag
 		return nil, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: cannot convert %v to *pb.ReleaseMailboxReq", protoData)
 	}
 
-	err := d.unPublishDestUser(request.BasicData.DestPubkey)
+	err := d.unPublishDestUser(request.BasicData.Pubkey)
 	if err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
-	request, ok := protoData.(*pb.ReadMailboxMsgReq)
+	request, ok := protoData.(*pb.ReadMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
-		return nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxMsgReq", protoData)
+		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxReq", protoData)
+		return nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot convert %v to *pb.ReadMailboxReq", protoData)
 	}
 
-	pubkey := request.BasicData.DestPubkey
+	pubkey := request.BasicData.Pubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
@@ -436,13 +436,13 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	}
 	defer results.Close()
 
-	mailboxMsgDataList := []*pb.MailboxMsgData{}
+	mailboxMsgDataList := []*pb.MailboxItem{}
 	find := false
 	needDeleteKeyList := []string{}
 	for result := range results.Next() {
-		mailboxMsgData := &pb.MailboxMsgData{
-			Key:        string(result.Key),
-			MsgContent: result.Value,
+		mailboxMsgData := &pb.MailboxItem{
+			Key:     string(result.Key),
+			Content: result.Value,
 		}
 		dmsgLog.Logger.Debugf("dmsgService->OnReadMailboxMsgRequest key:%v, value:%v", string(result.Key), string(result.Value))
 		mailboxMsgDataList = append(mailboxMsgDataList, mailboxMsgData)
@@ -470,7 +470,7 @@ func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.Proto
 		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
 	}
 
-	customProtocolInfo := d.customStreamProtocolInfoList[request.CustomProtocolID]
+	customProtocolInfo := d.customStreamProtocolInfoList[request.PID]
 	if customProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
 		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
@@ -490,7 +490,7 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
-	customProtocolInfo := d.customStreamProtocolInfoList[response.CustomProtocolID]
+	customProtocolInfo := d.customStreamProtocolInfoList[response.PID]
 	if customProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
 		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolResponse: customProtocolInfo is nil, response: %v", response)
@@ -521,7 +521,7 @@ func (d *DmsgService) OnCustomPubsubProtocolRequest(protoData protoreflect.Proto
 		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
 	}
 
-	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[request.CustomProtocolID]
+	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[request.PID]
 	if customPubsubProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
 		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolRequest: customProtocolInfo is nil, request: %v", request)
@@ -541,7 +541,7 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.P
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
-	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.CustomProtocolID]
+	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.PID]
 	if customPubsubProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
 		return nil, fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo is nil, response: %v", response)
@@ -572,10 +572,10 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 	}
-	pubsub := d.destUserPubsubs[request.BasicData.DestPubkey]
+	pubsub := d.destUserPubsubs[request.BasicData.Pubkey]
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
-		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.DestPubkey)
+		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.Pubkey)
+		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.Pubkey)
 	}
 	return nil, nil
 }
@@ -586,7 +586,7 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
-	pubkey := request.BasicData.DestPubkey
+	pubkey := request.BasicData.Pubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
@@ -597,7 +597,7 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 	return nil, nil
 }
 
-func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey string, protocolData []byte) error {
+func (d *DmsgService) PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte) error {
 	userPubsub := d.getDestUserPubsub(userPubkey)
 	if userPubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)

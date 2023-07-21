@@ -63,12 +63,12 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	// pubsub protocol
 	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponseProtocolID(), d.seekMailboxProtocol)
+	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
 
 	// sendMsgProtocol, special pubsub protocol
 	// d.sendMsgPrtocol = dmsgClientCommon.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetRequestProtocolID(), d.sendMsgPrtocol)
+	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetRequestPID(), d.sendMsgPrtocol)
 
 	d.srcUserInfoList = make(map[string]*dmsgClientCommon.SrcUserInfo)
 	d.destUserInfoList = make(map[string]*dmsgClientCommon.DestUserInfo)
@@ -129,7 +129,7 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 	}
 
 	for _, servicePeerID := range servicePeerList {
-		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey, userPubkey)
+		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
 		if err != nil {
 			dmsgLog.Logger.Warnf("DmsgService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
@@ -417,15 +417,15 @@ func (d *DmsgService) SetReadAllSrcUserPubsubMsg(enable bool) {
 	}
 }
 
-func (d *DmsgService) GetCurSrcUserSign(protoData []byte) ([]byte, error) {
+func (d *DmsgService) GetCurSrcUserSig(protoData []byte) ([]byte, error) {
 	srcUserInfo := d.getSrcUserInfo(d.CurSrcUserInfo.UserKey.PubkeyHex)
 	if srcUserInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSign: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
-		return nil, fmt.Errorf("DmsgService->GetCurSrcUserSign: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+		return nil, fmt.Errorf("DmsgService->GetCurSrcUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
 	}
 	sign, err := srcUserInfo.GetSignCallback(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSign: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSig: %v", err)
 		return nil, err
 	}
 	return sign, nil
@@ -542,12 +542,12 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
 		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", protoData)
 	}
-	userInfo := d.getSrcUserInfo(response.BasicData.DestPubkey)
+	userInfo := d.getSrcUserInfo(response.BasicData.Pubkey)
 	if userInfo == nil {
-		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: user public key %s is not exist", response.BasicData.DestPubkey)
-		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: user public key %s is not exist", response.BasicData.DestPubkey)
+		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: user public key %s is not exist", response.BasicData.Pubkey)
+		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: user public key %s is not exist", response.BasicData.Pubkey)
 	}
-	peerId, err := peer.Decode(response.BasicData.PeerId)
+	peerId, err := peer.Decode(response.BasicData.PeerID)
 	if err != nil {
 		return nil, err
 	}
@@ -558,18 +558,16 @@ func (d *DmsgService) OnCreateMailboxResponse(protoData protoreflect.ProtoMessag
 		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
 		err = d.readMailboxMsgPrtocol.Request(
 			peerId,
-			response.BasicData.DestPubkey,
-			response.BasicData.DestPubkey)
+			response.BasicData.Pubkey)
 		if err != nil {
 			return nil, err
 		}
-		if userInfo.MailboxPeerId == "" {
-			userInfo.MailboxPeerId = response.BasicData.PeerId
-		} else if response.BasicData.PeerId != userInfo.MailboxPeerId {
+		if userInfo.MailboxPeerID == "" {
+			userInfo.MailboxPeerID = response.BasicData.PeerID
+		} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
 			err = d.releaseMailboxPrtocol.Request(
 				peerId,
-				response.BasicData.DestPubkey,
-				response.BasicData.DestPubkey)
+				response.BasicData.Pubkey)
 			if err != nil {
 				return nil, err
 			}
@@ -597,7 +595,7 @@ func (d *DmsgService) OnReleaseMailboxResponse(protoData protoreflect.ProtoMessa
 
 func (d *DmsgService) OnReadMailboxMsgResponse(protoData protoreflect.ProtoMessage) (interface{}, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnReadMailboxMsgResponse: new message from mailbox...")
-	response, ok := protoData.(*pb.ReadMailboxMsgRes)
+	response, ok := protoData.(*pb.ReadMailboxRes)
 	if response == nil || !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: cannot convert %v to *pb.ReadMailboxMsgRes", protoData)
 		return nil, fmt.Errorf("DmsgService->OnReadMailboxMsgResponse: cannot convert %v to *pb.ReadMailboxMsgRes", protoData)
@@ -610,16 +608,15 @@ func (d *DmsgService) OnReadMailboxMsgResponse(protoData protoreflect.ProtoMessa
 		return nil, fmt.Errorf("DmsgService->OnReadMailboxMsgResponse: cannot find src user pubuc key %s", pubkey)
 	}
 
-	dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: found (%d) new message...", len(response.MailboxMsgDatas))
-	for _, mailboxMsgData := range response.MailboxMsgDatas {
+	dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: found (%d) new message...", len(response.ContentList))
+	for _, mailboxItem := range response.ContentList {
+		dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: new message Key = %s", mailboxItem.Key)
+		msgContent := mailboxItem.Content
 
-		dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: new message Key = %s", mailboxMsgData.Key)
-		msgContent := mailboxMsgData.MsgContent
-
-		fields := strings.Split(mailboxMsgData.Key, dmsg.MsgKeyDelimiter)
+		fields := strings.Split(mailboxItem.Key, dmsg.MsgKeyDelimiter)
 		if len(fields) < dmsg.MsgFieldsLen {
-			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: msg key fields len not enough:%v", mailboxMsgData.Key)
-			return nil, fmt.Errorf("DmsgService->OnReadMailboxMsgResponse: msg key fields len not enough:%v", mailboxMsgData.Key)
+			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: msg key fields len not enough:%v", mailboxItem.Key)
+			return nil, fmt.Errorf("DmsgService->OnReadMailboxMsgResponse: msg key fields len not enough:%v", mailboxItem.Key)
 		}
 
 		timeStamp, err := strconv.ParseInt(fields[dmsg.MsgTimeStampIndex], 10, 64)
@@ -643,7 +640,7 @@ func (d *DmsgService) OnReadMailboxMsgResponse(protoData protoreflect.ProtoMessa
 			dmsg.MsgDirection.From)
 
 		if err != nil {
-			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: Put user msg error: %v, key:%v", err, mailboxMsgData.Key)
+			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: Put user msg error: %v, key:%v", err, mailboxItem.Key)
 		}
 	}
 	return nil, nil
@@ -661,27 +658,27 @@ func (d *DmsgService) OnSeekMailboxResponse(protoData protoreflect.ProtoMessage)
 		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: RetCode(%v) fail", response.RetCode)
 	}
 
-	destUserPubKey := response.BasicData.DestPubkey
+	destUserPubKey := response.BasicData.Pubkey
 	userInfo := d.getSrcUserInfo(destUserPubKey)
 	if userInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", destUserPubKey)
 		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", destUserPubKey)
 	}
-	peerId, err := peer.Decode(response.PeerId)
+	peerId, err := peer.Decode(response.BasicData.PeerID)
 	if err != nil {
 		return nil, err
 	}
 	dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: mailbox has existed, read message from mailbox...")
-	err = d.readMailboxMsgPrtocol.Request(peerId, destUserPubKey, destUserPubKey)
+	err = d.readMailboxMsgPrtocol.Request(peerId, destUserPubKey)
 	if err != nil {
 		return nil, err
 	}
-	if userInfo.MailboxPeerId == "" {
-		userInfo.MailboxPeerId = response.BasicData.PeerId
+	if userInfo.MailboxPeerID == "" {
+		userInfo.MailboxPeerID = response.BasicData.PeerID
 		userInfo.MailboxCreateSignal <- true
 		return nil, nil
-	} else if response.PeerId != userInfo.MailboxPeerId {
-		err = d.releaseMailboxPrtocol.Request(peerId, destUserPubKey, destUserPubKey)
+	} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
+		err = d.releaseMailboxPrtocol.Request(peerId, destUserPubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -696,20 +693,19 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
-	srcPubkey := sendMsgReq.BasicData.SignPubKey
+	srcPubkey := sendMsgReq.BasicData.Pubkey
 	needResponse := sendMsgReq.NeedResponse
-	destPubkey := sendMsgReq.BasicData.DestPubkey
+	destPubkey := sendMsgReq.DestPubkey
 	msgDirection := dmsg.MsgDirection.From
 	d.onReceiveMsg(
 		srcPubkey,
 		destPubkey,
-		sendMsgReq.MsgContent,
-		sendMsgReq.BasicData.Timestamp,
-		sendMsgReq.BasicData.Id,
+		sendMsgReq.Content,
+		sendMsgReq.BasicData.TS,
+		sendMsgReq.BasicData.ID,
 		msgDirection)
 
 	if d.IsExistSrcUser(srcPubkey) && needResponse {
-
 		return nil, nil
 	}
 	return nil, nil
@@ -734,9 +730,9 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
-	customProtocolInfo := d.customStreamProtocolInfoList[response.CustomProtocolID]
+	customProtocolInfo := d.customStreamProtocolInfoList[response.PID]
 	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", response.CustomProtocolID)
+		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", response.PID)
 		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", customProtocolInfo)
 	}
 	if customProtocolInfo.Client == nil {
@@ -768,9 +764,9 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.P
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", resProtoData)
 	}
-	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.CustomProtocolID]
+	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.PID]
 	if customPubsubProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo(%v) is nil", response.CustomProtocolID)
+		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo(%v) is nil", response.PID)
 		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo(%v) is nil", customPubsubProtocolInfo)
 	}
 	if customPubsubProtocolInfo.Client == nil {
@@ -793,7 +789,7 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.P
 }
 
 // ClientService interface
-func (d *DmsgService) PublishProtocol(protocolID pb.ProtocolID, userPubkey string,
+func (d *DmsgService) PublishProtocol(protocolID pb.PID, userPubkey string,
 	protocolData []byte, pubsubSource dmsgClientCommon.PubsubSourceType) error {
 	pubsubBuf := new(bytes.Buffer)
 	err := binary.Write(pubsubBuf, binary.LittleEndian, protocolID)

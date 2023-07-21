@@ -27,49 +27,49 @@ func (adapter *CustomStreamProtocolAdapter) init() {
 	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_RES
+func (adapter *CustomStreamProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_CUSTOM_STREAM_PROTOCOL_RES
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetRequestProtocolID() pb.ProtocolID {
-	return pb.ProtocolID_CUSTOM_STREAM_PROTOCOL_REQ
+func (adapter *CustomStreamProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CUSTOM_STREAM_PROTOCOL_REQ
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
+func (adapter *CustomStreamProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid)
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
+func (adapter *CustomStreamProtocolAdapter) GetStreamResponsePID() protocol.ID {
 	return protocol.ID(dmsgProtocol.PidCustomProtocolRes + "/" + adapter.pid)
 }
 
-func (adapter *CustomStreamProtocolAdapter) InitProtocolRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *CustomStreamProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 2 {
-		customProtocolID, ok := dataList[0].(string)
+		pid, ok := dataList[0].(string)
 		if !ok {
-			return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: failed to cast datalist[0] to string for get customProtocolID")
+			return errors.New("CustomStreamProtocolAdapter->InitRequest: failed to cast datalist[0] to string for get customProtocolID")
 		}
 		content, ok := dataList[1].([]byte)
 		if !ok {
-			return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: failed to cast datalist[1] to []byte for get content")
+			return errors.New("CustomStreamProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
 		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
-			BasicData:        basicData,
-			CustomProtocolID: customProtocolID,
-			Content:          content,
+			BasicData: basicData,
+			PID:       pid,
+			Content:   content,
 		}
 	} else {
-		return errors.New("CustomStreamProtocolAdapter->InitProtocolRequest: parameter dataList need contain customProtocolID and content")
+		return errors.New("CustomStreamProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
 	}
 	return nil
 }
 
-func (adapter *CustomStreamProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
+func (adapter *CustomStreamProtocolAdapter) CallResponseCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
+func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
@@ -77,7 +77,7 @@ func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseBasicData() *pb.B
 	return response.BasicData
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseRetCode() *pb.RetCode {
+func (adapter *CustomStreamProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
@@ -85,12 +85,12 @@ func (adapter *CustomStreamProtocolAdapter) GetProtocolResponseRetCode() *pb.Ret
 	return response.RetCode
 }
 
-func (adapter *CustomStreamProtocolAdapter) SetProtocolRequestSign(signature []byte) {
+func (adapter *CustomStreamProtocolAdapter) SetRequestSig(sig []byte) {
 	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
 	if !ok {
 		return
 	}
-	request.BasicData.Sign = signature
+	request.BasicData.Sig = sig
 }
 
 func NewCustomStreamProtocol(

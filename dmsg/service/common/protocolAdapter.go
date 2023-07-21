@@ -9,18 +9,18 @@ import (
 type CommonProtocolAdapter struct {
 }
 
-func (adapter *CommonProtocolAdapter) GetResponseProtocolID() pb.ProtocolID {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetRequestProtocolID: not implemented")
+func (adapter *CommonProtocolAdapter) GetResponsePID() pb.PID {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetRequestPID: not implemented")
 	return -1
 }
 
-func (adapter *CommonProtocolAdapter) GetStreamResponseProtocolID() protocol.ID {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamResponseProtocolID: not implemented")
+func (adapter *CommonProtocolAdapter) GetStreamResponsePID() protocol.ID {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamResponsePID: not implemented")
 	return protocol.ID("noimplement")
 }
 
-func (adapter *CommonProtocolAdapter) GetStreamRequestProtocolID() protocol.ID {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamRequestProtocolID: not implemented")
+func (adapter *CommonProtocolAdapter) GetStreamRequestPID() protocol.ID {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamRequestPID: not implemented")
 	return protocol.ID("noimplement")
 }
 
@@ -32,32 +32,32 @@ func (adapter *CommonProtocolAdapter) SetProtocolResponseRet(code int32, result 
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetProtocolResponseRet: not implemented")
 }
 
-func (adapter *CommonProtocolAdapter) GetProtocolRequestBasicData() *pb.BasicData {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetProtocolRequestBasicData: not implemented")
+func (adapter *CommonProtocolAdapter) GetRequestBasicData() *pb.BasicData {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetRequestBasicData: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) GetProtocolResponseBasicData() *pb.BasicData {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetProtocolResponseBasicData: not implemented")
+func (adapter *CommonProtocolAdapter) GetResponseBasicData() *pb.BasicData {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetResponseBasicData: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) InitProtocolResponse(basicData *pb.BasicData, data interface{}) error {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->InitProtocolResponse: not implemented")
+func (adapter *CommonProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->InitResponse: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) SetProtocolResponseSign(signature []byte) error {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetProtocolResponseSign: not implemented")
+func (adapter *CommonProtocolAdapter) SetResponseSig(signature []byte) error {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetResponseSig: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) CallProtocolRequestCallback() (interface{}, error) {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallProtocolRequestCallback: not implemented")
+func (adapter *CommonProtocolAdapter) CallRequestCallback() (interface{}, error) {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallRequestCallback: not implemented")
 	return nil, nil
 }
 
-func (adapter *CommonProtocolAdapter) CallProtocolResponseCallback() (interface{}, error) {
-	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallProtocolResponseCallback: not implemented")
+func (adapter *CommonProtocolAdapter) CallResponseCallback() (interface{}, error) {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallResponseCallback: not implemented")
 	return nil, nil
 }
