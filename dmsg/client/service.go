@@ -68,7 +68,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	// sendMsgProtocol, special pubsub protocol
 	// d.sendMsgPrtocol = dmsgClientCommon.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 	d.sendMsgPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetResponseProtocolID(), d.sendMsgPrtocol)
+	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetRequestProtocolID(), d.sendMsgPrtocol)
 
 	d.srcUserInfoList = make(map[string]*dmsgClientCommon.SrcUserInfo)
 	d.destUserInfoList = make(map[string]*dmsgClientCommon.DestUserInfo)
