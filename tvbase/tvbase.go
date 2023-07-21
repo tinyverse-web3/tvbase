@@ -471,7 +471,7 @@ func (m *TvBase) bootstrap() error {
 			defer wg.Done()
 			err := m.host.Connect(m.ctx, *addrInfo)
 			if err != nil {
-				tvLog.Logger.Warnf("tvBase->bootstrap: fail connect boottrap addrInfo:%v, error:%v", addrInfo, err)
+				tvLog.Logger.Warnf("tvBase->bootstrap: fail connect bootstrap addrInfo:%v, error:%v", addrInfo, err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
 				tvLog.Logger.Infof("tvBase->bootstrap: succ connect bootstrap node:%v", addrInfo)
