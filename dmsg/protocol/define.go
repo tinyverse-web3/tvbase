@@ -11,14 +11,14 @@ const (
 const ProtocolRequestTimeout = 10 * time.Second
 
 const (
-	PidCreateMailboxReq  = "/tinverseInfrasture/dmsg/createMailbox/req/" + ProtocolVersion
-	PidCreateMailboxRes  = "/tinverseInfrasture/dmsg/createMailbox/res/" + ProtocolVersion
-	PidReleaseMailboxReq = "/tinverseInfrasture/dmsg/releaseMailbox/req/" + ProtocolVersion
-	PidReleaseMailboxRes = "/tinverseInfrasture/dmsg/releaseMailbox/res/" + ProtocolVersion
-	PidReadMailboxMsgReq = "/tinverseInfrasture/dmsg/readMailboxMsg/req/" + ProtocolVersion
-	PidReadMailboxMsgRes = "/tinverseInfrasture/dmsg/readMailboxMsg/res/" + ProtocolVersion
-	PidCustomProtocolReq = "/tinverseInfrasture/dmsg/customProtocol/req/" + ProtocolVersion
-	PidCustomProtocolRes = "/tinverseInfrasture/dmsg/customProtocol/res/" + ProtocolVersion
+	PidCreateMailboxReq  = "/tvbase/dmsg/createMailbox/req/" + ProtocolVersion
+	PidCreateMailboxRes  = "/tvbase/dmsg/createMailbox/res/" + ProtocolVersion
+	PidReleaseMailboxReq = "/tvbase/dmsg/releaseMailbox/req/" + ProtocolVersion
+	PidReleaseMailboxRes = "/tvbase/dmsg/releaseMailbox/res/" + ProtocolVersion
+	PidReadMailboxMsgReq = "/tvbase/dmsg/readMailboxMsg/req/" + ProtocolVersion
+	PidReadMailboxMsgRes = "/tvbase/dmsg/readMailboxMsg/res/" + ProtocolVersion
+	PidCustomProtocolReq = "/tvbase/dmsg/customProtocol/req/" + ProtocolVersion
+	PidCustomProtocolRes = "/tvbase/dmsg/customProtocol/res/" + ProtocolVersion
 )
 
 type ReqSubscribe interface {

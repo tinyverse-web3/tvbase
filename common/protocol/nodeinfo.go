@@ -22,8 +22,8 @@ import (
 const (
 	RandInfoSize = 32
 	timeout      = time.Second * 5
-	ID           = "/tinverseInfrasture/nodeinfo/0.0.1"
-	ServiceName  = "tinverseInfrasture.nodeinfo"
+	ID           = "/tvbase/nodeinfo/0.0.1"
+	ServiceName  = "tvbase.nodeinfo"
 )
 
 type NodeInfoService struct {
@@ -98,7 +98,7 @@ func (ps *NodeInfoService) Request(ctx context.Context, p peer.ID) *Result {
 
 // Request NodeInfo the remote peer until the context is canceled, returning a stream of RTTs or errors.
 func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
-	s, err := h.NewStream(network.WithUseTransient(ctx, "tinverseInfrasture/nodeinfo"), p, ID)
+	s, err := h.NewStream(network.WithUseTransient(ctx, "tvbase/nodeinfo"), p, ID)
 	if err != nil {
 		return &Result{Error: err}
 	}

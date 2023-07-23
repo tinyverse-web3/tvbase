@@ -9,12 +9,12 @@ import (
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 )
 
-const TinverseInfrastureRendezvous = "tinverseInfrasture/discover-rendzvous/common"
+const TvbaseRendezvous = "tvbase/discover-rendzvous/common"
 
 func (m *TvBase) initRendezvous() error {
 	if m.pubRoutingDiscovery == nil {
 		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
-		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TinverseInfrastureRendezvous)
+		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TvbaseRendezvous)
 
 		handleNoNet := func(peerID peer.ID) error {
 			if !m.IsExistConnectedPeer() {
@@ -34,7 +34,7 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 	for !m.IsRendezvous {
 		rendezvousPeerCount := 0
 		start := time.Now()
-		peerChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TinverseInfrastureRendezvous)
+		peerChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TvbaseRendezvous)
 		if err != nil {
 			tvLog.Logger.Errorf("tvBase->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
 			continue

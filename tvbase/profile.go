@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	EnvEnableProfiling = "tinverseInfrasture_PROF"
-	cpuProfile         = "tinverseInfrasture.cpuprof"
-	heapProfile        = "tinverseInfrasture.memprof"
+	EnvEnableProfiling = "tvbase_PROF"
+	cpuProfile         = "tvbase.cpuprof"
+	heapProfile        = "tvbase.memprof"
 )
 
 func profileIfEnabled() (func(), error) {

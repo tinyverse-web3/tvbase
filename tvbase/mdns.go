@@ -11,7 +11,7 @@ import (
 	"go.uber.org/fx"
 )
 
-const MdnsServiceName = "tinverseInfrasture/mdns/default"
+const MdnsServiceName = "tvbase/mdns/default"
 
 // for mdns Notifee interface
 func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {

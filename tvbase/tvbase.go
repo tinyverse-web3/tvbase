@@ -187,7 +187,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 
 	otel.SetTracerProvider(shutdownTracerProvider)
 	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
-	tracer := shutdownTracerProvider.Tracer("tinverseInfrasture")
+	tracer := shutdownTracerProvider.Tracer("tvbase")
 	initTraceOpt := fx.Provide(func(lc fx.Lifecycle) trace.Tracer {
 		lc.Append(fx.Hook{
 			OnStop: func(ctx context.Context) error {
@@ -265,7 +265,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	// trace start
 	var traceArguments []string // TODO add arguments
 	traceOpt := trace.WithAttributes(attribute.StringSlice("Arguments", traceArguments))
-	spanName := "tinverseInfrasture"
+	spanName := "tvbase"
 	ctx, m.TracerSpan = tracer.Start(
 		ctx,
 		spanName,
@@ -284,7 +284,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	fxOpts = append(fxOpts, startTraceOpt)
 
 	// metrics
-	m.ctx = metrics.CtxScope(ctx, "tvInfrasture")
+	m.ctx = metrics.CtxScope(ctx, "tvbase")
 	return fx.Options(fxOpts...), nil
 }
 

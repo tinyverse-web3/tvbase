@@ -11,11 +11,11 @@ var CurrentCommit string
 
 const CurrentVersionNumber = "0.0.1-dev"
 
-const ApiVersion = "/tinverseInfrasture/" + CurrentVersionNumber + "/" //nolint
+const ApiVersion = "/tvbase/" + CurrentVersionNumber + "/" //nolint
 
 // Note: This will end in `/` when no commit is available. This is expected.
 func GetUserAgentVersion() string {
-	userAgent := "tinverseInfrasture/" + CurrentVersionNumber + "/" + CurrentCommit
+	userAgent := "tvbase/" + CurrentVersionNumber + "/" + CurrentCommit
 	if userAgentSuffix != "" {
 		if CurrentCommit != "" {
 			userAgent += "/"

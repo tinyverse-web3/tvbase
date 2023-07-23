@@ -49,7 +49,7 @@ func NewTracerProvider(ctx context.Context) (shutdownTracerProvider, error) {
 	r, err := resource.Merge(
 		resource.Default(),
 		resource.NewSchemaless(
-			semconv.ServiceNameKey.String("tinverseInfrasture"),
+			semconv.ServiceNameKey.String("tvbase"),
 			semconv.ServiceVersionKey.String(tvCommon.CurrentVersionNumber),
 		),
 	)
