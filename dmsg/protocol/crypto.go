@@ -10,18 +10,18 @@ import (
 )
 
 func AuthProtocolMsg(message proto.Message, basicData *pb.BasicData) bool {
-	sign := basicData.Sig
+	sig := basicData.Sig
 	basicData.Sig = nil
 	protoData, err := proto.Marshal(message)
 	if err != nil {
 		dmsgLog.Logger.Errorf("AuthProtocolMsg: failed to marshal pb message %v", err)
 		return false
 	}
-	basicData.Sig = sign
-	return verifyData(protoData, basicData.Pubkey, sign)
+	basicData.Sig = sig
+	return verifyData(protoData, basicData.Pubkey, sig)
 }
 
-func verifyData(protoData []byte, pubkeyHex string, sign []byte) bool {
+func verifyData(protoData []byte, pubkeyHex string, sig []byte) bool {
 	pubkeyData, err := key.TranslateKeyStringToProtoBuf(pubkeyHex)
 	if err != nil {
 		dmsgLog.Logger.Errorf("verifyData: TranslateKeyStringToProtoBuf error: %v", err)
@@ -32,7 +32,7 @@ func verifyData(protoData []byte, pubkeyHex string, sign []byte) bool {
 		dmsgLog.Logger.Errorf("verifyData: Public key is not ECDSA KEY, error: %v", err)
 		return false
 	}
-	isVerify, err := crypto.VerifyDataSignByEcdsa(pubkey, protoData, sign)
+	isVerify, err := crypto.VerifyDataSignByEcdsa(pubkey, protoData, sig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("verifyData: VerifyDataSignByEcdsa error: %v", err)
 		return false

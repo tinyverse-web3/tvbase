@@ -186,20 +186,14 @@ func (d *DmsgService) readUserPubsub(userPubsub *dmsgClientCommon.UserPubsub) {
 		contentData := m.Data[protocolIDLen:]
 		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
 		if reqSubscribe != nil {
-			err = reqSubscribe.HandleRequestData(contentData)
-			if err != nil {
-				dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: HandleRequestData error: %v", err)
-			}
+			reqSubscribe.HandleRequestData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find request protocolID(%d) for reqSubscribe", protocolID)
 		}
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
 		if resSubScribe != nil {
-			err = resSubScribe.HandleResponseData(contentData)
-			if err != nil {
-				dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: HandleResponseData error: %v", err)
-			}
+			resSubScribe.HandleResponseData(contentData)
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find response protocolID(%d) for resSubscribe", protocolID)

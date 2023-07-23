@@ -151,6 +151,12 @@ func (p *Protocol) GenRequestInfo(
 		return "", nil, nil, err
 	}
 
+	requestProtoData, err = proto.Marshal(p.RequestProtoMsg)
+	if err != nil {
+		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
+		return "", nil, nil, err
+	}
+
 	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
 		ProtoMessage:    p.RequestProtoMsg,
 		CreateTimestamp: requestBasicData.TS,
