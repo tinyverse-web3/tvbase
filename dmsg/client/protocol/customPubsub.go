@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
@@ -21,8 +22,8 @@ func NewCustomPubsubProtocolAdapter() *CustomPubsubProtocolAdapter {
 }
 
 func (adapter *CustomPubsubProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
-	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
+	adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{}
+	adapter.protocol.ResponseProtoMsg = &pb.CustomProtocolRes{}
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetRequestPID() pb.PID {
@@ -44,7 +45,7 @@ func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData,
 			return errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
 
-		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
+		adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{
 			BasicData: basicData,
 			PID:       pid,
 			Content:   content,
@@ -56,7 +57,7 @@ func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData,
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.RequestProtoMsg, adapter.protocol.ResponseProtoMsg)
 	return data, err
 }
 
@@ -68,7 +69,7 @@ func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback(
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}
@@ -76,16 +77,16 @@ func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 func (adapter *CustomPubsubProtocolAdapter) SetRequestSig(sig []byte) error {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.CustomProtocolReq)
 	if !ok {
-		return errors.New("failed to cast request to *pb.CustomProtocolReq")
+		return fmt.Errorf("CustomPubsubProtocolAdapter->SetRequestSig: failed to cast request to *pb.CustomProtocolReq")
 	}
 	request.BasicData.Sig = sig
 	return nil

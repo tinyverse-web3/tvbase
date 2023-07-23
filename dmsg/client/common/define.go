@@ -12,41 +12,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type StreamProtocolCallback interface {
-	OnCreateMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnReadMailboxMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnReleaseMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnSeekMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-}
-type StreamProtocolAdapter interface {
-	InitRequest(basicData *pb.BasicData, dataList ...any) error
-	GetRequestPID() pb.PID
-	GetStreamRequestPID() protocol.ID
-	GetStreamResponsePID() protocol.ID
-	GetResponseBasicData() *pb.BasicData
-	GetResponseRetCode() *pb.RetCode
-	SetRequestSig(sig []byte)
-	CallResponseCallback(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-}
-
 type RequestInfo struct {
 	ProtoMessage    protoreflect.ProtoMessage
 	CreateTimestamp int64
 }
-
-type StreamProtocol struct {
-	Ctx              context.Context
-	Host             host.Host
-	RequestInfoList  map[string]*RequestInfo
-	Callback         StreamProtocolCallback
-	ProtocolService  ProtocolService
-	ProtocolRequest  protoreflect.ProtoMessage
-	ProtocolResponse protoreflect.ProtoMessage
-	Adapter          StreamProtocolAdapter
-}
-
-type PubsubProtocolAdapter interface {
+type ProtocolAdapter interface {
 	InitRequest(basicData *pb.BasicData, dataList ...any) error
 	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetRequestPID() pb.PID
@@ -60,15 +30,41 @@ type PubsubProtocolAdapter interface {
 	CallResponseCallback(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 
-type PubsubProtocol struct {
+type StreamProtocolCallback interface {
+	OnCreateMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnReadMailboxMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnReleaseMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+}
+
+type StreamProtocolAdapter interface {
+	ProtocolAdapter
+	GetStreamRequestPID() protocol.ID
+	GetStreamResponsePID() protocol.ID
+}
+
+type Protocol struct {
 	Ctx              context.Context
 	Host             host.Host
 	RequestInfoList  map[string]*RequestInfo
-	Callback         PubsubProtocolCallback
-	ProtocolService  ProtocolService
-	ProtocolRequest  protoreflect.ProtoMessage
-	ProtocolResponse protoreflect.ProtoMessage
-	Adapter          PubsubProtocolAdapter
+	Service          ProtocolService
+	RequestProtoMsg  protoreflect.ProtoMessage
+	ResponseProtoMsg protoreflect.ProtoMessage
+	Adapter          ProtocolAdapter
+}
+
+type StreamProtocol struct {
+	Protocol
+	Callback StreamProtocolCallback
+}
+
+type PubsubProtocolAdapter interface {
+	ProtocolAdapter
+}
+
+type PubsubProtocol struct {
+	Protocol
+	Callback PubsubProtocolCallback
 }
 
 type PubsubProtocolCallback interface {

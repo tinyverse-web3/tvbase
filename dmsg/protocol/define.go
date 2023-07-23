@@ -22,9 +22,9 @@ const (
 )
 
 type ReqSubscribe interface {
-	HandleRequestData(protocolData []byte)
+	HandleRequestData(protocolData []byte) error
 }
 
 type ResSubscribe interface {
-	HandleResponseData(protocolData []byte)
+	HandleResponseData(protocolData []byte) error
 }

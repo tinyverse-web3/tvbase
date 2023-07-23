@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -22,8 +23,8 @@ func NewCreateMailboxProtocolAdapter() *CreateMailboxProtocolAdapter {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.CreateMailboxReq{}
-	adapter.protocol.ProtocolResponse = &pb.CreateMailboxRes{}
+	adapter.protocol.RequestProtoMsg = &pb.CreateMailboxReq{}
+	adapter.protocol.ResponseProtoMsg = &pb.CreateMailboxRes{}
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetRequestPID() pb.PID {
@@ -42,7 +43,7 @@ func (adapter *CreateMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData
 	request := &pb.CreateMailboxReq{
 		BasicData: basicData,
 	}
-	adapter.protocol.ProtocolRequest = request
+	adapter.protocol.RequestProtoMsg = request
 	return nil
 }
 
@@ -54,7 +55,7 @@ func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback(
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
 	}
@@ -62,19 +63,20 @@ func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicDat
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetRequestSig(sig []byte) {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CreateMailboxReq)
+func (adapter *CreateMailboxProtocolAdapter) SetRequestSig(sig []byte) error {
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.CreateMailboxReq)
 	if !ok {
-		return
+		return fmt.Errorf("CreateMailboxProtocolAdapter->SetRequestSig: failed to cast request to *pb.CreateMailboxReq")
 	}
 	request.BasicData.Sig = sig
+	return nil
 }
 
 func NewCreateMailboxProtocol(

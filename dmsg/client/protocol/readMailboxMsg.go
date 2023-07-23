@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -22,8 +23,8 @@ func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.ReadMailboxReq{}
-	adapter.protocol.ProtocolResponse = &pb.ReadMailboxRes{}
+	adapter.protocol.RequestProtoMsg = &pb.ReadMailboxReq{}
+	adapter.protocol.ResponseProtoMsg = &pb.ReadMailboxRes{}
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestPID() pb.PID {
@@ -42,7 +43,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(basicData *pb.BasicDat
 	request := &pb.ReadMailboxReq{
 		BasicData: basicData,
 	}
-	adapter.protocol.ProtocolRequest = request
+	adapter.protocol.RequestProtoMsg = request
 	return nil
 }
 
@@ -54,7 +55,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback(
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.ReadMailboxRes)
 	if !ok {
 		return nil
 	}
@@ -62,19 +63,20 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicDa
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.ReadMailboxRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) SetRequestSig(sig []byte) {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.ReadMailboxReq)
+func (adapter *ReadMailboxMsgProtocolAdapter) SetRequestSig(sig []byte) error {
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.ReadMailboxReq)
 	if !ok {
-		return
+		return fmt.Errorf("ReadMailboxMsgProtocolAdapter->SetRequestSig: failed to cast request to *pb.ReadMailboxReq")
 	}
 	request.BasicData.Sig = sig
+	return nil
 }
 
 func NewReadMailboxMsgProtocol(

@@ -17,6 +17,11 @@ func (adapter *CommonProtocolAdapter) GetRequestPID() pb.PID {
 	return -1
 }
 
+func (adapter *CommonProtocolAdapter) GetResponsePID() pb.PID {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetResponsePID: not implemented")
+	return -1
+}
+
 func (adapter *CommonProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->GetStreamRequestPID: not implemented")
 	return protocol.ID("noimplement")
@@ -69,6 +74,7 @@ func (adapter *CommonProtocolAdapter) GetResponseRetCode() *pb.RetCode {
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) SetRequestSig(signature []byte) {
+func (adapter *CommonProtocolAdapter) SetRequestSig(sig []byte) error {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetRequestSig: not implemented")
+	return nil
 }

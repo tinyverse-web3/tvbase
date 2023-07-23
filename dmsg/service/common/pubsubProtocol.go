@@ -1,13 +1,15 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/libp2p/go-libp2p/core/host"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
+func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from: r: %v", r)
@@ -17,7 +19,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: unmarshal protocolData err: %v", err)
-		return
+		return err
 	}
 
 	requestProtocolId := p.Adapter.GetRequestPID()
@@ -28,13 +30,13 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Warnf("PubsubProtocol->HandleRequestData: failed to authenticate message")
-		return
+		return fmt.Errorf("PubsubProtocol->HandleRequestData: failed to authenticate message")
 	}
 
 	callbackData, err := p.Adapter.CallRequestCallback()
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: CallRequestCallback error: %v", err)
-		return
+		return err
 	}
 	if callbackData != nil {
 		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: callback data: %s", callbackData)
@@ -46,29 +48,29 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	responseBasicData.ID = requestBasicData.ID
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: NewBasicData error: %v", err)
-		return
+		return err
 	}
 	err = p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: InitResponse error: %v", err)
-		return
+		return err
 	}
 
 	// sign the data
 	protoData, err := proto.Marshal(p.ProtocolResponse)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
-		return
+		return err
 	}
 	sig, err := p.ProtocolService.GetCurSrcUserSig(protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: GetCurSrcUserSig error: %v", err)
-		return
+		return err
 	}
 	err = p.Adapter.SetResponseSig(sig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: SetResponseSig error: %v", err)
-		return
+		return err
 	}
 
 	protoData, err = proto.Marshal(p.ProtocolResponse)
@@ -86,6 +88,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v, error:%v",
 			requestProtocolId, p.ProtocolResponse, err)
 	}
+	return nil
 }
 
 func NewPubsubProtocol(

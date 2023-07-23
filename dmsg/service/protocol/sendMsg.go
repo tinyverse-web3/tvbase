@@ -16,7 +16,7 @@ type SendMsgProtocol struct {
 	SendMsgRequest *pb.SendMsgReq
 }
 
-func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
+func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: recovered from:", r)
@@ -26,7 +26,7 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
 	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: unmarshal protoData error %v", err))
-		return
+		return err
 	}
 
 	// requestProtocolId := p.Adapter.GetRequestPID()
@@ -37,17 +37,17 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
 	sendMsgReq, ok := p.ProtocolRequest.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
-		return
+		return fmt.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
 	}
 	basicData := sendMsgReq.BasicData
 	valid, err := protocol.EcdsaAuthProtocolMsg(p.ProtocolRequest, basicData)
 	if err != nil {
 		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: authenticate message err:%v", err)
-		return
+		return err
 	}
 	if !valid {
 		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: failed to authenticate message")
-		return
+		return err
 	}
 
 	callbackData, err := p.Callback.OnSendMsgRequest(p.ProtocolRequest)
@@ -60,6 +60,7 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) {
 
 	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
 		requestProtocolId, p.ProtocolRequest)
+	return nil
 }
 
 func NewSendMsgProtocol(host host.Host, protocolCallback dmsgServiceCommon.PubsubProtocolCallback, protocolService dmsgServiceCommon.ProtocolService) *SendMsgProtocol {

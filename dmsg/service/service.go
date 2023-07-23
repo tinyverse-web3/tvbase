@@ -164,7 +164,10 @@ func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub)
 		contentData := m.Data[protocolIDLen:]
 		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
 		if reqSubscribe != nil {
-			reqSubscribe.HandleRequestData(contentData)
+			err = reqSubscribe.HandleRequestData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: HandleRequestData error %v", err)
+			}
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
@@ -172,7 +175,10 @@ func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub)
 		// no protocol for resSubScribe in service
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
 		if resSubScribe != nil {
-			resSubScribe.HandleResponseData(contentData)
+			err = resSubScribe.HandleResponseData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: HandleResponseData error %v", err)
+			}
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("dmsgService->readDestUserPubsub: no find protocolId(%d) for resSubscribe", protocolID)

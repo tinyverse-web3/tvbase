@@ -31,11 +31,15 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 		}
 	}()
 	p.stream = stream
-	p.HandleRequestData(protoData)
+	err = p.HandleRequestData(protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error %v", err)
+		return
+	}
 	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler: end")
 }
 
-func (p *StreamProtocol) HandleRequestData(protoData []byte) {
+func (p *StreamProtocol) HandleRequestData(protoData []byte) error {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: recovered from:", r)
@@ -45,7 +49,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 	err := proto.Unmarshal(protoData, p.Request)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error %v", err)
-		return
+		return err
 	}
 
 	var callbackData interface{}
@@ -54,21 +58,21 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 	valid := protocol.AuthProtocolMsg(p.Request, requestBasicData)
 	if !valid {
 		p.sendResponseProtocol(p.stream, callbackData, fmt.Errorf("failed to authenticate message"))
-		return
+		return fmt.Errorf("failed to authenticate message")
 	}
 
 	// callback
 	callbackData, err = p.Adapter.CallRequestCallback()
 	if err != nil {
 		p.sendResponseProtocol(p.stream, callbackData, err)
-		return
+		return err
 	}
 	if callbackData != nil {
 		dmsgLog.Logger.Infof("StreamProtocol->HandleRequestData: callback data: %s", callbackData)
 	}
 
 	p.sendResponseProtocol(p.stream, callbackData, nil)
-
+	return nil
 }
 
 func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackData interface{}, codeErr error) {

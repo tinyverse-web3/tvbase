@@ -128,7 +128,7 @@ func (d *DmsgService) createMailbox(userPubkey string) {
 	}
 
 	for _, servicePeerID := range servicePeerList {
-		err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
+		_, err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
 		if err != nil {
 			dmsgLog.Logger.Warnf("DmsgService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
@@ -186,14 +186,20 @@ func (d *DmsgService) readUserPubsub(userPubsub *dmsgClientCommon.UserPubsub) {
 		contentData := m.Data[protocolIDLen:]
 		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
 		if reqSubscribe != nil {
-			reqSubscribe.HandleRequestData(contentData)
+			err = reqSubscribe.HandleRequestData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: HandleRequestData error: %v", err)
+			}
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find request protocolID(%d) for reqSubscribe", protocolID)
 		}
 		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
 		if resSubScribe != nil {
-			resSubScribe.HandleResponseData(contentData)
+			err = resSubScribe.HandleResponseData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: HandleResponseData error: %v", err)
+			}
 			continue
 		} else {
 			dmsgLog.Logger.Warnf("DmsgService->readUserPubsub: no find response protocolID(%d) for resSubscribe", protocolID)
@@ -506,7 +512,7 @@ func (d *DmsgService) GetCurSrcUserSig(protoData []byte) ([]byte, error) {
 func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg begin:\ndestPubkey: %v", destPubkey)
 	signPubkey := d.CurSrcUserInfo.UserKey.PubkeyHex
-	data, err := d.sendMsgPrtocol.Request(
+	protoData, err := d.sendMsgPrtocol.Request(
 		signPubkey,
 		destPubkey,
 		msgContent,
@@ -515,7 +521,7 @@ func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsg
 		dmsgLog.Logger.Errorf("DmsgService->SendMsg: %v", err)
 		return nil, err
 	}
-	sendMsgReq, ok := data.(*pb.SendMsgReq)
+	sendMsgReq, ok := protoData.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->SendMsg: data is not SendMsgReq")
 		return nil, fmt.Errorf("DmsgService->SendMsg: data is not SendMsgReq")
@@ -555,7 +561,7 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 		fallthrough
 	case 1: // exist mailbox
 		dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		err = d.readMailboxMsgPrtocol.Request(
+		_, err = d.readMailboxMsgPrtocol.Request(
 			peerId,
 			response.BasicData.Pubkey)
 		if err != nil {
@@ -564,7 +570,7 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 		if userInfo.MailboxPeerID == "" {
 			userInfo.MailboxPeerID = response.BasicData.PeerID
 		} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
-			err = d.releaseMailboxPrtocol.Request(
+			_, err = d.releaseMailboxPrtocol.Request(
 				peerId,
 				response.BasicData.Pubkey)
 			if err != nil {
@@ -687,7 +693,7 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 		return nil, err
 	}
 	dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: mailbox has existed, read message from mailbox...")
-	err = d.readMailboxMsgPrtocol.Request(peerId, userPubKey)
+	_, err = d.readMailboxMsgPrtocol.Request(peerId, userPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -696,7 +702,7 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 		userInfo.MailboxCreateSignal <- true
 		return nil, nil
 	} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
-		err = d.releaseMailboxPrtocol.Request(peerId, userPubKey)
+		_, err = d.releaseMailboxPrtocol.Request(peerId, userPubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -848,7 +854,7 @@ func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid strin
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v", err)
 		return err
 	}
-	err = protocolInfo.Protocol.Request(
+	_, err = protocolInfo.Protocol.Request(
 		peerId,
 		d.CurSrcUserInfo.UserKey.PubkeyHex,
 		d.CurSrcUserInfo.UserKey.PubkeyHex,

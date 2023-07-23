@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -24,8 +25,8 @@ func NewCustomStreamProtocolAdapter() *CustomStreamProtocolAdapter {
 }
 
 func (adapter *CustomStreamProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
-	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
+	adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{}
+	adapter.protocol.ResponseProtoMsg = &pb.CustomProtocolRes{}
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponsePID() pb.PID {
@@ -54,7 +55,7 @@ func (adapter *CustomStreamProtocolAdapter) InitRequest(basicData *pb.BasicData,
 		if !ok {
 			return errors.New("CustomStreamProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
-		adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{
+		adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{
 			BasicData: basicData,
 			PID:       pid,
 			Content:   content,
@@ -73,7 +74,7 @@ func (adapter *CustomStreamProtocolAdapter) CallResponseCallback(
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}
@@ -81,19 +82,20 @@ func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData() *pb.BasicData
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 
-func (adapter *CustomStreamProtocolAdapter) SetRequestSig(sig []byte) {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
+func (adapter *CustomStreamProtocolAdapter) SetRequestSig(sig []byte) error {
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.CustomProtocolReq)
 	if !ok {
-		return
+		return fmt.Errorf("CustomStreamProtocolAdapter->SetRequestSig: failed to cast request to *pb.CustomProtocolReq")
 	}
 	request.BasicData.Sig = sig
+	return nil
 }
 
 func NewCustomStreamProtocol(

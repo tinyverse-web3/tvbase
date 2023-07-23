@@ -22,8 +22,8 @@ func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
 }
 
 func (adapter *SendMsgProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.SendMsgReq{}
-	adapter.protocol.ProtocolResponse = &pb.SendMsgRes{}
+	adapter.protocol.RequestProtoMsg = &pb.SendMsgReq{}
+	adapter.protocol.ResponseProtoMsg = &pb.SendMsgRes{}
 }
 
 func (adapter *SendMsgProtocolAdapter) GetRequestPID() pb.PID {
@@ -41,7 +41,7 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, data
 			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
-		adapter.protocol.ProtocolRequest = &pb.SendMsgReq{
+		adapter.protocol.RequestProtoMsg = &pb.SendMsgReq{
 			BasicData: basicData,
 			Content:   content,
 		}
@@ -56,12 +56,12 @@ func (adapter *SendMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, dat
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
-	adapter.protocol.ProtocolResponse = response
+	adapter.protocol.ResponseProtoMsg = response
 	return nil
 }
 
 func (adapter *SendMsgProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
 		return errors.New("SendMsgProtocolAdapter->SetResponseSig: failed to cast request to *pb.SendMsgRes")
 	}
@@ -70,7 +70,7 @@ func (adapter *SendMsgProtocolAdapter) SetResponseSig(sig []byte) error {
 }
 
 func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.RequestProtoMsg, adapter.protocol.ResponseProtoMsg)
 	return data, err
 }
 
@@ -82,7 +82,7 @@ func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
 }
 
 func (adapter *SendMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.SendMsgReq)
 	if !ok {
 		return nil
 	}
@@ -90,7 +90,7 @@ func (adapter *SendMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
 }
 
 func (adapter *SendMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
 		return nil
 	}
@@ -98,14 +98,14 @@ func (adapter *SendMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 }
 
 func (adapter *SendMsgProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 func (adapter *SendMsgProtocolAdapter) SetRequestSig(sig []byte) error {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.SendMsgReq)
+	request, ok := adapter.protocol.RequestProtoMsg.(*pb.SendMsgReq)
 	if !ok {
 		return errors.New("failed to cast request to *pb.SendMsgReq")
 	}
