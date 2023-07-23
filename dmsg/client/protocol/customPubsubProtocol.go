@@ -58,9 +58,9 @@ func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData,
 	return nil
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
-	return data, err
+func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (bool, interface{}, error) {
+	needResponse, data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	return needResponse, data, err
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (interface{}, error) {

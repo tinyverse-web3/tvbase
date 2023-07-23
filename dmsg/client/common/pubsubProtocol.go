@@ -33,7 +33,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		return
 	}
 
-	callbackData, err := p.Adapter.CallRequestCallback()
+	_, callbackData, err := p.Adapter.CallRequestCallback()
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: CallRequestCallback error: %v", err)
 		return

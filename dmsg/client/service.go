@@ -686,11 +686,11 @@ func (d *DmsgService) OnSeekMailboxResponse(protoData protoreflect.ProtoMessage)
 	return nil, nil
 }
 
-func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (interface{}, error) {
+func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (bool, interface{}, error) {
 	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		return false, nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 
 	srcPubkey := sendMsgReq.BasicData.Pubkey
@@ -706,9 +706,9 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (inte
 		msgDirection)
 
 	if d.IsExistSrcUser(srcPubkey) && needResponse {
-		return nil, nil
+		return false, nil, nil
 	}
-	return nil, nil
+	return false, nil, nil
 }
 
 func (d *DmsgService) OnSendMsgResponse(protoData protoreflect.ProtoMessage) (interface{}, error) {
@@ -754,8 +754,8 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.P
 	return nil, nil
 }
 
-func (d *DmsgService) OnCustomPubsubProtocolRequest(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	return nil, nil
+func (d *DmsgService) OnCustomPubsubProtocolRequest(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (bool, interface{}, error) {
+	return false, nil, nil
 }
 
 func (d *DmsgService) OnCustomPubsubProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {

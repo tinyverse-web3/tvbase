@@ -9,8 +9,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func SendProtocolMsg(ctx context.Context, host host.Host, peerID peer.ID, protocolID protocol.ID, protoData proto.Message) error {
-	stream, err := host.NewStream(ctx, peerID, protocolID)
+func SendProtocolMsg(ctx context.Context, host host.Host, peerID peer.ID, pid protocol.ID, protoData proto.Message) error {
+	stream, err := host.NewStream(ctx, peerID, pid)
 	if err != nil {
 		return err
 	}

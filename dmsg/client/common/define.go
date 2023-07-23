@@ -54,7 +54,7 @@ type PubsubProtocolAdapter interface {
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
 	SetRequestSig(signature []byte) error
-	CallRequestCallback() (interface{}, error)
+	CallRequestCallback() (bool, interface{}, error)
 	CallResponseCallback() (interface{}, error)
 	GetPubsubSource() PubsubSourceType
 }
@@ -72,9 +72,9 @@ type PubsubProtocol struct {
 
 type PubsubProtocolCallback interface {
 	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgRequest(protoreflect.ProtoMessage) (interface{}, error)
+	OnSendMsgRequest(protoreflect.ProtoMessage) (bool, interface{}, error)
 	OnSendMsgResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (bool, interface{}, error)
 	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 

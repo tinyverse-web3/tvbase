@@ -53,9 +53,9 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, data
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest)
-	return data, err
+func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (bool, interface{}, error) {
+	needResponse, data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest)
+	return needResponse, data, err
 }
 
 func (adapter *SendMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
