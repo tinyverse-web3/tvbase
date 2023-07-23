@@ -24,8 +24,8 @@ func NewCustomStreamProtocolAdapter() *CustomStreamProtocolAdapter {
 }
 
 func (adapter *CustomStreamProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
-	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
+	adapter.protocol.Request = &pb.CustomProtocolReq{}
+	adapter.protocol.Response = &pb.CustomProtocolRes{}
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponsePID() pb.PID {
@@ -49,58 +49,58 @@ func (adapter *CustomStreamProtocolAdapter) DestoryProtocol() {
 }
 
 func (adapter *CustomStreamProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
-		tvLog.Logger.Errorf("CustomProtocolAdapter InitResponse data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomProtocolAdapter->SetProtocolResponseFailRet: data is not CustomProtocolReq")
 		return
 	}
 	request.RetCode = dmsgProtocol.NewFailRetCode(errMsg)
 }
 
 func (adapter *CustomStreamProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
-		tvLog.Logger.Errorf("CustomProtocolAdapter InitResponse data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomStreamProtocolAdapter InitResponse data is not CustomProtocolReq")
 		return
 	}
 	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
+	request, ok := adapter.protocol.Request.(*pb.CustomProtocolReq)
 	if !ok {
-		tvLog.Logger.Errorf("CustomProtocolAdapter InitResponse data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomStreamProtocolAdapter InitResponse data is not CustomProtocolReq")
 		return nil
 	}
 	return request.BasicData
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
-		tvLog.Logger.Errorf("CustomProtocolAdapter InitResponse data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomStreamProtocolAdapter InitResponse data is not CustomProtocolReq")
 		return nil
 	}
 	return request.BasicData
 }
 
 func (adapter *CustomStreamProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
-	response := &pb.CustomProtocolRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
-	}
-	request, ok := data.(*pb.CustomProtocolReq)
+	pid, ok := data.(string)
 	if !ok {
-		tvLog.Logger.Errorf("CustomProtocolAdapter InitResponse data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomStreamProtocolAdapter InitResponse: data is not CustomProtocolReq")
 		return nil
 	}
-	response.PID = request.PID
-	adapter.protocol.ProtocolResponse = response
+	response := &pb.CustomProtocolRes{
+		BasicData: basicData,
+		PID:       pid,
+		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	}
+	adapter.protocol.Response = response
 	return nil
 }
 
 func (adapter *CustomStreamProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		return errors.New("failed to cast request to *pb.ReleaseMailboxRes")
 	}
@@ -109,12 +109,12 @@ func (adapter *CustomStreamProtocolAdapter) SetResponseSig(sig []byte) error {
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomStreamProtocolRequest(adapter.protocol.ProtocolRequest)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolRequest(adapter.protocol.Request)
 	return data, err
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.Request, adapter.protocol.Response)
 	return data, err
 }
 

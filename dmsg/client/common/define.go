@@ -27,7 +27,7 @@ type StreamProtocolAdapter interface {
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
 	SetRequestSig(sig []byte)
-	CallResponseCallback() (interface{}, error)
+	CallResponseCallback(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 
 type RequestInfo struct {
@@ -48,15 +48,16 @@ type StreamProtocol struct {
 
 type PubsubProtocolAdapter interface {
 	InitRequest(basicData *pb.BasicData, dataList ...any) error
+	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
 	GetRequestBasicData() *pb.BasicData
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
 	SetRequestSig(sig []byte) error
+	SetResponseSig(sig []byte) error
 	CallRequestCallback() (interface{}, error)
-	CallResponseCallback() (interface{}, error)
-	GetMsgSource() MsgSource
+	CallResponseCallback(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 
 type PubsubProtocol struct {
@@ -81,7 +82,7 @@ type PubsubProtocolCallback interface {
 type ProtocolService interface {
 	GetCurSrcUserPubKeyHex() string
 	GetCurSrcUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte, msgSource MsgSource) error
+	PublishProtocol(userPubkey string, pid pb.PID, protoData []byte) error
 }
 
 type UserPubsub struct {
@@ -105,18 +106,6 @@ type DestUserInfo struct {
 type SrcUserKey struct {
 	PubkeyHex string
 	Pubkey    *ecdsa.PublicKey
-}
-
-type MsgSource int32
-
-type msgSourceEnum struct {
-	DestUser MsgSource
-	SrcUser  MsgSource
-}
-
-var MsgSourceEnum = msgSourceEnum{
-	DestUser: 0,
-	SrcUser:  1,
 }
 
 type OnReceiveMsg func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string)

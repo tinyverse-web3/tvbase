@@ -42,7 +42,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 		}
 	}()
 
-	err := proto.Unmarshal(protoData, p.ProtocolRequest)
+	err := proto.Unmarshal(protoData, p.Request)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error %v", err)
 		return
@@ -51,7 +51,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) {
 	var callbackData interface{}
 	requestBasicData := p.Adapter.GetRequestBasicData()
 
-	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
+	valid := protocol.AuthProtocolMsg(p.Request, requestBasicData)
 	if !valid {
 		p.sendResponseProtocol(p.stream, callbackData, fmt.Errorf("failed to authenticate message"))
 		return
@@ -107,7 +107,7 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 	}
 
 	// sign the data
-	protoData, err := proto.Marshal(p.ProtocolResponse)
+	protoData, err := proto.Marshal(p.Response)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: marshal response error: %v", err)
 		return
@@ -129,16 +129,16 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 		p.Host,
 		stream.Conn().RemotePeer(),
 		p.Adapter.GetStreamResponsePID(),
-		p.ProtocolResponse,
+		p.Response,
 	)
 	responseProtocolId := p.Adapter.GetResponsePID()
 	sreamResponseProtocolId := p.Adapter.GetStreamResponsePID()
 	if err == nil {
 		dmsgLog.Logger.Infof("StreamProtocol->sendResponseProtocol: responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
-			responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
+			responseProtocolId, sreamResponseProtocolId, p.Response)
 	} else {
 		dmsgLog.Logger.Warnf("StreamProtocol->sendResponseProtocol: err:%v/n.responseProtocolId:%s, sreamResponseProtocolId:%s, Message:%v",
-			err, responseProtocolId, sreamResponseProtocolId, p.ProtocolResponse)
+			err, responseProtocolId, sreamResponseProtocolId, p.Response)
 	}
 
 }

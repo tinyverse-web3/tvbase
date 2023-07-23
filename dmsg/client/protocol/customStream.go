@@ -9,6 +9,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CustomStreamProtocolAdapter struct {
@@ -64,8 +65,10 @@ func (adapter *CustomStreamProtocolAdapter) InitRequest(basicData *pb.BasicData,
 	return nil
 }
 
-func (adapter *CustomStreamProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *CustomStreamProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

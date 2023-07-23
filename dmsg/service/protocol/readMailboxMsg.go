@@ -23,7 +23,7 @@ func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.ReadMailboxReq{}
+	adapter.protocol.Request = &pb.ReadMailboxReq{}
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponsePID() pb.PID {
@@ -43,7 +43,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) DestoryProtocol() {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
 	if !ok {
 		return
 	}
@@ -51,7 +51,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseFailRet(errMsg 
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
 	if !ok {
 		return
 	}
@@ -59,7 +59,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseRet(code int32,
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.ReadMailboxReq)
+	request, ok := adapter.protocol.Request.(*pb.ReadMailboxReq)
 	if !ok {
 		return nil
 	}
@@ -67,7 +67,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData() *pb.BasicDat
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
 	if !ok {
 		return nil
 	}
@@ -84,12 +84,12 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(basicData *pb.BasicDa
 		RetCode:     dmsgProtocol.NewSuccRetCode(),
 		ContentList: contentList,
 	}
-	adapter.protocol.ProtocolResponse = response
+	adapter.protocol.Response = response
 	return nil
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.ReadMailboxRes)
+	response, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
 	if !ok {
 		return errors.New("failed to cast request to *pb.ReadMailboxMsgRes")
 	}
@@ -98,7 +98,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(sig []byte) error {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.ProtocolRequest)
+	data, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.Request)
 	return data, err
 }
 

@@ -46,14 +46,14 @@ type StreamProtocolAdapter interface {
 	CallResponseCallback() (interface{}, error)
 }
 type StreamProtocol struct {
-	Ctx              context.Context
-	Host             host.Host
-	ProtocolService  ProtocolService
-	Callback         StreamProtocolCallback
-	ProtocolRequest  protoreflect.ProtoMessage
-	ProtocolResponse protoreflect.ProtoMessage
-	Adapter          StreamProtocolAdapter
-	stream           network.Stream
+	Ctx             context.Context
+	Host            host.Host
+	ProtocolService ProtocolService
+	Callback        StreamProtocolCallback
+	Request         protoreflect.ProtoMessage
+	Response        protoreflect.ProtoMessage
+	Adapter         StreamProtocolAdapter
+	stream          network.Stream
 }
 
 // pubsubProtocol

@@ -22,7 +22,7 @@ func NewCreateMailboxProtocolAdapter() *CreateMailboxProtocolAdapter {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) init() {
-	adapter.protocol.ProtocolRequest = &pb.CreateMailboxReq{}
+	adapter.protocol.Request = &pb.CreateMailboxReq{}
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetResponsePID() pb.PID {
@@ -42,7 +42,7 @@ func (adapter *CreateMailboxProtocolAdapter) DestoryProtocol() {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseFailRet(errMsg s
 }
 
 func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
 	if !ok {
 		return
 	}
@@ -58,7 +58,7 @@ func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseRet(code int32, 
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CreateMailboxReq)
+	request, ok := adapter.protocol.Request.(*pb.CreateMailboxReq)
 	if !ok {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (adapter *CreateMailboxProtocolAdapter) GetRequestBasicData() *pb.BasicData
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
 	}
@@ -78,12 +78,12 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(basicData *pb.BasicDat
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
-	adapter.protocol.ProtocolResponse = response
+	adapter.protocol.Response = response
 	return nil
 }
 
 func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CreateMailboxRes)
+	response, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
 	if !ok {
 		return errors.New("failed to cast request to *pb.CreateMailboxRes")
 	}
@@ -92,12 +92,12 @@ func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback() (any, error) {
-	data, err := adapter.protocol.Callback.OnCreateMailboxRequest(adapter.protocol.ProtocolRequest)
+	data, err := adapter.protocol.Callback.OnCreateMailboxRequest(adapter.protocol.Request)
 	return data, err
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback() (any, error) {
-	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.Response)
 	return data, err
 }
 

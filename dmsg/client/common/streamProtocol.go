@@ -27,7 +27,7 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 	}
 	err = stream.Close()
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->ResponseHandler: error %v, response:%v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->ResponseHandler: error %v", err)
 		return
 	}
 
@@ -50,27 +50,28 @@ func (p *StreamProtocol) HandleResponseData(protoData []byte) {
 		return
 	}
 
-	basicData := p.Adapter.GetResponseBasicData()
-	valid := dmsgProtocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleResponseData: protocolResponse: %v", p.ProtocolResponse)
+
+	responseBasicData := p.Adapter.GetResponseBasicData()
+	valid := dmsgProtocol.AuthProtocolMsg(p.ProtocolResponse, responseBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleResponseData: failed to authenticate message, response: %v", p.ProtocolResponse)
 		return
 	}
 
-	_, ok := p.RequestInfoList[basicData.ID]
+	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
 	if ok {
-		delete(p.RequestInfoList, basicData.ID)
+		callbackData, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, p.ProtocolResponse)
+		if err != nil {
+			dmsgLog.Logger.Warnf("StreamProtocol->HandleResponseData: OnCreateMailboxResponse error %v, response:%v, callbackData:%v",
+				err, p.ProtocolResponse, callbackData)
+		}
+		if callbackData != nil {
+			dmsgLog.Logger.Debugf("StreamProtocol->HandleResponseData: callbackData %v", callbackData)
+		}
+		delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
 		dmsgLog.Logger.Warnf("StreamProtocol->HandleResponseData: failed to locate request data object for response:%v", p.ProtocolResponse)
-	}
-
-	callbackData, err := p.Adapter.CallResponseCallback()
-	if err != nil {
-		dmsgLog.Logger.Warnf("StreamProtocol->HandleResponseData: OnCreateMailboxResponse error %v, response:%v, callbackData:%v",
-			err, p.ProtocolResponse, callbackData)
-	}
-	if callbackData != nil {
-		dmsgLog.Logger.Debugf("StreamProtocol->HandleResponseData: callbackData %v", callbackData)
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleResponseData end")

@@ -7,6 +7,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SeekMailboxProtocolAdapter struct {
@@ -32,10 +34,6 @@ func (adapter *SeekMailboxProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEEK_MAILBOX_RES
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetMsgSource() common.MsgSource {
-	return common.MsgSourceEnum.SrcUser
-}
-
 func (adapter *SeekMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	request := &pb.SeekMailboxReq{
 		BasicData: basicData,
@@ -44,8 +42,28 @@ func (adapter *SeekMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, 
 	return nil
 }
 
-func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *SeekMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+	response := &pb.SeekMailboxRes{
+		BasicData: basicData,
+		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	}
+	adapter.protocol.ProtocolResponse = response
+	return nil
+}
+
+func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
+	response, ok := adapter.protocol.ProtocolResponse.(*pb.SeekMailboxRes)
+	if !ok {
+		return errors.New("SeekMailboxProtocolAdapter->SetResponseSig: failed to cast request to *pb.SeekMailboxRes")
+	}
+	response.BasicData.Sig = sig
+	return nil
+}
+
+func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

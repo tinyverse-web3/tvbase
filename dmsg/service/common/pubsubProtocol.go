@@ -48,7 +48,11 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: NewBasicData error: %v", err)
 		return
 	}
-	p.Adapter.InitResponse(responseBasicData, p.ProtocolRequest)
+	err = p.Adapter.InitResponse(responseBasicData, callbackData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: InitResponse error: %v", err)
+		return
+	}
 
 	// sign the data
 	protoData, err := proto.Marshal(p.ProtocolResponse)

@@ -21,14 +21,14 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 
 	err := proto.Unmarshal(protocolData, p.ProtocolRequest)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: unmarshal error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: unmarshal request error: %v", err)
 		return
 	}
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData: protocolRequest: %v", p.ProtocolRequest)
 
-	basicData := p.Adapter.GetRequestBasicData()
-	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, basicData)
+	requestBasicData := p.Adapter.GetRequestBasicData()
+	valid := protocol.AuthProtocolMsg(p.ProtocolRequest, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: failed to authenticate message")
 		return
@@ -43,6 +43,52 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData: callbackData: %v", callbackData)
 	}
 
+	// generate response message
+	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
+	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, p.Adapter.GetResponsePID())
+	responseBasicData.ID = requestBasicData.ID
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: NewBasicData error: %v", err)
+		return
+	}
+
+	err = p.Adapter.InitResponse(responseBasicData, callbackData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: InitResponse error: %v", err)
+		return
+	}
+
+	// sign the data
+	protoData, err := proto.Marshal(p.ProtocolResponse)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
+		return
+	}
+	sig, err := p.ProtocolService.GetCurSrcUserSig(protoData)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: GetCurSrcUserSig error: %v", err)
+		return
+	}
+	err = p.Adapter.SetResponseSig(sig)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: SetResponseSig error: %v", err)
+		return
+	}
+
+	protoData, err = proto.Marshal(p.ProtocolResponse)
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
+	}
+
+	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData: protocolResponse: %v", p.ProtocolResponse)
+
+	// send the response
+	err = p.ProtocolService.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, protoData)
+
+	if err != nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error:%v", err)
+	}
+
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData end")
 }
 
@@ -52,18 +98,6 @@ func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: recovered from: r: %v", r)
-		}
-
-		basicData := p.Adapter.GetResponseBasicData()
-		if basicData == nil {
-			return
-		}
-		_, ok := p.RequestInfoList[basicData.ID]
-		if ok {
-			delete(p.RequestInfoList, basicData.ID)
-		} else {
-			dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: failed to locate requests, response:%v",
-				p.ProtocolResponse)
 		}
 	}()
 
@@ -75,20 +109,25 @@ func (p *PubsubProtocol) HandleResponseData(protocolData []byte) {
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: protocolResponse: %v", p.ProtocolResponse)
 
-	basicData := p.Adapter.GetResponseBasicData()
-	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, basicData)
+	responseBasicData := p.Adapter.GetResponseBasicData()
+	valid := protocol.AuthProtocolMsg(p.ProtocolResponse, responseBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: failed to authenticate message")
 		return
 	}
 
-	callbackData, err := p.Adapter.CallResponseCallback()
-	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleResponseData: CallResponseCallback error: %v", err)
-		return
-	}
-	if callbackData != nil {
-		dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: callbackData: %v", callbackData)
+	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
+	if ok {
+		callbackData, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, p.ProtocolResponse)
+		if err != nil {
+			dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: CallResponseCallback error: %v", err)
+		}
+		if callbackData != nil {
+			dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData: callbackData %v", callbackData)
+		}
+		delete(p.RequestInfoList, responseBasicData.ID)
+	} else {
+		dmsgLog.Logger.Warnf("PubsubProtocol->HandleResponseData: failed to locate request data object for response:%v", p.ProtocolResponse)
 	}
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleResponseData end")
@@ -100,12 +139,12 @@ func (p *PubsubProtocol) Request(
 	dataList ...any) (any, error) {
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsignPubKey:%s\ndestUserPubKey:%s\ndataList:%v",
 		signUserPubKey, destUserPubKey, dataList)
-	basicData, err := protocol.NewBasicData(p.Host, signUserPubKey, p.Adapter.GetRequestPID())
+	requestBasicData, err := protocol.NewBasicData(p.Host, signUserPubKey, p.Adapter.GetRequestPID())
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: NewBasicData error: %v", err)
 		return nil, err
 	}
-	err = p.Adapter.InitRequest(basicData, dataList...)
+	err = p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: InitRequest error: %v", err)
 		return nil, err
@@ -115,14 +154,14 @@ func (p *PubsubProtocol) Request(
 	//sign data
 	protoData, err := proto.Marshal(p.ProtocolRequest)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: marshal protocolData error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: marshal request error: %v", err)
 		return nil, err
 	}
-	signature, err := p.ProtocolService.GetCurSrcUserSig(protoData)
+	sig, err := p.ProtocolService.GetCurSrcUserSig(protoData)
 	if err != nil {
 		return nil, err
 	}
-	err = p.Adapter.SetRequestSig(signature)
+	err = p.Adapter.SetRequestSig(sig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: set protocol request sign error: %v", err)
 		return nil, err
@@ -130,19 +169,19 @@ func (p *PubsubProtocol) Request(
 
 	protocolData, err := proto.Marshal(p.ProtocolRequest)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: marshal protocolData error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: marshal request error: %v", err)
 		return nil, err
 	}
 
-	err = p.ProtocolService.PublishProtocol(basicData.PID, destUserPubKey, protocolData, p.Adapter.GetMsgSource())
+	err = p.ProtocolService.PublishProtocol(destUserPubKey, requestBasicData.PID, protocolData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: pubsub publish error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		return nil, err
 	}
 
-	p.RequestInfoList[basicData.ID] = &RequestInfo{
+	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
 		ProtoMessage:    p.ProtocolRequest,
-		CreateTimestamp: basicData.TS,
+		CreateTimestamp: requestBasicData.TS,
 	}
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request end")
 	return p.ProtocolRequest, nil

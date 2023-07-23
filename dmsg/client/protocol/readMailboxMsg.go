@@ -8,6 +8,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ReadMailboxMsgProtocolAdapter struct {
@@ -45,8 +46,10 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(basicData *pb.BasicDat
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

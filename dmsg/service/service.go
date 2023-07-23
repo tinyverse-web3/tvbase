@@ -463,7 +463,7 @@ func (d *DmsgService) OnReadMailboxMsgRequest(protoData protoreflect.ProtoMessag
 	return mailboxMsgDataList, nil
 }
 
-func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.ProtoMessage) (interface{}, error) {
+func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.ProtoMessage) (any, error) {
 	request, ok := protoData.(*pb.CustomProtocolReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert %v to *pb.CustomContentReq", protoData)
@@ -481,7 +481,7 @@ func (d *DmsgService) OnCustomStreamProtocolRequest(protoData protoreflect.Proto
 		return nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: callback is nil")
 	}
 	customProtocolInfo.Service.HandleRequest(request)
-	return request, nil
+	return request.PID, nil
 }
 
 func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (interface{}, error) {

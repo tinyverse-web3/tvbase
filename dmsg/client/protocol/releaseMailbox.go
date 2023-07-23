@@ -8,6 +8,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ReleaseMailboxProtocolAdapter struct {
@@ -45,8 +46,10 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitRequest(basicData *pb.BasicDat
 	return nil
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReleaseMailboxResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *ReleaseMailboxProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnReleaseMailboxResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

@@ -7,6 +7,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SendMsgProtocolAdapter struct {
@@ -32,10 +34,6 @@ func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEND_MSG_RES
 }
 
-func (adapter *SendMsgProtocolAdapter) GetMsgSource() common.MsgSource {
-	return common.MsgSourceEnum.DestUser
-}
-
 func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 1 {
 		content, ok := dataList[0].([]byte)
@@ -53,13 +51,33 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, data
 	return nil
 }
 
+func (adapter *SendMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+	response := &pb.SendMsgRes{
+		BasicData: basicData,
+		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	}
+	adapter.protocol.ProtocolResponse = response
+	return nil
+}
+
+func (adapter *SendMsgProtocolAdapter) SetResponseSig(sig []byte) error {
+	response, ok := adapter.protocol.ProtocolResponse.(*pb.SendMsgRes)
+	if !ok {
+		return errors.New("SendMsgProtocolAdapter->SetResponseSig: failed to cast request to *pb.SendMsgRes")
+	}
+	response.BasicData.Sig = sig
+	return nil
+}
+
 func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
 	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
-func (adapter *SendMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSendMsgResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSendMsgResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

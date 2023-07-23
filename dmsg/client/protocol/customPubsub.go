@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CustomPubsubProtocolAdapter struct {
@@ -30,10 +31,6 @@ func (adapter *CustomPubsubProtocolAdapter) GetRequestPID() pb.PID {
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_RES
-}
-
-func (adapter *CustomPubsubProtocolAdapter) GetMsgSource() common.MsgSource {
-	return common.MsgSourceEnum.SrcUser
 }
 
 func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
@@ -63,8 +60,10 @@ func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, 
 	return data, err
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
