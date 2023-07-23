@@ -46,7 +46,7 @@ func (adapter *CreateMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

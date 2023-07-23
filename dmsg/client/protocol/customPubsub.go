@@ -32,8 +32,8 @@ func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_RES
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
-	return common.PubsubSource.SrcUser
+func (adapter *CustomPubsubProtocolAdapter) GetMsgSource() common.MsgSource {
+	return common.MsgSourceEnum.SrcUser
 }
 
 func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
@@ -58,9 +58,9 @@ func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData,
 	return nil
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (bool, interface{}, error) {
-	needResponse, data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
-	return needResponse, data, err
+func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	return data, err
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (interface{}, error) {

@@ -13,10 +13,10 @@ import (
 )
 
 type StreamProtocolCallback interface {
-	OnCreateMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnReadMailboxMsgResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnReleaseMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
+	OnCreateMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnReadMailboxMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnReleaseMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnSeekMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 type StreamProtocolAdapter interface {
@@ -26,7 +26,7 @@ type StreamProtocolAdapter interface {
 	GetStreamResponsePID() protocol.ID
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
-	SetRequestSig(signature []byte)
+	SetRequestSig(sig []byte)
 	CallResponseCallback() (interface{}, error)
 }
 
@@ -53,10 +53,10 @@ type PubsubProtocolAdapter interface {
 	GetRequestBasicData() *pb.BasicData
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
-	SetRequestSig(signature []byte) error
-	CallRequestCallback() (bool, interface{}, error)
+	SetRequestSig(sig []byte) error
+	CallRequestCallback() (interface{}, error)
 	CallResponseCallback() (interface{}, error)
-	GetPubsubSource() PubsubSourceType
+	GetMsgSource() MsgSource
 }
 
 type PubsubProtocol struct {
@@ -71,17 +71,17 @@ type PubsubProtocol struct {
 }
 
 type PubsubProtocolCallback interface {
-	OnSeekMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgRequest(protoreflect.ProtoMessage) (bool, interface{}, error)
-	OnSendMsgResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (bool, interface{}, error)
+	OnSeekMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnSendMsgRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnSendMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
 
 type ProtocolService interface {
 	GetCurSrcUserPubKeyHex() string
 	GetCurSrcUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte, pubsubSource PubsubSourceType) error
+	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte, msgSource MsgSource) error
 }
 
 type UserPubsub struct {
@@ -95,7 +95,7 @@ type SrcUserInfo struct {
 	MailboxPeerID       string
 	MailboxCreateSignal chan bool
 	UserKey             *SrcUserKey
-	GetSignCallback     GetSignCallback
+	GetSigCallback      GetSigCallback
 }
 
 type DestUserInfo struct {
@@ -107,13 +107,14 @@ type SrcUserKey struct {
 	Pubkey    *ecdsa.PublicKey
 }
 
-type PubsubSourceType int32
-type PubsubSourceStruct struct {
-	DestUser PubsubSourceType
-	SrcUser  PubsubSourceType
+type MsgSource int32
+
+type msgSourceEnum struct {
+	DestUser MsgSource
+	SrcUser  MsgSource
 }
 
-var PubsubSource = PubsubSourceStruct{
+var MsgSourceEnum = msgSourceEnum{
 	DestUser: 0,
 	SrcUser:  1,
 }
@@ -129,7 +130,7 @@ type UserMsg struct {
 	MsgContent     string
 }
 
-type GetSignCallback func(protoData []byte) (sig []byte, err error)
+type GetSigCallback func(protoData []byte) (sig []byte, err error)
 
 type CustomStreamProtocolInfo struct {
 	Client   customProtocol.CustomStreamProtocolClient

@@ -32,15 +32,15 @@ func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEND_MSG_RES
 }
 
-func (adapter *SendMsgProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
-	return common.PubsubSource.DestUser
+func (adapter *SendMsgProtocolAdapter) GetMsgSource() common.MsgSource {
+	return common.MsgSourceEnum.DestUser
 }
 
 func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
 	if len(dataList) == 1 {
 		content, ok := dataList[0].([]byte)
 		if !ok {
-			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get msgContent")
+			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
 		adapter.protocol.ProtocolRequest = &pb.SendMsgReq{
@@ -48,18 +48,18 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, data
 			Content:   content,
 		}
 	} else {
-		return errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain srcPubkey and msgContent")
+		return errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
 	}
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (bool, interface{}, error) {
-	needResponse, data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest)
-	return needResponse, data, err
+func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+	return data, err
 }
 
 func (adapter *SendMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSendMsgResponse(adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnSendMsgResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

@@ -32,8 +32,8 @@ func (adapter *SeekMailboxProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEEK_MAILBOX_RES
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetPubsubSource() common.PubsubSourceType {
-	return common.PubsubSource.SrcUser
+func (adapter *SeekMailboxProtocolAdapter) GetMsgSource() common.MsgSource {
+	return common.MsgSourceEnum.SrcUser
 }
 
 func (adapter *SeekMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
@@ -45,7 +45,7 @@ func (adapter *SeekMailboxProtocolAdapter) InitRequest(basicData *pb.BasicData, 
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 

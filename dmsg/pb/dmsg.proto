@@ -40,7 +40,6 @@ message SendMsgReq {
     BasicData basicData = 1;
     string destPubkey = 2;
     bytes content = 3;
-    bool needResponse = 4;
 }
 
 message SendMsgRes {

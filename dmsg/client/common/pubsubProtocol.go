@@ -12,6 +12,7 @@ import (
 
 func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData begin\nrequestProtocolId: %v", p.Adapter.GetRequestPID())
+
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from: err: %v", r)
@@ -33,7 +34,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) {
 		return
 	}
 
-	_, callbackData, err := p.Adapter.CallRequestCallback()
+	callbackData, err := p.Adapter.CallRequestCallback()
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: CallRequestCallback error: %v", err)
 		return
@@ -133,7 +134,7 @@ func (p *PubsubProtocol) Request(
 		return nil, err
 	}
 
-	err = p.ProtocolService.PublishProtocol(basicData.PID, destUserPubKey, protocolData, p.Adapter.GetPubsubSource())
+	err = p.ProtocolService.PublishProtocol(basicData.PID, destUserPubKey, protocolData, p.Adapter.GetMsgSource())
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request err: pubsub publish error: %v", err)
 		return nil, err

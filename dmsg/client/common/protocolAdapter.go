@@ -31,9 +31,9 @@ func (adapter *CommonProtocolAdapter) InitRequest(basicData *pb.BasicData, dataL
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) CallRequestCallback() (bool, interface{}, error) {
+func (adapter *CommonProtocolAdapter) CallRequestCallback() (interface{}, error) {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallRequestCallback: not implemented")
-	return false, nil, fmt.Errorf("CommonProtocolAdapter->CallRequestCallback: not implemented")
+	return nil, fmt.Errorf("CommonProtocolAdapter->CallRequestCallback: not implemented")
 }
 
 func (adapter *CommonProtocolAdapter) CallResponseCallback() (interface{}, error) {

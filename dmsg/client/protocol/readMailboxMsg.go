@@ -46,7 +46,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(basicData *pb.BasicDat
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(adapter.protocol.ProtocolResponse)
+	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
 	return data, err
 }
 
