@@ -40,7 +40,9 @@ func (adapter *SendMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMess
 func (adapter *SendMsgProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var requestProtoMsg *pb.SendMsgReq
+	requestProtoMsg := &pb.SendMsgReq{
+		BasicData: basicData,
+	}
 	if len(dataList) == 2 {
 		destPubkey, ok := dataList[0].(string)
 		if !ok {
@@ -51,14 +53,10 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(
 		if !ok {
 			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
-
-		requestProtoMsg = &pb.SendMsgReq{
-			BasicData:  basicData,
-			Content:    content,
-			DestPubkey: destPubkey,
-		}
+		requestProtoMsg.Content = content
+		requestProtoMsg.DestPubkey = destPubkey
 	} else {
-		return nil, errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
+		return requestProtoMsg, errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
 	}
 	return requestProtoMsg, nil
 }
@@ -98,6 +96,17 @@ func (adapter *SendMsgProtocolAdapter) GetResponseRetCode(
 		return nil
 	}
 	return response.RetCode
+}
+
+func (adapter *SendMsgProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	request, ok := responseProtoMsg.(*pb.SendMsgRes)
+	if !ok {
+		return
+	}
+	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
 func (adapter *SendMsgProtocolAdapter) SetRequestSig(

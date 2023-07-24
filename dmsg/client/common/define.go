@@ -6,6 +6,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
@@ -26,6 +27,7 @@ type ProtocolAdapter interface {
 	GetRequestBasicData(requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseBasicData(responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
+	SetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage, code int32, result string)
 	SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error
 	SetResponseSig(responseProtoMsg protoreflect.ProtoMessage, sig []byte) error
 	CallRequestCallback(requestProtoMsg protoreflect.ProtoMessage) (any, error)
@@ -72,6 +74,7 @@ type Protocol struct {
 type StreamProtocol struct {
 	Protocol
 	Callback StreamProtocolCallback
+	stream   network.Stream
 }
 
 type PubsubProtocolAdapter interface {

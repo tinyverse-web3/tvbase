@@ -50,7 +50,9 @@ func (adapter *CustomStreamProtocolAdapter) GetEmptyResponse() protoreflect.Prot
 func (adapter *CustomStreamProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var requestProtoMsg *pb.CustomProtocolReq
+	requestProtoMsg := &pb.CustomProtocolReq{
+		BasicData: basicData,
+	}
 	if len(dataList) == 2 {
 		pid, ok := dataList[0].(string)
 		if !ok {
@@ -60,13 +62,10 @@ func (adapter *CustomStreamProtocolAdapter) InitRequest(
 		if !ok {
 			return nil, errors.New("CustomStreamProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
-		requestProtoMsg = &pb.CustomProtocolReq{
-			BasicData: basicData,
-			PID:       pid,
-			Content:   content,
-		}
+		requestProtoMsg.PID = pid
+		requestProtoMsg.Content = content
 	} else {
-		return nil, errors.New("CustomStreamProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
+		return requestProtoMsg, errors.New("CustomStreamProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
 	}
 	return requestProtoMsg, nil
 }
@@ -74,7 +73,10 @@ func (adapter *CustomStreamProtocolAdapter) InitRequest(
 func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var responseProtoMsg *pb.CustomProtocolRes
+	responseProtoMsg := &pb.CustomProtocolRes{
+		BasicData: basicData,
+		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	}
 	if len(dataList) == 2 {
 		pid, ok := dataList[0].(string)
 		if !ok {
@@ -84,14 +86,10 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 		if !ok {
 			return nil, errors.New("CustomStreamProtocolAdapter->InitResponse: failed to cast datalist[1] to []byte for get content")
 		}
-		responseProtoMsg = &pb.CustomProtocolRes{
-			BasicData: basicData,
-			PID:       pid,
-			Content:   content,
-			RetCode:   dmsgProtocol.NewSuccRetCode(),
-		}
+		responseProtoMsg.PID = pid
+		responseProtoMsg.Content = content
 	} else {
-		return nil, errors.New("CustomStreamProtocolAdapter->InitResponse: parameter dataList need contain customProtocolID and content")
+		return responseProtoMsg, errors.New("CustomStreamProtocolAdapter->InitResponse: parameter dataList need contain customProtocolID and content")
 	}
 	return responseProtoMsg, nil
 }
@@ -121,6 +119,17 @@ func (adapter *CustomStreamProtocolAdapter) GetResponseRetCode(
 		return nil
 	}
 	return response.RetCode
+}
+
+func (adapter *CustomStreamProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	request, ok := responseProtoMsg.(*pb.CustomProtocolRes)
+	if !ok {
+		return
+	}
+	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
 func (adapter *CustomStreamProtocolAdapter) SetRequestSig(

@@ -73,6 +73,13 @@ func (adapter *CommonProtocolAdapter) GetResponseRetCode(
 	return nil
 }
 
+func (adapter *CommonProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetResponseRetCode: not implemented")
+}
+
 func (adapter *CommonProtocolAdapter) SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetRequestSig: not implemented")
 	return nil

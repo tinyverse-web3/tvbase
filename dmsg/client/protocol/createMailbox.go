@@ -103,13 +103,25 @@ func (adapter *CreateMailboxProtocolAdapter) SetRequestSig(
 }
 
 func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(
-	responseProtoMsg protoreflect.ProtoMessage, sig []byte) error {
+	responseProtoMsg protoreflect.ProtoMessage,
+	sig []byte) error {
 	response, ok := responseProtoMsg.(*pb.CreateMailboxRes)
 	if !ok {
 		return fmt.Errorf("CreateMailboxProtocolAdapter->SetResponseSig: failed to cast request to *pb.CreateMailboxRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
+}
+
+func (adapter *CreateMailboxProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	request, ok := responseProtoMsg.(*pb.CreateMailboxRes)
+	if !ok {
+		return
+	}
+	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback(

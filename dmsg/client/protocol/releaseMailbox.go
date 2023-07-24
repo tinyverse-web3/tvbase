@@ -91,6 +91,17 @@ func (adapter *ReleaseMailboxProtocolAdapter) GetResponseRetCode(
 	return response.RetCode
 }
 
+func (adapter *ReleaseMailboxProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	request, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
+	if !ok {
+		return
+	}
+	request.RetCode = dmsgProtocol.NewRetCode(code, result)
+}
+
 func (adapter *ReleaseMailboxProtocolAdapter) SetRequestSig(
 	requestProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
