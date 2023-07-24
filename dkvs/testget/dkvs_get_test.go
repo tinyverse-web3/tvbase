@@ -67,7 +67,7 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0022")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-pk001-0022")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -97,7 +97,7 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	}
 
 	// use a pubkey as key
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + bytesToHexString(pkBytes)
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + bytesToHexString(pkBytes)
 
 	value, _, _, _, _, err = kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue4) {
@@ -129,7 +129,7 @@ func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync7-001")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync7-001")
 	tValue1 := []byte("world2")
 
 	value, _, _, _, _, err := kv.Get(tKey)
@@ -137,13 +137,13 @@ func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync7-002")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync7-002")
 	value, _, _, _, _, err = kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue1) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync7-003")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync7-003")
 	value, _, _, _, _, err = kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue1) {
 		t.Fatal(err)

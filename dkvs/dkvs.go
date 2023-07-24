@@ -13,11 +13,9 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
 	badgerds "github.com/ipfs/go-ds-badger2"
-	levelds "github.com/ipfs/go-ds-leveldb"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
@@ -164,7 +162,7 @@ func GetRecordSignData2(key string, record *pb.DkvsRecord) []byte {
 	return GetRecordSignData(key, record.Value, record.PubKey, record.Validity-record.Ttl, record.Ttl)
 }
 
-func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
+func (d *Dkvs) CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *pb.Cert) error {
 
 	if !isValidKey(key) {
@@ -222,7 +220,7 @@ func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 	}
 
 	if txcert != nil {
-		if !d.IsPublicService(KEY_NS_TX, txcert.IssuerPubkey) || !VerifyCertTxCompleted2(key, cert1, txcert, pubkey1, pubkey2) {
+		if !d.IsPublicService(PUBSERVICE_MINER, txcert.IssuerPubkey) || !VerifyCertTxCompleted2(key, cert1, txcert, pubkey1, pubkey2) {
 			err := errors.New("invalid cert")
 			Logger.Error(err)
 			return err
@@ -236,7 +234,7 @@ func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 // record2 由发起者生成，并且由接受者签名的record记录，校验后可以直接调用dhtPut
 func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *pb.Cert) error {
-	
+
 	err := d.CheckTransferPara(key, value1, pubkey1, sig1, value2, pubkey2, issuetime, ttl, sig2, txcert)
 	if err != nil {
 		Logger.Error(err)
@@ -249,7 +247,7 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 
 	prepareRecord, err := CreateRecordWithType(value1, pubkey1, issuetime, ttl, sig1, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
-	 	return err
+		return err
 	}
 	if txcert != nil {
 		prepareRecord.Data, err = txcert.Marshal()
@@ -258,17 +256,17 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 			return err
 		}
 	}
-	
+
 	newRecord, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		return err
 	}
-	newRecord.Data, err = prepareRecord.Marshal()  // Data数据可以认为不是record的一部分（带外数据），不需要签名
+	newRecord.Data, err = prepareRecord.Marshal() // Data数据可以认为不是record的一部分（带外数据），不需要签名
 	if err != nil {
 		Logger.Error(err)
 		return err
 	}
-	
+
 	recBuf, err := newRecord.Marshal()
 	if err != nil {
 		return err
@@ -307,20 +305,6 @@ func (d *Dkvs) putRecord(key string, record *pb.DkvsRecord) error {
 	recordKey := RecordKey(key)
 	//return d.dhtPut(recordKey, drMarsh)
 	return d.asyncPut(recordKey, drMarsh)
-}
-
-func createLevelDB(dbRootDir string) (*levelds.Datastore, error) {
-	fullPath := dbRootDir
-	if !filepath.IsAbs(fullPath) {
-		rootPath, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		fullPath = filepath.Join(rootPath, fullPath)
-	}
-	return levelds.NewDatastore(fullPath, &levelds.Options{
-		Compression: ldbopts.NoCompression,
-	})
 }
 
 func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
@@ -515,15 +499,17 @@ func (d *Dkvs) IsPublicService(sn string, pubkey []byte) bool {
 	if len(sn) > MaxDKVPublicSNLength {
 		return false
 	}
-	key, ok := dkvsServiceNameMap[sn]
+	vector, ok := dkvsServiceNameMap[sn]
 	if ok {
-		if key == BytesToHexString(pubkey) {
-			return true
-		} else {
-			// 看看是否是派生出来的子公钥
-			if d.IsChildPubkey(pubkey, HexStringToBytes(key)) {
+		for _, key := range vector {
+			if key == BytesToHexString(pubkey) {
 				return true
 			}
+		}
+
+		// 看看是否是派生出来的子公钥
+		if d.IsChildPubkey(pubkey, HexStringToBytes(vector[0])) {
+			return true
 		}
 	} else {
 		if IsGunService(pubkey) {

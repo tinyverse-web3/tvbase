@@ -12,19 +12,17 @@ import (
 const MaxDKVPublicSNLength int = 8
 
 // maintained by DAO
-const KEY_NS_GUN = "gun"
-const KEY_NS_TX = "tx"         // miner
-const KEY_NS_WALLET = "wallet" // miner
-const KEY_NS_DAUTH = "dauth"
-const KEY_NS_DMSG = "dmsg"
+const PUBSERVICE_GUN = "gun"
+const PUBSERVICE_MINER = "miner"
+const PUBSERVICE_DAUTH = "dauth"
+
+const KEY_NS_GUN = "contract"
 
 // name:publickey (eg: 0xabc)
-var dkvsServiceNameMap = map[string]string{
-	KEY_NS_GUN:    "0x08011220b8f61ce7b44d1ff9a8f86186eb1062180684f785d3456c4949e7792714cb1ac1", // zjMGsKesWSlZnayK
-	KEY_NS_TX:     "0x080112206f95bc02be8daa6ad6ca1ce753b633b86c73c2edd93950b4fe5dcda29f500c2a", // thsgMCRQoWIPwfxJ
-	KEY_NS_WALLET: "0x080112206f95bc02be8daa6ad6ca1ce753b633b86c73c2edd93950b4fe5dcda29f500c2a",
-	KEY_NS_DAUTH:  "0x080112205af541d9b6d1273f886b3611bb666872318926f9cc269fd6652b40ac0574f6e5", // oIBBgepoPyhdJTYB
-	KEY_NS_DMSG:   "0x08011220ca3f355dcfcab9e3907c205f3aee9025afeed0086af86ab0f8b4e1cb2e37915d", // yYjULoePVwOnOjmO
+var dkvsServiceNameMap = map[string][]string{
+	PUBSERVICE_GUN:   {"0x08011220b8f61ce7b44d1ff9a8f86186eb1062180684f785d3456c4949e7792714cb1ac1"}, // zjMGsKesWSlZnayK
+	PUBSERVICE_MINER: {"0x080112206f95bc02be8daa6ad6ca1ce753b633b86c73c2edd93950b4fe5dcda29f500c2a"}, // thsgMCRQoWIPwfxJ
+	PUBSERVICE_DAUTH: {"0x080112205af541d9b6d1273f886b3611bb666872318926f9cc269fd6652b40ac0574f6e5"}, // oIBBgepoPyhdJTYB
 }
 
 func IsPublicServiceName(sn string) bool {
@@ -34,9 +32,11 @@ func IsPublicServiceName(sn string) bool {
 
 func IsPublicServiceKey(pubkey []byte) bool {
 	v := BytesToHexString(pubkey)
-	for _, val := range dkvsServiceNameMap {
-		if val == v {
-			return true
+	for _, vector := range dkvsServiceNameMap {
+		for _, val := range vector {
+			if val == v {
+				return true
+			}
 		}
 	}
 	return false
@@ -44,23 +44,19 @@ func IsPublicServiceKey(pubkey []byte) bool {
 
 func IsPublicServiceNameKey(sn string, pubkey []byte) bool {
 	v := BytesToHexString(pubkey)
-	value, ok := dkvsServiceNameMap[sn]
+	vector, ok := dkvsServiceNameMap[sn]
 	if ok {
-		if value == v {
-			return true
+		for _, val := range vector {
+			if val == v {
+				return true
+			}
 		}
 	}
 	return false
 }
 
 func IsGunService(pubkey []byte) bool {
-	key, ok := dkvsServiceNameMap[KEY_NS_GUN]
-	if ok {
-		if key == BytesToHexString(pubkey) {
-			return true
-		}
-	}
-	return false
+	return IsPublicServiceNameKey(PUBSERVICE_GUN, pubkey)
 }
 
 func IsGunName(key string) bool {
@@ -80,11 +76,6 @@ func IsGunName(key string) bool {
 
 func GetGunKey(name string) string {
 	return "/" + KEY_NS_GUN + "/" + name
-}
-
-func GetGUNPubKey() []byte {
-	pubkey := dkvsServiceNameMap[KEY_NS_GUN]
-	return HexStringToBytes(pubkey)
 }
 
 func BytesToHexString(input []byte) string {
@@ -114,10 +105,12 @@ func HexStringToBytes(input string) []byte {
 
 func FindPublicServiceCert(cv []*pb.Cert) *pb.Cert {
 
-	for _, val := range dkvsServiceNameMap {
-		cert := SearchCertByPubkey(cv, HexStringToBytes(val))
-		if cert != nil {
-			return cert
+	for _, vector := range dkvsServiceNameMap {
+		for _, val := range vector {
+			cert := SearchCertByPubkey(cv, HexStringToBytes(val))
+			if cert != nil {
+				return cert
+			}
 		}
 	}
 
@@ -126,10 +119,12 @@ func FindPublicServiceCert(cv []*pb.Cert) *pb.Cert {
 
 func FindPublicServiceCertWithUserPubkey(cv []*pb.Cert, userPubkey []byte) *pb.Cert {
 
-	for _, val := range dkvsServiceNameMap {
-		cert := SearchCertByPubkey(cv, HexStringToBytes(val))
-		if cert != nil && VerifyCert(cert) && bytes.Equal(cert.UserPubkey, userPubkey) {
-			return cert
+	for _, vector := range dkvsServiceNameMap {
+		for _, val := range vector {
+			cert := SearchCertByPubkey(cv, HexStringToBytes(val))
+			if cert != nil && VerifyCert(cert) && bytes.Equal(cert.UserPubkey, userPubkey) {
+				return cert
+			}
 		}
 	}
 
@@ -138,19 +133,21 @@ func FindPublicServiceCertWithUserPubkey(cv []*pb.Cert, userPubkey []byte) *pb.C
 
 func FindPublicServiceCertByServiceName(cv []*pb.Cert, name string) *pb.Cert {
 
-	pubkey, ok := dkvsServiceNameMap[name]
+	vector, ok := dkvsServiceNameMap[name]
 	if !ok {
 		return nil
 	}
 
-	cert := SearchCertByPubkey(cv, HexStringToBytes(pubkey))
-	if cert != nil && VerifyCert(cert) {
-		return cert
+	for _, val := range vector {
+		cert := SearchCertByPubkey(cv, HexStringToBytes(val))
+		if cert != nil && VerifyCert(cert) {
+			return cert
+		}
 	}
 
 	return nil
 }
 
 func FindGunCert(cv []*pb.Cert) *pb.Cert {
-	return FindPublicServiceCertByServiceName(cv, KEY_NS_GUN)
+	return FindPublicServiceCertByServiceName(cv, PUBSERVICE_GUN)
 }

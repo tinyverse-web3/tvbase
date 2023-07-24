@@ -54,7 +54,7 @@ func TestDkvs(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-k001-aa18")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa18")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -137,7 +137,7 @@ func TestDkvs(t *testing.T) {
 	}
 
 	// use a pubkey as key
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + bytesToHexString(pkBytes)
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + bytesToHexString(pkBytes)
 	data = dkvs.GetRecordSignData(tKey, tValue4, pkBytes2, issuetime, ttl)
 	sigData5, err := priv2.Sign(data)
 	if err != nil {
@@ -191,8 +191,6 @@ func TestGun(t *testing.T) {
 	}
 	fmt.Println("public key: ", bytesToHexString(gunPubKey))
 	fmt.Println("public key length: ", len(bytesToHexString(gunPubKey)))
-
-	fmt.Println("GUN public key: ", bytesToHexString(dkvs.GetGUNPubKey()))
 
 	// Gun service apply a gun name
 	name := dkvs.RandString(8)
@@ -396,21 +394,17 @@ func TestTransferKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
 	//  transfer a name to A
 	err = testTransfer(kv, key, gvalue, PrivKey1, issuetime, ttl, privA)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	
-
 	//  can be transfered.
 	privB, err := dkvs.GetPriKeyBySeed("BBB")
 	if err != nil {
 		t.Fatal(err)
 	}
-
 
 	// transfer succ
 	err = testTransfer(kv, key, gvalue, privA, issuetime, ttl, privB)
@@ -486,7 +480,7 @@ func testTransfer(kv common.DkvsService, key string, gvalue []byte, privk1 ic.Pr
 	var cert2 *dkvs_pb.Cert
 	if fee != 0 {
 		seed := "thsgMCRQoWIPwfxJ" //dkvs.RandString(16)
-		minerPrivKey, _:= dkvs.GetPriKeyBySeed(seed)
+		minerPrivKey, _ := dkvs.GetPriKeyBySeed(seed)
 		minerPubKey, _ := ic.MarshalPublicKey(minerPrivKey.GetPublic())
 
 		cert2 = dkvs.IssueCertTxCompleted(key, "txtxtx", fee, pubkey1, pubkey2, minerPubKey)
@@ -531,7 +525,6 @@ func testTransfer(kv common.DkvsService, key string, gvalue []byte, privk1 ic.Pr
 
 	return nil
 }
-
 
 func hash(key string) (hashKey string) {
 	shaHash := sha512.Sum384([]byte(key))

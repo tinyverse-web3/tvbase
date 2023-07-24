@@ -3,6 +3,7 @@ package dkvs
 import (
 	"bytes"
 	"errors"
+	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	record "github.com/libp2p/go-libp2p-record"
@@ -137,6 +138,19 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 
 				Logger.Debugf("key %s transfer from %s to %s\n", key, BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey))
 				return 0, nil
+			} else {
+				// 同一个公共服务，如果是已经注册的服务，可以相互修改数据
+				subkeys := strings.Split(key, "/")
+				l := len(subkeys)
+				if l < 3 { // subkeys[0] = ""
+					return -1, ErrDifferentPublicKey
+				}
+				if IsPublicServiceName(subkeys[1]) {
+					if IsPublicServiceNameKey(subkeys[1], oldRecord.PubKey) && IsPublicServiceNameKey(subkeys[1], newRecord.PubKey) {
+						Logger.Debugf("key %s is public service\n", key)
+						return 0, nil
+					}
+				}
 			}
 			
 			Logger.Error(ErrDifferentPublicKey)
