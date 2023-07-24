@@ -37,10 +37,6 @@ func (adapter *CreateMailboxProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidCreateMailboxReq
 }
 
-func (adapter *CreateMailboxProtocolAdapter) DestoryProtocol() {
-	adapter.protocol.Host.RemoveStreamHandler(dmsgProtocol.PidCreateMailboxReq)
-}
-
 func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
 	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
 	if !ok {

@@ -83,7 +83,7 @@ func (p *Protocol) HandleRequestData(
 }
 
 func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
-	dmsgLog.Logger.Debugf("Protocol->HandleResponseData begin:\nrequestPId:%s", p.Adapter.GetRequestPID())
+	dmsgLog.Logger.Debugf("Protocol->HandleResponseData begin:\nresponsePID:%s", p.Adapter.GetResponsePID())
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("Protocol->HandleResponseData: recovered from: r: %v", r)
