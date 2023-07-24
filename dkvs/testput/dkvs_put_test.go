@@ -64,7 +64,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-pk001-0022")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-pk001-0022")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -158,7 +158,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	}
 
 	// use a pubkey as key
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + bytesToHexString(pkBytes)
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + bytesToHexString(pkBytes)
 	data = dkvs.GetRecordSignData(tKey, tValue4, pkBytes2, issuetime, ttl)
 	sigData5, err := priv2.Sign(data)
 	if err != nil {
@@ -213,7 +213,7 @@ func TestUnsyncedDb(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync001")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync001")
 	tValue1 := []byte("world1")
 	ttl := dkvs.GetTtlFromDuration(time.Hour)
 	issuetime := dkvs.TimeNow()
@@ -228,7 +228,7 @@ func TestUnsyncedDb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync002")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync002")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -239,7 +239,7 @@ func TestUnsyncedDb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync003")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync003")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -250,7 +250,7 @@ func TestUnsyncedDb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync004")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync004")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -261,7 +261,7 @@ func TestUnsyncedDb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync005")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync005")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -301,7 +301,7 @@ func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync16-001")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync16-001")
 	tValue1 := []byte("world2")
 	ttl := dkvs.GetTtlFromDuration(time.Hour)
 	issuetime := dkvs.TimeNow()
@@ -316,7 +316,7 @@ func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync16-002")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync16-002")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
@@ -327,7 +327,7 @@ func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tKey = "/" + dkvs.KEY_NS_DAUTH + "/" + hash("dkvs-usync16-003")
+	tKey = "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-usync16-003")
 	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
 	sigData1, err = priv.Sign(data)
 	if err != nil {
