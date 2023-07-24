@@ -35,15 +35,21 @@ func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
 }
 
 func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
-	if len(dataList) == 1 {
-		content, ok := dataList[0].([]byte)
+	if len(dataList) == 2 {
+		destPubkey, ok := dataList[0].(string)
+		if !ok {
+			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+		}
+
+		content, ok := dataList[1].([]byte)
 		if !ok {
 			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
 		adapter.protocol.RequestProtoMsg = &pb.SendMsgReq{
-			BasicData: basicData,
-			Content:   content,
+			BasicData:  basicData,
+			Content:    content,
+			DestPubkey: destPubkey,
 		}
 	} else {
 		return errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")

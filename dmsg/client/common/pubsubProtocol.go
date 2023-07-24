@@ -36,18 +36,19 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 }
 
 func (p *PubsubProtocol) Request(
-	userPubKey string,
-	destUserPubKey string,
+	srcUserPubKey string,
+	destUserPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\ndestUserPubKey:%s", destUserPubKey)
+	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsrcUserPubKey:%s", srcUserPubKey)
 
-	requestInfoId, _, requestProtoData, err := p.GenRequestInfo(userPubKey, dataList...)
+	dataList = append([]any{destUserPubkey}, dataList...)
+	requestInfoId, _, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
 	if err != nil {
 		return nil, err
 	}
 
 	requestBasicData := p.Adapter.GetRequestBasicData()
-	err = p.Service.PublishProtocol(destUserPubKey, requestBasicData.PID, requestProtoData)
+	err = p.Service.PublishProtocol(destUserPubkey, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)
