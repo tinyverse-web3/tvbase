@@ -323,8 +323,6 @@ func VerifyCertTransferConfirm(key string, oldvalue []byte, txcert *pb.Cert, pub
 		return false
 	}
 
-	// 缺少这个检查 d.IsPublicService(KEY_NS_TX, txcert.IssuerPubkey)
-
 	if !VerifyCertTxCompleted2(key, cert1, txcert, pubkey1, pubkey2) {
 		Logger.Error("VerifyCertTxCompleted2 failed")
 		return false

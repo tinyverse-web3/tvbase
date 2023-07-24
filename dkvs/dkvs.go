@@ -202,12 +202,6 @@ func (d *Dkvs)CheckTransferPara(key string, value1, pubkey1 []byte, sig1 []byte,
 		return err
 	}
 
-	err = ValidateValue(key, value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
-	if err != nil {
-		Logger.Error("ValidateValue ", err)
-		return err
-	}
-
 	err = ValidateValue(key, value2, pubkey2, issuetime, ttl, sig2, int(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		Logger.Error("ValidateValue ", err)
@@ -250,52 +244,36 @@ func (d *Dkvs) TransferKey(key string, value1, pubkey1 []byte, sig1 []byte,
 	}
 
 	recordKey := RecordKey(key)
-	// 先放证书
-	tmpRec2, err := CreateRecordWithType(value1, pubkey1, issuetime, ttl, sig1, uint32(pb.DkvsRecord_GUN_SIGNATURE))
-	if err != nil {
-		return err
-	}
+	// 原来的流程，需要多次put，这会让节点上的数据可能不同步，需要尽可能减少put次数
+	// 利用 record.Data 保存必要的信息，一次完成转移
 
-	tmpRecBuf2, err := tmpRec2.Marshal()
+	prepareRecord, err := CreateRecordWithType(value1, pubkey1, issuetime, ttl, sig1, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
-		return err
-	}
-
-	err = d.dhtPut(recordKey, tmpRecBuf2) // 必须同步到网络上
-	if err != nil {
-		Logger.Error(err)
-		return err
-	}
-	// 转移
-	tmpRec3, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, _ValueType_Transfer)
-	if err != nil {
-		return err
+	 	return err
 	}
 	if txcert != nil {
-		tmpRec3.Data, _ = txcert.Marshal()
+		prepareRecord.Data, err = txcert.Marshal()
+		if err != nil {
+			Logger.Error(err)
+			return err
+		}
 	}
-
-	tmpRecBuf3, err := tmpRec3.Marshal()
+	
+	newRecord, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, uint32(pb.DkvsRecord_GUN_SIGNATURE))
 	if err != nil {
 		return err
 	}
-	err = d.dhtPut(recordKey, tmpRecBuf3) // 必须同步到网络上
+	newRecord.Data, err = prepareRecord.Marshal()  // Data数据可以认为不是record的一部分（带外数据），不需要签名
 	if err != nil {
 		Logger.Error(err)
 		return err
 	}
-
-	// 重新设置正确的标志位
-	tmpRec4, err := CreateRecordWithType(value2, pubkey2, issuetime, ttl, sig2, uint32(pb.DkvsRecord_GUN_SIGNATURE))
+	
+	recBuf, err := newRecord.Marshal()
 	if err != nil {
 		return err
 	}
-
-	tmpRecBuf4, err := tmpRec4.Marshal()
-	if err != nil {
-		return err
-	}
-	err = d.dhtPut(recordKey, tmpRecBuf4) // 必须同步到网络上
+	err = d.dhtPut(recordKey, recBuf) // 必须同步到网络上
 	if err != nil {
 		Logger.Error(err)
 		return err

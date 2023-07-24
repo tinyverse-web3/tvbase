@@ -136,8 +136,6 @@ func ValidateValue(key string, val []byte, pubKey []byte, issuetime uint64, ttl 
 
 	var bVerify bool
 	switch valueType {
-	case _ValueType_Transfer:
-		bVerify = true
 	case int(pb.DkvsRecord_GUN_SIGNATURE):
 		if IsGunName(key) {
 			bVerify = VerifyGunRecordValue(key, val, issuetime, ttl)

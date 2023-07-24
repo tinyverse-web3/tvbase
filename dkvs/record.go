@@ -9,8 +9,6 @@ import (
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
-const _ValueType_Transfer = 0xffff
-
 var _ record.Validator = Validator{}
 
 // RecordKey returns the libp2p record key for a given peer ID.
@@ -108,30 +106,43 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 
 	switch oldRecord.ValidityType {
 	case pb.DkvsRecord_EOL:
-		if newRecord.ValueType == _ValueType_Transfer {
-			// 处于转移状态的key，需要检查是否有权限接收该key
-			var cert *pb.Cert = nil
+		// 正常状态，只检查是否是公钥相同
+		cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
+		if cmp != 0 {
+			// 检查是否是TransferKey
+			
 			if newRecord.Data != nil {
-				var c pb.Cert
-				err := c.Unmarshal(newRecord.Data)
+				var prepareRecord pb.DkvsRecord
+				err := prepareRecord.Unmarshal(newRecord.Data)
 				if err != nil {
 					Logger.Error(err)
-					return -1, err
+					return -1, ErrPublicKeyMismatch
 				}
-				cert = &c
+
+				var txcert *pb.Cert
+				if prepareRecord.Data != nil {
+					var c pb.Cert
+					err := c.Unmarshal(prepareRecord.Data)
+					if err != nil {
+						Logger.Error(err)
+						return -1, err
+					}
+					txcert = &c
+				}
+
+				if !VerifyCertTransferConfirm(key, prepareRecord.Value, txcert, oldRecord.PubKey, newRecord.PubKey) {
+					Logger.Error(ErrSignature)
+					return -1, ErrPublicKeyMismatch
+				}
+
+				Logger.Debugf("key %s transfer from %s to %s\n", key, BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey))
+				return 0, nil
 			}
-			if !VerifyCertTransferConfirm(key, oldRecord.Value, cert, oldRecord.PubKey, newRecord.PubKey) {
-				Logger.Error(ErrSignature)
-				return -1, ErrPublicKeyMismatch
-			}
-		} else {
-			// 正常状态，只检查是否是公钥相同
-			cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
-			if cmp != 0 {
-				Logger.Error(ErrDifferentPublicKey)
-				return -1, ErrDifferentPublicKey
-			}
+			
+			Logger.Error(ErrDifferentPublicKey)
+			return -1, ErrDifferentPublicKey
 		}
+		
 
 	default:
 	}
