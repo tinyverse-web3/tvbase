@@ -499,25 +499,19 @@ func (d *Dkvs) IsPublicService(sn string, pubkey []byte) bool {
 	if len(sn) > MaxDKVPublicSNLength {
 		return false
 	}
-	vector, ok := dkvsServiceNameMap[sn]
-	if ok {
-		for _, key := range vector {
-			if key == BytesToHexString(pubkey) {
-				return true
-			}
-		}
 
+	if IsPublicServiceKey(pubkey) {
+		return true
+	}
+
+	// 看看是否是被授权的服务
+	if d.IsApprovedService(sn) {
+		return true
+	}
+
+	for _, vector := range dkvsServiceNameMap {
 		// 看看是否是派生出来的子公钥
 		if d.IsChildPubkey(pubkey, HexStringToBytes(vector[0])) {
-			return true
-		}
-	} else {
-		if IsGunService(pubkey) {
-			return true
-		}
-
-		// 看看是否是被授权的服务
-		if d.IsApprovedService(sn) {
 			return true
 		}
 	}
