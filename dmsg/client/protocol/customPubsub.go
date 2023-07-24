@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -21,43 +22,122 @@ func NewCustomPubsubProtocolAdapter() *CustomPubsubProtocolAdapter {
 	return ret
 }
 
-func (adapter *CustomPubsubProtocolAdapter) init() {
-	adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{}
-	adapter.protocol.ResponseProtoMsg = &pb.CustomProtocolRes{}
-}
-
 func (adapter *CustomPubsubProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_REQ
+	return pb.PID_CUSTOM_PUBSUB_REQ
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_CUSTOM_PUBSUB_PROTOCOL_RES
+	return pb.PID_CUSTOM_PUBSUB_RES
 }
 
-func (adapter *CustomPubsubProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *CustomPubsubProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.CustomProtocolReq{}
+}
+func (adapter *CustomPubsubProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.CustomProtocolRes{}
+}
+
+func (adapter *CustomPubsubProtocolAdapter) InitRequest(
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
+	var requestProtoMsg *pb.CustomProtocolReq
 	if len(dataList) == 2 {
 		pid, ok := dataList[0].(string)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for get customProtocolID")
+			return nil, errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for get customProtocolID")
 		}
 		content, ok := dataList[1].([]byte)
 		if !ok {
-			return errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
+			return nil, errors.New("CustomPubsubProtocolAdapter->InitRequest: failed to cast datalist[1] to []byte for get content")
 		}
-
-		adapter.protocol.RequestProtoMsg = &pb.CustomProtocolReq{
+		requestProtoMsg = &pb.CustomProtocolReq{
 			BasicData: basicData,
 			PID:       pid,
 			Content:   content,
 		}
 	} else {
-		return errors.New("CustomPubsubProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
+		return nil, errors.New("CustomPubsubProtocolAdapter->InitRequest: parameter dataList need contain customProtocolID and content")
 	}
+	return requestProtoMsg, nil
+}
+
+func (adapter *CustomPubsubProtocolAdapter) InitResponse(
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
+	var responseProtoMsg *pb.CustomProtocolRes
+	if len(dataList) == 2 {
+		pid, ok := dataList[0].(string)
+		if !ok {
+			return nil, errors.New("CustomPubsubProtocolAdapter->InitResponse: failed to cast datalist[0] to string for get customProtocolID")
+		}
+		content, ok := dataList[1].([]byte)
+		if !ok {
+			return nil, errors.New("CustomPubsubProtocolAdapter->InitResponse: failed to cast datalist[1] to []byte for get content")
+		}
+		responseProtoMsg = &pb.CustomProtocolRes{
+			BasicData: basicData,
+			PID:       pid,
+			Content:   content,
+			RetCode:   dmsgProtocol.NewSuccRetCode(),
+		}
+	} else {
+		return nil, errors.New("CustomPubsubProtocolAdapter->InitResponse: parameter dataList need contain customProtocolID and content")
+	}
+	return responseProtoMsg, nil
+}
+
+func (adapter *CustomPubsubProtocolAdapter) GetRequestBasicData(
+	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
+	if !ok {
+		return nil
+	}
+	return request.BasicData
+}
+
+func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData(
+	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
+	if !ok {
+		return nil
+	}
+	return response.BasicData
+}
+
+func (adapter *CustomPubsubProtocolAdapter) GetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
+	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
+	if !ok {
+		return nil
+	}
+	return response.RetCode
+}
+
+func (adapter *CustomPubsubProtocolAdapter) SetRequestSig(
+	requestProtoMsg protoreflect.ProtoMessage,
+	sig []byte) error {
+	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
+	if !ok {
+		return fmt.Errorf("CustomPubsubProtocolAdapter->SetRequestSig: failed to cast request to *pb.CustomProtocolReq")
+	}
+	request.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.RequestProtoMsg, adapter.protocol.ResponseProtoMsg)
+func (adapter *CustomPubsubProtocolAdapter) SetResponseSig(
+	responseProtoMsg protoreflect.ProtoMessage,
+	sig []byte) error {
+	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
+	if !ok {
+		return fmt.Errorf("CreateMailboxProtocolAdapter->SetResponseSig: failed to cast request to *pb.CreateMailboxReq")
+	}
+	response.BasicData.Sig = sig
+	return nil
+}
+
+func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback(
+	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(requestProtoData)
 	return data, err
 }
 
@@ -68,30 +148,6 @@ func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback(
 	return data, err
 }
 
-func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
-
-func (adapter *CustomPubsubProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return nil
-	}
-	return response.RetCode
-}
-func (adapter *CustomPubsubProtocolAdapter) SetRequestSig(sig []byte) error {
-	request, ok := adapter.protocol.RequestProtoMsg.(*pb.CustomProtocolReq)
-	if !ok {
-		return fmt.Errorf("CustomPubsubProtocolAdapter->SetRequestSig: failed to cast request to *pb.CustomProtocolReq")
-	}
-	request.BasicData.Sig = sig
-	return nil
-}
-
 func NewCustomPubsubProtocol(
 	ctx context.Context,
 	host host.Host,
@@ -100,6 +156,5 @@ func NewCustomPubsubProtocol(
 	adapter := NewCustomPubsubProtocolAdapter()
 	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
 	adapter.protocol = protocol
-	adapter.init()
 	return protocol
 }

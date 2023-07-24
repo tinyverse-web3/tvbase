@@ -29,11 +29,11 @@ func (adapter *CustomStreamProtocolAdapter) init() {
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_CUSTOM_STREAM_PROTOCOL_RES
+	return pb.PID_CUSTOM_STREAM_RES
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_CUSTOM_STREAM_PROTOCOL_REQ
+	return pb.PID_CUSTOM_STREAM_REQ
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetStreamResponsePID() protocol.ID {

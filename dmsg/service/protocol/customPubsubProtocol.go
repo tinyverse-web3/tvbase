@@ -30,11 +30,11 @@ func (adapter *CustomPubsubProtocolAdapter) init(customProtocolId string) {
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_CUSTOM_STREAM_PROTOCOL_RES
+	return pb.PID_CUSTOM_STREAM_RES
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_CUSTOM_STREAM_PROTOCOL_REQ
+	return pb.PID_CUSTOM_STREAM_REQ
 }
 
 func (adapter *CustomPubsubProtocolAdapter) DestoryProtocol() {

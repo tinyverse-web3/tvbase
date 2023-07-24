@@ -5,20 +5,22 @@ package pb;
 option go_package = "dmsg/pb";
 
 enum PID {
-    CREATE_MAILBOX_RES = 0;
-    CREATE_MAILBOX_REQ = 1;
-    RELEASE_MAILBOX_RES = 2;
-    RELEASE_MAILBOX_REQ = 3;
-    SEEK_MAILBOX_RES = 4;
-    SEEK_MAILBOX_REQ = 5;
-    READ_MAILBOX_MSG_RES = 6;
-    READ_MAILBOX_MSG_REQ = 7;
-    SEND_MSG_RES = 8;
-    SEND_MSG_REQ = 9;
-    CUSTOM_STREAM_PROTOCOL_RES = 10;
-    CUSTOM_STREAM_PROTOCOL_REQ = 11;
-    CUSTOM_PUBSUB_PROTOCOL_RES = 12;
-    CUSTOM_PUBSUB_PROTOCOL_REQ = 13;
+    CREATE_MAILBOX_REQ = 0;
+    CREATE_MAILBOX_RES = 1;
+    RELEASE_MAILBOX_REQ = 2;
+    RELEASE_MAILBOX_RES = 3;
+    SEEK_MAILBOX_REQ = 4;
+    SEEK_MAILBOX_RES = 5;
+    READ_MAILBOX_REQ = 6;
+    READ_MAILBOX_RES = 7;
+    QUERY_PEER_REQ = 8;
+    QUERY_PEER_RES = 9;
+    SEND_MSG_REQ = 10;
+    SEND_MSG_RES = 11;
+    CUSTOM_STREAM_REQ = 12;
+    CUSTOM_STREAM_RES = 13;
+    CUSTOM_PUBSUB_REQ = 14;
+    CUSTOM_PUBSUB_RES = 15;
 }
 
 message BasicData {
@@ -86,6 +88,16 @@ message SeekMailboxReq {
 
 message SeekMailboxRes {
     BasicData basicData = 1;
+    RetCode retCode = 3;
+}
+
+message QueryPeerReq {
+    BasicData basicData = 1;
+}
+
+message QueryPeerRes {
+    BasicData basicData = 1;
+    string PeerID = 2;
     RetCode retCode = 3;
 }
 

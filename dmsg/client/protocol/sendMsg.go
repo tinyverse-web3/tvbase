@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
@@ -21,11 +22,6 @@ func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
 	return ret
 }
 
-func (adapter *SendMsgProtocolAdapter) init() {
-	adapter.protocol.RequestProtoMsg = &pb.SendMsgReq{}
-	adapter.protocol.ResponseProtoMsg = &pb.SendMsgRes{}
-}
-
 func (adapter *SendMsgProtocolAdapter) GetRequestPID() pb.PID {
 	return pb.PID_SEND_MSG_REQ
 }
@@ -34,40 +30,91 @@ func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEND_MSG_RES
 }
 
-func (adapter *SendMsgProtocolAdapter) InitRequest(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *SendMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.SendMsgReq{}
+}
+func (adapter *SendMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.SendMsgRes{}
+}
+
+func (adapter *SendMsgProtocolAdapter) InitRequest(
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
+	var requestProtoMsg *pb.SendMsgReq
 	if len(dataList) == 2 {
 		destPubkey, ok := dataList[0].(string)
 		if !ok {
-			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
 		content, ok := dataList[1].([]byte)
 		if !ok {
-			return errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
-		adapter.protocol.RequestProtoMsg = &pb.SendMsgReq{
+		requestProtoMsg = &pb.SendMsgReq{
 			BasicData:  basicData,
 			Content:    content,
 			DestPubkey: destPubkey,
 		}
 	} else {
-		return errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
+		return nil, errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
 	}
-	return nil
+	return requestProtoMsg, nil
 }
 
-func (adapter *SendMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
-	response := &pb.SendMsgRes{
+func (adapter *SendMsgProtocolAdapter) InitResponse(
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
+	responseProtoMsg := &pb.SendMsgRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
-	adapter.protocol.ResponseProtoMsg = response
+	return responseProtoMsg, nil
+}
+
+func (adapter *SendMsgProtocolAdapter) GetRequestBasicData(
+	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoMsg.(*pb.SendMsgReq)
+	if !ok {
+		return nil
+	}
+	return request.BasicData
+}
+
+func (adapter *SendMsgProtocolAdapter) GetResponseBasicData(
+	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+	response, ok := responseProtoMsg.(*pb.SendMsgRes)
+	if !ok {
+		return nil
+	}
+	return response.BasicData
+}
+
+func (adapter *SendMsgProtocolAdapter) GetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
+	response, ok := responseProtoMsg.(*pb.SendMsgRes)
+	if !ok {
+		return nil
+	}
+	return response.RetCode
+}
+
+func (adapter *SendMsgProtocolAdapter) SetRequestSig(
+	requestProtoMsg protoreflect.ProtoMessage,
+	sig []byte) error {
+	request, ok := requestProtoMsg.(*pb.SendMsgReq)
+	if !ok {
+		return fmt.Errorf("SendMsgProtocolAdapter->SetRequestSig: failed to cast request to *pb.SendMsgReq")
+	}
+	request.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
+func (adapter *SendMsgProtocolAdapter) SetResponseSig(
+	responseProtoMsg protoreflect.ProtoMessage,
+	sig []byte) error {
+	response, ok := responseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
 		return errors.New("SendMsgProtocolAdapter->SetResponseSig: failed to cast request to *pb.SendMsgRes")
 	}
@@ -75,8 +122,9 @@ func (adapter *SendMsgProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSendMsgRequest(adapter.protocol.RequestProtoMsg, adapter.protocol.ResponseProtoMsg)
+func (adapter *SendMsgProtocolAdapter) CallRequestCallback(
+	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	data, err := adapter.protocol.Callback.OnSendMsgRequest(requestProtoData)
 	return data, err
 }
 
@@ -87,38 +135,6 @@ func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
 	return data, err
 }
 
-func (adapter *SendMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.RequestProtoMsg.(*pb.SendMsgReq)
-	if !ok {
-		return nil
-	}
-	return request.BasicData
-}
-
-func (adapter *SendMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
-
-func (adapter *SendMsgProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ResponseProtoMsg.(*pb.SendMsgRes)
-	if !ok {
-		return nil
-	}
-	return response.RetCode
-}
-func (adapter *SendMsgProtocolAdapter) SetRequestSig(sig []byte) error {
-	request, ok := adapter.protocol.RequestProtoMsg.(*pb.SendMsgReq)
-	if !ok {
-		return errors.New("failed to cast request to *pb.SendMsgReq")
-	}
-	request.BasicData.Sig = sig
-	return nil
-}
-
 func NewSendMsgProtocol(
 	ctx context.Context,
 	host host.Host,
@@ -127,6 +143,5 @@ func NewSendMsgProtocol(
 	adapter := NewSendMsgProtocolAdapter()
 	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
 	adapter.protocol = protocol
-	adapter.init()
 	return protocol
 }

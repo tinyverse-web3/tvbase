@@ -27,7 +27,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) init() {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_READ_MAILBOX_MSG_RES
+	return pb.PID_READ_MAILBOX_RES
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamResponsePID() protocol.ID {

@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -48,20 +48,43 @@ func (p *StreamProtocol) Request(
 		return nil, err
 	}
 
+	protoData, err := proto.Marshal(requestProtoMsg)
+	if err != nil {
+		delete(p.RequestInfoList, requestInfoId)
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
+		return nil, err
+	}
+
 	adapter, ok := p.Adapter.(StreamProtocolAdapter)
 	if !ok {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 		return nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 	}
-	err = dmsgProtocol.SendProtocolMsg(p.Ctx, p.Host, peerID, adapter.GetStreamRequestPID(), requestProtoMsg)
+	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->Request: SendProtocolMsg error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
+		return nil, err
+	}
+	writeLen, err := stream.Write(protoData)
+	if err != nil {
+		delete(p.RequestInfoList, requestInfoId)
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: Write error: %v", err)
+		if err := stream.Reset(); err != nil {
+			dmsgLog.Logger.Errorf("StreamProtocol->Request: Reset error: %v", err)
+		}
 		return nil, err
 	}
 
+	dmsgLog.Logger.Debugf("StreamProtocol->Request: write stream len: %d", writeLen)
+
+	err = stream.Close()
+	if err != nil {
+		dmsgLog.Logger.Errorf("StreamProtocol->Request: Close error: %v", err)
+	}
+
 	dmsgLog.Logger.Debugf("StreamProtocol->Request end")
-	return p.RequestProtoMsg, nil
+	return requestProtoMsg, nil
 }
 
 func NewStreamProtocol(

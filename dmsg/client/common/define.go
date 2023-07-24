@@ -17,24 +17,42 @@ type RequestInfo struct {
 	CreateTimestamp int64
 }
 type ProtocolAdapter interface {
-	InitRequest(basicData *pb.BasicData, dataList ...any) error
-	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
-	GetRequestBasicData() *pb.BasicData
-	GetResponseBasicData() *pb.BasicData
-	GetResponseRetCode() *pb.RetCode
-	SetRequestSig(sig []byte) error
-	SetResponseSig(sig []byte) error
-	CallRequestCallback() (interface{}, error)
-	CallResponseCallback(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	GetEmptyRequest() protoreflect.ProtoMessage
+	GetEmptyResponse() protoreflect.ProtoMessage
+	InitRequest(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
+	InitResponse(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
+	GetRequestBasicData(requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseBasicData(responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
+	SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error
+	SetResponseSig(responseProtoMsg protoreflect.ProtoMessage, sig []byte) error
+	CallRequestCallback(requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	CallResponseCallback(requestProtoMsg protoreflect.ProtoMessage, responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type StreamProtocolCallback interface {
-	OnCreateMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnReadMailboxMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnReleaseMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCreateMailboxRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCreateMailboxResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnReadMailboxMsgRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnReadMailboxMsgResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnReleaseMailboxRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnReleaseMailboxResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCustomStreamProtocolRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCustomStreamProtocolResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type StreamProtocolAdapter interface {
@@ -44,13 +62,11 @@ type StreamProtocolAdapter interface {
 }
 
 type Protocol struct {
-	Ctx              context.Context
-	Host             host.Host
-	RequestInfoList  map[string]*RequestInfo
-	Service          ProtocolService
-	RequestProtoMsg  protoreflect.ProtoMessage
-	ResponseProtoMsg protoreflect.ProtoMessage
-	Adapter          ProtocolAdapter
+	Ctx             context.Context
+	Host            host.Host
+	RequestInfoList map[string]*RequestInfo
+	Service         ProtocolService
+	Adapter         ProtocolAdapter
 }
 
 type StreamProtocol struct {
@@ -68,11 +84,26 @@ type PubsubProtocol struct {
 }
 
 type PubsubProtocolCallback interface {
-	OnSeekMailboxResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnSeekMailboxRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnSeekMailboxResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnQueryPeerRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnQueryPeerResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnSendMsgRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnSendMsgResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCustomPubsubProtocolRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCustomPubsubProtocolResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type ProtocolService interface {

@@ -12,19 +12,19 @@ import (
 func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData begin\nrequestPID: %v", p.Adapter.GetRequestPID())
 
-	err := p.Protocol.HandleRequestData(requestProtocolData)
+	requestProtoMsg, responseProtoMsg, err := p.Protocol.HandleRequestData(requestProtocolData)
 	if err != nil {
 		return err
 	}
 
-	responseProtoData, err := proto.Marshal(p.ResponseProtoMsg)
+	responseProtoData, err := proto.Marshal(responseProtoMsg)
 	if err != nil {
 		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
 		return err
 	}
 	// send the response
-	requestBasicData := p.Adapter.GetRequestBasicData()
-	responseBasicData := p.Adapter.GetResponseBasicData()
+	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
+	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	err = p.Service.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, responseProtoData)
 
 	if err != nil {
@@ -42,12 +42,12 @@ func (p *PubsubProtocol) Request(
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsrcUserPubKey:%s", srcUserPubKey)
 
 	dataList = append([]any{destUserPubkey}, dataList...)
-	requestInfoId, _, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
+	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
 	if err != nil {
 		return nil, err
 	}
 
-	requestBasicData := p.Adapter.GetRequestBasicData()
+	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
 	err = p.Service.PublishProtocol(destUserPubkey, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
@@ -56,7 +56,7 @@ func (p *PubsubProtocol) Request(
 	}
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request end")
-	return p.RequestProtoMsg, nil
+	return requestProtoMsg, nil
 }
 
 func NewPubsubProtocol(
