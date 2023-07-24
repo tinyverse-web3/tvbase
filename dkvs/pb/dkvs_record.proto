@@ -67,3 +67,11 @@ message CertDataTxCompleted {
 	bytes senderkey = 4;
 	bytes receiverkey = 5;
 }
+
+// Cert.Data
+message SimpleContractIssueToken {
+    string name = 1;        // token名称，GUN名字。如果是“”，从Cert.Name得到名字。
+    uint64 maxScore = 2;    // 最大58bits
+    bytes receiverKey = 4;  // 接收者公钥
+    bytes userData = 5; 
+}

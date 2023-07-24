@@ -172,7 +172,13 @@ func VerifyGunRecordValue(key string, value []byte, issuetime uint64, ttl uint64
 		return false
 	}
 
-	return cert.Ttl == ttl && cert.IssueTime == issuetime && GetGunKey(string(cert.Data)) == key
+	var si pb.SimpleContractIssueToken
+	err := si.Unmarshal(cert.Data)
+	if err != nil {
+		return false
+	}
+
+	return cert.Ttl == ttl && cert.IssueTime == issuetime && GetGunKey(si.Name) == key
 }
 
 func FindTransferCert(cv []*pb.Cert) *pb.Cert {
@@ -350,15 +356,26 @@ func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cer
 	return &cert
 }
 
+// as a nft
 func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
+
+	var si pb.SimpleContractIssueToken
+	si.Name = name
+	si.MaxScore = 1
+	si.ReceiverKey = nil
+	si.UserData = nil
+	buf, err := si.Marshal()
+	if err != nil {
+		return nil
+	}
 
 	cert := pb.Cert{
 		Version:      1,
-		Name:         PUBSERVICE_GUN,
-		Type:         uint32(pb.CertType_Default),
+		Name:         name,
+		Type:         uint32(pb.CertType_NFT),
 		SubType:      0,
 		UserPubkey:   nil,
-		Data:         []byte(name),
+		Data:         buf,
 		IssueTime:    issueTime,
 		Ttl:          ttl,
 		IssuerPubkey: gunPubkey,
