@@ -84,20 +84,20 @@ type PubsubProtocol struct {
 	Adapter          PubsubProtocolAdapter
 }
 
-type CommonPubsub struct {
+type UserPubsub struct {
 	Topic        *pubsub.Topic
 	CancelFunc   context.CancelFunc
 	Subscription *pubsub.Subscription
 }
 
-type DestUserPubsub struct {
-	CommonPubsub
+type DestUserInfo struct {
+	UserPubsub
 	MsgRWMutex          sync.RWMutex
 	LastReciveTimestamp int64
 }
 
 type CustomProtocolPubsub struct {
-	CommonPubsub
+	UserPubsub
 }
 
 type CustomStreamProtocolInfo struct {

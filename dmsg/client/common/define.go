@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"crypto/ecdsa"
+	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -118,8 +119,8 @@ type ProtocolService interface {
 type UserPubsub struct {
 	Topic           *pubsub.Topic
 	Subscription    *pubsub.Subscription
-	IsReadPubsubMsg bool
 	CancelFunc      context.CancelFunc
+	IsReadPubsubMsg bool
 }
 type SrcUserInfo struct {
 	UserPubsub
@@ -159,4 +160,29 @@ type CustomStreamProtocolInfo struct {
 type CustomPubsubProtocolInfo struct {
 	Client   customProtocol.CustomPubsubProtocolClient
 	Protocol *PubsubProtocol
+}
+
+// service
+type ServiceDestUserInfo struct {
+	DestUserInfo
+	MsgRWMutex          sync.RWMutex
+	LastReciveTimestamp int64
+}
+
+const MailboxLimitErr = "mailbox is limited"
+const MailboxAlreadyExistErr = "dest pubkey already exists"
+const MailboxAlreadyExistCode = 1
+
+type UserInfo struct {
+	UserKey *UserKey
+}
+type UserKey struct {
+	PubKeyHex string
+	PriKeyHex string
+	PubKey    *ecdsa.PublicKey
+	PriKey    *ecdsa.PrivateKey
+}
+
+type CustomProtocolPubsub struct {
+	UserPubsub
 }

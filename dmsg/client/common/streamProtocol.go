@@ -173,6 +173,7 @@ func NewStreamProtocol(
 	protocol.Service = protocolService
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	// protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	go protocol.TickCleanRequest()
 	return protocol
 }
