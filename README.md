@@ -45,10 +45,10 @@ echo '[url "git@github.com:tinyverse-web3/"]
 ## deploy full tvnode in linux server cmd
 # clear all data and deploy
 ```shell
-git pull && chmod +x ./install.sh  && ./install.sh && rm ~/.tvnode/*.log && rm -rf ~/.tvnode/*_data && rm -rf ~/.tvnode/unsynckv && ./boot.sh
+cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && rm ~/.tvnode/*.log && rm -rf ~/.tvnode/*_data && rm -rf ~/.tvnode/unsynckv && ./boot.sh
 ```
 
 # Just deploy without clearing any data
 ```shell
-git pull && chmod +x ./install.sh  && ./install.sh && rm ~/.tvnode/*.log && ./boot.sh
+cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && ./boot.sh
 ```

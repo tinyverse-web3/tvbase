@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultPathName = ".tvnode"
-	defaultPathRoot = "~/" + defaultPathName
+	defaultPathRoot = "./" + defaultPathName
 )
 
 func dsKeyDcode(s string) ([]byte, error) {
