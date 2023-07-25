@@ -138,6 +138,10 @@ func GetDefaultTtl() uint64 {
 	return uint64(DefaultDKVSRecordEOL.Milliseconds())
 }
 
+func GetMaxTtl() uint64 {
+	return uint64(MaxTTL.Milliseconds())
+}
+
 func TimeNow() uint64 {
 	return uint64(time.Now().UnixMilli())
 }
