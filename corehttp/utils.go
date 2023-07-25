@@ -3,6 +3,7 @@ package corehttp
 import (
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/gogo/protobuf/proto"
@@ -75,15 +76,22 @@ func isPrivateNode(addInfo peer.AddrInfo) (bool, string) {
 }
 
 func getTvBaseDataDir() string {
+	currentUser, err := user.Current()
 	relPath := defaultPathRoot
+	if err != nil {
+		relPath = currentUser.HomeDir + string(os.PathSeparator) + defaultPathName
+	}
 	absPath, _ := filepath.Abs(relPath)
-	_, err := os.Stat(absPath)
+	_, err = os.Stat(absPath)
 	if err != nil || os.IsNotExist(err) {
+		Logger.Debugf("Path is not exist {path: %s, err: %s}", absPath, err.Error())
 		absPath, err = os.Getwd()
 		if err != nil {
+			Logger.Debugf("os.Getwd() is not exist {err: %s}", err.Error())
 			absPath, _ = filepath.Abs("./")
 		}
 	}
+	Logger.Debugf("current path: {path: %s}", absPath)
 	return absPath
 }
 
