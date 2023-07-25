@@ -30,7 +30,6 @@ message DkvsRecord {
 enum CertType {
 	Default = 0; // cert
 	Contract = 1;
-	NFT = 2;
 }
 
 // 证书，也就是某种意义上的NFT。如果指定userPubkey，就是跟该账户绑定；如果没有指定，就可以转让。
