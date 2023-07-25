@@ -373,7 +373,7 @@ func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *
 		Version:      1,
 		Name:         name,
 		Type:         uint32(pb.CertType_Contract),
-		SubType:      0,
+		SubType:      1, // nft
 		UserPubkey:   nil,
 		Data:         buf,
 		IssueTime:    issueTime,
