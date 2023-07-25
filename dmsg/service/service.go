@@ -38,13 +38,13 @@ type DmsgService struct {
 	ProtocolProxy
 	datastore                    db.Datastore
 	curSrcUserInfo               *dmsgServiceCommon.UserInfo
-	destUserPubsubs              map[string]*dmsgServiceCommon.DestUserPubsub
+	destUserInfoList             map[string]*dmsgServiceCommon.DestUserInfo
 	customProtocolPubsubs        map[string]*dmsgServiceCommon.CustomProtocolPubsub
 	protocolReqSubscribes        map[pb.PID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.PID]protocol.ResSubscribe
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo
-	stopCheckDestPubsubs         chan bool
+	stopCheckDestInfoList        chan bool
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -82,7 +82,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.sendMsgPrtocol = serviceProtocol.NewSendMsgProtocol(d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(pb.PID_SEND_MSG_REQ, d.sendMsgPrtocol)
 
-	d.destUserPubsubs = make(map[string]*dmsgServiceCommon.DestUserPubsub)
+	d.destUserInfoList = make(map[string]*dmsgServiceCommon.DestUserInfo)
 	d.customProtocolPubsubs = make(map[string]*dmsgServiceCommon.CustomProtocolPubsub)
 
 	d.protocolReqSubscribes = make(map[pb.PID]protocol.ReqSubscribe)
@@ -120,7 +120,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 		},
 	}
 
-	d.stopCheckDestPubsubs = make(chan bool)
+	d.stopCheckDestInfoList = make(chan bool)
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (d *DmsgService) getMsgPrefix(userPubkey string) string {
 	return dmsg.MsgPrefix + userPubkey
 }
 
-func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub) {
+func (d *DmsgService) readProtocolPubsub(pubsub *dmsgServiceCommon.UserPubsub) {
 	ctx, cancel := context.WithCancel(d.BaseService.GetCtx())
 	pubsub.CancelFunc = cancel
 	for {
@@ -223,7 +223,7 @@ func (d *DmsgService) checkDestUserPubs(done chan bool) {
 				return
 			case <-ticker.C:
 				cfg := d.BaseService.GetConfig()
-				for userPubkey, pubsub := range d.destUserPubsubs {
+				for userPubkey, pubsub := range d.destUserInfoList {
 					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
 					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
 					if days >= cfg.DMsg.KeepMailboxMsgDay {
@@ -253,8 +253,8 @@ func (d *DmsgService) checkDestUserPubs(done chan bool) {
 	}()
 }
 
-func (d *DmsgService) readDestUserPubsub(pubsub *dmsgServiceCommon.DestUserPubsub) {
-	d.readProtocolPubsub(&pubsub.CommonPubsub)
+func (d *DmsgService) readDestUserPubsub(pubsub *dmsgServiceCommon.DestUserInfo) {
+	d.readProtocolPubsub(&pubsub.UserPubsub)
 }
 
 func (d *DmsgService) subscribeDestUser(userPubKey string) error {
@@ -269,8 +269,8 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 	}
 	// go d.BaseService.DiscoverRendezvousPeers()
 
-	d.destUserPubsubs[userPubKey] = &dmsgServiceCommon.DestUserPubsub{
-		CommonPubsub: dmsgServiceCommon.CommonPubsub{
+	d.destUserInfoList[userPubKey] = &dmsgServiceCommon.DestUserInfo{
+		UserPubsub: dmsgServiceCommon.UserPubsub{
 			Topic:        userTopic,
 			Subscription: userSub,
 		},
@@ -281,7 +281,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 }
 
 func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
-	pubsub := d.destUserPubsubs[userPubKey]
+	pubsub := d.destUserInfoList[userPubKey]
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
 		return fmt.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubKey)
@@ -292,19 +292,19 @@ func (d *DmsgService) unSubscribeDestUser(userPubKey string) error {
 	if err != nil {
 		dmsgLog.Logger.Warnf("dmsgService->unSubscribeDestUser: Topic.Close error: %v", err)
 	}
-	delete(d.destUserPubsubs, userPubKey)
+	delete(d.destUserInfoList, userPubKey)
 	return nil
 }
 
 func (d *DmsgService) unSubscribeDestUsers() error {
-	for userPubKey := range d.destUserPubsubs {
+	for userPubKey := range d.destUserInfoList {
 		d.unSubscribeDestUser(userPubKey)
 	}
 	return nil
 }
 
-func (d *DmsgService) getDestUserPubsub(destUserPubsub string) *dmsgServiceCommon.DestUserPubsub {
-	return d.destUserPubsubs[destUserPubsub]
+func (d *DmsgService) getDestUserPubsub(destUserPubsub string) *dmsgServiceCommon.DestUserInfo {
+	return d.destUserInfoList[destUserPubsub]
 }
 
 func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
@@ -334,7 +334,7 @@ func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
 }
 
 func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
-	destUserCount := len(d.destUserPubsubs)
+	destUserCount := len(d.destUserInfoList)
 	cfg := d.BaseService.GetConfig()
 	if destUserCount >= cfg.DMsg.MaxMailboxPubsubCount {
 		dmsgLog.Logger.Warnf("dmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", destUserCount)
@@ -349,7 +349,7 @@ func (d *DmsgService) Start() error {
 	if err != nil {
 		return err
 	}
-	d.checkDestUserPubs(d.stopCheckDestPubsubs)
+	d.checkDestUserPubs(d.stopCheckDestInfoList)
 	return nil
 }
 
@@ -360,12 +360,12 @@ func (d *DmsgService) Stop() error {
 	}
 
 	d.unSubscribeDestUsers()
-	d.stopCheckDestPubsubs <- true
+	d.stopCheckDestInfoList <- true
 	return nil
 }
 
-func (d *DmsgService) GetDestUserPubsub(publicKey string) *dmsgServiceCommon.DestUserPubsub {
-	return d.destUserPubsubs[publicKey]
+func (d *DmsgService) GetDestUserPubsub(publicKey string) *dmsgServiceCommon.DestUserInfo {
+	return d.destUserInfoList[publicKey]
 }
 
 // StreamProtocolCallback interface
@@ -578,7 +578,7 @@ func (d *DmsgService) OnSeekMailboxRequest(protoData protoreflect.ProtoMessage) 
 		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: cannot convert %v to *pb.SeekMailboxReq", protoData)
 	}
-	pubsub := d.destUserPubsubs[request.BasicData.Pubkey]
+	pubsub := d.destUserInfoList[request.BasicData.Pubkey]
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.Pubkey)
 		return nil, fmt.Errorf("dmsgService->OnSeekMailboxRequest: mailbox not exist for pubic key:%v", request.BasicData.Pubkey)
@@ -670,7 +670,7 @@ func (d *DmsgService) publishCustomProtocol(pubkey string) error {
 		return err
 	}
 	pubsub = d.getCustomProtocolPubsub(pubkey)
-	go d.readCustomProtocolPubsub(&pubsub.CommonPubsub)
+	go d.readCustomProtocolPubsub(&pubsub.UserPubsub)
 	return nil
 }
 
@@ -715,7 +715,7 @@ func (d *DmsgService) subscribeCustomProtocol(pubKey string) error {
 	// go d.BaseService.DiscoverRendezvousPeers()
 
 	d.customProtocolPubsubs[pubKey] = &dmsgServiceCommon.CustomProtocolPubsub{
-		CommonPubsub: dmsgServiceCommon.CommonPubsub{
+		UserPubsub: dmsgServiceCommon.UserPubsub{
 			Topic:        topic,
 			Subscription: subscribe,
 		},
@@ -730,7 +730,7 @@ func (d *DmsgService) unSubscribeCustomProtocols() error {
 	return nil
 }
 
-func (d *DmsgService) readCustomProtocolPubsub(pubsub *dmsgServiceCommon.CommonPubsub) {
+func (d *DmsgService) readCustomProtocolPubsub(pubsub *dmsgServiceCommon.UserPubsub) {
 	d.readProtocolPubsub(pubsub)
 }
 
