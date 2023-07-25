@@ -23,10 +23,6 @@ func CreateRecord(val []byte, pk []byte, issuetime uint64, ttl uint64, sig []byt
 }
 
 func CreateRecordWithType(val []byte, pk []byte, issuetime uint64, ttl uint64, sig []byte, vt uint32) (*pb.DkvsRecord, error) {
-	if ttl == 0 {
-		ttl = GetTtlFromDuration(DefaultDKVSRecordEOL)
-	}
-
 	entry := new(pb.DkvsRecord)
 	entry.Version = uint32(1)
 	entry.ValueType = vt
