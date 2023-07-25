@@ -119,9 +119,9 @@ func DecodeAndFindCertByPubkey(value []byte, pubkey []byte) *pb.Cert {
 }
 
 // used to sign with private key
-func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64) []byte {
+func GetGunSignData(name string, num uint64, gunPubkey []byte, issueTime uint64, ttl uint64) []byte {
 
-	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
+	cert := IssueCertGun(name, num, gunPubkey, issueTime, ttl)
 
 	b, err := cert.Marshal()
 	if err != nil {
@@ -132,8 +132,8 @@ func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64)
 }
 
 // generate value for a GUN record
-func EncodeGunValue(name string, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
-	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
+func EncodeGunValue(name string, num uint64, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
+	cert := IssueCertGun(name, num, gunPubkey, issueTime, ttl)
 	cert.IssuerSign = gunSign
 
 	rv := pb.CertsRecordValue{
@@ -357,12 +357,12 @@ func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cer
 }
 
 // as a nft
-func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
+func IssueCertGun(name string, num uint64, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
 
 	var si pb.SimpleContractIssueToken
 	si.Name = name
-	si.MaxScore = 1
-	si.ReceiverKey = nil
+	si.MaxScore = num
+	si.ReceiverKey = gunPubkey
 	si.UserData = nil
 	buf, err := si.Marshal()
 	if err != nil {
@@ -373,7 +373,7 @@ func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *
 		Version:      1,
 		Name:         name,
 		Type:         uint32(pb.CertType_Contract),
-		SubType:      1, // nft
+		SubType:      1, // new score
 		UserPubkey:   nil,
 		Data:         buf,
 		IssueTime:    issueTime,

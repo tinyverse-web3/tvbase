@@ -206,13 +206,13 @@ func TestGun(t *testing.T) {
 	issueTime := dkvs.TimeNow()
 	ttl := dkvs.GetTtlFromDuration(10 * time.Hour)
 	issuetime := dkvs.TimeNow()
-	data1 := dkvs.GetGunSignData(name, gunPubKey, issueTime, ttl)
+	data1 := dkvs.GetGunSignData(name, 1, gunPubKey, issueTime, ttl)
 	sign1, err := gunPrivKey.Sign(data1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gunvalue := dkvs.EncodeGunValue(name, issueTime, ttl, gunPubKey, sign1, nil)
-	newgunvalue := dkvs.EncodeGunValue(name, issueTime, ttl, gunPubKey, sign1, []byte("user data"))
+	gunvalue := dkvs.EncodeGunValue(name, 1, issueTime, ttl, gunPubKey, sign1, nil)
+	newgunvalue := dkvs.EncodeGunValue(name, 1, issueTime, ttl, gunPubKey, sign1, []byte("user data"))
 
 	data := dkvs.GetRecordSignData(key, gunvalue, gunPubKey, issuetime, ttl)
 	sigData1, err := gunPrivKey.Sign(data)
@@ -269,7 +269,7 @@ func TestGun(t *testing.T) {
 	}
 
 	newttl := ttl + 1
-	gunvalue2 := dkvs.EncodeGunValue(name, issueTime, newttl, gunPubKey, sign1, nil)
+	gunvalue2 := dkvs.EncodeGunValue(name, 1, issueTime, newttl, gunPubKey, sign1, nil)
 	data = dkvs.GetRecordSignData(key, gunvalue2, pubKeyA, issuetime, newttl)
 	sigDataA3, err := privA.Sign(data)
 	if err != nil {
@@ -372,12 +372,12 @@ func TestTransferKey(t *testing.T) {
 	issueTime := dkvs.TimeNow()
 	ttl := dkvs.GetTtlFromDuration(10 * time.Hour)
 	issuetime := dkvs.TimeNow()
-	data1 := dkvs.GetGunSignData(name, PubKey1, issueTime, ttl)
+	data1 := dkvs.GetGunSignData(name, 1, PubKey1, issueTime, ttl)
 	sign1, err := PrivKey1.Sign(data1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gvalue := dkvs.EncodeGunValue(name, issueTime, ttl, PubKey1, sign1, nil)
+	gvalue := dkvs.EncodeGunValue(name, 1, issueTime, ttl, PubKey1, sign1, nil)
 
 	data := dkvs.GetRecordSignData(key, gvalue, PubKey1, issuetime, ttl)
 	sigData1, err := PrivKey1.Sign(data)
