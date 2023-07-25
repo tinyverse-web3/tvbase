@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
@@ -136,4 +137,14 @@ func getValueFromDkvsRec(dkvsVal []byte) (string, error) {
 		return "", err
 	}
 	return string(dkvsRec.Value), nil
+}
+
+func formatUnixTime(unixTime uint64) string {
+	// convert Unix timestamp to time.Time type
+	timeObj := time.Unix(int64(unixTime)/1000, int64(unixTime)%1000*int64(time.Millisecond))
+
+	// String formatted as year, month, day, hour, minute, and second
+	formattedTime := timeObj.Format("2006-01-02 15:04:05.000")
+
+	return formattedTime
 }

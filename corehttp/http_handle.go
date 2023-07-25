@@ -24,8 +24,9 @@ import (
 )
 
 type DkvsKV struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key     string `json:"key"`
+	PutTime string `json:"put_time"`
+	Value   string `json:"value"`
 }
 
 type Node struct {
@@ -102,17 +103,18 @@ func QueryAllKeyOption() ServeOption {
 				lbp2pRec := new(recpb.Record)
 				err = proto.Unmarshal(result.Value, lbp2pRec)
 				if err != nil {
-					Logger.Debugf("queryAllKeys---> proto.Unmarshal(result.Value, lbp2pRec) failed: %v", err)
+					Logger.Debugf("queryAllKeys---> proto.Unmarshal(lbp2pRec.Value, lbp2pRec) failed: %v", err)
 					continue
 				}
 				dkvsRec := new(dkvs_pb.DkvsRecord)
 				if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
-					Logger.Debugf("queryAllKeys---> proto.Unmarshal(rec.Value, dkvsRec) failed: %v", err)
+					Logger.Debugf("queryAllKeys---> proto.Unmarshal(dkvsRec.Value, dkvsRec) failed: %v", err)
 					continue
 				}
 				var kv DkvsKV
 				kv.Key = string(dkvs.RemovePrefix(string(key)))
 				kv.Value = string(dkvsRec.Value)
+				kv.PutTime = formatUnixTime(dkvsRec.Seq)
 				keyList = append(keyList, kv)
 			}
 			jsonData, err := json.Marshal(keyList)
