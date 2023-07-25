@@ -306,6 +306,11 @@ func QuerySystemResouce() ServeOption {
 				Logger.Errorf("Failed to get CPU Details: %v", err)
 				return
 			}
+			totalCores := 0
+			for _, info := range cpuDetails {
+				totalCores += int(info.Cores)
+			}
+			cpuDetails[0].Cores = int32(totalCores)
 			cpuInfo.CpuDetails = cpuDetails
 			sysRes.CpuInfo = *cpuInfo
 
