@@ -128,11 +128,11 @@ func ValidateValue(key string, val []byte, pubKey []byte, issuetime uint64, ttl 
 	}
 
 	sigData := GetRecordSignData(key, val, pubKey, issuetime, ttl)
-	if ok, err := pk.Verify(sigData, sig); err != nil || !ok {
-		Logger.Error(ErrSignature)
+	ok, err := pk.Verify(sigData, sig)
+	if  err != nil || !ok {
+		Logger.Error(err)
 		return ErrSignature
 	}
-
 
 	var bVerify bool
 	switch valueType {
