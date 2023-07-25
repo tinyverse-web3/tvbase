@@ -30,11 +30,7 @@ func CreateRecordWithType(val []byte, pk []byte, issuetime uint64, ttl uint64, s
 	entry.Value = val
 	entry.ValidityType = pb.DkvsRecord_EOL
 	entry.Seq = TimestampSeq()
-	if ttl == 0 {
-		entry.Validity = issuetime + GetMaxTtl() 
-	} else {
-		entry.Validity = issuetime + ttl 
-	}
+	entry.Validity = issuetime + ttl 
 	entry.Ttl = ttl
 
 	entry.Signature = sig

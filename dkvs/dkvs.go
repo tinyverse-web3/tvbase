@@ -70,6 +70,12 @@ func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl 
 		return err
 	}
 
+	if ttl == 0 {
+		err := errors.New("invalid ttl")
+		Logger.Error(err)
+		return err
+	}
+
 	valueType := 0
 	if IsGunName(key) {
 		// 如果是/gun/name这样的格式，就检查内容，需要有GUN证书，并且保证证书不被随意覆盖(更长的就不检查了，只检查name是否有权限)
