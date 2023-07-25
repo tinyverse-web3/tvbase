@@ -78,7 +78,7 @@ func isPrivateNode(addInfo peer.AddrInfo) (bool, string) {
 func getTvBaseDataDir() string {
 	currentUser, err := user.Current()
 	relPath := defaultPathRoot
-	if err != nil {
+	if err == nil {
 		relPath = currentUser.HomeDir + string(os.PathSeparator) + defaultPathName
 	}
 	absPath, _ := filepath.Abs(relPath)
