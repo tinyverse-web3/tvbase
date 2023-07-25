@@ -2,6 +2,7 @@ package dkvs
 
 import (
 	"bytes"
+	"errors"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -463,11 +464,14 @@ func EncodeCertsRecordValueWithCert(cr *pb.CertsRecordValue, cert *pb.Cert, user
 		}
 	} else {
 		bFound := false
-		for i, c := range cr.CertVect {
+		for _, c := range cr.CertVect {
 			if c.Name == cert.Name {
-				cr.CertVect[i] = cert
-				bFound = true
-				break
+				// 不允许同名
+				// cr.CertVect[i] = cert
+				// bFound = true
+				// break
+				err := errors.New("the same cert exists. " + cert.Name)
+				return nil, err
 			}
 		}
 		cr.UserData = userdata
