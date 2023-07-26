@@ -1,6 +1,7 @@
 package corehttp
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"os/user"
@@ -144,7 +145,9 @@ func formatUnixTime(unixTime uint64) string {
 	timeObj := time.Unix(int64(unixTime)/1000, int64(unixTime)%1000*int64(time.Millisecond))
 
 	// String formatted as year, month, day, hour, minute, and second
-	formattedTime := timeObj.Format("2006-01-02 15:04:05.000")
+	// formattedTime := timeObj.Format("2006-01-02 15:04:05.000")
+
+	formattedTime := fmt.Sprintf("%v", timeObj)
 
 	return formattedTime
 }

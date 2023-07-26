@@ -2,6 +2,7 @@ package corehttp
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -27,6 +28,7 @@ type DkvsKV struct {
 	Key      string `json:"key"`
 	PutTime  string `json:"put_time"`
 	Validity string `json:"validity"`
+	PubKey   string `json:"pub_key"`
 	Value    string `json:"value"`
 }
 
@@ -117,6 +119,7 @@ func QueryAllKeyOption() ServeOption {
 				kv.Value = string(dkvsRec.Value)
 				kv.PutTime = formatUnixTime(dkvsRec.Seq)
 				kv.Validity = formatUnixTime(dkvsRec.Validity)
+				kv.PubKey = hex.EncodeToString(dkvsRec.PubKey)
 				keyList = append(keyList, kv)
 			}
 			jsonData, err := json.Marshal(keyList)
