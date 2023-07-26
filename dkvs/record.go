@@ -111,7 +111,6 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 		cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
 		if cmp != 0 {
 			// 检查是否是TransferKey
-			
 			if newRecord.Data != nil {
 				var prepareRecord pb.DkvsRecord
 				err := prepareRecord.Unmarshal(newRecord.Data)
@@ -139,16 +138,26 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 				Logger.Debugf("key %s transfer from %s to %s\n", key, BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey))
 				return 0, nil
 			} else {
-				// 同一个公共服务，如果是已经注册的服务，可以相互修改数据
 				subkeys := strings.Split(key, "/")
-				l := len(subkeys)
-				if l < 3 { // subkeys[0] = ""
+				if len(subkeys) < 3 { // subkeys[0] = ""
 					return -1, ErrDifferentPublicKey
 				}
-				if IsPublicServiceName(subkeys[1]) {
-					if IsPublicServiceNameKey(subkeys[1], oldRecord.PubKey) && IsPublicServiceNameKey(subkeys[1], newRecord.PubKey) {
-						Logger.Debugf("key %s is public service\n", key)
+				if IsPublicServiceName(subkeys[1]) || isApprovedService(subkeys[1]) {
+					b11 := IsPublicServiceNameKey(subkeys[1], oldRecord.PubKey)
+					b21 := IsPublicServiceNameKey(subkeys[1], newRecord.PubKey)
+
+					if b11 && b21 {
+						// 同一个公共服务，如果是已经注册的服务，可以相互修改数据
+						Logger.Debugf("%s and %s are public service %s\n", BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey), subkeys[1])
 						return 0, nil
+					} else {
+						b12 := isApprovedPubkey(subkeys[1], oldRecord.PubKey) || b11
+						b22 := isApprovedPubkey(subkeys[1], newRecord.PubKey) || b21
+						// 新老记录有服务颁发的证书，证明可以修改（要读取证书）
+						if b12 && b22 {
+							Logger.Debugf("%s and %s have cert of public service %s\n", BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey), subkeys[1])
+							return 0, nil
+						}
 					}
 				}
 			}

@@ -17,6 +17,11 @@ var DefaultCertTtl = uint64(time.Duration(time.Hour * 24 * 365 * 100).Millisecon
 
 const CertTransferPrepare = "TransferPrepare"
 const CertTxCompleted = "TxCompleted"
+const CertApprove = "Approve"
+
+func GetCertAddr(sn string, pk []byte) string {
+	return "/" + sn + "/" + BytesToHexString(pk) + "/cert"
+}
 
 func VerifyCert(cert *pb.Cert) bool {
 
@@ -337,6 +342,26 @@ func VerifyCertTransferConfirm(key string, oldvalue []byte, txcert *pb.Cert, pub
 	return true
 }
 
+
+
+func VerifyCertApprove(cert *pb.Cert, pk []byte) bool {
+
+	if cert == nil {
+		return false
+	}
+	if !VerifyCert(cert) {
+		return false
+	}
+	if !IsPublicServiceNameKey(string(cert.Data), cert.IssuerPubkey) {
+		return false
+	}
+	if cert.Name != CertApprove {
+		return false
+	}
+
+	return bytes.Equal(pk, cert.UserPubkey)
+}
+
 // used to sign with private key
 func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cert {
 
@@ -347,6 +372,24 @@ func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cer
 		SubType:      0,
 		UserPubkey:   nil,
 		Data:         data,
+		IssueTime:    TimeNow(),
+		Ttl:          ttl,
+		IssuerPubkey: issuePubkey,
+		IssuerSign:   nil,
+	}
+
+	return &cert
+}
+
+func IssueCertApprove(ns string, userPubkey []byte, issuePubkey []byte, ttl uint64) *pb.Cert {
+
+	cert := pb.Cert{
+		Version:      1,
+		Name:         CertApprove,
+		Type:         uint32(pb.CertType_Default),
+		SubType:      0,
+		UserPubkey:   userPubkey,
+		Data:         []byte(ns),
 		IssueTime:    TimeNow(),
 		Ttl:          ttl,
 		IssuerPubkey: issuePubkey,

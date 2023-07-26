@@ -9,8 +9,6 @@ import (
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
-const MaxDKVPublicSNLength int = 8
-
 // maintained by DAO
 const PUBSERVICE_GUN = "gun"
 const PUBSERVICE_MINER = "miner"
@@ -21,8 +19,17 @@ const KEY_NS_GUN = "contract"
 // name:publickey (eg: 0xabc)
 var dkvsServiceNameMap = map[string][]string{
 	PUBSERVICE_GUN:   {"0x08011220b8f61ce7b44d1ff9a8f86186eb1062180684f785d3456c4949e7792714cb1ac1"}, // zjMGsKesWSlZnayK
-	PUBSERVICE_MINER: {"0x080112206f95bc02be8daa6ad6ca1ce753b633b86c73c2edd93950b4fe5dcda29f500c2a"}, // thsgMCRQoWIPwfxJ
-	PUBSERVICE_DAUTH: {"0x080112205af541d9b6d1273f886b3611bb666872318926f9cc269fd6652b40ac0574f6e5"}, // oIBBgepoPyhdJTYB
+	PUBSERVICE_MINER: 
+					{
+					"0x080112206f95bc02be8daa6ad6ca1ce753b633b86c73c2edd93950b4fe5dcda29f500c2a", // thsgMCRQoWIPwfxJ
+					"0x08011220ca2573a27462d653594faf292eb8ee21ac3bc6353be5234852ddb180e2e45db9", // RWQVifzRadMFMpyZ
+					"0x08011220d11339fbad7d0a9201ff993d4d2dc3081c69f8be92377003d4c2baa64381b31e", // GeFTuvVKGRhlEgrq
+					},
+	PUBSERVICE_DAUTH: 
+					{
+					"0x080112205af541d9b6d1273f886b3611bb666872318926f9cc269fd6652b40ac0574f6e5", // oIBBgepoPyhdJTYB
+					"0x08011220251b0c412bf1a04d98928b37b45ef34a2f75c8f76adc6e4a9697542e43efe4f4", // WliTOjtgvyZEWZNr
+					}, 
 }
 
 func IsPublicServiceName(sn string) bool {

@@ -426,6 +426,7 @@ func TestTransferKey(t *testing.T) {
 }
 
 func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
+	
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err != nil {
 		return nil, nil, (err)
@@ -443,6 +444,28 @@ func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []by
 	sign2, err := sk.Sign(data)
 
 	return value2, sign2, err
+
+	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
+}
+
+func getNewRecordValue2(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, uint64, uint64, error) {
+	
+	var rv *dkvs_pb.CertsRecordValue
+	value1, _, issuetime, ttl, _, err := kv.Get(key)
+	if err == nil {
+		rv = dkvs.DecodeCertsRecordValue(value1)
+	} else {
+		rv = &dkvs_pb.CertsRecordValue{}
+		issuetime = dkvs.TimeNow()
+		ttl = dkvs.GetDefaultTtl()
+	}
+
+	value2, _ := dkvs.EncodeCertsRecordValueWithCert(rv, cert, nil)
+	
+	data := dkvs.GetRecordSignData(key, value2, pk, issuetime, ttl)
+	sign2, err := sk.Sign(data)
+
+	return value2, sign2, issuetime, ttl, err
 
 	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
 }
@@ -530,4 +553,266 @@ func hash(key string) (hashKey string) {
 	shaHash := sha512.Sum384([]byte(key))
 	hashKey = hex.EncodeToString(shaHash[:])
 	return
+}
+
+
+
+func TestMultiWriters(t *testing.T) {
+	tvbase, err := tvbase.NewTvbase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	kv := tvbase.GetDkvsService()
+
+	seed1 := "thsgMCRQoWIPwfxJ" //dkvs.RandString(16)
+	priv1, err := dkvs.GetPriKeyBySeed(seed1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk1, err := ic.MarshalPublicKey(priv1.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("pubkey1: ", bytesToHexString(pk1))
+
+	tKey := "/" + dkvs.PUBSERVICE_MINER + "/" + hash("dkvs-k001-aa18")
+	tValue1 := []byte("world1")
+	tValue2 := []byte("mtv2")
+	ttl := dkvs.GetTtlFromDuration(time.Hour)
+	issuetime := dkvs.TimeNow()
+
+	sigData1, err := priv1.Sign(dkvs.GetRecordSignData(tKey, tValue1, pk1, issuetime, ttl))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pk1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	seed2 := "GeFTuvVKGRhlEgrq" //dkvs.RandString(16)
+	priv2, err := dkvs.GetPriKeyBySeed(seed2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk2, err := ic.MarshalPublicKey(priv2.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("pubkey2: ", bytesToHexString(pk2))
+
+	sigData2, err := priv2.Sign(dkvs.GetRecordSignData(tKey, tValue2, pk2, issuetime, ttl))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue2, pk2, issuetime, ttl, sigData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, _, _, _, sign, err := kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue2) || !bytes.Equal(sign, sigData2) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue1, pk1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, _, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue1) || !bytes.Equal(sign, sigData1) {
+		t.Fatal(err)
+	}
+}
+
+
+func TestMultiWritersWithCert(t *testing.T) {
+	tvbase, err := tvbase.NewTvbase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	kv := tvbase.GetDkvsService()
+
+	seed1 := "oIBBgepoPyhdJTYB" // dauth
+	priv1, err := dkvs.GetPriKeyBySeed(seed1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk1, err := ic.MarshalPublicKey(priv1.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("pubkey1: ", bytesToHexString(pk1))
+
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa18")
+	tValue1 := []byte("world1")
+	tValue2 := []byte("mtv2")
+	tValue3 := []byte("hope3")
+	ttl := dkvs.GetTtlFromDuration(time.Hour)
+	issuetime := dkvs.TimeNow()
+
+	sigData1, err := priv1.Sign(dkvs.GetRecordSignData(tKey, tValue1, pk1, issuetime, ttl))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pk1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	seed2 := dkvs.RandString(16)
+	priv2, err := dkvs.GetPriKeyBySeed(seed2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk2, err := ic.MarshalPublicKey(priv2.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("pubkey2: ", bytesToHexString(pk2))
+
+	// apply a cert from dauth
+	cert := dkvs.IssueCertApprove(dkvs.PUBSERVICE_DAUTH, pk2, pk1, ttl)
+	signData1 := dkvs.GetCertSignData(cert)
+	if signData1 == nil {
+		t.Fatal()
+	}
+	sign1, err := priv1.Sign(signData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert.IssuerSign = sign1
+	addr := dkvs.GetCertAddr(dkvs.PUBSERVICE_DAUTH, pk2)
+	certvalue1, certsign1, issuetime2, ttl2, err := getNewRecordValue2(kv, addr, priv1, pk1, cert)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(addr, certvalue1, pk1, issuetime2, ttl2, certsign1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// pk2 try to overwrite the key
+	sigData2, err := priv2.Sign(dkvs.GetRecordSignData(tKey, tValue2, pk2, issuetime, ttl))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue2, pk2, issuetime, ttl, sigData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err := kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue2) || !bytes.Equal(sign, sigData2) || !bytes.Equal(pk2, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue1, pk1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue1) || !bytes.Equal(sign, sigData1) || !bytes.Equal(pk1, pubkey){
+		t.Fatal(err)
+	}
+
+	// apply a cert from dauth
+	seed3 := dkvs.RandString(16)
+	priv3, err := dkvs.GetPriKeyBySeed(seed3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk3, err := ic.MarshalPublicKey(priv3.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("pubkey3: ", bytesToHexString(pk3))
+	cert3 := dkvs.IssueCertApprove(dkvs.PUBSERVICE_DAUTH, pk3, pk1, ttl)
+	signData3 := dkvs.GetCertSignData(cert3)
+	if signData3 == nil {
+		t.Fatal()
+	}
+	sign3, err := priv1.Sign(signData3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert3.IssuerSign = sign3
+	addr3 := dkvs.GetCertAddr(dkvs.PUBSERVICE_DAUTH, pk3)
+	certvalue3, certsign3, issuetime3, ttl3, err := getNewRecordValue2(kv, addr3, priv1, pk1, cert3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(addr3, certvalue3, pk1, issuetime3, ttl3, certsign3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sigData3, err := priv3.Sign(dkvs.GetRecordSignData(tKey, tValue3, pk3, issuetime, ttl))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// three writers
+	err = kv.Put(tKey, tValue3, pk3, issuetime, ttl, sigData3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue3) || !bytes.Equal(sign, sigData3) || !bytes.Equal(pk3, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue2, pk2, issuetime, ttl, sigData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue2) || !bytes.Equal(sign, sigData2) || !bytes.Equal(pk2, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue3, pk3, issuetime, ttl, sigData3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue3) || !bytes.Equal(sign, sigData3) || !bytes.Equal(pk3, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue1, pk1, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue1) || !bytes.Equal(sign, sigData1) || !bytes.Equal(pk1, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue3, pk3, issuetime, ttl, sigData3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue3) || !bytes.Equal(sign, sigData3) || !bytes.Equal(pk3, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue2, pk2, issuetime, ttl, sigData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue2) || !bytes.Equal(sign, sigData2) || !bytes.Equal(pk2, pubkey) {
+		t.Fatal(err)
+	}
+
+	err = kv.Put(tKey, tValue3, pk3, issuetime, ttl, sigData3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, pubkey, _, _, sign, err = kv.Get(tKey)
+	if err != nil || !bytes.Equal(value, tValue3) || !bytes.Equal(sign, sigData3) || !bytes.Equal(pk3, pubkey) {
+		t.Fatal(err)
+	}
 }

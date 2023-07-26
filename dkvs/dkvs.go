@@ -32,6 +32,8 @@ type Dkvs struct {
 	baseServiceCfg *tvConfig.NodeConfig
 }
 
+var _dkvs *Dkvs = nil
+
 func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	rootPath := tvbase.GetConfig().RootPath
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
@@ -48,7 +50,7 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 		Logger.Errorf("NewDkvs getProtocolMessenger： %v", err)
 		return nil
 	}
-	_dkvs := &Dkvs{
+	_dkvs = &Dkvs{
 		idht:           idht,
 		dkvsdb:         dkvsdb,
 		dhtDatastore:   dhtDatastore,
@@ -506,7 +508,7 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 }
 
 func (d *Dkvs) IsPublicService(sn string, pubkey []byte) bool {
-	if len(sn) > MaxDKVPublicSNLength {
+	if len(sn) > MinDKVSRecordKeyLength {
 		return false
 	}
 
@@ -549,4 +551,35 @@ func (d *Dkvs) IsApprovedService(sn string) bool {
 
 	cert := FindPublicServiceCertWithUserPubkey(rv.CertVect, record.PubKey)
 	return cert != nil
+}
+
+func (d *Dkvs) IsApprovedPubkey(sn string, pk []byte) bool {
+	key := GetCertAddr(sn, pk)
+	record, err := d.FastGetRecord(key)
+	if err != nil {
+		return false
+	}
+
+	rv := DecodeCertsRecordValue(record.Value)
+	if rv == nil {
+		return false
+	}
+
+	cert := FindPublicServiceCertByServiceName(rv.CertVect, sn)
+	return VerifyCertApprove(cert, pk)
+}
+
+func isApprovedPubkey(sn string, pk []byte) bool {
+	if _dkvs != nil {
+		return _dkvs.IsApprovedPubkey(sn, pk)
+	}
+
+	return false
+}
+
+func isApprovedService(sn string) bool {
+	if _dkvs != nil {
+		return _dkvs.IsApprovedService(sn)
+	}
+	return false
 }
