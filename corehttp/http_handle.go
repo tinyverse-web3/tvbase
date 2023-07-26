@@ -24,9 +24,10 @@ import (
 )
 
 type DkvsKV struct {
-	Key     string `json:"key"`
-	PutTime string `json:"put_time"`
-	Value   string `json:"value"`
+	Key      string `json:"key"`
+	PutTime  string `json:"put_time"`
+	Validity string `json:"validity"`
+	Value    string `json:"value"`
 }
 
 type Node struct {
@@ -115,6 +116,7 @@ func QueryAllKeyOption() ServeOption {
 				kv.Key = string(dkvs.RemovePrefix(string(key)))
 				kv.Value = string(dkvsRec.Value)
 				kv.PutTime = formatUnixTime(dkvsRec.Seq)
+				kv.Validity = formatUnixTime(dkvsRec.Validity)
 				keyList = append(keyList, kv)
 			}
 			jsonData, err := json.Marshal(keyList)

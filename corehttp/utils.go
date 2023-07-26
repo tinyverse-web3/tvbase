@@ -140,7 +140,7 @@ func getValueFromDkvsRec(dkvsVal []byte) (string, error) {
 }
 
 func formatUnixTime(unixTime uint64) string {
-	// convert Unix timestamp to time.Time type
+	// convert Unix timestamp() to time.Time type
 	timeObj := time.Unix(int64(unixTime)/1000, int64(unixTime)%1000*int64(time.Millisecond))
 
 	// String formatted as year, month, day, hour, minute, and second
