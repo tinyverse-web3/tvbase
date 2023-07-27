@@ -95,14 +95,24 @@ func selectRecord(recs []*pb.DkvsRecord, vals [][]byte) (int, error) {
 }
 
 // Verify that the public key of the new record is the same as the old public key to prevent the record from being overwritten
-func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
-	newRecord := new(pb.DkvsRecord)
-	if err := proto.Unmarshal(newVal, newRecord); err != nil {
+func verifyPubKey(key string, Val1 []byte, Val2 []byte) (int, error) {
+	var newRecord *pb.DkvsRecord
+	var oldRecord *pb.DkvsRecord
+	record1 := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(Val1, record1); err != nil {
 		return -1, err
 	}
-	oldRecord := new(pb.DkvsRecord)
-	if err := proto.Unmarshal(oldVal, oldRecord); err != nil {
+	record2 := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(Val2, record2); err != nil {
 		return -1, err
+	}
+
+	if record1.Seq > record2.Seq {
+		newRecord = record1
+		oldRecord = record2
+	} else {
+		newRecord = record2
+		oldRecord = record1
 	}
 
 	switch oldRecord.ValidityType {
