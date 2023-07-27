@@ -61,6 +61,9 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 
 	// register a network event to handler unsynckey
 	tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
+
+	// Periodically process unsynchronized keys
+	_dkvs.periodicallyProcessUnsyncKey()
 	return _dkvs
 }
 

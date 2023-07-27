@@ -171,13 +171,17 @@ func (d *Dkvs) startSpan(ctx context.Context, name string, opts ...trace.SpanSta
 func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 	lock.Lock() //加锁防止多线程同时操作putAllKeyToPeers
 	defer lock.Unlock()
+	if d.getUnsyncedDbSize() == 0 {
+		Logger.Debugf("putAllUnsyncKeyToNetwork---> unsyncDb content is empty, no keys need to be synced to the network")
+		return nil
+	}
 	log.Printf("peerID: %s", peerID.Pretty())
-	Logger.Debug("putAllUnsyncKeyToNetwork---> start")
-	Logger.Debug("sync start unsyncDb content---")
+	Logger.Info("putAllUnsyncKeyToNetwork---> start")
+	Logger.Info("sync start unsyncDb content: ---")
 	d.printUnsyncedDb()
 	d.putAllKeysToPeers() //将db中未同步的key再一次put到基他节点
-	Logger.Debug("putAllUnsyncKeyToNetwork---> end")
-	Logger.Debug("sync end unsyncDb content---")
+	Logger.Info("putAllUnsyncKeyToNetwork---> end")
+	Logger.Info("sync end unsyncDb content: ---")
 	d.printUnsyncedDb()
 	return nil
 }
@@ -282,6 +286,22 @@ func (d *Dkvs) printUnsyncedDb() {
 	for result := range results.Next() {
 		Logger.Debugf("printUnsyncDb {key: %s}", result.Value)
 	}
+}
+
+func (d *Dkvs) getUnsyncedDbSize() uint64 {
+	ctx := context.Background()
+	q := query.Query{}
+	var size uint64 = 0
+	results, err := d.dkvsdb.Query(ctx, q)
+	if err != nil {
+		return size
+	}
+	defer results.Close()
+
+	for range results.Next() {
+		size++
+	}
+	return size
 }
 
 func (d *Dkvs) putAllKeysToPeers() error {
@@ -402,4 +422,25 @@ func (d *Dkvs) updateProvider(ctx context.Context, p peer.ID, key string) error 
 		return err
 	}
 	return nil
+}
+
+// Periodically process unsynchronized keys
+func (d *Dkvs) periodicallyProcessUnsyncKey() {
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			host := d.idht.Host()
+			peers := host.Network().Peers()
+			if len(peers) == 0 { // if len(ppers) equal 0 indicates that it is not connected to any node
+				Logger.Debugf("periodicallyProcessUnsyncKey()--->the current node is not connected to the network")
+				continue
+			}
+			Logger.Debug("periodicallyProcessUnsyncKey()--->the current node is connected to the network and call putAllUnsyncKeyToNetwork()")
+			err := d.putAllUnsyncKeyToNetwork(d.idht.PeerID())
+			if err != nil {
+				Logger.Debugf("periodicallyProcessUnsyncKey()--->call putAllUnsyncKeyToNetwork() failed {err: s%}", err.Error())
+			}
+		}
+	}()
 }
