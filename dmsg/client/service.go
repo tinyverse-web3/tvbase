@@ -890,7 +890,6 @@ func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid strin
 	_, err = protocolInfo.Protocol.Request(
 		peerId,
 		d.CurSrcUserInfo.UserKey.PubkeyHex,
-		d.CurSrcUserInfo.UserKey.PubkeyHex,
 		pid,
 		content)
 	if err != nil {

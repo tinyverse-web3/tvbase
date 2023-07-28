@@ -125,9 +125,9 @@ func NewCustomStreamProtocol(
 	protocolService common.ProtocolService,
 	protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {
 	adapter := NewCustomStreamProtocolAdapter()
+	adapter.pid = pid
 	protocol := common.NewStreamProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	adapter.protocol = protocol
 	adapter.init()
-	adapter.pid = pid
 	return adapter.protocol
 }
