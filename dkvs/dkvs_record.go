@@ -23,10 +23,6 @@ func CreateRecord(val []byte, pk []byte, issuetime uint64, ttl uint64, sig []byt
 }
 
 func CreateRecordWithType(val []byte, pk []byte, issuetime uint64, ttl uint64, sig []byte, vt uint32) (*pb.DkvsRecord, error) {
-	if ttl == 0 {
-		ttl = GetTtlFromDuration(DefaultDKVSRecordEOL)
-	}
-
 	entry := new(pb.DkvsRecord)
 	entry.Version = uint32(1)
 	entry.ValueType = vt
@@ -128,11 +124,11 @@ func ValidateValue(key string, val []byte, pubKey []byte, issuetime uint64, ttl 
 	}
 
 	sigData := GetRecordSignData(key, val, pubKey, issuetime, ttl)
-	if ok, err := pk.Verify(sigData, sig); err != nil || !ok {
-		Logger.Error(ErrSignature)
+	ok, err := pk.Verify(sigData, sig)
+	if  err != nil || !ok {
+		Logger.Error(err)
 		return ErrSignature
 	}
-
 
 	var bVerify bool
 	switch valueType {

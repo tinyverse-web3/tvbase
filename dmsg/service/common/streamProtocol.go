@@ -57,7 +57,7 @@ func (p *StreamProtocol) HandleRequestData(protoData []byte) error {
 
 	valid := protocol.AuthProtocolMsg(p.Request, requestBasicData)
 	if !valid {
-		p.sendResponseProtocol(p.stream, callbackData, fmt.Errorf("failed to authenticate message"))
+		p.sendResponseProtocol(p.stream, nil, fmt.Errorf("failed to authenticate message"))
 		return fmt.Errorf("failed to authenticate message")
 	}
 
@@ -81,14 +81,9 @@ func (p *StreamProtocol) sendResponseProtocol(stream network.Stream, callbackDat
 	protocolID := p.Adapter.GetResponsePID()
 
 	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, protocolID)
+	responseBasicData := protocol.NewBasicData(p.Host, srcUserPubKey, protocolID)
 	responseBasicData.ID = requestBasicData.ID
-	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: NewBasicData error: %v", err)
-		return
-	}
-
-	err = p.Adapter.InitResponse(responseBasicData, callbackData)
+	err := p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->sendResponseProtocol: InitResponse error: %v", err)
 		return

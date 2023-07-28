@@ -41,3 +41,14 @@ go env -w GOPRIVATE="github.com/tinyverse-web3/*"
 echo '[url "git@github.com:tinyverse-web3/"]
 	insteadOf = https://github.com/tinyverse-web3/' >> ~/.gitconfig
 ```
+
+## deploy full tvnode in linux server cmd
+# clear all data and deploy
+```shell
+cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && rm ~/.tvnode/*.log && rm -rf ~/.tvnode/*_data && rm -rf ~/.tvnode/unsynckv && ./boot.sh
+```
+
+# Just deploy without clearing any data
+```shell
+cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && ./boot.sh
+```

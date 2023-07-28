@@ -44,12 +44,8 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 
 	// generate response message
 	srcUserPubKey := p.ProtocolService.GetCurSrcUserPubKeyHex()
-	responseBasicData, err := protocol.NewBasicData(p.Host, srcUserPubKey, p.Adapter.GetResponsePID())
+	responseBasicData := protocol.NewBasicData(p.Host, srcUserPubKey, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
-	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: NewBasicData error: %v", err)
-		return err
-	}
 	err = p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: InitResponse error: %v", err)

@@ -19,12 +19,9 @@ const MaxDKVSRecordKeyLength int = 256
 // Keys with a length of less than 32 bytes are reserved and not allowed, and the service node directly rejects them
 const MinDKVSRecordKeyLength int = 32
 
-// Unit is nanosecond
-const OneHundredYears int64 = 1000 * 1000 * 1000 * 60 * 60 * 24 * 365 * 100
-const TimeErroConstant int64 = 1000 * 1000 * 1000 * 60 * 60 * 24 * 10
 
 // Because there will be errors in the time zone and timing accuracy, in order to prevent mistakes, add this error
-const MaxTTL int64 = OneHundredYears + TimeErroConstant
+const MaxTTL time.Duration = time.Hour * 24 * 365 * 100
 
 // DefaultPrefix is the application specific prefix attached to all DHT protocols by default.
 const DefaultPrefix protocol.ID = "/dkvs"

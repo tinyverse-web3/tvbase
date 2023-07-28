@@ -22,6 +22,7 @@ type DmsgService interface {
 
 type DkvsService interface {
 	Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl uint64, sig []byte) error
+	// return: value, pubkey, issuetime, ttl, signature, err
 	Get(key string) ([]byte, []byte, uint64, uint64, []byte, error)
 	GetRecord(key string) (*dkvspb.DkvsRecord, error)
 	FastGetRecord(key string) (*dkvspb.DkvsRecord, error)

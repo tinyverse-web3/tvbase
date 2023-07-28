@@ -14,23 +14,27 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 
 	requestProtoMsg, responseProtoMsg, err := p.Protocol.HandleRequestData(requestProtocolData)
 	if err != nil {
-		return err
+		if requestProtoMsg == nil {
+			return err
+		}
+		responseProtoMsg, err = p.GetErrResponse(requestProtoMsg, err)
+		if err != nil {
+			return err
+		}
 	}
 
 	responseProtoData, err := proto.Marshal(responseProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 		return err
 	}
 	// send the response
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	err = p.Service.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, responseProtoData)
-
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error:%v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
 	}
-
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData end")
 	return nil
 }

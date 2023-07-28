@@ -82,6 +82,17 @@ func (adapter *SeekMailboxProtocolAdapter) GetResponseRetCode(
 	return response.RetCode
 }
 
+func (adapter *SeekMailboxProtocolAdapter) SetResponseRetCode(
+	responseProtoMsg protoreflect.ProtoMessage,
+	code int32,
+	result string) {
+	request, ok := responseProtoMsg.(*pb.SeekMailboxRes)
+	if !ok {
+		return
+	}
+	request.RetCode = dmsgProtocol.NewRetCode(code, result)
+}
+
 func (adapter *SeekMailboxProtocolAdapter) SetRequestSig(
 	requestProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {

@@ -3,9 +3,11 @@ package common
 import (
 	"context"
 	"crypto/ecdsa"
+	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
@@ -26,6 +28,7 @@ type ProtocolAdapter interface {
 	GetRequestBasicData(requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseBasicData(responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
+	SetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage, code int32, result string)
 	SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error
 	SetResponseSig(responseProtoMsg protoreflect.ProtoMessage, sig []byte) error
 	CallRequestCallback(requestProtoMsg protoreflect.ProtoMessage) (any, error)
@@ -72,6 +75,7 @@ type Protocol struct {
 type StreamProtocol struct {
 	Protocol
 	Callback StreamProtocolCallback
+	stream   network.Stream
 }
 
 type PubsubProtocolAdapter interface {
@@ -115,8 +119,8 @@ type ProtocolService interface {
 type UserPubsub struct {
 	Topic           *pubsub.Topic
 	Subscription    *pubsub.Subscription
-	IsReadPubsubMsg bool
 	CancelFunc      context.CancelFunc
+	IsReadPubsubMsg bool
 }
 type SrcUserInfo struct {
 	UserPubsub
@@ -156,4 +160,29 @@ type CustomStreamProtocolInfo struct {
 type CustomPubsubProtocolInfo struct {
 	Client   customProtocol.CustomPubsubProtocolClient
 	Protocol *PubsubProtocol
+}
+
+// service
+type ServiceDestUserInfo struct {
+	DestUserInfo
+	MsgRWMutex          sync.RWMutex
+	LastReciveTimestamp int64
+}
+
+const MailboxLimitErr = "mailbox is limited"
+const MailboxAlreadyExistErr = "dest pubkey already exists"
+const MailboxAlreadyExistCode = 1
+
+type UserInfo struct {
+	UserKey *UserKey
+}
+type UserKey struct {
+	PubKeyHex string
+	PriKeyHex string
+	PubKey    *ecdsa.PublicKey
+	PriKey    *ecdsa.PrivateKey
+}
+
+type CustomProtocolPubsub struct {
+	UserPubsub
 }

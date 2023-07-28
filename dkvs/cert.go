@@ -17,6 +17,11 @@ var DefaultCertTtl = uint64(time.Duration(time.Hour * 24 * 365 * 100).Millisecon
 
 const CertTransferPrepare = "TransferPrepare"
 const CertTxCompleted = "TxCompleted"
+const CertApprove = "Approve"
+
+func GetCertAddr(sn string, pk []byte) string {
+	return "/" + sn + "/" + BytesToHexString(pk) + "/cert"
+}
 
 func VerifyCert(cert *pb.Cert) bool {
 
@@ -119,9 +124,9 @@ func DecodeAndFindCertByPubkey(value []byte, pubkey []byte) *pb.Cert {
 }
 
 // used to sign with private key
-func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64) []byte {
+func GetGunSignData(name string, num uint64, gunPubkey []byte, issueTime uint64, ttl uint64) []byte {
 
-	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
+	cert := IssueCertGun(name, num, gunPubkey, issueTime, ttl)
 
 	b, err := cert.Marshal()
 	if err != nil {
@@ -132,8 +137,8 @@ func GetGunSignData(name string, gunPubkey []byte, issueTime uint64, ttl uint64)
 }
 
 // generate value for a GUN record
-func EncodeGunValue(name string, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
-	cert := IssueCertGun(name, gunPubkey, issueTime, ttl)
+func EncodeGunValue(name string, num uint64, issueTime uint64, ttl uint64, gunPubkey []byte, gunSign []byte, userData []byte) []byte {
+	cert := IssueCertGun(name, num, gunPubkey, issueTime, ttl)
 	cert.IssuerSign = gunSign
 
 	rv := pb.CertsRecordValue{
@@ -172,7 +177,13 @@ func VerifyGunRecordValue(key string, value []byte, issuetime uint64, ttl uint64
 		return false
 	}
 
-	return cert.Ttl == ttl && cert.IssueTime == issuetime && GetGunKey(string(cert.Data)) == key
+	var si pb.SimpleContractIssueToken
+	err := si.Unmarshal(cert.Data)
+	if err != nil {
+		return false
+	}
+
+	return cert.Ttl == ttl && cert.IssueTime == issuetime && GetGunKey(si.Name) == key
 }
 
 func FindTransferCert(cv []*pb.Cert) *pb.Cert {
@@ -247,8 +258,8 @@ func VerifyCertTransferPrepare(key string, cert *pb.Cert, oldpk, newpk []byte) b
 	if err != nil {
 		return false
 	}
-	
-	if !bytes.Equal(cert.IssuerPubkey, oldpk) || 
+
+	if !bytes.Equal(cert.IssuerPubkey, oldpk) ||
 		cert.Name != CertTransferPrepare || tp.Key != key {
 		return false
 	}
@@ -271,7 +282,7 @@ func VerifyCertTxCompleted(key string, fee uint64, txcert *pb.Cert, oldpk, newpk
 	if !VerifyCert(txcert) {
 		return false
 	}
-	if !IsPublicServiceNameKey(KEY_NS_TX, txcert.IssuerPubkey) {
+	if !IsPublicServiceNameKey(PUBSERVICE_MINER, txcert.IssuerPubkey) {
 		return false
 	}
 	if txcert.Name != CertTxCompleted {
@@ -327,9 +338,28 @@ func VerifyCertTransferConfirm(key string, oldvalue []byte, txcert *pb.Cert, pub
 		Logger.Error("VerifyCertTxCompleted2 failed")
 		return false
 	}
-	
 
 	return true
+}
+
+
+
+func VerifyCertApprove(cert *pb.Cert, pk []byte) bool {
+
+	if cert == nil {
+		return false
+	}
+	if !VerifyCert(cert) {
+		return false
+	}
+	if !IsPublicServiceNameKey(string(cert.Data), cert.IssuerPubkey) {
+		return false
+	}
+	if cert.Name != CertApprove {
+		return false
+	}
+
+	return bytes.Equal(pk, cert.UserPubkey)
 }
 
 // used to sign with private key
@@ -351,16 +381,44 @@ func IssueCert(name string, data []byte, issuePubkey []byte, ttl uint64) *pb.Cer
 	return &cert
 }
 
-
-func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
+func IssueCertApprove(ns string, userPubkey []byte, issuePubkey []byte, ttl uint64) *pb.Cert {
 
 	cert := pb.Cert{
 		Version:      1,
-		Name:         KEY_NS_GUN,
+		Name:         CertApprove,
 		Type:         uint32(pb.CertType_Default),
 		SubType:      0,
+		UserPubkey:   userPubkey,
+		Data:         []byte(ns),
+		IssueTime:    TimeNow(),
+		Ttl:          ttl,
+		IssuerPubkey: issuePubkey,
+		IssuerSign:   nil,
+	}
+
+	return &cert
+}
+
+// as a nft
+func IssueCertGun(name string, num uint64, gunPubkey []byte, issueTime uint64, ttl uint64) *pb.Cert {
+
+	var si pb.SimpleContractIssueToken
+	si.Name = name
+	si.MaxScore = num
+	si.ReceiverKey = gunPubkey
+	si.UserData = nil
+	buf, err := si.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	cert := pb.Cert{
+		Version:      1,
+		Name:         name,
+		Type:         uint32(pb.CertType_Contract),
+		SubType:      1, // new score
 		UserPubkey:   nil,
-		Data:         []byte(name),
+		Data:         buf,
 		IssueTime:    issueTime,
 		Ttl:          ttl,
 		IssuerPubkey: gunPubkey,
@@ -370,12 +428,11 @@ func IssueCertGun(name string, gunPubkey []byte, issueTime uint64, ttl uint64) *
 	return &cert
 }
 
-
 func IssueCertTransferPrepare(key string, fee uint64, receiverpk, issuePubkey []byte) *pb.Cert {
 
 	tp := pb.CertDataTransferPrepare{
-		Key : key,
-		Fee : fee,
+		Key: key,
+		Fee: fee,
 	}
 
 	buf, err := tp.Marshal()
@@ -401,10 +458,10 @@ func IssueCertTransferPrepare(key string, fee uint64, receiverpk, issuePubkey []
 
 func IssueCertTxCompleted(key string, tx string, fee uint64, senderpk, receiverpk, issuerpk []byte) *pb.Cert {
 	tc := pb.CertDataTxCompleted{
-		Key : key,
-		Tx : tx,
-		Fee : fee,
-		Senderkey: senderpk,
+		Key:         key,
+		Tx:          tx,
+		Fee:         fee,
+		Senderkey:   senderpk,
 		Receiverkey: receiverpk,
 	}
 
@@ -449,11 +506,14 @@ func EncodeCertsRecordValueWithCert(cr *pb.CertsRecordValue, cert *pb.Cert, user
 		}
 	} else {
 		bFound := false
-		for i, c := range cr.CertVect {
+		for _, c := range cr.CertVect {
 			if c.Name == cert.Name {
-				cr.CertVect[i] = cert
+				// 不允许同名
+				// cr.CertVect[i] = cert
 				bFound = true
 				break
+				//err := errors.New("the same cert exists. " + cert.Name)
+				//return nil, err
 			}
 		}
 		cr.UserData = userdata
@@ -461,7 +521,6 @@ func EncodeCertsRecordValueWithCert(cr *pb.CertsRecordValue, cert *pb.Cert, user
 			cr.CertVect = append(cr.CertVect, cert)
 		}
 	}
-	
+
 	return cr.Marshal()
 }
-

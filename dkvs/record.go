@@ -3,6 +3,7 @@ package dkvs
 import (
 	"bytes"
 	"errors"
+	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	record "github.com/libp2p/go-libp2p-record"
@@ -94,14 +95,24 @@ func selectRecord(recs []*pb.DkvsRecord, vals [][]byte) (int, error) {
 }
 
 // Verify that the public key of the new record is the same as the old public key to prevent the record from being overwritten
-func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
-	newRecord := new(pb.DkvsRecord)
-	if err := proto.Unmarshal(newVal, newRecord); err != nil {
+func verifyPubKey(key string, Val1 []byte, Val2 []byte) (int, error) {
+	var newRecord *pb.DkvsRecord
+	var oldRecord *pb.DkvsRecord
+	record1 := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(Val1, record1); err != nil {
 		return -1, err
 	}
-	oldRecord := new(pb.DkvsRecord)
-	if err := proto.Unmarshal(oldVal, oldRecord); err != nil {
+	record2 := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(Val2, record2); err != nil {
 		return -1, err
+	}
+
+	if record1.Seq > record2.Seq {
+		newRecord = record1
+		oldRecord = record2
+	} else {
+		newRecord = record2
+		oldRecord = record1
 	}
 
 	switch oldRecord.ValidityType {
@@ -110,7 +121,6 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 		cmp := bytes.Compare(newRecord.GetPubKey(), oldRecord.GetPubKey())
 		if cmp != 0 {
 			// 检查是否是TransferKey
-			
 			if newRecord.Data != nil {
 				var prepareRecord pb.DkvsRecord
 				err := prepareRecord.Unmarshal(newRecord.Data)
@@ -137,6 +147,29 @@ func verifyPubKey(key string, newVal []byte, oldVal []byte) (int, error) {
 
 				Logger.Debugf("key %s transfer from %s to %s\n", key, BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey))
 				return 0, nil
+			} else {
+				subkeys := strings.Split(key, "/")
+				if len(subkeys) < 3 { // subkeys[0] = ""
+					return -1, ErrDifferentPublicKey
+				}
+				if IsPublicServiceName(subkeys[1]) || isApprovedService(subkeys[1]) {
+					b11 := IsPublicServiceNameKey(subkeys[1], oldRecord.PubKey)
+					b21 := IsPublicServiceNameKey(subkeys[1], newRecord.PubKey)
+
+					if b11 && b21 {
+						// 同一个公共服务，如果是已经注册的服务，可以相互修改数据
+						Logger.Debugf("%s and %s are public service %s\n", BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey), subkeys[1])
+						return 0, nil
+					} else {
+						b12 := isApprovedPubkey(subkeys[1], oldRecord.PubKey) || b11
+						b22 := isApprovedPubkey(subkeys[1], newRecord.PubKey) || b21
+						// 新老记录有服务颁发的证书，证明可以修改（要读取证书）
+						if b12 && b22 {
+							Logger.Debugf("%s and %s have cert of public service %s\n", BytesToHexString(oldRecord.PubKey), BytesToHexString(newRecord.PubKey), subkeys[1])
+							return 0, nil
+						}
+					}
+				}
 			}
 			
 			Logger.Error(ErrDifferentPublicKey)

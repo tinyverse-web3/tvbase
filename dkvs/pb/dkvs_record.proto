@@ -30,7 +30,6 @@ message DkvsRecord {
 enum CertType {
 	Default = 0; // cert
 	Contract = 1;
-	NFT = 2;
 }
 
 // 证书，也就是某种意义上的NFT。如果指定userPubkey，就是跟该账户绑定；如果没有指定，就可以转让。
@@ -66,4 +65,12 @@ message CertDataTxCompleted {
 	uint64 fee = 3;
 	bytes senderkey = 4;
 	bytes receiverkey = 5;
+}
+
+// Cert.Data
+message SimpleContractIssueToken {
+    string name = 1;        // token名称，GUN名字。如果是“”，从Cert.Name得到名字。
+    uint64 maxScore = 2;    // 最大58bits
+    bytes receiverKey = 4;  // 接收者公钥
+    bytes userData = 5; 
 }

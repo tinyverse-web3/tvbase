@@ -1,9 +1,12 @@
 package corehttp
 
 import (
+	"fmt"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
@@ -16,7 +19,7 @@ import (
 
 const (
 	defaultPathName = ".tvnode"
-	defaultPathRoot = "~/" + defaultPathName
+	defaultPathRoot = "./" + defaultPathName
 )
 
 func dsKeyDcode(s string) ([]byte, error) {
@@ -75,15 +78,22 @@ func isPrivateNode(addInfo peer.AddrInfo) (bool, string) {
 }
 
 func getTvBaseDataDir() string {
+	currentUser, err := user.Current()
 	relPath := defaultPathRoot
+	if err == nil {
+		relPath = currentUser.HomeDir + string(os.PathSeparator) + defaultPathName
+	}
 	absPath, _ := filepath.Abs(relPath)
-	_, err := os.Stat(absPath)
+	_, err = os.Stat(absPath)
 	if err != nil || os.IsNotExist(err) {
+		Logger.Debugf("Path is not exist {path: %s, err: %s}", absPath, err.Error())
 		absPath, err = os.Getwd()
 		if err != nil {
+			Logger.Debugf("os.Getwd() is not exist {err: %s}", err.Error())
 			absPath, _ = filepath.Abs("./")
 		}
 	}
+	Logger.Debugf("current path: {path: %s}", absPath)
 	return absPath
 }
 
@@ -128,4 +138,16 @@ func getValueFromDkvsRec(dkvsVal []byte) (string, error) {
 		return "", err
 	}
 	return string(dkvsRec.Value), nil
+}
+
+func formatUnixTime(unixTime uint64) string {
+	// convert Unix timestamp() to time.Time type
+	timeObj := time.Unix(int64(unixTime)/1000, int64(unixTime)%1000*int64(time.Millisecond))
+
+	// String formatted as year, month, day, hour, minute, and second
+	// formattedTime := timeObj.Format("2006-01-02 15:04:05.000")
+
+	formattedTime := fmt.Sprintf("%v", timeObj)
+
+	return formattedTime
 }
