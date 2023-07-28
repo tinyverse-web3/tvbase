@@ -263,15 +263,20 @@ func TestPullCID(t *testing.T) {
 	tvcLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
 	// init dmsg client
-	node, _, err := initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
+	tvbase, _, err := initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
 	if err != nil {
 		tvcLog.Errorf("init acceptable error: %v", err)
 		t.Errorf("init acceptable error: %v", err)
 		return
 	}
 
-	pullCidProtocol := pullcid.GetPullCidClientProtocol()
-	err = node.RegistCSCProtocol(pullCidProtocol)
+	pullCidProtocol, err := pullcid.GetPullCidClientProtocol(tvbase)
+	if err != nil {
+		tvcLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+		return
+	}
+	err = tvbase.RegistCSCProtocol(pullCidProtocol)
 	if err != nil {
 		tvcLog.Errorf("node.RegistCSCProtocol error: %v", err)
 		t.Errorf("node.RegistCSCProtocol error: %v", err)

@@ -1,17 +1,26 @@
 package pullcid
 
 import (
+	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
+	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
+	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
+	"github.com/tinyverse-web3/tvbase/tvbase"
+	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
+	keyUtil "github.com/tinyverse-web3/tvutil/key"
 )
 
 const pullCidPID = "pullcid"
+
+const StorageKeyPrefix = "/tvnode/storage/ipfs/"
 
 type clientCommicateInfo struct {
 	data            any
@@ -44,17 +53,32 @@ type PullCidClientProtocol struct {
 var pullCidClientProtocol *PullCidClientProtocol
 var pullCidServiceProtocol *PullCidServiceProtocol
 
-func GetPullCidClientProtocol() *PullCidClientProtocol {
+func GetPullCidClientProtocol(tvbase *tvbase.TvBase) (*PullCidClientProtocol, error) {
 	if pullCidClientProtocol == nil {
 		pullCidClientProtocol = &PullCidClientProtocol{}
-		pullCidClientProtocol.Init()
+		err := pullCidClientProtocol.Init()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return pullCidClientProtocol
+	return pullCidClientProtocol, nil
 }
 
-func (p *PullCidClientProtocol) Init() {
+var PullCidServicePriKey *ecdsa.PrivateKey
+
+func (p *PullCidClientProtocol) Init() error {
+	if PullCidServicePriKey == nil {
+		var err error
+		PullCidServicePriKey, _, err = keyUtil.GenerateEcdsaKey(pullCidPID)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->Init: GenerateEcdsaKey err: %v", err)
+			return err
+		}
+	}
+
 	p.CustomStreamClientProtocol.Init(pullCidPID)
 	p.commicateInfoList = make(map[string]*clientCommicateInfo)
+	return nil
 }
 
 func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
@@ -148,18 +172,20 @@ type PullCidServiceProtocol struct {
 	customProtocol.CustomStreamServiceProtocol
 	commicateInfoList      map[string]*serviceCommicateInfo
 	commicateInfoListMutex sync.Mutex
+	tvBaseService          tvbaseCommon.TvBaseService
 }
 
-func GetPullCidServiceProtocol() *PullCidServiceProtocol {
+func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) *PullCidServiceProtocol {
 	if pullCidServiceProtocol == nil {
 		pullCidServiceProtocol = &PullCidServiceProtocol{}
-		pullCidServiceProtocol.Init()
+		pullCidServiceProtocol.Init(tvBaseService)
 	}
 	return pullCidServiceProtocol
 }
 
-func (p *PullCidServiceProtocol) Init() {
+func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) {
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
+	p.tvBaseService = tvBaseService
 	p.commicateInfoList = make(map[string]*serviceCommicateInfo)
 }
 
@@ -252,6 +278,35 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	default:
 		customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
 			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
+	}
+
+	if pullCidResponse.Status == tvIpfs.PinStatus_PINNED {
+		var peerIDList []string
+		// TODO 提供选项，可选择让用户上传CID对应数据至NTF.STORAGE和WEB3.STORAGE，比如付费数据或重要数据
+
+		// dkvs save cid info
+		key := StorageKeyPrefix + pullCidResponse.CID
+		pubkey := &PullCidServicePriKey.PublicKey
+
+		pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubkey)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: generate pubKey_porto error %v", err)
+			return err
+		}
+
+		peerIDList = append(peerIDList, p.tvBaseService.GetHost().ID().String())
+		value, err := json.Marshal(peerIDList)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: json marshal error: %v", err)
+			return err
+		}
+
+		sig, err := tvutilCrypto.SignDataByEcdsa(PullCidServicePriKey, value)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse:: %v", err)
+			return err
+		}
+		p.tvBaseService.GetDkvsService().Put(key, []byte(value), pubkeyData, dkvs.TimeNow(), dkvs.GetTtlFromDuration(time.Hour), sig)
 	}
 
 	return nil

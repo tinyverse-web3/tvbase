@@ -170,7 +170,7 @@ func main() {
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
 	}
-	tvbase.RegistCSSProtocol(pullcid.GetPullCidServiceProtocol())
+	tvbase.RegistCSSProtocol(pullcid.GetPullCidServiceProtocol(tvbase))
 
 	<-ctx.Done()
 	// tvInfrasture.Stop()
