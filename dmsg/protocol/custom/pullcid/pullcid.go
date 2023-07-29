@@ -281,7 +281,7 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 
 	if pullCidResponse.Status == tvIpfs.PinStatus_PINNED {
-		var peerIDList []string
+		var peerIDList map[string]any = make(map[string]any)
 		// TODO 提供选项，可选择让用户上传CID对应数据至NTF.STORAGE和WEB3.STORAGE，比如付费数据或重要数据
 
 		// dkvs save cid info
@@ -290,23 +290,36 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 
 		pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubkey)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: generate pubKey_porto error %v", err)
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: ECDSAPublicKeyToProtoBuf error %v", err)
 			return err
 		}
 
-		peerIDList = append(peerIDList, p.tvBaseService.GetHost().ID().String())
-		value, err := json.Marshal(peerIDList)
+		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(key)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: json marshal error: %v", err)
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: GetDkvsService->Get error: %v", err)
+			return err
+		}
+
+		err = json.Unmarshal(value, &peerIDList)
+		if err != nil {
+			customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: json.Unmarshal old dkvs value error: %v", err)
+		}
+
+		peerID := p.tvBaseService.GetHost().ID().String()
+		peerIDList[peerID] = peerID
+		value, err = json.Marshal(peerIDList)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: json marshal new dkvs value error: %v", err)
 			return err
 		}
 
 		sig, err := tvutilCrypto.SignDataByEcdsa(PullCidServicePriKey, value)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse:: %v", err)
+			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: SignDataByEcdsa: %v", err)
 			return err
 		}
-		p.tvBaseService.GetDkvsService().Put(key, []byte(value), pubkeyData, dkvs.TimeNow(), dkvs.GetTtlFromDuration(time.Hour), sig)
+		maxTTL := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
+		p.tvBaseService.GetDkvsService().Put(key, []byte(value), pubkeyData, dkvs.TimeNow(), maxTTL, sig)
 	}
 
 	return nil
