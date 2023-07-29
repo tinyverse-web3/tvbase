@@ -493,7 +493,7 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 		}),
 	}
 
-	d.baseService.GetAvailableServicePeerList(key) //增加Get的稳定性
+	//d.baseService.GetAvailableServicePeerList(key) //增加Get的稳定性
 
 	err := retry.Do(
 		func() error {
