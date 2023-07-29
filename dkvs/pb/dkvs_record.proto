@@ -48,8 +48,9 @@ message Cert {
 
 // DkvsRecord.value
 message CertsRecordValue {
-	bytes userData = 1;
-    repeated Cert certVect = 2;
+	string prevBundleAdrr = 1;
+	bytes userData = 2;
+    repeated Cert certVect = 3;
 }
 
 // Cert.data
