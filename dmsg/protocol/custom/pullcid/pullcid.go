@@ -1,9 +1,14 @@
 package pullcid
 
 import (
+	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"sync"
 	"time"
 
@@ -20,7 +25,10 @@ import (
 
 const pullCidPID = "pullcid"
 
-const StorageKeyPrefix = "/tvnode/storage/ipfs/"
+const StorageKeyPrefix = "/tvnode/storage/"
+
+var NftApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDgxOTgwNzg4Y2UxQjY3MDQyM2Y1NzAyMDQ2OWM0MzI3YzNBNzU5YzciLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY5MDUyODU1MjcxMywibmFtZSI6InRlc3QxIn0.vslsn8tAWUtZ0BZjcxhyMrcuufwfZ7fTMpF_DrojF4c"
+var Web3StorageApiKey = ""
 
 type clientCommicateInfo struct {
 	data            any
@@ -33,8 +41,9 @@ type serviceCommicateInfo struct {
 }
 
 type PullCidRequest struct {
-	CID          string
-	MaxCheckTime time.Duration
+	CID                 string
+	MaxCheckTime        time.Duration
+	StorageProviderList []string
 }
 
 type PullCidResponse struct {
@@ -281,46 +290,167 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 
 	if pullCidResponse.Status == tvIpfs.PinStatus_PINNED {
-		var peerIDList map[string]any = make(map[string]any)
-		// TODO 提供选项，可选择让用户上传CID对应数据至NTF.STORAGE和WEB3.STORAGE，比如付费数据或重要数据
-
-		// dkvs save cid info
-		key := StorageKeyPrefix + pullCidResponse.CID
-		pubkey := &PullCidServicePriKey.PublicKey
-
-		pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubkey)
+		var storageInfoList *map[string]any = &map[string]any{}
+		err = p.uploadContentToProvider(pullCidResponse.CID, pullCidRequest.StorageProviderList, storageInfoList)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: ECDSAPublicKeyToProtoBuf error %v", err)
 			return err
 		}
-
-		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(key)
+		err = p.saveCidInfoToDkvs(pullCidResponse.CID, storageInfoList)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: GetDkvsService->Get error: %v", err)
 			return err
 		}
-
-		err = json.Unmarshal(value, &peerIDList)
-		if err != nil {
-			customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: json.Unmarshal old dkvs value error: %v", err)
-		}
-
-		peerID := p.tvBaseService.GetHost().ID().String()
-		peerIDList[peerID] = peerID
-		value, err = json.Marshal(peerIDList)
-		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: json marshal new dkvs value error: %v", err)
-			return err
-		}
-
-		sig, err := tvutilCrypto.SignDataByEcdsa(PullCidServicePriKey, value)
-		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: SignDataByEcdsa: %v", err)
-			return err
-		}
-		maxTTL := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
-		p.tvBaseService.GetDkvsService().Put(key, []byte(value), pubkeyData, dkvs.TimeNow(), maxTTL, sig)
 	}
 
 	return nil
+}
+
+func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string, storageInfoList *map[string]any) error {
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
+		cid, storageProviderList)
+	if len(storageProviderList) > 0 {
+		content, elapsedTime, err := tvIpfs.IpfsBlockGet(cid, p.Ctx)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToProvider: err: %v", err)
+			return err
+		}
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider: ipfs block get:\ncontent:%v \nelapsedTime: %v", content, elapsedTime)
+	}
+	for _, storageProvider := range storageProviderList {
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider: storageProvider:%s", storageProvider)
+		switch storageProvider {
+		case "nft":
+			(*storageInfoList)["nft"] = storageProvider
+			go p.uploadContentToNft(p.Ctx, cid)
+		case "web3storage":
+			(*storageInfoList)["web3storage"] = storageProvider
+		}
+	}
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider end")
+	return nil
+}
+
+func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string, storageInfoList *map[string]any) error {
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
+	dkvsKey := StorageKeyPrefix + cid
+	pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(&PullCidServicePriKey.PublicKey)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: ECDSAPublicKeyToProtoBuf error %v", err)
+		return err
+	}
+	value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
+		return err
+	}
+	err = json.Unmarshal(value, storageInfoList)
+	if err != nil {
+		customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
+	}
+	peerID := p.tvBaseService.GetHost().ID().String()
+	(*storageInfoList)[peerID] = peerID
+	value, err = json.Marshal(storageInfoList)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
+		return err
+	}
+	sig, err := tvutilCrypto.SignDataByEcdsa(PullCidServicePriKey, value)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
+		return err
+	}
+	maxTTL := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
+	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, []byte(value), pubkeyData, dkvs.TimeNow(), maxTTL, sig)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
+		return err
+	}
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs end")
+	return nil
+}
+
+func (p *PullCidServiceProtocol) uploadContentToNft(ctx context.Context, cid string) error {
+	// NFT.Storage 接受每次上传大小高达31GiB的存储请求! 每次上传可以包含单个文件或文件目录。
+	// 如果您使用的是 HTTP API，则需要对超过 100MB 的文件进行一些手动拆分。有关详细信息，请参阅HTTP API https://nft.storage/api-docs/
+	// 如果 API 使用以下方式收到超过 30 个请求，则会触发速率限制：在 10 秒窗口内使用相同的 API 密钥。
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft begin: cid: %v", cid)
+	content, _, err := tvIpfs.IpfsBlockGet(cid, ctx)
+	if err != nil {
+		return err
+	}
+
+	requestBody := &bytes.Buffer{}
+	writer := multipart.NewWriter(requestBody)
+	fileWriter, err := writer.CreateFormFile("file", cid)
+	if err != nil {
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: CreateFormFile error: %v", err)
+		return nil
+	}
+
+	fileBuffer := bytes.NewBuffer(content)
+	_, err = fileWriter.Write(fileBuffer.Bytes())
+	if err != nil {
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: fileWriter.Write error: %v", err)
+		return nil
+	}
+	writer.WriteField("Content-Type", writer.FormDataContentType())
+	err = writer.Close()
+	if err != nil {
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: writer.Close error: %v", err)
+		return nil
+	}
+
+	requestBodySize := len(requestBody.Bytes())
+	if requestBodySize >= 100*1024*1024 {
+		// TODO 100MB need split small files ,links to car, implement it
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: file too large, requestBodySize:%v", requestBodySize)
+		return fmt.Errorf("uploadContentToNft->uploadContentToNft: file too large, requestBodySize:%v", requestBodySize)
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "https://api.nft.storage/upload", requestBody)
+	if err != nil {
+		customProtocol.Logger.Errorf("TestNftStorageUpload: http.NewRequest error: %v", err)
+		return nil
+	}
+
+	req.Header.Set("Authorization", "Bearer "+NftApiKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: client.Do error: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: ioutil.ReadAll error: %v", err)
+		return err
+	}
+
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: body: %s", string(responseBody))
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft end")
+	return nil
+}
+
+func (p *PullCidServiceProtocol) asyncMethod() {
+	taskQueue := make(chan int)
+
+	// 启动一个goroutine来处理任务队列
+	go func() {
+		for task := range taskQueue {
+			// 执行任务的操作
+			fmt.Printf("执行任务：%d\n", task)
+		}
+	}()
+
+	// 添加任务到任务队列
+	timer := time.NewTicker(3 * time.Second)
+	for {
+		<-timer.C // 定时器到期后，从定时器的通道中读取数据
+		taskQueue <- 1
+	}
+
+	// 关闭任务队列
+	close(taskQueue)
 }

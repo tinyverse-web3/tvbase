@@ -27,13 +27,11 @@ func TestMsgService(t *testing.T) {
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		tvLog.Logger.Errorf("TestMsgService error: %v", err)
 		t.Errorf("TestMsgService error: %v", err)
 		return
 	}
 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
-		tvLog.Logger.Errorf("TestMsgService error: %v", err)
 		t.Errorf("TestMsgService error: %v", err)
 		return
 	}

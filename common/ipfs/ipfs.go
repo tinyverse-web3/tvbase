@@ -49,6 +49,18 @@ func CheckIpfsCmd() error {
 	return nil
 }
 
+func IpfsBlockGet(cid string, ctx context.Context) ([]byte, time.Duration, error) {
+	startTime := time.Now()
+	cmdOut, err := exec.CommandContext(ctx, "ipfs", "block", "get", cid).CombinedOutput()
+	elapsed := time.Since(startTime)
+	Logger.Debugf("IpfsBlockGet:\ncid: %s,\ncmd out: %s,\nelapsed time: %v", cid, cmdOut, elapsed.Seconds())
+	if err != nil {
+		Logger.Errorf("IpfsBlockGet:\ncid: %s,\ncmd out: %s,\nelapsed time: %v, err: %v", cid, cmdOut, elapsed.Seconds(), err)
+		return cmdOut, elapsed, err
+	}
+	return cmdOut, elapsed, nil
+}
+
 func IpfsGet(cid string, ctx context.Context) (time.Duration, error) {
 	startTime := time.Now()
 	cmdOut, err := exec.CommandContext(ctx, "ipfs", "get", cid).CombinedOutput()
