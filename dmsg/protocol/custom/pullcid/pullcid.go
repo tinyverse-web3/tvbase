@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"sync"
 	"time"
@@ -24,11 +23,7 @@ import (
 )
 
 const pullCidPID = "pullcid"
-
 const StorageKeyPrefix = "/tvnode/storage/"
-
-var NftApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDgxOTgwNzg4Y2UxQjY3MDQyM2Y1NzAyMDQ2OWM0MzI3YzNBNzU5YzciLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY5MDUyODU1MjcxMywibmFtZSI6InRlc3QxIn0.vslsn8tAWUtZ0BZjcxhyMrcuufwfZ7fTMpF_DrojF4c"
-var Web3StorageApiKey = ""
 
 type clientCommicateInfo struct {
 	data            any
@@ -91,6 +86,7 @@ func (p *PullCidClientProtocol) Init() error {
 }
 
 func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
+	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: begin\nrequest: %v\nresponse: %v", request, response)
 	pullCidResponse := &PullCidResponse{
 		Status: tvIpfs.PinStatus_UNKNOW,
 	}
@@ -107,15 +103,29 @@ func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, re
 
 	requestInfo.responseSignal <- pullCidResponse
 	delete(p.commicateInfoList, pullCidResponse.CID)
-
+	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: end")
 	return nil
 }
 
 func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, options ...any) (*PullCidResponse, error) {
+	customProtocol.Logger.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v\noptions:%v", peerId, request, options)
 	_, err := cid.Decode(request.CID)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
 		return nil, err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
+	defer cancel()
+	content, _, err := tvIpfs.IpfsBlockGet(request.CID, timeoutCtx)
+	if err != nil {
+		return nil, err
+	}
+	contentSize := len(content)
+	if contentSize >= 100*1024*1024 {
+		// TODO over 100MB need to be split using CAR,, implement it
+		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
+		return nil, fmt.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
 	}
 
 	var timeout time.Duration = 3 * time.Second
@@ -155,14 +165,17 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		pullCidResponse, ok := responseObject.(*PullCidResponse)
 		if !ok {
 			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
-			return nil, err
+			return nil, fmt.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
 		}
+		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end")
 		return pullCidResponse, nil
 	case <-time.After(timeout):
 		delete(p.commicateInfoList, request.CID)
-		return nil, err
+		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: time.After(timeout)")
+		return nil, nil
 	case <-p.Ctx.Done():
 		delete(p.commicateInfoList, request.CID)
+		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
 		return nil, p.Ctx.Err()
 	}
 }
@@ -182,7 +195,41 @@ type PullCidServiceProtocol struct {
 	commicateInfoList      map[string]*serviceCommicateInfo
 	commicateInfoListMutex sync.Mutex
 	tvBaseService          tvbaseCommon.TvBaseService
+	ipfsProviderList       map[string]*ipfsProviderList
+	storageInfoList        *map[string]any
 }
+
+type ipfsUpload func(providerName string, cid string) error
+
+type ipfsProviderList struct {
+	uploadTaskList map[string]*uploadTask
+	mutex          sync.Mutex
+	interval       time.Duration
+	timeout        time.Duration
+	uploadUrl      string
+	apiKey         string
+	timer          time.Ticker
+	taskQueue      chan bool
+	uploadFunc     ipfsUpload
+	isRun          bool
+}
+
+type uploadTask struct {
+	cid string
+}
+
+var (
+	NftProvider = "nft"
+	NftApiKey   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDgxOTgwNzg4Y2UxQjY3MDQyM2Y1NzAyMDQ2OWM0MzI3YzNBNzU5YzciLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY5MDUyODU1MjcxMywibmFtZSI6InRlc3QxIn0.vslsn8tAWUtZ0BZjcxhyMrcuufwfZ7fTMpF_DrojF4c"
+	NftPostURL  = "https://api.nft.storage/upload"
+
+	Web3Provider = "web3"
+	Web3ApiKey   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDAyYzZEYkJBMTQyOTA1MzliZjgwNkEzRkNDRDgzMDFmNWNjNTQ2ZDIiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2OTA2ODkxMjg3NDUsIm5hbWUiOiJ0ZXN0In0.nhArwLJYjFwTiW1-SSRPyrCCczyYQ4T2PAHcShFZXqg"
+	Web3PostURL  = "https://api.web3.storage/upload"
+
+	UploadInterval = 3 * time.Second
+	UploadTimeout  = 30 * time.Second
+)
 
 func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) *PullCidServiceProtocol {
 	if pullCidServiceProtocol == nil {
@@ -196,9 +243,14 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
 	p.tvBaseService = tvBaseService
 	p.commicateInfoList = make(map[string]*serviceCommicateInfo)
+	p.storageInfoList = &map[string]any{}
+	p.ipfsProviderList = make(map[string]*ipfsProviderList)
+	p.initIpfsProviderTask(NftProvider, NftApiKey, NftPostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
+	p.initIpfsProviderTask(Web3Provider, Web3ApiKey, Web3PostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
 }
 
 func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) error {
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest begin:\nrequest: %v", request)
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
@@ -252,32 +304,34 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	}()
 
 	<-timer.C
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse begin:\nrequest: %v \nresponse: %v", request, response)
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
 	if commicateInfo == nil {
-		customProtocol.Logger.Warnf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
-		return fmt.Errorf("PullCidClientProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
+		customProtocol.Logger.Warnf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
+		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
 	}
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
 	if !ok {
-		customProtocol.Logger.Infof("PullCidClientProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidClientProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
+		customProtocol.Logger.Infof("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
+		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
 	}
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
@@ -285,51 +339,36 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_TIMEOUT:
 		delete(p.commicateInfoList, pullCidRequest.CID)
 	default:
-		customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
 			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
 	}
 
 	if pullCidResponse.Status == tvIpfs.PinStatus_PINNED {
-		var storageInfoList *map[string]any = &map[string]any{}
-		err = p.uploadContentToProvider(pullCidResponse.CID, pullCidRequest.StorageProviderList, storageInfoList)
+		err = p.uploadContentToProvider(pullCidResponse.CID, pullCidRequest.StorageProviderList)
 		if err != nil {
 			return err
 		}
-		err = p.saveCidInfoToDkvs(pullCidResponse.CID, storageInfoList)
+		err = p.saveCidInfoToDkvs(pullCidResponse.CID)
 		if err != nil {
 			return err
 		}
 	}
-
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse end")
 	return nil
 }
 
-func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string, storageInfoList *map[string]any) error {
+func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string) error {
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
 		cid, storageProviderList)
-	if len(storageProviderList) > 0 {
-		content, elapsedTime, err := tvIpfs.IpfsBlockGet(cid, p.Ctx)
-		if err != nil {
-			customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToProvider: err: %v", err)
-			return err
-		}
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider: ipfs block get:\ncontent:%v \nelapsedTime: %v", content, elapsedTime)
-	}
 	for _, storageProvider := range storageProviderList {
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider: storageProvider:%s", storageProvider)
-		switch storageProvider {
-		case "nft":
-			(*storageInfoList)["nft"] = storageProvider
-			go p.uploadContentToNft(p.Ctx, cid)
-		case "web3storage":
-			(*storageInfoList)["web3storage"] = storageProvider
-		}
+		(*p.storageInfoList)[storageProvider] = storageProvider
+		p.asyncUploadCidContent(storageProvider, cid)
 	}
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider end")
 	return nil
 }
 
-func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string, storageInfoList *map[string]any) error {
+func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
 	dkvsKey := StorageKeyPrefix + cid
 	pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(&PullCidServicePriKey.PublicKey)
@@ -342,13 +381,13 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string, storageInfoList *
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
 		return err
 	}
-	err = json.Unmarshal(value, storageInfoList)
+	err = json.Unmarshal(value, p.storageInfoList)
 	if err != nil {
 		customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
 	}
 	peerID := p.tvBaseService.GetHost().ID().String()
-	(*storageInfoList)[peerID] = peerID
-	value, err = json.Marshal(storageInfoList)
+	(*p.storageInfoList)[peerID] = peerID
+	value, err = json.Marshal(p.storageInfoList)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
 		return err
@@ -368,89 +407,139 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string, storageInfoList *
 	return nil
 }
 
-func (p *PullCidServiceProtocol) uploadContentToNft(ctx context.Context, cid string) error {
-	// NFT.Storage 接受每次上传大小高达31GiB的存储请求! 每次上传可以包含单个文件或文件目录。
-	// 如果您使用的是 HTTP API，则需要对超过 100MB 的文件进行一些手动拆分。有关详细信息，请参阅HTTP API https://nft.storage/api-docs/
-	// 如果 API 使用以下方式收到超过 30 个请求，则会触发速率限制：在 10 秒窗口内使用相同的 API 密钥。
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft begin: cid: %v", cid)
-	content, _, err := tvIpfs.IpfsBlockGet(cid, ctx)
+func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid string) error {
+	// the same API key exceeds 30 request within 10 seconds, the rate limit will be triggered
+	// https://nft.storage/api-docs/  https://web3.storage/docs/reference/http-api/
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
+	provider := p.ipfsProviderList[providerName]
+	if provider == nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
+		return fmt.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
+	defer cancel()
+	content, _, err := tvIpfs.IpfsBlockGet(cid, timeoutCtx)
 	if err != nil {
 		return err
 	}
 
-	requestBody := &bytes.Buffer{}
-	writer := multipart.NewWriter(requestBody)
-	fileWriter, err := writer.CreateFormFile("file", cid)
+	buf := bytes.NewBuffer(content)
+	bufSize := len(buf.Bytes())
+	if bufSize >= 100*1024*1024 {
+		// TODO over 100MB need to be split using CAR,, implement it
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
+		return fmt.Errorf("PullCidServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
+	}
+
+	client := &http.Client{
+		Timeout: provider.timeout,
+	}
+	req, err := http.NewRequest("POST", provider.uploadUrl, buf)
 	if err != nil {
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: CreateFormFile error: %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: http.NewRequest error: %v", err)
 		return nil
 	}
 
-	fileBuffer := bytes.NewBuffer(content)
-	_, err = fileWriter.Write(fileBuffer.Bytes())
-	if err != nil {
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: fileWriter.Write error: %v", err)
-		return nil
-	}
-	writer.WriteField("Content-Type", writer.FormDataContentType())
-	err = writer.Close()
-	if err != nil {
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: writer.Close error: %v", err)
-		return nil
-	}
-
-	requestBodySize := len(requestBody.Bytes())
-	if requestBodySize >= 100*1024*1024 {
-		// TODO 100MB need split small files ,links to car, implement it
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: file too large, requestBodySize:%v", requestBodySize)
-		return fmt.Errorf("uploadContentToNft->uploadContentToNft: file too large, requestBodySize:%v", requestBodySize)
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", "https://api.nft.storage/upload", requestBody)
-	if err != nil {
-		customProtocol.Logger.Errorf("TestNftStorageUpload: http.NewRequest error: %v", err)
-		return nil
-	}
-
-	req.Header.Set("Authorization", "Bearer "+NftApiKey)
+	req.Header.Set("Authorization", "Bearer "+provider.apiKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: client.Do error: %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: client.Do error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->uploadContentToNft: ioutil.ReadAll error: %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: ioutil.ReadAll error: %v", err)
 		return err
 	}
 
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft: body: %s", string(responseBody))
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToNft end")
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent: body: %s", string(responseBody))
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent end")
 	return nil
 }
 
-func (p *PullCidServiceProtocol) asyncMethod() {
-	taskQueue := make(chan int)
+func (p *PullCidServiceProtocol) initIpfsProviderTask(providerName string, apiKey string, uploadUrl string, interval time.Duration, timeout time.Duration, uploadFunc ipfsUpload) error {
+	if p.ipfsProviderList[providerName] != nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
+		return fmt.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
+	}
+	p.ipfsProviderList[providerName] = &ipfsProviderList{
+		uploadTaskList: make(map[string]*uploadTask),
+		interval:       interval,
+		timeout:        timeout,
+		uploadUrl:      uploadUrl,
+		apiKey:         apiKey,
+		uploadFunc:     uploadFunc,
+		isRun:          false,
+	}
+	return nil
+}
 
-	// 启动一个goroutine来处理任务队列
+func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid string) error {
+	customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
+		providerName, cid)
+	ipfsProviderTask := p.ipfsProviderList[providerName]
+	if ipfsProviderTask == nil {
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
+		return fmt.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
+	}
+	ipfsProviderTask.mutex.Lock()
+	ipfsProviderTask.uploadTaskList[cid] = &uploadTask{
+		cid: cid,
+	}
+	ipfsProviderTask.mutex.Unlock()
+	if ipfsProviderTask.isRun {
+		return nil
+	}
+
+	ipfsProviderTask.isRun = true
+	ipfsProviderTask.taskQueue = make(chan bool)
+	defer close(ipfsProviderTask.taskQueue)
+	done := make(chan bool)
+	defer close(done)
+
+	ipfsProviderTask.timer.Reset(ipfsProviderTask.interval)
 	go func() {
-		for task := range taskQueue {
-			// 执行任务的操作
-			fmt.Printf("执行任务：%d\n", task)
+		for {
+			select {
+			case <-ipfsProviderTask.taskQueue:
+				ipfsProviderTask.mutex.Lock()
+				defer ipfsProviderTask.mutex.Unlock()
+				if (len(ipfsProviderTask.uploadTaskList)) > 0 {
+					for _, uploadTask := range ipfsProviderTask.uploadTaskList {
+						delete(ipfsProviderTask.uploadTaskList, uploadTask.cid)
+						ipfsProviderTask.uploadFunc(providerName, uploadTask.cid)
+						break
+					}
+				} else {
+					done <- true
+					return
+				}
+			case <-p.Ctx.Done():
+				done <- true
+				return
+			}
 		}
 	}()
 
-	// 添加任务到任务队列
-	timer := time.NewTicker(3 * time.Second)
 	for {
-		<-timer.C // 定时器到期后，从定时器的通道中读取数据
-		taskQueue <- 1
+		select {
+		case <-ipfsProviderTask.timer.C:
+			ipfsProviderTask.taskQueue <- true
+			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderTask.timer.C")
+		case <-done:
+			ipfsProviderTask.timer.Stop()
+			ipfsProviderTask.isRun = false
+			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: done")
+			return nil
+		case <-p.Ctx.Done():
+			ipfsProviderTask.timer.Stop()
+			ipfsProviderTask.isRun = false
+			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: p.Ctx.Done()")
+			return p.Ctx.Err()
+		}
 	}
-
-	// 关闭任务队列
-	close(taskQueue)
 }
