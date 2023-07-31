@@ -17,7 +17,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	keyUtil "github.com/tinyverse-web3/tvutil/key"
 )
@@ -57,7 +56,7 @@ type PullCidClientProtocol struct {
 var pullCidClientProtocol *PullCidClientProtocol
 var pullCidServiceProtocol *PullCidServiceProtocol
 
-func GetPullCidClientProtocol(tvbase *tvbase.TvBase) (*PullCidClientProtocol, error) {
+func GetPullCidClientProtocol() (*PullCidClientProtocol, error) {
 	if pullCidClientProtocol == nil {
 		pullCidClientProtocol = &PullCidClientProtocol{}
 		err := pullCidClientProtocol.Init()

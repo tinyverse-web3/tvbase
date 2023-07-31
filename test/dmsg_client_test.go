@@ -270,7 +270,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	pullCidProtocol, err := pullcid.GetPullCidClientProtocol(tvbase)
+	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
 	if err != nil {
 		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
 		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
