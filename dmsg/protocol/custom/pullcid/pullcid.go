@@ -377,18 +377,22 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: ECDSAPublicKeyToProtoBuf error %v", err)
 		return err
 	}
-	value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
-	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
-		return err
+	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
+	if isExistKey {
+		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
+			return err
+		}
+		err = json.Unmarshal(value, p.storageInfoList)
+		if err != nil {
+			customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
+		}
 	}
-	err = json.Unmarshal(value, p.storageInfoList)
-	if err != nil {
-		customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
-	}
+
 	peerID := p.tvBaseService.GetHost().ID().String()
 	(*p.storageInfoList)[peerID] = peerID
-	value, err = json.Marshal(p.storageInfoList)
+	value, err := json.Marshal(p.storageInfoList)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
 		return err
