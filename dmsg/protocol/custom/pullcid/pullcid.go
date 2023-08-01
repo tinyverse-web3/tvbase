@@ -67,18 +67,7 @@ func GetPullCidClientProtocol() (*PullCidClientProtocol, error) {
 	return pullCidClientProtocol, nil
 }
 
-var PullCidServicePriKey *ecdsa.PrivateKey
-
 func (p *PullCidClientProtocol) Init() error {
-	if PullCidServicePriKey == nil {
-		var err error
-		PullCidServicePriKey, _, err = keyUtil.GenerateEcdsaKey(pullCidPID)
-		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Init: GenerateEcdsaKey err: %v", err)
-			return err
-		}
-	}
-
 	p.CustomStreamClientProtocol.Init(pullCidPID)
 	p.commicateInfoList = make(map[string]*clientCommicateInfo)
 	return nil
@@ -190,6 +179,7 @@ func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration)
 
 // service
 type PullCidServiceProtocol struct {
+	PriKey *ecdsa.PrivateKey
 	customProtocol.CustomStreamServiceProtocol
 	commicateInfoList      map[string]*serviceCommicateInfo
 	commicateInfoListMutex sync.Mutex
@@ -230,15 +220,26 @@ var (
 	UploadTimeout  = 30 * time.Second
 )
 
-func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) *PullCidServiceProtocol {
+func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*PullCidServiceProtocol, error) {
 	if pullCidServiceProtocol == nil {
 		pullCidServiceProtocol = &PullCidServiceProtocol{}
-		pullCidServiceProtocol.Init(tvBaseService)
+		err := pullCidServiceProtocol.Init(tvBaseService)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return pullCidServiceProtocol
+	return pullCidServiceProtocol, nil
 }
 
-func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) {
+func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+	if p.PriKey == nil {
+		var err error
+		p.PriKey, _, err = keyUtil.GenerateEcdsaKey(pullCidPID)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidClientProtocol->Init: GenerateEcdsaKey err: %v", err)
+			return err
+		}
+	}
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
 	p.tvBaseService = tvBaseService
 	p.commicateInfoList = make(map[string]*serviceCommicateInfo)
@@ -246,6 +247,7 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 	p.ipfsProviderList = make(map[string]*ipfsProviderList)
 	p.initIpfsProviderTask(NftProvider, NftApiKey, NftPostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
 	p.initIpfsProviderTask(Web3Provider, Web3ApiKey, Web3PostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
+	return nil
 }
 
 func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) error {
@@ -370,7 +372,7 @@ func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProv
 func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
 	dkvsKey := StorageKeyPrefix + cid
-	pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(&PullCidServicePriKey.PublicKey)
+	pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(&p.PriKey.PublicKey)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: ECDSAPublicKeyToProtoBuf error %v", err)
 		return err
@@ -391,7 +393,7 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
 		return err
 	}
-	sig, err := tvutilCrypto.SignDataByEcdsa(PullCidServicePriKey, value)
+	sig, err := tvutilCrypto.SignDataByEcdsa(p.PriKey, value)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
 		return err

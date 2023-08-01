@@ -41,7 +41,11 @@ func TestMsgService(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	tvbase.RegistCSSProtocol(pullcid.GetPullCidServiceProtocol(tvbase))
+	p, err := pullcid.GetPullCidServiceProtocol(tvbase)
+	if err != nil {
+		panic(err)
+	}
+	tvbase.RegistCSSProtocol(p)
 
 	defer func() {
 		tvbase.Stop()
