@@ -22,7 +22,7 @@ import (
 )
 
 const pullCidPID = "pullcid"
-const StorageKeyPrefix = "/tvnode/storage/"
+const StorageKeyPrefix = "/dauthstoragedauthstoragedauthstoragedauthstoragedauthstorage/"
 
 type clientCommicateInfo struct {
 	data            any
@@ -406,7 +406,7 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		return err
 	}
 
-	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, value, pubkeyData, dkvs.TimeNow(), ttl, sig)
+	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, value, pubkeyData, issuetime, ttl, sig)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
 		return err
