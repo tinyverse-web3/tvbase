@@ -28,6 +28,7 @@ func (m *TvBase) initEvent() error {
 				}
 				tvLog.Logger.Debugf("tvBase->initEvent: peer connectedness changed-> connectedness:%v, peer:%v",
 					evt.Connectedness, evt.Peer)
+				tvLog.Logger.Debugf("peer addr: %v", m.host.Peerstore().PeerInfo(evt.Peer))
 				switch evt.Connectedness {
 				case network.NotConnected:
 					// tvLog.Logger.Debug("NotConnected")

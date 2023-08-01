@@ -181,8 +181,10 @@ func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 	d.printUnsyncedDb()
 	d.putAllKeysToPeers() //将db中未同步的key再一次put到基他节点
 	Logger.Info("putAllUnsyncKeyToNetwork---> end")
-	Logger.Info("sync end unsyncDb content: ---")
-	d.printUnsyncedDb()
+	if d.getUnsyncedDbSize() > 0 {
+		Logger.Info("sync end unsyncDb content: ---")
+		d.printUnsyncedDb()
+	}
 	return nil
 }
 
