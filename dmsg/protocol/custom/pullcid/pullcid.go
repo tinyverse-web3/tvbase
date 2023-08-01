@@ -397,13 +397,16 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
 		return err
 	}
-	sig, err := tvutilCrypto.SignDataByEcdsa(p.PriKey, value)
+	issuetime := dkvs.TimeNow()
+	ttl := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
+	sigData := dkvs.GetRecordSignData(dkvsKey, value, pubkeyData, issuetime, ttl)
+	sig, err := tvutilCrypto.SignDataByEcdsa(p.PriKey, sigData)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
 		return err
 	}
-	maxTTL := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
-	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, []byte(value), pubkeyData, dkvs.TimeNow(), maxTTL, sig)
+
+	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, value, pubkeyData, dkvs.TimeNow(), ttl, sig)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
 		return err
