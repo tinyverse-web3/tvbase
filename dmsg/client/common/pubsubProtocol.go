@@ -22,6 +22,15 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 			return err
 		}
 	}
+	if requestProtoMsg == nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: requestProtoMsg is nil")
+		return err
+	}
+
+	if responseProtoMsg == nil {
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: responseProtoMsg is nil")
+		return err
+	}
 
 	responseProtoData, err := proto.Marshal(responseProtoMsg)
 	if err != nil {
