@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -73,24 +75,24 @@ func NewTvbase(options ...any) (*TvBase, error) {
 	if len(options) > 0 {
 		rootPath, ok = options[0].(string)
 		if !ok {
-			tvLog.Logger.Errorf("NewInfrasture: options[0](rootPath) is not string")
-			return nil, fmt.Errorf("NewInfrasture: options[0](rootPath) is not string")
+			tvLog.Logger.Errorf("NewTvbase: options[0](rootPath) is not string")
+			return nil, fmt.Errorf("NewTvbase: options[0](rootPath) is not string")
 		}
 	}
 
 	if len(options) > 1 {
 		ctx, ok = options[1].(context.Context)
 		if !ok {
-			tvLog.Logger.Errorf("NewInfrasture: options[1](ctx) is not context.Context")
-			return nil, fmt.Errorf("NewInfrasture: options[1](ctx) is not context.Context")
+			tvLog.Logger.Errorf("NewTvbase: options[1](ctx) is not context.Context")
+			return nil, fmt.Errorf("NewTvbase: options[1](ctx) is not context.Context")
 		}
 	}
 
 	if len(options) > 2 {
 		isStart, ok = options[2].(bool)
 		if !ok {
-			tvLog.Logger.Errorf("NewInfrasture: options[0](isStart) is not bool")
-			return nil, fmt.Errorf("NewInfrasture: options[0](isStart) is not bool")
+			tvLog.Logger.Errorf("NewTvbase: options[0](isStart) is not bool")
+			return nil, fmt.Errorf("NewTvbase: options[0](isStart) is not bool")
 		}
 	}
 
@@ -102,7 +104,15 @@ func NewTvbase(options ...any) (*TvBase, error) {
 	if err != nil {
 		return m, err
 	}
-	tvLog.Logger.Infof("tvnode mode: %v", m.nodeCfg.Mode)
+	switch m.nodeCfg.Mode {
+	case tvConfig.LightMode:
+		tvLog.Logger.Infof("NewTvbase: mode: %s", "LightMode")
+	case tvConfig.ServiceMode:
+		tvLog.Logger.Infof("NewTvbase: mode: %s", "ServiceMode")
+	default:
+		tvLog.Logger.Errorf("NewTvbase: mode is not exist: mode: %s", m.nodeCfg.Mode)
+		return m, fmt.Errorf("NewTvbase: mode is not exist: mode: %v", m.nodeCfg.Mode)
+	}
 
 	if isStart {
 		err = m.Start()
@@ -116,7 +126,7 @@ func NewTvbase(options ...any) (*TvBase, error) {
 func (m *TvBase) Start() error {
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		m.initMetric()
 	}
 
@@ -158,7 +168,7 @@ func (m *TvBase) Start() error {
 
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		coreHttp.InitHttpServer(m)
 	}
 
@@ -226,7 +236,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	var intrOpt fx.Option
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -302,8 +312,54 @@ func (m *TvBase) initFx(opt fx.Option) error {
 	return nil
 }
 
+func (m *TvBase) checkListenAddrs() error {
+	for _, addr := range m.nodeCfg.Network.ListenAddrs {
+		subkeys := strings.Split(addr, "/")
+		l := len(subkeys)
+		if l < 5 {
+			continue
+		}
+
+		addrStr := ""
+		switch subkeys[1] {
+		case "ip4":
+			addrStr = subkeys[2] + ":" + subkeys[4]
+		case "ip6":
+			addrStr = "[" + subkeys[2] + "]" + ":" + subkeys[4]
+		}
+		network := subkeys[3]
+		switch network {
+		case "tcp":
+			conn, err := net.Listen(network, addrStr)
+			if err != nil {
+				tvLog.Logger.Errorf("TvBase->checkListenAddrs: Listen, addr: %v, error: %v", subkeys, err)
+			}
+			conn.Close()
+		case "udp":
+			addr, err := net.ResolveUDPAddr(network, addrStr)
+			if err != nil {
+				tvLog.Logger.Errorf("TvBase->checkListenAddrs: ResolveUDPAddr, addr: %v, error: %v", addrStr, err)
+				return err
+			}
+			conn, err := net.ListenUDP(network, addr)
+			if err != nil {
+				tvLog.Logger.Errorf("TvBase->checkListenAddrs: ListenUDP, addr: %v, error: %v", addrStr, err)
+				return err
+			}
+			conn.Close()
+		}
+
+	}
+	return nil
+
+}
+
 func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pnet.PSK) (host.Host, error) {
-	var err error
+	err := m.checkListenAddrs()
+	if err != nil {
+		return nil, err
+	}
+
 	m.dhtDatastore, err = db.CreateDataStore(m.nodeCfg.DHT.DatastorePath, m.nodeCfg.Mode)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
@@ -333,7 +389,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 
 	// resource manager
 	switch m.nodeCfg.Mode {
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		rmgr, err := m.initResourceManager()
 		if err != nil {
 			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
@@ -432,7 +488,7 @@ func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
 		m.DmsgService, err = dmsgClient.CreateService(m)
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {

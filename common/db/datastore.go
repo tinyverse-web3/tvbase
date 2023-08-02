@@ -20,7 +20,7 @@ func CreateDataStore(dbRootDir string, mode tvConfig.NodeMode) (Datastore, error
 	switch mode {
 	case tvConfig.LightMode:
 		return createBadgerDB(dbRootDir)
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		return createLevelDB(dbRootDir)
 	}
 	return nil, nil

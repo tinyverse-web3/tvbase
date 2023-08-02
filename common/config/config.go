@@ -18,13 +18,15 @@ import (
 type NodeMode int32
 
 const (
-	FullMode NodeMode = iota
+	ServiceMode NodeMode = iota
 	LightMode
 )
 
-const (
+var (
 	NodeConfigFileName = "config.json"
-	DefaultPort        = "9000"
+	LightPort          = "0"
+	ServicePort        = "9000"
+	DefaultPort        = LightPort
 )
 
 // NodeConfig stores the full configuration of the relays, ACLs and other settings

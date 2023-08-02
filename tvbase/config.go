@@ -107,7 +107,7 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 			// attempt to open a port in your network's firewall using UPnP
 			libp2p.NATPortMap(),
 		)
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 	}
 
 	return opts, nil
@@ -179,7 +179,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			}),
 		)
 	} else {
-		if m.nodeCfg.Mode == tvConfig.FullMode && !m.nodeCfg.Network.IsLocalNet {
+		if m.nodeCfg.Mode == tvConfig.ServiceMode && !m.nodeCfg.Network.IsLocalNet {
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
@@ -252,7 +252,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		opts = append(opts,
 			libp2p.DisableMetrics(),
 		)
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		// BandwidthCounter
 		if !m.nodeCfg.Swarm.DisableBandwidthMetrics {
 			reporter := metrics.NewBandwidthCounter()
@@ -288,7 +288,7 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 		var modeOption kaddht.Option
 
 		switch m.nodeCfg.Mode {
-		case tvConfig.FullMode:
+		case tvConfig.ServiceMode:
 			modeOption = kaddht.Mode(kaddht.ModeServer)
 		case tvConfig.LightMode:
 			modeOption = kaddht.Mode(kaddht.ModeAuto)

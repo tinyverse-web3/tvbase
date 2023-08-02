@@ -103,7 +103,7 @@ func (m *TvBase) getAvailablePeerList(key string, nodeMode tvConfig.NodeMode) ([
 
 	var peerList tvPeer.PeerInfoList
 	switch nodeMode {
-	case tvConfig.FullMode:
+	case tvConfig.ServiceMode:
 		peerList = m.servicePeerList
 	case tvConfig.LightMode:
 		peerList = m.lightPeerList

@@ -10,11 +10,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 )
 
-func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
+func GenConfig2IdentityFile(rootPath string, mode tvbaseConfig.NodeMode) error {
 	rootPath = strings.Trim(rootPath, " ")
 	if rootPath == "" {
 		rootPath = "."
@@ -45,18 +45,24 @@ func GenConfig2IdentityFile(rootPath string, mode tvConfig.NodeMode) error {
 		}
 	}
 
-	config := tvConfig.NewDefaultNodeConfig()
+	var config tvbaseConfig.NodeConfig
+	defaultPort := tvbaseConfig.DefaultPort
+	switch mode {
+	case tvbaseConfig.ServiceMode:
+		tvbaseConfig.DefaultPort = tvbaseConfig.ServicePort
+	case tvbaseConfig.LightMode:
+		tvbaseConfig.DefaultPort = tvbaseConfig.LightPort
+	}
 
-	oldMode := config.Mode
+	config = tvbaseConfig.NewDefaultNodeConfig()
 	config.Mode = mode
-	err = tvConfig.GenConfigFile(fullPath, &config)
+	err = tvbaseConfig.GenConfigFile(fullPath, &config)
 	if err != nil {
 		fmt.Println("GenConfig2IdentityFile->GenConfigFile: err:" + err.Error())
 	}
-	fmt.Println("GenConfig2IdentityFile->generate node config file: " + fullPath + tvConfig.NodeConfigFileName)
+	tvbaseConfig.DefaultPort = defaultPort
 
-	config.Mode = oldMode
-
+	fmt.Println("GenConfig2IdentityFile->generate node config file: " + fullPath + tvbaseConfig.NodeConfigFileName)
 	err = identity.GenIdenityFile(fullPath)
 	if err != nil {
 		fmt.Println("GenConfig2IdentityFile->GenIdenityFile: " + err.Error())
@@ -83,7 +89,7 @@ func GetRootPath(path string) (string, error) {
 	return fullPath, nil
 }
 
-func LoadNodeConfig(options ...any) (*tvConfig.NodeConfig, error) {
+func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 	rootPath := ""
 	if len(options) > 0 {
 		ok := false
@@ -93,13 +99,13 @@ func LoadNodeConfig(options ...any) (*tvConfig.NodeConfig, error) {
 			return nil, fmt.Errorf("LoadNodeConfig: options[0](rootPath) is not string")
 		}
 	}
-	config := tvConfig.NewDefaultNodeConfig()
+	config := tvbaseConfig.NewDefaultNodeConfig()
 
 	fullPath, err := GetRootPath(rootPath)
 	if err != nil {
 		return nil, err
 	}
-	err = tvConfig.InitConfig(fullPath, &config)
+	err = tvbaseConfig.InitConfig(fullPath, &config)
 	if err != nil {
 		fmt.Println("InitConfig: err:" + err.Error())
 		return nil, err

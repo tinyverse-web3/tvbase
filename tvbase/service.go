@@ -85,7 +85,7 @@ func (m *TvBase) SetTracerStatus(err error) {
 }
 
 func (m *TvBase) GetAvailableServicePeerList(key string) ([]peer.ID, error) {
-	return m.getAvailablePeerList(key, tvConfig.FullMode)
+	return m.getAvailablePeerList(key, tvConfig.ServiceMode)
 }
 
 func (m *TvBase) GetAvailableLightPeerList(key string) ([]peer.ID, error) {

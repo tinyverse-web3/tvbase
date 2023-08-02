@@ -74,7 +74,7 @@ func parseServiceCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.FullMode)
+		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
 		if err != nil {
 			tvLog.Logger.Fatal(err)
 		}

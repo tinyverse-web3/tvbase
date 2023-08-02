@@ -132,7 +132,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 			}
 
 		}()
-	case config.FullMode:
+	case config.ServiceMode:
 		// enable relay server
 		def := m.nodeCfg.Relay.Resources
 		var ropts []relayv2.Option

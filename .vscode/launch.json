@@ -38,7 +38,7 @@
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode/main.go",
-            "args": []
+            "args": ["-rootPath", "./"]
         }
     ]
 }
