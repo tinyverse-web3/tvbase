@@ -20,7 +20,7 @@ import (
 )
 
 const pullCidPID = "pullcid"
-const StorageKeyPrefix = "/dauth/storage/"
+const StorageKeyPrefix = "/dauth/"
 
 type clientCommicateInfo struct {
 	data            any
@@ -376,7 +376,7 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: crypto.MarshalPublicKey error: %v", err)
 		return err
 	}
-
+	peerID := p.tvBaseService.GetHost().ID().String()
 	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
 	if isExistKey {
 		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
@@ -388,9 +388,12 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		if err != nil {
 			customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
 		}
+		if (*p.storageInfoList)[peerID] != nil {
+			customProtocol.Logger.Debug("PullCidServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
+			return nil
+		}
 	}
 
-	peerID := p.tvBaseService.GetHost().ID().String()
 	(*p.storageInfoList)[peerID] = peerID
 	value, err := json.Marshal(p.storageInfoList)
 	if err != nil {
