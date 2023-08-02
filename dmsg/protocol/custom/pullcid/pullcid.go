@@ -20,7 +20,7 @@ import (
 )
 
 const pullCidPID = "pullcid"
-const StorageKeyPrefix = "/storage/ipfs/"
+const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
 
 type clientCommicateInfo struct {
 	data            any
