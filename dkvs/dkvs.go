@@ -498,7 +498,7 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 	err := retry.Do(
 		func() error {
 			var err error
-			val, err = d.idht.GetValue(ctx, key, dht.Quorum(2))
+			val, err = d.idht.GetValue(ctx, key)
 			return err
 		},
 		retryStrategy...,

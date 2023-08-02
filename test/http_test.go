@@ -90,7 +90,11 @@ func putSomeValue(tvbase tvCommon.TvBaseService) error {
 		return err
 	}
 	xyz, err := kv.GetRecord(tKey3)
-	dkvs.Logger.Debugf("{xyz: %v", xyz)
+	if err != nil {
+		dkvs.Logger.Debugf("{tKey3: %v, err: %s}", tKey3, err.Error())
+		return err
+	}
+	dkvs.Logger.Debugf("{tKey3: %v, value: %v}", tKey3, xyz)
 	return nil
 }
 
