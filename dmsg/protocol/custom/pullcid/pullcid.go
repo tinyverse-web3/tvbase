@@ -20,7 +20,7 @@ import (
 )
 
 const pullCidPID = "pullcid"
-const StorageKeyPrefix = "/dauth/"
+const StorageKeyPrefix = "/storage/ipfs/"
 
 type clientCommicateInfo struct {
 	data            any
@@ -195,7 +195,7 @@ type ipfsProviderList struct {
 	timeout        time.Duration
 	uploadUrl      string
 	apiKey         string
-	timer          time.Ticker
+	timer          *time.Ticker
 	taskQueue      chan bool
 	uploadFunc     ipfsUpload
 	isRun          bool
@@ -387,9 +387,10 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		err = json.Unmarshal(value, p.storageInfoList)
 		if err != nil {
 			customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
+			return nil
 		}
 		if (*p.storageInfoList)[peerID] != nil {
-			customProtocol.Logger.Debug("PullCidServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
+			customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
 			return nil
 		}
 	}
@@ -491,6 +492,25 @@ func (p *PullCidServiceProtocol) initIpfsProviderTask(providerName string, apiKe
 func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid string) error {
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
 		providerName, cid)
+	dkvsKey := StorageKeyPrefix + cid
+	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
+	if isExistKey {
+		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
+		if err != nil {
+			customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
+			return err
+		}
+		err = json.Unmarshal(value, p.storageInfoList)
+		if err != nil {
+			customProtocol.Logger.Warnf("PullCidServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
+			return err
+		}
+		if (*p.storageInfoList)[providerName] != nil {
+			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent: provider is already exist in dkvs, providerName: %s", providerName)
+			return nil
+		}
+	}
+
 	ipfsProviderTask := p.ipfsProviderList[providerName]
 	if ipfsProviderTask == nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
@@ -510,7 +530,9 @@ func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid 
 	defer close(ipfsProviderTask.taskQueue)
 	done := make(chan bool)
 	defer close(done)
-
+	if ipfsProviderTask.timer == nil {
+		ipfsProviderTask.timer = time.NewTicker(ipfsProviderTask.timeout)
+	}
 	ipfsProviderTask.timer.Reset(ipfsProviderTask.interval)
 	go func() {
 		for {
