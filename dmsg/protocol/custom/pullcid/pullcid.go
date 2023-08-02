@@ -3,7 +3,6 @@ package pullcid
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,17 +11,16 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
-	keyUtil "github.com/tinyverse-web3/tvutil/key"
 )
 
 const pullCidPID = "pullcid"
-const StorageKeyPrefix = "/dauthstoragedauthstoragedauthstoragedauthstoragedauthstorage/"
+const StorageKeyPrefix = "/dauth/storage/"
 
 type clientCommicateInfo struct {
 	data            any
@@ -179,7 +177,7 @@ func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration)
 
 // service
 type PullCidServiceProtocol struct {
-	PriKey *ecdsa.PrivateKey
+	PriKey crypto.PrivKey
 	customProtocol.CustomStreamServiceProtocol
 	commicateInfoList      map[string]*serviceCommicateInfo
 	commicateInfoListMutex sync.Mutex
@@ -233,12 +231,13 @@ func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*PullC
 
 func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
 	if p.PriKey == nil {
-		var err error
-		p.PriKey, _, err = keyUtil.GenerateEcdsaKey(pullCidPID)
+		prikey, err := dkvs.GetPriKeyBySeed(pullCidPID)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Init: GenerateEcdsaKey err: %v", err)
+			customProtocol.Logger.Errorf("PullCidServiceProtocol->Init: GetPriKeyBySeed err: %v", err)
 			return err
 		}
+		p.PriKey = prikey
+
 	}
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
 	p.tvBaseService = tvBaseService
@@ -372,11 +371,12 @@ func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProv
 func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
 	dkvsKey := StorageKeyPrefix + cid
-	pubkeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(&p.PriKey.PublicKey)
+	pubkeyData, err := crypto.MarshalPublicKey(p.PriKey.GetPublic())
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: ECDSAPublicKeyToProtoBuf error %v", err)
+		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: crypto.MarshalPublicKey error: %v", err)
 		return err
 	}
+
 	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
 	if isExistKey {
 		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
@@ -399,8 +399,7 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	}
 	issuetime := dkvs.TimeNow()
 	ttl := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
-	sigData := dkvs.GetRecordSignData(dkvsKey, value, pubkeyData, issuetime, ttl)
-	sig, err := tvutilCrypto.SignDataByEcdsa(p.PriKey, sigData)
+	sig, err := p.PriKey.Sign(dkvs.GetRecordSignData(dkvsKey, value, pubkeyData, issuetime, ttl))
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
 		return err
