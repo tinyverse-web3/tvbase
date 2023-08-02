@@ -114,7 +114,7 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		return nil, fmt.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
 	}
 
-	var timeout time.Duration = 3 * time.Second
+	var timeout time.Duration = 5 * time.Second
 	if len(options) > 0 {
 		var ok bool
 		timeout, ok = options[0].(time.Duration)
