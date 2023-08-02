@@ -538,14 +538,14 @@ func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid 
 		for {
 			select {
 			case <-ipfsProviderTask.taskQueue:
-				ipfsProviderTask.mutex.Lock()
-				defer ipfsProviderTask.mutex.Unlock()
 				if (len(ipfsProviderTask.uploadTaskList)) > 0 {
+					ipfsProviderTask.mutex.Lock()
 					for _, uploadTask := range ipfsProviderTask.uploadTaskList {
 						delete(ipfsProviderTask.uploadTaskList, uploadTask.cid)
 						ipfsProviderTask.uploadFunc(providerName, uploadTask.cid)
 						break
 					}
+					ipfsProviderTask.mutex.Unlock()
 				} else {
 					done <- true
 					return
