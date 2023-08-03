@@ -20,7 +20,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/tvnodelight/main.go",
             "console": "integratedTerminal",
-            "args": ["-srcSeed", "a", "-destSeed", "b", "-rootPath", "./"]
+            "args": ["-srcSeed", "a", "-destSeed", "b", "-pubSeed", "c", "-rootPath", "./"]
         },
         {
             "name": "tvnodelight-b-a",
@@ -29,7 +29,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/tvnodelight/main.go",
             "console": "integratedTerminal",
-            "args": ["-srcSeed", "b", "-destSeed", "a", "-rootPath", "./"]
+            "args": ["-srcSeed", "b", "-destSeed", "a", "-pubSeed", "c", "-rootPath", "./"]
         },
         {
             "name": "tvnode",

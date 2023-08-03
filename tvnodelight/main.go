@@ -25,11 +25,12 @@ const logName = "tvnodelight"
 
 var tvcLog = ipfsLog.Logger(logName)
 
-func parseCmdParams() (string, string, string) {
+func parseCmdParams() (string, string, string, string) {
 	help := flag.Bool("help", false, "Display help")
 	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
 	srcSeed := flag.String("srcSeed", "", "src user pubkey")
 	destSeed := flag.String("destSeed", "", "desc user pubkey")
+	pubSeed := flag.String("pubSeed", "", "desc user pubkey")
 	rootPath := flag.String("rootPath", "", "config file path")
 
 	flag.Parse()
@@ -56,7 +57,7 @@ func parseCmdParams() (string, string, string) {
 		log.Fatal("Please provide seed for generate dest user public key")
 	}
 
-	return *srcSeed, *destSeed, *rootPath
+	return *srcSeed, *destSeed, *pubSeed, *rootPath
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
@@ -101,7 +102,7 @@ func main() {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, destSeed, rootPath := parseCmdParams()
+	srcSeed, destSeed, pubSeed, rootPath := parseCmdParams()
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
@@ -114,6 +115,7 @@ func main() {
 		return
 	}
 
+	//src
 	srcPrikey, srcPubkey, err := getKeyBySeed(srcSeed)
 	if err != nil {
 		tvcLog.Errorf("getKeyBySeed error: %v", err)
@@ -123,6 +125,7 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	tvcLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
+	//dest
 	destPrikey, destPubKey, err := getKeyBySeed(destSeed)
 
 	if err != nil {
@@ -133,6 +136,18 @@ func main() {
 	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
 
 	tvcLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
+
+	// pub
+	pubPrikey, pubPubKey, err := getKeyBySeed(pubSeed)
+
+	if err != nil {
+		tvcLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	pubPrikeyHex := hex.EncodeToString(crypto.FromECDSA(pubPrikey))
+	pubPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(pubPubKey))
+
+	tvcLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", pubSeed, pubPrikeyHex, pubPubkeyHex)
 
 	// init dmsg client
 	tvbase, dmsgService, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
@@ -184,6 +199,21 @@ func main() {
 		return
 	}
 
+	// publish public user
+	pubPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(pubPubKey)
+	if err != nil {
+		tvbase.SetTracerStatus(err)
+		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+		return
+	}
+	pubPubKeyStr := keyutil.TranslateKeyProtoBufToString(pubPubkeyBytes)
+	err = dmsgService.SubscribeDestUser(pubPubKeyStr, true)
+	if err != nil {
+		tvbase.SetTracerStatus(err)
+		tvcLog.Errorf("SubscribeDestUser error: %v", err)
+		return
+	}
+
 	// send msg to dest user with read from stdin
 	go func() {
 		reader := bufio.NewReader(os.Stdin)
@@ -200,7 +230,9 @@ func main() {
 				continue
 			}
 
-			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent)
+			// pubkeyStr := destPubKeyStr
+			pubkeyStr := pubPubKeyStr
+			sendMsgReq, err := dmsgService.SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				tvcLog.Errorf("send msg: error: %v", err)
 			}
