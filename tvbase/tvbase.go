@@ -438,10 +438,18 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		},
 	})
 
-	tvLog.Logger.Infof("hostID: %s, Addresses: ", m.host.ID())
-	for _, addr := range m.host.Addrs() {
-		tvLog.Logger.Infof("\t%s/p2p/%s", addr, m.host.ID())
+	tvLog.Logger.Infof("tvbase->initHost: hostID: %s\nAddresses: ", m.host.ID())
+
+	addrs, err := m.host.Network().InterfaceListenAddresses()
+	if err != nil {
+		tvLog.Logger.Errorf("tvbase->initHost: error: %v", err)
+		return nil, err
 	}
+
+	for _, addr := range addrs {
+		tvLog.Logger.Infof("tvbase->initHost:InterfaceListenAddresses: addr: %v/p2p/%s", addr, m.host.ID())
+	}
+
 	return m.host, nil
 }
 
