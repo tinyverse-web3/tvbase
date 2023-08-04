@@ -8,6 +8,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -248,7 +250,14 @@ func main() {
 		}
 	}()
 
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		tvcLog.Infof("tvnodelight->main: received interrupt signal: %v", sig)
+		cancel()
+	}()
+
 	<-ctx.Done()
-	tvcLog.Info("tvnodelight->main: Gracefully shut down")
-	tvbase.Stop()
+	tvcLog.Info("tvnodelight->main: gracefully shut down")
 }

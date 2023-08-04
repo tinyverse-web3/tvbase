@@ -432,7 +432,10 @@ func (d *DmsgService) UnSubscribeDestUser(userPubKey string) error {
 	if err != nil {
 		dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
 	}
-	userInfo.CancelFunc()
+
+	if userInfo.CancelFunc != nil {
+		userInfo.CancelFunc()
+	}
 	userInfo.Subscription.Cancel()
 	delete(d.destUserInfoList, userPubKey)
 
