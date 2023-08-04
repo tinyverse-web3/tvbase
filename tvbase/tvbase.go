@@ -438,7 +438,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		},
 	})
 
-	tvLog.Logger.Infof("tvbase->initHost: hostID: %s\nAddresses: ", m.host.ID())
+	tvLog.Logger.Infof("tvbase->initHost: hostID: %s", m.host.ID())
 
 	addrs, err := m.host.Network().InterfaceListenAddresses()
 	if err != nil {
@@ -446,9 +446,12 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		return nil, err
 	}
 
+	allAddrsInfo := ""
 	for _, addr := range addrs {
-		tvLog.Logger.Infof("tvbase->initHost:InterfaceListenAddresses: addr: %v/p2p/%s", addr, m.host.ID())
+		allAddrsInfo += fmt.Sprintf("addr: %v/p2p/%s\n", addr, m.host.ID())
+
 	}
+	tvLog.Logger.Infof("tvbase->initHost: InterfaceListenAddresses:\n%s", allAddrsInfo)
 
 	return m.host, nil
 }
