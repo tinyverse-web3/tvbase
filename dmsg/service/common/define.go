@@ -28,6 +28,7 @@ type StreamProtocolCallback interface {
 	OnCreateMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
 	OnReadMailboxMsgRequest(protoreflect.ProtoMessage) (interface{}, error)
 	OnReleaseMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
+	OnCreatePubChannelRequest(protoreflect.ProtoMessage) (interface{}, error)
 	OnCustomStreamProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
 	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
 }
@@ -96,6 +97,11 @@ type DestUserInfo struct {
 	LastReciveTimestamp int64
 }
 
+type PubChannelInfo struct {
+	UserPubsub
+	LastReciveTimestamp int64
+}
+
 type CustomProtocolPubsub struct {
 	UserPubsub
 }
@@ -111,8 +117,12 @@ type CustomPubsubProtocolInfo struct {
 }
 
 const MailboxLimitErr = "mailbox is limited"
-const MailboxAlreadyExistErr = "dest pubkey already exists"
+const MailboxAlreadyExistErr = "dest mail already exists"
 const MailboxAlreadyExistCode = 1
+
+const PubChannelLimitErr = "pubic channel is limited"
+const PubChannelAlreadyExistErr = "public channel already exists"
+const PubChannelAlreadyExistCode = 1
 
 type UserInfo struct {
 	UserKey *UserKey

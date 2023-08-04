@@ -56,6 +56,11 @@ type StreamProtocolCallback interface {
 	OnCustomStreamProtocolResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCreatePubChannelRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	OnCreatePubChannelResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type StreamProtocolAdapter interface {
@@ -132,6 +137,12 @@ type SrcUserInfo struct {
 
 type DestUserInfo struct {
 	UserPubsub
+}
+
+type PubChannelInfo struct {
+	UserPubsub
+	LastRequestTimestamp   int64
+	CreatePubChannelSignal chan bool
 }
 
 type SrcUserKey struct {

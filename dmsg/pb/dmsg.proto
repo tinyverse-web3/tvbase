@@ -17,10 +17,12 @@ enum PID {
     QUERY_PEER_RES = 9;
     SEND_MSG_REQ = 10;
     SEND_MSG_RES = 11;
-    CUSTOM_STREAM_REQ = 12;
-    CUSTOM_STREAM_RES = 13;
-    CUSTOM_PUBSUB_REQ = 14;
-    CUSTOM_PUBSUB_RES = 15;
+    CREATE_PUB_CHANNEL_REQ = 12;
+    CREATE_PUB_CHANNEL_RES = 13;
+    CUSTOM_STREAM_REQ = 14;
+    CUSTOM_STREAM_RES = 15;
+    CUSTOM_PUBSUB_REQ = 16;
+    CUSTOM_PUBSUB_RES = 17;
 }
 
 message BasicData {
@@ -38,16 +40,7 @@ message RetCode {
     string result = 2;
 }
 
-message SendMsgReq {
-    BasicData basicData = 1;
-    string destPubkey = 2;
-    bytes content = 3;
-}
 
-message SendMsgRes {
-    BasicData basicData = 1;
-    RetCode retCode = 2;
-}
 
 message ReadMailboxReq {
     BasicData basicData = 1;
@@ -99,6 +92,27 @@ message QueryPeerRes {
     BasicData basicData = 1;
     string PeerID = 2;
     RetCode retCode = 3;
+}
+
+message SendMsgReq {
+    BasicData basicData = 1;
+    string destPubkey = 2;
+    bytes content = 3;
+}
+
+message SendMsgRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
+}
+
+message CreatePubChannelReq {
+    BasicData basicData = 1;
+    string channelKey = 2;
+}
+
+message CreatePubChannelRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
 }
 
 message CustomProtocolReq {
