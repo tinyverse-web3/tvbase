@@ -42,22 +42,22 @@ func (adapter *CommonProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
+func (adapter *CommonProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->InitResponse: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) SetResponseSig(signature []byte) error {
+func (adapter *CommonProtocolAdapter) SetResponseSig(sig []byte) error {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->SetResponseSig: not implemented")
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) CallRequestCallback() (interface{}, error) {
+func (adapter *CommonProtocolAdapter) CallRequestCallback() (any, any, error) {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallRequestCallback: not implemented")
-	return nil, nil
+	return nil, nil, nil
 }
 
-func (adapter *CommonProtocolAdapter) CallResponseCallback() (interface{}, error) {
+func (adapter *CommonProtocolAdapter) CallResponseCallback() (any, error) {
 	dmsgLog.Logger.Debugf("CommonProtocolAdapter->CallResponseCallback: not implemented")
 	return nil, nil
 }

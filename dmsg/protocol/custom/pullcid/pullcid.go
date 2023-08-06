@@ -254,16 +254,12 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 		return err
 	}
-
 	err = tvIpfs.CheckIpfsCmd()
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 		return err
 	}
-
 	if p.commicateInfoList[pullCidRequest.CID] != nil {
 		return nil
 	}
@@ -319,8 +315,8 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
 	if commicateInfo == nil {
-		customProtocol.Logger.Warnf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
-		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil, cid: %s", pullCidRequest.CID)
+		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
+		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
 	}
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)

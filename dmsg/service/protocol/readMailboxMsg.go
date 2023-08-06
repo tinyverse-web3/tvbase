@@ -74,15 +74,22 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicDa
 	return request.BasicData
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
-	contentList, ok := data.([]*pb.MailboxItem)
+func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+	if len(dataList) < 1 {
+		return errors.New("ReadMailboxMsgProtocolAdapter:InitResponse: dataList need contain MailboxItemList")
+	}
+	mailboxItemList, ok := dataList[0].([]*pb.MailboxItem)
 	if !ok {
-		return errors.New("fail to cast mailboxMsgDatas to []*pb.MailboxMsgData")
+		return errors.New("ReadMailboxMsgProtocolAdapter:InitResponse: fail to cast dataList[0] to []*pb.MailboxMsgData")
+	}
+	retCode := dmsgProtocol.NewSuccRetCode()
+	if len(dataList) > 1 {
+		retCode = dataList[1].(*pb.RetCode)
 	}
 	response := &pb.ReadMailboxRes{
 		BasicData:   basicData,
-		RetCode:     dmsgProtocol.NewSuccRetCode(),
-		ContentList: contentList,
+		RetCode:     retCode,
+		ContentList: mailboxItemList,
 	}
 	adapter.protocol.Response = response
 	return nil
@@ -97,9 +104,9 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.Request)
-	return data, err
+func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback() (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.Request)
+	return data, retCode, err
 }
 
 func NewReadMailboxMsgProtocol(ctx context.Context, host host.Host, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {

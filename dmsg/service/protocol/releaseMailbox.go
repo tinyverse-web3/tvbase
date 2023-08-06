@@ -69,7 +69,7 @@ func (adapter *ReleaseMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicDa
 	return request.BasicData
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
+func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
 	response := &pb.ReleaseMailboxRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
@@ -87,9 +87,9 @@ func (adapter *ReleaseMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReleaseMailboxRequest(adapter.protocol.Request)
-	return data, err
+func (adapter *ReleaseMailboxProtocolAdapter) CallRequestCallback() (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnReleaseMailboxRequest(adapter.protocol.Request)
+	return data, retCode, err
 }
 
 func NewReleaseMailboxProtocol(ctx context.Context, host host.Host, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {

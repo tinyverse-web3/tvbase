@@ -3,14 +3,21 @@ package protocol
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
 )
+
+type CustomPubsubProtocolResponseParam struct {
+	PID     string
+	Service customProtocol.CustomPubsubProtocolService
+}
 
 type CustomPubsubProtocolAdapter struct {
 	common.CommonProtocolAdapter
@@ -25,8 +32,8 @@ func NewCustomPubsubProtocolAdapter() *CustomPubsubProtocolAdapter {
 
 func (adapter *CustomPubsubProtocolAdapter) init(customProtocolId string) {
 	adapter.pid = customProtocolId
-	adapter.protocol.ProtocolRequest = &pb.CustomProtocolReq{}
-	adapter.protocol.ProtocolResponse = &pb.CustomProtocolRes{}
+	adapter.protocol.Request = &pb.CustomProtocolReq{}
+	adapter.protocol.Response = &pb.CustomProtocolRes{}
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponsePID() pb.PID {
@@ -42,7 +49,7 @@ func (adapter *CustomPubsubProtocolAdapter) DestoryProtocol() {
 }
 
 func (adapter *CustomPubsubProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		tvLog.Logger.Errorf("CustomProtocolAdapter->SetProtocolResponseFailRet: data is not CustomProtocolReq")
 		return
@@ -51,7 +58,7 @@ func (adapter *CustomPubsubProtocolAdapter) SetProtocolResponseFailRet(errMsg st
 }
 
 func (adapter *CustomPubsubProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		tvLog.Logger.Errorf("CustomProtocolAdapter->SetProtocolResponseRet: data is not CustomProtocolReq")
 		return
@@ -60,7 +67,7 @@ func (adapter *CustomPubsubProtocolAdapter) SetProtocolResponseRet(code int32, r
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolRequest.(*pb.CustomProtocolReq)
+	request, ok := adapter.protocol.Request.(*pb.CustomProtocolReq)
 	if !ok {
 		tvLog.Logger.Errorf("CustomProtocolAdapter GetRequestBasicData data is not CustomProtocolReq")
 		return nil
@@ -69,7 +76,7 @@ func (adapter *CustomPubsubProtocolAdapter) GetRequestBasicData() *pb.BasicData 
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	request, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		tvLog.Logger.Errorf("CustomPubsubProtocolAdapter->GetResponseBasicData: data is not CustomProtocolReq")
 		return nil
@@ -77,23 +84,42 @@ func (adapter *CustomPubsubProtocolAdapter) GetResponseBasicData() *pb.BasicData
 	return request.BasicData
 }
 
-func (adapter *CustomPubsubProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
-	response := &pb.CustomProtocolRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+func (adapter *CustomPubsubProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+	if len(dataList) < 1 {
+		return errors.New("CustomStreamProtocolAdapter:InitResponse: dataList need contain customPubsubProtocolResponseParam")
 	}
-	request, ok := data.(*pb.CustomProtocolReq)
+
+	responseParam, ok := dataList[0].(*CustomPubsubProtocolResponseParam)
 	if !ok {
-		tvLog.Logger.Errorf("CustomPubsubProtocolAdapter->InitResponse: data is not CustomProtocolReq")
+		tvLog.Logger.Errorf("CustomPubsubProtocolAdapter->InitResponse: fail to cast dataList[0] customPubsubProtocolResponseParam)")
 		return nil
 	}
-	response.PID = request.PID
-	adapter.protocol.ProtocolResponse = response
+
+	request, ok := adapter.protocol.Request.(*pb.CustomProtocolReq)
+	if !ok {
+		tvLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert to *pb.CustomContentReq")
+		return fmt.Errorf("dmsgService->OnCustomPubsubProtocolResponse: cannot convert to *pb.CustomContentReq")
+	}
+
+	response := &pb.CustomProtocolRes{
+		BasicData: basicData,
+		PID:       responseParam.PID,
+		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	}
+	adapter.protocol.Response = response
+
+	// get response.Content
+	err := responseParam.Service.HandleResponse(request, response)
+	if err != nil {
+		tvLog.Logger.Errorf("dmsgService->OnCustomPubsubProtocolResponse: callback happen err: %v", err)
+		return err
+	}
+
 	return nil
 }
 
 func (adapter *CustomPubsubProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		return errors.New("CustomPubsubProtocolAdapter->SetResponseSig: failed to cast request to *pb.ReleaseMailboxRes")
 	}
@@ -101,18 +127,18 @@ func (adapter *CustomPubsubProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.ProtocolRequest)
-	return data, err
+func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback() (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(adapter.protocol.Request)
+	return data, retCode, err
 }
 
-func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.ProtocolRequest, adapter.protocol.ProtocolResponse)
+func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback() (any, error) {
+	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(adapter.protocol.Request, adapter.protocol.Response)
 	return data, err
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.ProtocolResponse.(*pb.CustomProtocolRes)
+	response, ok := adapter.protocol.Response.(*pb.CustomProtocolRes)
 	if !ok {
 		return nil
 	}

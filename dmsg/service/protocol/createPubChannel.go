@@ -74,7 +74,7 @@ func (adapter *PubChannelProtocolAdapter) GetResponseBasicData() *pb.BasicData {
 	return request.BasicData
 }
 
-func (adapter *PubChannelProtocolAdapter) InitResponse(basicData *pb.BasicData, data interface{}) error {
+func (adapter *PubChannelProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
 	response := &pb.CreatePubChannelRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
@@ -92,9 +92,9 @@ func (adapter *PubChannelProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *PubChannelProtocolAdapter) CallRequestCallback() (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCreatePubChannelRequest(adapter.protocol.Request)
-	return data, err
+func (adapter *PubChannelProtocolAdapter) CallRequestCallback() (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCreatePubChannelRequest(adapter.protocol.Request)
+	return data, retCode, err
 }
 
 func NewCreatePubChannelProtocol(ctx context.Context, host host.Host, protocolService common.ProtocolService, protocolCallback common.StreamProtocolCallback) *common.StreamProtocol {

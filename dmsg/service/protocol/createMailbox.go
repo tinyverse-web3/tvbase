@@ -69,7 +69,7 @@ func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicDat
 	return request.BasicData
 }
 
-func (adapter *CreateMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, data any) error {
+func (adapter *CreateMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
 	response := &pb.CreateMailboxRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
@@ -87,9 +87,9 @@ func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
 	return nil
 }
 
-func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback() (any, error) {
-	data, err := adapter.protocol.Callback.OnCreateMailboxRequest(adapter.protocol.Request)
-	return data, err
+func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback() (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCreateMailboxRequest(adapter.protocol.Request)
+	return data, retCode, err
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback() (any, error) {

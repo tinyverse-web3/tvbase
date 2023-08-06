@@ -24,17 +24,17 @@ type ProtocolService interface {
 }
 
 type StreamProtocolCallback interface {
-	OnCreateMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCreateMailboxResponse(protoreflect.ProtoMessage) (interface{}, error)
-	OnReadMailboxMsgRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnReleaseMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCreatePubChannelRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomStreamProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnCreateMailboxRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCreateMailboxResponse(protoreflect.ProtoMessage) (any, error)
+	OnReadMailboxMsgRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnReleaseMailboxRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCreatePubChannelRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCustomStreamProtocolRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (any, error)
 }
 
 type StreamProtocolAdapter interface {
-	InitResponse(basicData *pb.BasicData, data interface{}) error
+	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetResponsePID() pb.PID
 	GetStreamResponsePID() protocol.ID
 	GetStreamRequestPID() protocol.ID
@@ -43,8 +43,8 @@ type StreamProtocolAdapter interface {
 	SetProtocolResponseRet(code int32, result string)
 	SetProtocolResponseFailRet(errMsg string)
 	SetResponseSig(signature []byte) error
-	CallRequestCallback() (interface{}, error)
-	CallResponseCallback() (interface{}, error)
+	CallRequestCallback() (any, any, error)
+	CallResponseCallback() (any, error)
 }
 type StreamProtocol struct {
 	Ctx             context.Context
@@ -59,30 +59,29 @@ type StreamProtocol struct {
 
 // pubsubProtocol
 type PubsubProtocolAdapter interface {
-	InitResponse(basicData *pb.BasicData, data interface{}) error
+	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
 	GetRequestBasicData() *pb.BasicData
 	GetResponseBasicData() *pb.BasicData
 	GetResponseRetCode() *pb.RetCode
 	SetResponseSig(signature []byte) error
-	CallRequestCallback() (interface{}, error)
+	CallRequestCallback() (any, any, error)
 }
 
 type PubsubProtocolCallback interface {
-	OnSeekMailboxRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnSendMsgRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage) (interface{}, error)
-	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (interface{}, error)
+	OnSendMsgRequest(protoreflect.ProtoMessage) (any, error)
+	OnCustomPubsubProtocolRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCustomPubsubProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (any, error)
 }
 
 type PubsubProtocol struct {
-	Host             host.Host
-	ProtocolService  ProtocolService
-	Callback         PubsubProtocolCallback
-	ProtocolRequest  protoreflect.ProtoMessage
-	ProtocolResponse protoreflect.ProtoMessage
-	Adapter          PubsubProtocolAdapter
+	Host     host.Host
+	Service  ProtocolService
+	Callback PubsubProtocolCallback
+	Request  protoreflect.ProtoMessage
+	Response protoreflect.ProtoMessage
+	Adapter  PubsubProtocolAdapter
 }
 
 type UserPubsub struct {
@@ -116,8 +115,6 @@ type CustomPubsubProtocolInfo struct {
 	Protocol *PubsubProtocol
 }
 
-const MailboxLimitErr = "mailbox is limited"
-const MailboxAlreadyExistErr = "dest mail already exists"
 const MailboxAlreadyExistCode = 1
 
 const PubChannelLimitErr = "pubic channel is limited"
