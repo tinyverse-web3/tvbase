@@ -905,16 +905,19 @@ func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessag
 		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
 	}
 
-	srcPubkey := sendMsgReq.BasicData.Pubkey
-	destPubkey := sendMsgReq.DestPubkey
-	msgDirection := dmsg.MsgDirection.From
-	d.onReceiveMsg(
-		srcPubkey,
-		destPubkey,
-		sendMsgReq.Content,
-		sendMsgReq.BasicData.TS,
-		sendMsgReq.BasicData.ID,
-		msgDirection)
+	if d.onReceiveMsg != nil {
+		srcPubkey := sendMsgReq.BasicData.Pubkey
+		destPubkey := sendMsgReq.DestPubkey
+		msgDirection := dmsg.MsgDirection.From
+		d.onReceiveMsg(
+			srcPubkey,
+			destPubkey,
+			sendMsgReq.Content,
+			sendMsgReq.BasicData.TS,
+			sendMsgReq.BasicData.ID,
+			msgDirection)
+	}
+
 	return nil, nil
 }
 
