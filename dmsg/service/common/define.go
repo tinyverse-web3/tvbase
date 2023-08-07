@@ -33,38 +33,43 @@ type StreamProtocolCallback interface {
 }
 
 type StreamProtocolAdapter interface {
-	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetResponsePID() pb.PID
 	GetStreamResponsePID() protocol.ID
 	GetStreamRequestPID() protocol.ID
-	GetRequestBasicData() *pb.BasicData
-	GetResponseBasicData() *pb.BasicData
-	SetProtocolResponseRet(code int32, result string)
-	SetProtocolResponseFailRet(errMsg string)
-	SetResponseSig(signature []byte) error
-	CallRequestCallback() (any, any, error)
-	CallResponseCallback() (any, error)
+	GetEmptyRequest() protoreflect.ProtoMessage
+	GetEmptyResponse() protoreflect.ProtoMessage
+	GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData
+	InitResponse(
+		requestProtoData protoreflect.ProtoMessage,
+		basicData *pb.BasicData,
+		dataList ...any) (protoreflect.ProtoMessage, error)
+	SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error
+	CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error)
+	CallResponseCallback(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error)
 }
 type StreamProtocol struct {
 	Ctx             context.Context
 	Host            host.Host
 	ProtocolService ProtocolService
 	Callback        StreamProtocolCallback
-	Request         protoreflect.ProtoMessage
-	Response        protoreflect.ProtoMessage
 	Adapter         StreamProtocolAdapter
 }
 
 // pubsubProtocol
 type PubsubProtocolAdapter interface {
-	InitResponse(basicData *pb.BasicData, dataList ...any) error
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
-	GetRequestBasicData() *pb.BasicData
-	GetResponseBasicData() *pb.BasicData
-	GetResponseRetCode() *pb.RetCode
-	SetResponseSig(signature []byte) error
-	CallRequestCallback() (any, any, error)
+	GetEmptyRequest() protoreflect.ProtoMessage
+	GetEmptyResponse() protoreflect.ProtoMessage
+	GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData
+	InitResponse(
+		requestProtoData protoreflect.ProtoMessage,
+		basicData *pb.BasicData,
+		dataList ...any) (protoreflect.ProtoMessage, error)
+	SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error
+	CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error)
 }
 
 type PubsubProtocolCallback interface {
@@ -77,8 +82,6 @@ type PubsubProtocol struct {
 	Host     host.Host
 	Service  ProtocolService
 	Callback PubsubProtocolCallback
-	Request  protoreflect.ProtoMessage
-	Response protoreflect.ProtoMessage
 	Adapter  PubsubProtocolAdapter
 }
 

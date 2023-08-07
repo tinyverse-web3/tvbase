@@ -61,23 +61,24 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream netwo
 		}
 	}()
 
-	err := proto.Unmarshal(requestProtoData, p.Request)
+	request := p.Adapter.GetEmptyRequest()
+	err := proto.Unmarshal(requestProtoData, request)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error %v", err)
 		return err
 	}
-	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:\np.Request: %v", p.Request)
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:\np.Request: %v", request)
 
-	requestBasicData := p.Adapter.GetRequestBasicData()
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	var retCode *pb.RetCode = nil
 	var requestCallbackData any
-	valid := protocol.AuthProtocolMsg(p.Request, requestBasicData)
+	valid := protocol.AuthProtocolMsg(request, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: failed to authenticate message")
 		retCode = protocol.NewFailRetCode("StreamProtocol->HandleRequestData: failed to authenticate message")
 	} else {
 		var retCodeData any
-		requestCallbackData, retCodeData, err = p.Adapter.CallRequestCallback()
+		requestCallbackData, retCodeData, err = p.Adapter.CallRequestCallback(request)
 		if err != nil {
 			retCode = protocol.NewFailRetCode(err.Error())
 		} else {
@@ -92,29 +93,29 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream netwo
 	// generate response message
 	responseBasicData := protocol.NewBasicData(p.Host, p.ProtocolService.GetCurSrcUserPubKeyHex(), p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
-	err = p.Adapter.InitResponse(responseBasicData, requestCallbackData, retCode)
+	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCode)
 	if err != nil {
 		return err
 	}
-	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData: p.Response:\n%v", p.Response)
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData: response:\n%v", response)
 
 	// sign the data
-	requestProtoData, err = proto.Marshal(p.Response)
+	requestProtoData, err = proto.Marshal(response)
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: proto.Marshal: error: %v", err)
 		return err
 	}
-	signature, err := p.ProtocolService.GetCurSrcUserSig(requestProtoData)
+	sig, err := p.ProtocolService.GetCurSrcUserSig(requestProtoData)
 	if err != nil {
 		return err
 	}
-	err = p.Adapter.SetResponseSig(signature)
+	err = p.Adapter.SetResponseSig(response, sig)
 	if err != nil {
 		return err
 	}
 
 	// send response message
-	err = protocol.SendProtocolMsg(p.Ctx, p.Host, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponsePID(), p.Response)
+	err = protocol.SendProtocolMsg(p.Ctx, p.Host, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponsePID(), response)
 	if err != nil {
 		return err
 	}

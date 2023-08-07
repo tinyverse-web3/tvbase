@@ -7,6 +7,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SeekMailboxProtocolAdapter struct {
@@ -20,8 +21,6 @@ func NewSeekMailboxProtocolAdapter() *SeekMailboxProtocolAdapter {
 }
 
 func (adapter *SeekMailboxProtocolAdapter) init() {
-	adapter.protocol.Request = &pb.SeekMailboxReq{}
-	adapter.protocol.Response = &pb.SeekMailboxRes{}
 }
 
 func (adapter *SeekMailboxProtocolAdapter) GetRequestPID() pb.PID {
@@ -32,44 +31,45 @@ func (adapter *SeekMailboxProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEEK_MAILBOX_RES
 }
 
-func (adapter *SeekMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
-	response := &pb.SeekMailboxRes{
-		BasicData: basicData,
-		RetCode:   protocol.NewSuccRetCode(),
-	}
-
-	adapter.protocol.Response = response
-	return nil
+func (adapter *SeekMailboxProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.SeekMailboxReq{}
+}
+func (adapter *SeekMailboxProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.SeekMailboxRes{}
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Request.(*pb.SeekMailboxReq)
+func (adapter *SeekMailboxProtocolAdapter) GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	response, ok := adapter.protocol.Response.(*pb.SeekMailboxRes)
+func (adapter *SeekMailboxProtocolAdapter) GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	response, ok := responseProtoData.(*pb.SeekMailboxRes)
 	if !ok {
 		return nil
 	}
 	return response.BasicData
 }
 
-func (adapter *SeekMailboxProtocolAdapter) GetResponseRetCode() *pb.RetCode {
-	response, ok := adapter.protocol.Response.(*pb.SeekMailboxRes)
-	if !ok {
-		return nil
+func (adapter *SeekMailboxProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
+	response := &pb.SeekMailboxRes{
+		BasicData: basicData,
+		RetCode:   protocol.NewSuccRetCode(),
 	}
-	return response.RetCode
+
+	return response, nil
 }
 
-func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.Response.(*pb.SeekMailboxRes)
+func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error {
+	response, ok := responseProtoData.(*pb.SeekMailboxRes)
 	if !ok {
-		return errors.New("failed to cast request to *pb.SeekMailboxRes")
+		return errors.New("SeekMailboxProtocolAdapter->SetResponseSig: failed to cast response to *pb.SeekMailboxRes")
 	}
 	response.BasicData.Sig = sig
 	return nil

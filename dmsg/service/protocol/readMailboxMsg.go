@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -23,7 +24,10 @@ func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) init() {
-	adapter.protocol.Request = &pb.ReadMailboxReq{}
+}
+
+func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_READ_MAILBOX_REQ
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetResponsePID() pb.PID {
@@ -38,74 +42,69 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestPID() protocol.ID 
 	return dmsgProtocol.PidReadMailboxMsgReq
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) DestoryProtocol() {
-	adapter.protocol.Host.RemoveStreamHandler(dmsgProtocol.PidReadMailboxMsgReq)
+func (adapter *ReadMailboxMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.ReadMailboxReq{}
+}
+func (adapter *ReadMailboxMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.ReadMailboxRes{}
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewFailRetCode(errMsg)
-}
-
-func (adapter *ReadMailboxMsgProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
-}
-
-func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Request.(*pb.ReadMailboxReq)
+func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoData.(*pb.ReadMailboxReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
+func (adapter *ReadMailboxMsgProtocolAdapter) GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := responseProtoData.(*pb.ReadMailboxRes)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
 	if len(dataList) < 1 {
-		return errors.New("ReadMailboxMsgProtocolAdapter:InitResponse: dataList need contain MailboxItemList")
+		return nil, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: dataList need contain MailboxItemList")
 	}
 	mailboxItemList, ok := dataList[0].([]*pb.MailboxItem)
 	if !ok {
-		return errors.New("ReadMailboxMsgProtocolAdapter:InitResponse: fail to cast dataList[0] to []*pb.MailboxMsgData")
+		return nil, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []*pb.MailboxMsgData")
 	}
-	retCode := dmsgProtocol.NewSuccRetCode()
+
+	var retCode *pb.RetCode
 	if len(dataList) > 1 {
-		retCode = dataList[1].(*pb.RetCode)
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
+
 	response := &pb.ReadMailboxRes{
 		BasicData:   basicData,
 		RetCode:     retCode,
 		ContentList: mailboxItemList,
 	}
-	adapter.protocol.Response = response
-	return nil
+
+	return response, nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.Response.(*pb.ReadMailboxRes)
+func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error {
+	response, ok := responseProtoData.(*pb.ReadMailboxRes)
 	if !ok {
-		return errors.New("failed to cast request to *pb.ReadMailboxMsgRes")
+		return errors.New("CreateMailboxProtocolAdapter->ReadMailboxMsgProtocolAdapter: failed to cast response to *pb.ReadMailboxMsgRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback() (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(adapter.protocol.Request)
+func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
 	return data, retCode, err
 }
 

@@ -13,7 +13,6 @@ import (
 
 type SendMsgProtocol struct {
 	dmsgServiceCommon.PubsubProtocol
-	SendMsgRequest *pb.SendMsgReq
 }
 
 func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
@@ -23,24 +22,24 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 		}
 	}()
 
-	err := proto.Unmarshal(protocolData, p.Request)
+	request := p.Adapter.GetEmptyRequest()
+	err := proto.Unmarshal(protocolData, request)
 	if err != nil {
-		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: unmarshal protoData error %v", err))
+		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: proto.Unmarshal request error %v", err))
 		return err
 	}
 
-	// requestProtocolId := p.Adapter.GetRequestPID()
 	requestProtocolId := pb.PID_SEND_MSG_REQ
 	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
-		requestProtocolId, p.Request)
+		requestProtocolId, request)
 
-	sendMsgReq, ok := p.Request.(*pb.SendMsgReq)
+	sendMsgReq, ok := request.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
 		return fmt.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
 	}
 	basicData := sendMsgReq.BasicData
-	valid, err := protocol.EcdsaAuthProtocolMsg(p.Request, basicData)
+	valid, err := protocol.EcdsaAuthProtocolMsg(request, basicData)
 	if err != nil {
 		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: authenticate message err:%v", err)
 		return err
@@ -50,23 +49,20 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 		return err
 	}
 
-	callbackData, err := p.Callback.OnSendMsgRequest(p.Request)
+	_, err = p.Callback.OnSendMsgRequest(request)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: callback error %v", err))
 	}
-	if callbackData != nil {
-		dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: callback data: %v", callbackData)
-	}
 
-	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
-		requestProtocolId, p.Request)
+	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s, Message:%v",
+		requestProtocolId, request)
 	return nil
 }
 
-func NewSendMsgProtocol(host host.Host, protocolCallback dmsgServiceCommon.PubsubProtocolCallback, protocolService dmsgServiceCommon.ProtocolService) *SendMsgProtocol {
+func NewSendMsgProtocol(host host.Host,
+	protocolCallback dmsgServiceCommon.PubsubProtocolCallback,
+	protocolService dmsgServiceCommon.ProtocolService) *SendMsgProtocol {
 	ret := &SendMsgProtocol{}
-	ret.SendMsgRequest = &pb.SendMsgReq{}
-	ret.Request = ret.SendMsgRequest
 	ret.Host = host
 	ret.Service = protocolService
 	ret.Callback = protocolCallback

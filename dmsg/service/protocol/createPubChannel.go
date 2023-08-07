@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -23,7 +24,10 @@ func NewCreatePubChannelProtocolAdapter() *PubChannelProtocolAdapter {
 }
 
 func (adapter *PubChannelProtocolAdapter) init() {
-	adapter.protocol.Request = &pb.CreatePubChannelReq{}
+}
+
+func (adapter *PubChannelProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CREATE_PUB_CHANNEL_REQ
 }
 
 func (adapter *PubChannelProtocolAdapter) GetResponsePID() pb.PID {
@@ -38,62 +42,51 @@ func (adapter *PubChannelProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidCreatePubChannelReq
 }
 
-func (adapter *PubChannelProtocolAdapter) DestoryProtocol() {
-	adapter.protocol.Host.RemoveStreamHandler(dmsgProtocol.PidCreatePubChannelReq)
+func (adapter *PubChannelProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.CreatePubChannelReq{}
+}
+func (adapter *PubChannelProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.CreatePubChannelRes{}
 }
 
-func (adapter *PubChannelProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.Response.(*pb.CreatePubChannelRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewFailRetCode(errMsg)
-}
-
-func (adapter *PubChannelProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.Response.(*pb.CreatePubChannelRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
-}
-
-func (adapter *PubChannelProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Request.(*pb.CreatePubChannelReq)
+func (adapter *PubChannelProtocolAdapter) GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoData.(*pb.CreatePubChannelReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *PubChannelProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Response.(*pb.CreatePubChannelRes)
+func (adapter *PubChannelProtocolAdapter) GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := responseProtoData.(*pb.CreatePubChannelRes)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *PubChannelProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *PubChannelProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
 	response := &pb.CreatePubChannelRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
-	adapter.protocol.Response = response
-	return nil
+	return response, nil
 }
 
-func (adapter *PubChannelProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.Response.(*pb.CreatePubChannelRes)
+func (adapter *PubChannelProtocolAdapter) SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error {
+	response, ok := responseProtoData.(*pb.CreatePubChannelRes)
 	if !ok {
-		return errors.New("failed to cast request to *pb.CreatePubChannelRes")
+		return errors.New("PubChannelProtocolAdapter.SetResponseSig: failed to cast response to *pb.CreatePubChannelRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *PubChannelProtocolAdapter) CallRequestCallback() (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnCreatePubChannelRequest(adapter.protocol.Request)
+func (adapter *PubChannelProtocolAdapter) CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCreatePubChannelRequest(requestProtoData)
 	return data, retCode, err
 }
 

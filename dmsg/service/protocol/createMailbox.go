@@ -9,6 +9,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CreateMailboxProtocolAdapter struct {
@@ -22,78 +23,76 @@ func NewCreateMailboxProtocolAdapter() *CreateMailboxProtocolAdapter {
 }
 
 func (adapter *CreateMailboxProtocolAdapter) init() {
-	adapter.protocol.Request = &pb.CreateMailboxReq{}
+}
+
+func (adapter *CreateMailboxProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CREATE_MAILBOX_REQ
 }
 
 func (adapter *CreateMailboxProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_CREATE_MAILBOX_RES
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return dmsgProtocol.PidCreateMailboxRes
-}
-
 func (adapter *CreateMailboxProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidCreateMailboxReq
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseFailRet(errMsg string) {
-	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewFailRetCode(errMsg)
+func (adapter *CreateMailboxProtocolAdapter) GetStreamResponsePID() protocol.ID {
+	return dmsgProtocol.PidCreateMailboxRes
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetProtocolResponseRet(code int32, result string) {
-	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
+func (adapter *CreateMailboxProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.CreateMailboxReq{}
+}
+func (adapter *CreateMailboxProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.CreateMailboxRes{}
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetRequestBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Request.(*pb.CreateMailboxReq)
+func (adapter *CreateMailboxProtocolAdapter) GetRequestBasicData(requestProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData() *pb.BasicData {
-	request, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
+func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData(responseProtoData protoreflect.ProtoMessage) *pb.BasicData {
+	response, ok := responseProtoData.(*pb.CreateMailboxRes)
 	if !ok {
 		return nil
 	}
-	return request.BasicData
+	return response.BasicData
 }
 
-func (adapter *CreateMailboxProtocolAdapter) InitResponse(basicData *pb.BasicData, dataList ...any) error {
+func (adapter *CreateMailboxProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	basicData *pb.BasicData,
+	dataList ...any) (protoreflect.ProtoMessage, error) {
 	response := &pb.CreateMailboxRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
-	adapter.protocol.Response = response
-	return nil
+	return response, nil
 }
 
-func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(sig []byte) error {
-	response, ok := adapter.protocol.Response.(*pb.CreateMailboxRes)
+func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(responseProtoData protoreflect.ProtoMessage, sig []byte) error {
+	response, ok := responseProtoData.(*pb.CreateMailboxRes)
 	if !ok {
-		return errors.New("failed to cast request to *pb.CreateMailboxRes")
+		return errors.New("CreateMailboxProtocolAdapter->SetResponseSig: failed to cast response to *pb.CreateMailboxRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback() (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnCreateMailboxRequest(adapter.protocol.Request)
+func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCreateMailboxRequest(requestProtoData)
 	return data, retCode, err
 }
 
-func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback() (any, error) {
-	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(adapter.protocol.Response)
+func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
+	data, err := adapter.protocol.Callback.OnCreateMailboxResponse(responseProtoData)
 	return data, err
 }
 
