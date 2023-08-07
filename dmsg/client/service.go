@@ -649,6 +649,19 @@ func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg
 	d.onReceiveMsg = onReceiveMsg
 }
 
+func (d *DmsgService) RequestReadMailbox() error {
+	peerID, err := peer.Decode(d.CurSrcUserInfo.MailboxPeerID)
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: peer.Decode error: %v", err)
+		return err
+	}
+	_, err = d.readMailboxMsgPrtocol.Request(peerID, d.CurSrcUserInfo.UserKey.PubkeyHex)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // StreamProtocolCallback interface
 func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
 	// TODO implement me
@@ -686,18 +699,14 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 		fallthrough
 	case 1: // exist mailbox
 		dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		_, err = d.readMailboxMsgPrtocol.Request(
-			peerId,
-			response.BasicData.Pubkey)
+		_, err = d.readMailboxMsgPrtocol.Request(peerId, response.BasicData.Pubkey)
 		if err != nil {
 			return nil, err
 		}
 		if userInfo.MailboxPeerID == "" {
 			userInfo.MailboxPeerID = response.BasicData.PeerID
 		} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
-			_, err = d.releaseMailboxPrtocol.Request(
-				peerId,
-				response.BasicData.Pubkey)
+			_, err = d.releaseMailboxPrtocol.Request(peerId, response.BasicData.Pubkey)
 			if err != nil {
 				return nil, err
 			}
@@ -849,6 +858,7 @@ func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMe
 }
 
 func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
+	dmsgLog.Logger.Debug("DmsgService->OnSeekMailboxResponse begin")
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
@@ -889,6 +899,7 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 			return nil, err
 		}
 	}
+	dmsgLog.Logger.Debugf("DmsgService->OnSeekMailboxResponse end")
 	return nil, nil
 }
 

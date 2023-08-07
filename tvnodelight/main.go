@@ -70,7 +70,11 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return prikey, pubkey, nil
 }
 
-func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, rootPath string, ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
+func initMsgClient(
+	srcPubkey *ecdsa.PublicKey,
+	srcPrikey *ecdsa.PrivateKey,
+	rootPath string,
+	ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
 	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		tvcLog.Fatalf("InitMsgClient error: %v", err)
