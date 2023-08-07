@@ -6,6 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
+	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 )
 
@@ -13,6 +14,7 @@ const TvbaseRendezvous = "tvbase/discover-rendzvous/common"
 
 func (m *TvBase) initRendezvous() error {
 	if m.pubRoutingDiscovery == nil {
+		m.rendezvousCbList = make([]tvPeer.RendezvousCallback, 0)
 		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
 		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TvbaseRendezvous)
 
@@ -26,6 +28,10 @@ func (m *TvBase) initRendezvous() error {
 		m.RegistNotConnectedCallback(handleNoNet)
 	}
 	return nil
+}
+
+func (m *TvBase) RegistRendezvousCallback(callback tvPeer.RendezvousCallback) {
+	m.rendezvousCbList = append(m.rendezvousCbList, callback)
 }
 
 func (m *TvBase) DiscoverRendezvousPeers() {
@@ -66,6 +72,9 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			time.Sleep(10 * time.Second)
 		} else {
 			tvLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: The number of rendezvous peer is %v", rendezvousPeerCount)
+			for _, cb := range m.rendezvousCbList {
+				cb()
+			}
 		}
 	}
 }

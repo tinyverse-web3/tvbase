@@ -57,4 +57,5 @@ type TvBaseService interface {
 	GetAvailableLightPeerList(key string) ([]peer.ID, error)
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
+	RegistRendezvousCallback(callback tvPeer.RendezvousCallback)
 }

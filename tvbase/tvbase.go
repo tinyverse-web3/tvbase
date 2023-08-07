@@ -62,6 +62,7 @@ type TvBase struct {
 	nodeInfoService      *tvProtocol.NodeInfoService
 	pubRoutingDiscovery  *drouting.RoutingDiscovery
 	IsRendezvous         bool
+	rendezvousCbList     []tvPeer.RendezvousCallback
 	launch               *fx.App
 }
 

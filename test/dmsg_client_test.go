@@ -176,20 +176,26 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 	dmsgService := tvbase.GetClientDmsgService()
 	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
-		testLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
 	}
 
 	getSigCallback := func(protoData []byte) ([]byte, error) {
 		sig, err := tvCrypto.SignDataByEcdsa(srcPrikey, protoData)
 		if err != nil {
-			testLog.Errorf("sign error: %v", err)
+			testLog.Errorf("initMsgClient: sign error: %v", err)
 		}
 		testLog.Debugf("sign = %v", sig)
 		return sig, nil
 	}
-	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback)
+	done := make(chan error)
+	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback, done)
 	if err != nil {
+		return nil, nil, err
+	}
+	err = <-done
+	if err != nil {
+		testLog.Errorf("initMsgClient: InitUser error: %v", err)
 		return nil, nil, err
 	}
 
