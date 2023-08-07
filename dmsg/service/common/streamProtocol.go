@@ -13,10 +13,10 @@ import (
 )
 
 func (p *StreamProtocol) RequestHandler(stream network.Stream) {
-	localPeer := p.stream.Conn().LocalPeer()
-	remotePeer := p.stream.Conn().RemotePeer()
-	localMultiAddr := p.stream.Conn().LocalMultiaddr()
-	remoteMultiAddr := p.stream.Conn().RemoteMultiaddr()
+	localPeer := stream.Conn().LocalPeer()
+	remotePeer := stream.Conn().RemotePeer()
+	localMultiAddr := stream.Conn().LocalMultiaddr()
+	remoteMultiAddr := stream.Conn().RemoteMultiaddr()
 
 	sreamRequestProtocolId := p.Adapter.GetStreamRequestPID()
 	sreamResponseProtocolId := p.Adapter.GetStreamResponsePID()
@@ -46,15 +46,14 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 			dmsgLog.Logger.Warnf("StreamProtocol->RequestHandler: stream.Close(): error %v", err)
 		}
 	}()
-	p.stream = stream
-	err = p.HandleRequestData(protoData)
+	err = p.HandleRequestData(protoData, stream)
 	if err != nil {
 		return
 	}
 	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler end")
 }
 
-func (p *StreamProtocol) HandleRequestData(requestProtoData []byte) error {
+func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream network.Stream) error {
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData begin")
 	defer func() {
 		if r := recover(); r != nil {
@@ -115,7 +114,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte) error {
 	}
 
 	// send response message
-	err = protocol.SendProtocolMsg(p.Ctx, p.Host, p.stream.Conn().RemotePeer(), p.Adapter.GetStreamResponsePID(), p.Response)
+	err = protocol.SendProtocolMsg(p.Ctx, p.Host, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponsePID(), p.Response)
 	if err != nil {
 		return err
 	}

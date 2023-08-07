@@ -7,7 +7,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -54,7 +53,6 @@ type StreamProtocol struct {
 	Request         protoreflect.ProtoMessage
 	Response        protoreflect.ProtoMessage
 	Adapter         StreamProtocolAdapter
-	stream          network.Stream
 }
 
 // pubsubProtocol
