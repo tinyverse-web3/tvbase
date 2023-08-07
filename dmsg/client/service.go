@@ -153,7 +153,7 @@ func (d *DmsgService) Stop() error {
 func (d *DmsgService) InitUser(
 	userPubkeyData []byte,
 	getSigCallback dmsgClientCommon.GetSigCallback,
-	done chan error,
+	done chan any,
 ) error {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
