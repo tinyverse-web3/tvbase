@@ -142,15 +142,16 @@ func QueryAllKeyOption() ServeOption {
 
 func QueryKeyOption() ServeOption {
 	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
-		idht := t.GetDht()
+		dkvsService := t.GetDkvsService()
 		db := t.GetDhtDatabase()
 		ctx := context.Background()
 		mux.HandleFunc("/tvbase/queryKey", func(w http.ResponseWriter, r *http.Request) {
 			kvi := new(KvInfo)
 			queryParams := r.URL.Query()
 			queryKey := queryParams.Get("key")
-			var localValue = ""
-			var netValue = ""
+			var localValue *DkvsKV
+			var netValue *DkvsKV
+			var keyList []DkvsKV
 			if len(queryKey) == 0 {
 				Logger.Errorf("queryKey---> key does not exist in the url parameter: %v", fmt.Errorf("error"))
 				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
@@ -161,39 +162,46 @@ func QueryKeyOption() ServeOption {
 			results, err := db.Get(ctx, mkDsKey(dkvsKey))
 			if err != nil {
 				Logger.Errorf("queryKey---> key does not exist in dht datastore: %v", err)
-				handleError(w, "key does not exist in dht datastore", err, 400)
-				localValue = "key does not exist in dht datastore"
+				//handleError(w, "key does not exist in dht datastore", err, 400)
+				localValue = &DkvsKV{
+					Value: fmt.Sprintf("key does not exist in dht datastore: %s", err.Error()),
+				}
+			} else {
+				localValue, err = getKVDetailsFromLibp2pRec(queryKey, results)
+				if err != nil {
+					Logger.Errorf("queryKey---> failed to call getKVDetailsFromLibp2pRec(results): %s", err.Error())
+					//handleError(w, "failed to call getValueFromRec(results)", err, 400)
+					localValue = &DkvsKV{
+						Value: fmt.Sprintf("failed to call getKVDetailsFromLibp2pRec(queryKey, results): %s", err.Error()),
+					}
+				}
+			}
+			localValue.Key = "local: " + queryKey
+			kvi.LocalKV = localValue
+			keyList = append(keyList, *localValue)
 
-			}
-			localValue, err = getValueFromLibp2pRec(results)
+			netResults, err := dkvsService.GetRecord(queryKey)
 			if err != nil {
-				Logger.Errorf("queryKey---> failed to call getValueFromRec(results): %v", err)
-				handleError(w, "failed to call getValueFromRec(results)", err, 400)
-				localValue = "failed to call getValueFromRec(results)"
+				Logger.Errorf("queryKey---> failed to call  dkvsService.GetRecord(queryKey): %s", err.Error())
+				//handleError(w, "failed to call  dkvsService.GetRecord(queryKey)", err, 400)
+				netValue = &DkvsKV{
+					Value: fmt.Sprintf("failed to call  dkvsService.GetRecord(queryKey): %s", err.Error()),
+				}
+			} else {
+				netValue, err = getKVDetailsFromDkvsRec(queryKey, netResults)
+				if err != nil {
+					Logger.Errorf("queryKey---> failed to call getValueFromRec(netResults): %s", err.Error())
+					//handleError(w, "failed to call getValueFromRec(netResults)", err, 400)
+					netValue = &DkvsKV{
+						Value: fmt.Sprintf("failed to call getKVDetailsFromDkvsRec(queryKey, netResults): %s", err.Error()),
+					}
+				}
 			}
-			kvi.LocalKV = &DkvsKV{
-				Key:   queryKey,
-				Value: localValue,
-			}
+			netValue.Key = "network: " + queryKey
+			kvi.NetKV = netValue
+			keyList = append(keyList, *netValue)
 
-			netResults, err := idht.GetValue(ctx, dkvsKey)
-			if err != nil {
-				Logger.Errorf("queryKey---> failed to call idht.GetValue(ctx, dkvsKey): %v", err)
-				handleError(w, "failed to call idht.GetValue(ctx, dkvsKey)", err, 400)
-				netValue = "failed to call idht.GetValue(ctx, dkvsKey)"
-			}
-			netValue, err = getValueFromDkvsRec(netResults)
-			if err != nil {
-				Logger.Errorf("queryKey---> failed to call getValueFromRec(netResults): %v", err)
-				handleError(w, "failed to call getValueFromRec(netResults)", err, 400)
-				netValue = "failed to call getValueFromRec(netResults)"
-			}
-			kvi.NetKV = &DkvsKV{
-				Key:   queryKey,
-				Value: netValue,
-			}
-
-			jsonData, err := json.Marshal(kvi)
+			jsonData, err := json.Marshal(keyList)
 			if err != nil {
 				Logger.Errorf("queryKey---> json.Marshal(queryKey) failed:  %v", err)
 				handleError(w, "failed to marshal queryKey", err, 400)

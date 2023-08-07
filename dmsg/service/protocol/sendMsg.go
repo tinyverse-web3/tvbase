@@ -22,7 +22,8 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 		}
 	}()
 
-	request := p.Adapter.GetEmptyRequest()
+	// request := p.Adapter.GetEmptyRequest()
+	request := &pb.SendMsgReq{}
 	err := proto.Unmarshal(protocolData, request)
 	if err != nil {
 		dmsgLog.Logger.Errorf(fmt.Sprintf("SendMsgProtocol->HandleRequestData: proto.Unmarshal request error %v", err))
@@ -33,11 +34,12 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 	dmsgLog.Logger.Debugf("SendMsgProtocol->HandleRequestData: requestProtocolId:%s,  Message:%v",
 		requestProtocolId, request)
 
-	sendMsgReq, ok := request.(*pb.SendMsgReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
-		return fmt.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
-	}
+	// sendMsgReq, ok := request.(*pb.SendMsgReq)
+	sendMsgReq := request
+	// if !ok {
+	// 	dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
+	// 	return fmt.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
+	// }
 	basicData := sendMsgReq.BasicData
 	valid, err := protocol.EcdsaAuthProtocolMsg(request, basicData)
 	if err != nil {
