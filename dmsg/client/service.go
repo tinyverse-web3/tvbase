@@ -822,13 +822,17 @@ func (d *DmsgService) OnReadMailboxMsgResponse(requestProtoData protoreflect.Pro
 
 		dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: From = %s", srcPubkey)
 		dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: To = %s", destPubkey)
-		d.onReceiveMsg(
-			srcPubkey,
-			destPubkey,
-			msgContent,
-			timeStamp,
-			msgID,
-			dmsg.MsgDirection.From)
+		if d.onReceiveMsg != nil {
+			d.onReceiveMsg(
+				srcPubkey,
+				destPubkey,
+				msgContent,
+				timeStamp,
+				msgID,
+				dmsg.MsgDirection.From)
+		} else {
+			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: OnReceiveMsg is nil")
+		}
 
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->OnReadMailboxMsgResponse: Put user msg error: %v, key:%v", err, mailboxItem.Key)
@@ -905,16 +909,21 @@ func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessag
 		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
 	}
 
-	srcPubkey := sendMsgReq.BasicData.Pubkey
-	destPubkey := sendMsgReq.DestPubkey
-	msgDirection := dmsg.MsgDirection.From
-	d.onReceiveMsg(
-		srcPubkey,
-		destPubkey,
-		sendMsgReq.Content,
-		sendMsgReq.BasicData.TS,
-		sendMsgReq.BasicData.ID,
-		msgDirection)
+	if d.onReceiveMsg != nil {
+		srcPubkey := sendMsgReq.BasicData.Pubkey
+		destPubkey := sendMsgReq.DestPubkey
+		msgDirection := dmsg.MsgDirection.From
+		d.onReceiveMsg(
+			srcPubkey,
+			destPubkey,
+			sendMsgReq.Content,
+			sendMsgReq.BasicData.TS,
+			sendMsgReq.BasicData.ID,
+			msgDirection)
+	} else {
+		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: OnReceiveMsg is nil")
+	}
+
 	return nil, nil
 }
 

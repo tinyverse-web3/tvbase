@@ -1,6 +1,7 @@
 package corehttp
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-base32"
 	manet "github.com/multiformats/go-multiaddr/net"
+	"github.com/tinyverse-web3/tvbase/dkvs"
 	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
@@ -138,6 +140,37 @@ func getValueFromDkvsRec(dkvsVal []byte) (string, error) {
 		return "", err
 	}
 	return string(dkvsRec.Value), nil
+}
+
+func getKVDetailsFromLibp2pRec(libp2pKey string, libP2pVal []byte) (*DkvsKV, error) {
+	lbp2pRec := new(recpb.Record)
+	err := proto.Unmarshal(libP2pVal, lbp2pRec)
+	if err != nil {
+		Logger.Errorf("get value from libp2p record---> proto.Unmarshal(libP2pVal lbp2pRec) failed: %v", err)
+		return nil, err
+	}
+	dkvsRec := new(dkvs_pb.DkvsRecord)
+	if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
+		Logger.Errorf("get value from dkvs recrod---> proto.Unmarshal(lbp2pRec.Value, dkvsRec) failed: %v", err)
+		return nil, err
+	}
+	var kv DkvsKV
+	kv.Key = string(dkvs.RemovePrefix(libp2pKey))
+	kv.Value = string(dkvsRec.Value)
+	kv.PutTime = formatUnixTime(dkvsRec.Seq)
+	kv.Validity = formatUnixTime(dkvsRec.Validity)
+	kv.PubKey = hex.EncodeToString(dkvsRec.PubKey)
+	return &kv, nil
+}
+
+func getKVDetailsFromDkvsRec(libp2pKey string, dkvsRec *dkvs_pb.DkvsRecord) (*DkvsKV, error) {
+	var kv DkvsKV
+	kv.Key = string(dkvs.RemovePrefix(libp2pKey))
+	kv.Value = string(dkvsRec.Value)
+	kv.PutTime = formatUnixTime(dkvsRec.Seq)
+	kv.Validity = formatUnixTime(dkvsRec.Validity)
+	kv.PubKey = hex.EncodeToString(dkvsRec.PubKey)
+	return &kv, nil
 }
 
 func formatUnixTime(unixTime uint64) string {
