@@ -117,9 +117,6 @@ type CustomPubsubProtocolInfo struct {
 }
 
 const MailboxAlreadyExistCode = 1
-
-const PubChannelLimitErr = "pubic channel is limited"
-const PubChannelAlreadyExistErr = "public channel already exists"
 const PubChannelAlreadyExistCode = 1
 
 type UserInfo struct {

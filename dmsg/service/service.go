@@ -41,7 +41,7 @@ type DmsgService struct {
 	curSrcUserInfo               *dmsgServiceCommon.UserInfo
 	destUserInfoList             map[string]*dmsgServiceCommon.DestUserInfo
 	pubChannelInfoList           map[string]*dmsgServiceCommon.PubChannelInfo
-	customProtocolPubsubs        map[string]*dmsgServiceCommon.CustomProtocolPubsub
+	customProtocolPubsubList     map[string]*dmsgServiceCommon.CustomProtocolPubsub
 	protocolReqSubscribes        map[pb.PID]protocol.ReqSubscribe
 	protocolResSubscribes        map[pb.PID]protocol.ResSubscribe
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
@@ -86,7 +86,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.RegPubsubProtocolReqCallback(pb.PID_SEND_MSG_REQ, d.sendMsgPrtocol)
 
 	d.destUserInfoList = make(map[string]*dmsgServiceCommon.DestUserInfo)
-	d.customProtocolPubsubs = make(map[string]*dmsgServiceCommon.CustomProtocolPubsub)
+	d.customProtocolPubsubList = make(map[string]*dmsgServiceCommon.CustomProtocolPubsub)
 
 	d.pubChannelInfoList = make(map[string]*dmsgServiceCommon.PubChannelInfo)
 
@@ -358,7 +358,7 @@ func (d *DmsgService) getDestUserPubsub(destUserPubsub string) *dmsgServiceCommo
 }
 
 // pubChannel
-func (d *DmsgService) isAvailablePubChannel(userPubKey string) bool {
+func (d *DmsgService) isAvailablePubChannel(pubKey string) bool {
 	pubChannelInfo := len(d.pubChannelInfoList)
 	cfg := d.BaseService.GetConfig()
 	if pubChannelInfo >= cfg.DMsg.MaxPubChannelPubsubCount {
@@ -368,14 +368,14 @@ func (d *DmsgService) isAvailablePubChannel(userPubKey string) bool {
 	return true
 }
 
-func (d *DmsgService) subscribePubChannel(userPubkey string) error {
-	pubsub := d.pubChannelInfoList[userPubkey]
+func (d *DmsgService) subscribePubChannel(pubkey string) error {
+	pubsub := d.pubChannelInfoList[pubkey]
 	if pubsub != nil {
-		dmsgLog.Logger.Errorf("dmsgService->SubscribePubChannel: public key(%s) pubsub already exist", userPubkey)
-		return fmt.Errorf("dmsgService->SubscribePubChannel: public key(%s) pubsub already exist", userPubkey)
+		dmsgLog.Logger.Errorf("dmsgService->SubscribePubChannel: public key(%s) pubsub already exist", pubkey)
+		return fmt.Errorf("dmsgService->SubscribePubChannel: public key(%s) pubsub already exist", pubkey)
 	}
 
-	userTopic, err := d.Pubsub.Join(userPubkey)
+	userTopic, err := d.Pubsub.Join(pubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->SubscribePubChannel: Join error: %v", err)
 		return err
@@ -387,7 +387,7 @@ func (d *DmsgService) subscribePubChannel(userPubkey string) error {
 	}
 	// go d.BaseService.DiscoverRendezvousPeers()
 
-	d.pubChannelInfoList[userPubkey] = &dmsgServiceCommon.PubChannelInfo{
+	d.pubChannelInfoList[pubkey] = &dmsgServiceCommon.PubChannelInfo{
 		UserPubsub: dmsgServiceCommon.UserPubsub{
 			Topic:        userTopic,
 			Subscription: userSub,
@@ -395,15 +395,15 @@ func (d *DmsgService) subscribePubChannel(userPubkey string) error {
 		LastReciveTimestamp: time.Now().Unix(),
 	}
 
-	go d.readPubChannelPubsub(d.pubChannelInfoList[userPubkey])
+	go d.readPubChannelPubsub(d.pubChannelInfoList[pubkey])
 	return nil
 }
 
-func (d *DmsgService) unsubscribePubChannel(userPubkey string) error {
-	pubsub := d.pubChannelInfoList[userPubkey]
+func (d *DmsgService) unsubscribePubChannel(pubkey string) error {
+	pubsub := d.pubChannelInfoList[pubkey]
 	if pubsub == nil {
-		dmsgLog.Logger.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubkey)
-		return fmt.Errorf("dmsgService->unSubscribeDestUser: no find userPubkey %s for pubsub", userPubkey)
+		dmsgLog.Logger.Errorf("dmsgService->unSubscribeDestUser: no find pubkey %s for pubsub", pubkey)
+		return fmt.Errorf("dmsgService->unSubscribeDestUser: no find pubkey %s for pubsub", pubkey)
 	}
 	pubsub.CancelFunc()
 	pubsub.Subscription.Cancel()
@@ -411,13 +411,13 @@ func (d *DmsgService) unsubscribePubChannel(userPubkey string) error {
 	if err != nil {
 		dmsgLog.Logger.Warnf("dmsgService->unSubscribeDestUser: Topic.Close error: %v", err)
 	}
-	delete(d.pubChannelInfoList, userPubkey)
+	delete(d.pubChannelInfoList, pubkey)
 	return nil
 }
 
-func (d *DmsgService) unsubscribePubChannels() error {
-	for userPubkey := range d.destUserInfoList {
-		d.unsubscribePubChannel(userPubkey)
+func (d *DmsgService) unsubscribePubChannelList() error {
+	for pubkey := range d.pubChannelInfoList {
+		d.unsubscribePubChannel(pubkey)
 	}
 	return nil
 }
@@ -442,7 +442,7 @@ func (d *DmsgService) Stop() error {
 		return err
 	}
 
-	d.unsubscribePubChannels()
+	d.unsubscribePubChannelList()
 	d.unSubscribeDestUsers()
 	d.stopCleanRestResource <- true
 	return nil
@@ -566,14 +566,14 @@ func (d *DmsgService) OnCreatePubChannelRequest(requestProtoData protoreflect.Pr
 	}
 	isAvailable := d.isAvailablePubChannel(request.BasicData.Pubkey)
 	if !isAvailable {
-		return nil, nil, errors.New(dmsgServiceCommon.PubChannelLimitErr)
+		return nil, nil, errors.New("dmsgService->OnCreatePubChannelRequest: exceeded the maximum number of mailbox service")
 	}
 	pubChannelInfo := d.pubChannelInfoList[request.BasicData.Pubkey]
-	if pubChannelInfo == nil {
-		dmsgLog.Logger.Errorf("dmsgService->OnCreatePubChannelRequest: no find Pubkey for pubsub")
+	if pubChannelInfo != nil {
+		dmsgLog.Logger.Errorf("dmsgService->OnCreatePubChannelRequest: pubChannelInfo already exist")
 		retCode := &pb.RetCode{
-			Code:   dmsgServiceCommon.MailboxAlreadyExistCode,
-			Result: "dmsgService->OnCreatePubChannelRequest: no find Pubkey for pubsub",
+			Code:   dmsgServiceCommon.PubChannelAlreadyExistCode,
+			Result: "dmsgService->OnCreatePubChannelRequest: pubChannelInfo already exist",
 		}
 		return nil, retCode, nil
 	}
@@ -583,7 +583,6 @@ func (d *DmsgService) OnCreatePubChannelRequest(requestProtoData protoreflect.Pr
 	}
 
 	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelRequest end")
-
 	return nil, nil, nil
 }
 
@@ -729,7 +728,7 @@ func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.Custo
 
 // custom pubsub protocol
 func (d *DmsgService) getCustomProtocolPubsub(pubkey string) *dmsgServiceCommon.CustomProtocolPubsub {
-	return d.customProtocolPubsubs[pubkey]
+	return d.customProtocolPubsubList[pubkey]
 }
 
 func (d *DmsgService) publishCustomProtocol(pubkey string) error {
@@ -747,20 +746,20 @@ func (d *DmsgService) publishCustomProtocol(pubkey string) error {
 	return nil
 }
 
-func (d *DmsgService) unPublishCustomProtocol(userPubkey string) error {
-	pubsub := d.getCustomProtocolPubsub(userPubkey)
+func (d *DmsgService) unpublishCustomProtocol(pubkey string) error {
+	pubsub := d.getCustomProtocolPubsub(pubkey)
 	if pubsub == nil {
 		return nil
 	}
-	err := d.unSubscribeCustomProtocol(userPubkey)
+	err := d.unsubscribeCustomProtocol(pubkey)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *DmsgService) unSubscribeCustomProtocol(pubKey string) error {
-	pubsub := d.customProtocolPubsubs[pubKey]
+func (d *DmsgService) unsubscribeCustomProtocol(pubKey string) error {
+	pubsub := d.customProtocolPubsubList[pubKey]
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->unSubscribeCustomProtocol: no find pubKey %s for pubsub", pubKey)
 		return fmt.Errorf("dmsgService->unSubscribeCustomProtocol: no find pubKey %s for pubsub", pubKey)
@@ -771,7 +770,7 @@ func (d *DmsgService) unSubscribeCustomProtocol(pubKey string) error {
 	if err != nil {
 		dmsgLog.Logger.Warnf("dmsgService->unSubscribeCustomProtocol: userTopic.Close error: %v", err)
 	}
-	delete(d.customProtocolPubsubs, pubKey)
+	delete(d.customProtocolPubsubList, pubKey)
 	return nil
 }
 
@@ -787,7 +786,7 @@ func (d *DmsgService) subscribeCustomProtocol(pubKey string) error {
 	}
 	// go d.BaseService.DiscoverRendezvousPeers()
 
-	d.customProtocolPubsubs[pubKey] = &dmsgServiceCommon.CustomProtocolPubsub{
+	d.customProtocolPubsubList[pubKey] = &dmsgServiceCommon.CustomProtocolPubsub{
 		UserPubsub: dmsgServiceCommon.UserPubsub{
 			Topic:        topic,
 			Subscription: subscribe,
@@ -796,9 +795,9 @@ func (d *DmsgService) subscribeCustomProtocol(pubKey string) error {
 	return nil
 }
 
-func (d *DmsgService) unSubscribeCustomProtocols() error {
-	for pubkey := range d.customProtocolPubsubs {
-		d.unSubscribeCustomProtocol(pubkey)
+func (d *DmsgService) unsubscribeCustomProtocolList() error {
+	for pubkey := range d.customProtocolPubsubList {
+		d.unsubscribeCustomProtocol(pubkey)
 	}
 	return nil
 }

@@ -124,7 +124,8 @@ type ProtocolService interface {
 type UserPubsub struct {
 	Topic           *pubsub.Topic
 	Subscription    *pubsub.Subscription
-	CancelFunc      context.CancelFunc
+	Ctx             context.Context
+	CancelCtx       context.CancelFunc
 	IsReadPubsubMsg bool
 }
 type SrcUserInfo struct {
@@ -141,8 +142,9 @@ type DestUserInfo struct {
 
 type PubChannelInfo struct {
 	UserPubsub
-	LastRequestTimestamp   int64
-	CreatePubChannelSignal chan bool
+	PubKeyHex            string
+	LastRequestTimestamp int64
+	CreatePubChannelChan chan bool
 }
 
 type SrcUserKey struct {
