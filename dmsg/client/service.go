@@ -534,12 +534,6 @@ func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 	pubChannelInfo := &dmsgClientCommon.PubChannelInfo{}
 	pubChannelInfo.PubKeyHex = pubkey
 	pubChannelInfo.CreatePubChannelChan = make(chan bool)
-
-	err := d.requestCreatePubChannelService(pubChannelInfo)
-	if err != nil {
-		return err
-	}
-
 	topic, err := d.Pubsub.Join(pubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribePubChannel: Pubsub.Join error: %v", err)
@@ -552,6 +546,11 @@ func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 	}
 	pubChannelInfo.Topic = topic
 	pubChannelInfo.Subscription = subscription
+
+	err = d.requestCreatePubChannelService(pubChannelInfo)
+	if err != nil {
+		return err
+	}
 
 	d.pubChannelInfoList[pubkey] = pubChannelInfo
 	err = d.startReadPubChannelMsg(pubkey)
