@@ -98,10 +98,12 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 		return nil, nil, err
 	}
 	data := <-done
-	err = data.(error)
-	if err != nil {
-		tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
-		return nil, nil, err
+	if data != nil {
+		err = data.(error)
+		if err != nil {
+			tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
+			return nil, nil, err
+		}
 	}
 
 	return tvInfra, dmsgService, nil
