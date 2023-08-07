@@ -99,7 +99,7 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 	}
 	err = stream.Close()
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->ResponseHandler: error %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->ResponseHandler: error: %v", err)
 		return
 	}
 
