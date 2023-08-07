@@ -97,9 +97,10 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 	if err != nil {
 		return nil, nil, err
 	}
-	error := <-done
-	if error != nil {
-		tvcLog.Errorf("initMsgClient: InitUser error: %v", error)
+	data := <-done
+	err = data.(error)
+	if err != nil {
+		tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
 		return nil, nil, err
 	}
 
