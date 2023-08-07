@@ -75,6 +75,10 @@ func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(responseProtoData prot
 	return nil
 }
 
+func (adapter *SeekMailboxProtocolAdapter) CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	return nil, nil, nil
+}
+
 func NewSeekMailboxProtocol(
 	host host.Host,
 	protocolCallback common.PubsubProtocolCallback,
