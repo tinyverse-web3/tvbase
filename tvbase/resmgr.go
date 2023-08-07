@@ -589,7 +589,7 @@ func createDefaultLimitConfig(cfg config.SwarmConfig) (limitConfig rcmgr.Concret
 	}
 
 	msg := fmt.Sprintf(`Computed default go-libp2p Resource Manager limits based on: - 'Swarm.ResourceMgr.MaxMemory': %q
-	- 'Swarm.ResourceMgr.MaxFileDescriptors': %d Theses can be inspected with 'ipfs swarm resources'.`, maxMemoryString, maxFD)
+	- 'Swarm.ResourceMgr.MaxFileDescriptors': %d Theses can be inspected with 'tvbase swarm resources'.`, maxMemoryString, maxFD)
 
 	// We already have a complete value thus pass in an empty ConcreteLimitConfig.
 	return partialLimits.Build(rcmgr.ConcreteLimitConfig{}), msg, nil
