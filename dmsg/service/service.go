@@ -564,11 +564,12 @@ func (d *DmsgService) OnCreatePubChannelRequest(requestProtoData protoreflect.Pr
 		dmsgLog.Logger.Errorf("dmsgService->OnCreatePubChannelRequest: cannot convert to *pb.CreateMailboxReq")
 		return nil, nil, fmt.Errorf("dmsgService->OnCreatePubChannelRequest: cannot convert to *pb.CreateMailboxReq")
 	}
-	isAvailable := d.isAvailablePubChannel(request.BasicData.Pubkey)
+	channelKey := request.ChannelKey
+	isAvailable := d.isAvailablePubChannel(channelKey)
 	if !isAvailable {
 		return nil, nil, errors.New("dmsgService->OnCreatePubChannelRequest: exceeded the maximum number of mailbox service")
 	}
-	pubChannelInfo := d.pubChannelInfoList[request.BasicData.Pubkey]
+	pubChannelInfo := d.pubChannelInfoList[channelKey]
 	if pubChannelInfo != nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCreatePubChannelRequest: pubChannelInfo already exist")
 		retCode := &pb.RetCode{
@@ -577,7 +578,8 @@ func (d *DmsgService) OnCreatePubChannelRequest(requestProtoData protoreflect.Pr
 		}
 		return nil, retCode, nil
 	}
-	err := d.subscribePubChannel(request.BasicData.Pubkey)
+
+	err := d.subscribePubChannel(channelKey)
 	if err != nil {
 		return nil, nil, err
 	}
