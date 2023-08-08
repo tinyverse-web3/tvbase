@@ -395,7 +395,7 @@ func (d *DmsgService) subscribePubChannel(pubkey string) error {
 		LastReciveTimestamp: time.Now().Unix(),
 	}
 
-	go d.readPubChannelPubsub(d.pubChannelInfoList[pubkey])
+	// go d.readPubChannelPubsub(d.pubChannelInfoList[pubkey])
 	return nil
 }
 
