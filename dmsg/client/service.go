@@ -543,7 +543,7 @@ func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 
 	d.pubChannelInfoList[pubkey] = pubChannelInfo
 
-	err := d.requestCreatePubChannelService(pubChannelInfo)
+	err := d.createPubChannelService(pubChannelInfo)
 	if err != nil {
 		delete(d.pubChannelInfoList, pubkey)
 		return err
@@ -593,15 +593,15 @@ func (d *DmsgService) UnsubscribePubChannel(userPubKey string) error {
 	return nil
 }
 
-func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientCommon.PubChannelInfo) error {
-	dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService begin:\npublic channel key: %s", pubChannelInfo.PubKeyHex)
+func (d *DmsgService) createPubChannelService(pubChannelInfo *dmsgClientCommon.PubChannelInfo) error {
+	dmsgLog.Logger.Debugf("DmsgService->createPubChannelService begin:\npublic channel key: %s", pubChannelInfo.PubKeyHex)
 	find := false
 
 	hostId := d.BaseService.GetHost().ID().String()
 	servicePeerList, _ := d.BaseService.GetAvailableServicePeerList(hostId)
 	srcPubkey := d.GetCurSrcUserPubKeyHex()
 	for _, servicePeerID := range servicePeerList {
-		dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: servicePeerID: %s", servicePeerID)
+		dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: servicePeerID: %s", servicePeerID)
 		_, createPubChannelDoneChan, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
 		if err != nil {
 			continue
@@ -609,18 +609,18 @@ func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientC
 
 		select {
 		case createPubChannelResponseProtoData := <-createPubChannelDoneChan:
-			dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: createPubChannelResponseProtoData: %+v",
+			dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: createPubChannelResponseProtoData: %+v",
 				createPubChannelResponseProtoData)
 			response, ok := createPubChannelResponseProtoData.(*pb.CreatePubChannelRes)
 			if !ok || response == nil {
-				dmsgLog.Logger.Errorf("DmsgService->requestCreatePubChannelService: createPubChannelResponseProtoData is not CreatePubChannelRes")
+				dmsgLog.Logger.Errorf("DmsgService->createPubChannelService: createPubChannelResponseProtoData is not CreatePubChannelRes")
 				continue
 			}
 			if response.RetCode.Code < 0 {
-				dmsgLog.Logger.Errorf("DmsgService->requestCreatePubChannelService: createPubChannel fail")
+				dmsgLog.Logger.Errorf("DmsgService->createPubChannelService: createPubChannel fail")
 				continue
 			} else {
-				dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: createPubChannel success")
+				dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: createPubChannel success")
 				find = true
 				return nil
 			}
@@ -628,14 +628,14 @@ func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientC
 		case <-time.After(time.Second * 3):
 			continue
 		case <-d.BaseService.GetCtx().Done():
-			return fmt.Errorf("DmsgService->requestCreatePubChannelService: BaseService.GetCtx().Done()")
+			return fmt.Errorf("DmsgService->createPubChannelService: BaseService.GetCtx().Done()")
 		}
 	}
 	if !find {
-		dmsgLog.Logger.Error("DmsgService->requestCreatePubChannelService: no available service peer")
-		return fmt.Errorf("DmsgService->requestCreatePubChannelService: no available service peer")
+		dmsgLog.Logger.Error("DmsgService->createPubChannelService: no available service peer")
+		return fmt.Errorf("DmsgService->createPubChannelService: no available service peer")
 	}
-	dmsgLog.Logger.Debug("DmsgService->requestCreatePubChannelService end")
+	dmsgLog.Logger.Debug("DmsgService->createPubChannelService end")
 	return nil
 }
 
