@@ -144,7 +144,6 @@ type PubChannelInfo struct {
 	UserPubsub
 	PubKeyHex            string
 	LastRequestTimestamp int64
-	CreatePubChannelChan chan bool
 }
 
 type SrcUserKey struct {

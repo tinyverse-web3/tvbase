@@ -540,7 +540,6 @@ func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 
 	pubChannelInfo := &dmsgClientCommon.PubChannelInfo{}
 	pubChannelInfo.PubKeyHex = pubkey
-	pubChannelInfo.CreatePubChannelChan = make(chan bool)
 
 	d.pubChannelInfoList[pubkey] = pubChannelInfo
 
@@ -584,8 +583,6 @@ func (d *DmsgService) UnsubscribePubChannel(userPubKey string) error {
 		dmsgLog.Logger.Warnf("DmsgService->UnsubscribePubChannel: userTopic.Close error: %v", err)
 	}
 
-	close(pubChannelInfo.CreatePubChannelChan)
-
 	if pubChannelInfo.CancelCtx != nil {
 		pubChannelInfo.CancelCtx()
 	}
@@ -605,19 +602,29 @@ func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientC
 	srcPubkey := d.GetCurSrcUserPubKeyHex()
 	for _, servicePeerID := range servicePeerList {
 		dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: servicePeerID: %s", servicePeerID)
-		_, _, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
+		_, createPubChannelDoneChan, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
 		if err != nil {
 			continue
 		}
-		find = true
+
 		select {
-		case result := <-pubChannelInfo.CreatePubChannelChan:
-			if result {
-				dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: create public channel success")
-				return nil
-			} else {
+		case createPubChannelResponseProtoData := <-createPubChannelDoneChan:
+			dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: createPubChannelResponseProtoData: %+v",
+				createPubChannelResponseProtoData)
+			response, ok := createPubChannelResponseProtoData.(*pb.CreatePubChannelRes)
+			if !ok || response == nil {
+				dmsgLog.Logger.Errorf("DmsgService->requestCreatePubChannelService: createPubChannelResponseProtoData is not CreatePubChannelRes")
 				continue
 			}
+			if response.RetCode.Code < 0 {
+				dmsgLog.Logger.Errorf("DmsgService->requestCreatePubChannelService: createPubChannel fail")
+				continue
+			} else {
+				dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: createPubChannel success")
+				find = true
+				return nil
+			}
+
 		case <-time.After(time.Second * 3):
 			continue
 		case <-d.BaseService.GetCtx().Done():
@@ -844,33 +851,7 @@ func (d *DmsgService) OnCreatePubChannelResponse(
 	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelResponse begin:\nrequestProtoData: %v\nresponseProtoData: %v",
 		requestProtoData, responseProtoData)
 
-	request, ok := requestProtoData.(*pb.CreatePubChannelReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreatePubChannelResponse: fail to convert request to *pb.CreateMailboxReq")
-		return nil, fmt.Errorf("DmsgService->OnCreatePubChannelResponse: fail to convert request to *pb.CreateMailboxReq")
-	}
-	response, ok := responseProtoData.(*pb.CreatePubChannelRes)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreatePubChannelResponse: fail to convert response to *pb.CreateMailboxRes")
-		return nil, fmt.Errorf("DmsgService->OnCreatePubChannelResponse: fail to convert response to *pb.CreateMailboxRes")
-	}
-
-	pubChannelInfo := d.pubChannelInfoList[request.ChannelKey]
-	if pubChannelInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreatePubChannelResponse: pubkey is not exist")
-		return nil, fmt.Errorf("DmsgService->OnCreatePubChannelResponse: pubkey is not exist")
-	}
-
-	switch response.RetCode.Code {
-	case 0: // new
-		fallthrough
-	case 1: // exist
-		dmsgLog.Logger.Debug("DmsgService->OnCreatePubChannelResponse: create pub channel...")
-		pubChannelInfo.CreatePubChannelChan <- true
-	default: // < 0
-		dmsgLog.Logger.Warnf("DmsgService->OnCreatePubChannelResponse: RetCode(%v) fail", response.RetCode)
-		pubChannelInfo.CreatePubChannelChan <- false
-	}
+	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelResponse end")
 	return nil, nil
 }
 
