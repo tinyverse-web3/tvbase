@@ -113,30 +113,30 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 func (p *StreamProtocol) Request(
 	peerID peer.ID,
 	userPubkey string,
-	dataList ...any) (protoreflect.ProtoMessage, error) {
+	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	dmsgLog.Logger.Debugf("StreamProtocol->Request begin:\npeerID: %s", peerID)
 	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(userPubkey, dataList...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	protoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
 		delete(p.RequestInfoList, requestInfoId)
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	adapter, ok := p.Adapter.(StreamProtocolAdapter)
 	if !ok {
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
-		return nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
+		return nil, nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 	}
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
 		delete(p.RequestInfoList, requestInfoId)
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 	writeLen, err := stream.Write(protoData)
 	if err != nil {
@@ -145,7 +145,7 @@ func (p *StreamProtocol) Request(
 		if err := stream.Reset(); err != nil {
 			dmsgLog.Logger.Errorf("StreamProtocol->Request: Reset error: %v", err)
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->Request: write stream len: %d", writeLen)
@@ -156,7 +156,7 @@ func (p *StreamProtocol) Request(
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->Request end")
-	return requestProtoMsg, nil
+	return requestProtoMsg, p.RequestInfoList[requestInfoId].DoneChan, nil
 }
 
 func NewStreamProtocol(

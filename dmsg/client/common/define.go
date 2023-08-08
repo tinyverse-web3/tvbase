@@ -17,6 +17,7 @@ import (
 type RequestInfo struct {
 	ProtoMessage    protoreflect.ProtoMessage
 	CreateTimestamp int64
+	DoneChan        chan any
 }
 type ProtocolAdapter interface {
 	GetRequestPID() pb.PID

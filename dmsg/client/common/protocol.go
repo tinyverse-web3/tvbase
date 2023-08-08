@@ -143,6 +143,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 		if callbackData != nil {
 			dmsgLog.Logger.Debugf("Protocol->HandleResponseData: callbackData %v", callbackData)
 		}
+		p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg
 		delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
 		dmsgLog.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
@@ -188,6 +189,7 @@ func (p *Protocol) GenRequestInfo(
 	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
 		ProtoMessage:    requestProtoMsg,
 		CreateTimestamp: requestBasicData.TS,
+		DoneChan:        make(chan any),
 	}
 
 	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo end")

@@ -28,3 +28,12 @@ var MsgDirection = MsgDirectionStruct{
 	From: "from",
 	To:   "to",
 }
+
+type Msg struct {
+	ID         string
+	SrcPubkey  string
+	DestPubkey string
+	Content    []byte
+	TimeStamp  int64
+	Direction  string
+}
