@@ -699,6 +699,7 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 		fallthrough
 	case 1: // exist mailbox
 		dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
+		userInfo.MailboxCreateChan <- true
 		_, err = d.readMailboxMsgPrtocol.Request(peerId, request.BasicData.Pubkey)
 		if err != nil {
 			return nil, err
@@ -711,7 +712,6 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 				return nil, err
 			}
 		}
-		userInfo.MailboxCreateChan <- true
 	default: // < 0 service no finish create mailbox
 		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: RetCode(%v) fail", response.RetCode)
 		userInfo.MailboxCreateChan <- false
@@ -857,7 +857,9 @@ func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMe
 	return nil, nil
 }
 
-func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnSeekMailboxResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnSeekMailboxResponse begin")
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
@@ -869,10 +871,6 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", responseProtoData)
 		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", responseProtoData)
 	}
-	if response.RetCode.Code != 0 {
-		dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: RetCode(%v) fail", response.RetCode)
-		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: RetCode(%v) fail", response.RetCode)
-	}
 
 	userPubKey := request.BasicData.Pubkey
 	userInfo := d.getSrcUserInfo(userPubKey)
@@ -880,10 +878,21 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", userPubKey)
 		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", userPubKey)
 	}
+
 	peerId, err := peer.Decode(response.BasicData.PeerID)
 	if err != nil {
+		dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: fail to decode peer id: %v", err)
 		return nil, err
 	}
+
+	if response.RetCode.Code < 0 {
+		dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: fail RetCode: %v", response.RetCode)
+		userInfo.MailboxCreateChan <- false
+		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: fail RetCode: %v", response.RetCode)
+	} else {
+		userInfo.MailboxCreateChan <- true
+	}
+
 	dmsgLog.Logger.Warnf("DmsgService->OnSeekMailboxResponse: mailbox has existed, read message from mailbox...")
 	_, err = d.readMailboxMsgPrtocol.Request(peerId, userPubKey)
 	if err != nil {
@@ -891,7 +900,6 @@ func (d *DmsgService) OnSeekMailboxResponse(requestProtoData protoreflect.ProtoM
 	}
 	if userInfo.MailboxPeerID == "" {
 		userInfo.MailboxPeerID = response.BasicData.PeerID
-		userInfo.MailboxCreateChan <- true
 		return nil, nil
 	} else if response.BasicData.PeerID != userInfo.MailboxPeerID {
 		_, err = d.releaseMailboxPrtocol.Request(peerId, userPubKey)
