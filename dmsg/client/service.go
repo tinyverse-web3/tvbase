@@ -1080,10 +1080,17 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 	if destUserInfo == nil {
 		srcUserInfo := d.getSrcUserInfo(pubkey)
 		if srcUserInfo == nil {
-			dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
-			return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
+			pubChannelInfo := d.pubChannelInfoList[pubkey]
+			if pubChannelInfo == nil {
+				dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest/pubchannel user Info for key %s", pubkey)
+				return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest/pubchannel user Info for key %s", pubkey)
+			}
+			userPubsub = &pubChannelInfo.UserPubsub
+			// dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
+			// return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
+		} else {
+			userPubsub = &srcUserInfo.UserPubsub
 		}
-		userPubsub = &srcUserInfo.UserPubsub
 	} else {
 		userPubsub = &destUserInfo.UserPubsub
 	}
