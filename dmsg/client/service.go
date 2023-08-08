@@ -498,18 +498,6 @@ func (d *DmsgService) isExistPubChannel(userPubkey string) bool {
 	return d.getPubChannelInfo(userPubkey) != nil
 }
 
-func (d *DmsgService) startReadPubChannelMsg(pubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StartPubChannelPubsubMsg begin: destUserPubkey: %v", pubkey)
-	pubChannelInfo := d.getPubChannelInfo(pubkey)
-	if pubChannelInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->StartPubChannelPubsubMsg: user public key(%s) pubsub already exist", pubkey)
-		return fmt.Errorf("DmsgService->StartPubChannelPubsubMsg: user public key(%s) pubsub already exist", pubkey)
-	}
-	go d.readUserPubsub(&pubChannelInfo.UserPubsub)
-	dmsgLog.Logger.Debug("DmsgService->StartPubChannelPubsubMsg end")
-	return nil
-}
-
 func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 	dmsgLog.Logger.Debugf("DmsgService->SubscribePubChannel begin:\npubkey: %s", pubkey)
 
@@ -523,29 +511,31 @@ func (d *DmsgService) SubscribePubChannel(pubkey string) error {
 	pubChannelInfo := &dmsgClientCommon.PubChannelInfo{}
 	pubChannelInfo.PubKeyHex = pubkey
 	pubChannelInfo.CreatePubChannelChan = make(chan bool)
+
+	d.pubChannelInfoList[pubkey] = pubChannelInfo
+
+	err := d.requestCreatePubChannelService(pubChannelInfo)
+	if err != nil {
+		delete(d.pubChannelInfoList, pubkey)
+		return err
+	}
+
 	topic, err := d.Pubsub.Join(pubkey)
 	if err != nil {
+		delete(d.pubChannelInfoList, pubkey)
 		dmsgLog.Logger.Errorf("DmsgService->SubscribePubChannel: Pubsub.Join error: %v", err)
 		return err
 	}
 	subscription, err := topic.Subscribe()
 	if err != nil {
+		delete(d.pubChannelInfoList, pubkey)
+		topic.Close()
 		dmsgLog.Logger.Errorf("DmsgService->SubscribePubChannel: Pubsub.Subscribe error: %v", err)
 		return err
 	}
 	pubChannelInfo.Topic = topic
 	pubChannelInfo.Subscription = subscription
-
-	err = d.requestCreatePubChannelService(pubChannelInfo)
-	if err != nil {
-		return err
-	}
-
-	d.pubChannelInfoList[pubkey] = pubChannelInfo
-	err = d.startReadPubChannelMsg(pubkey)
-	if err != nil {
-		return err
-	}
+	go d.readUserPubsub(&pubChannelInfo.UserPubsub)
 
 	dmsgLog.Logger.Debug("DmsgService->SubscribePubChannel end")
 	return nil
@@ -577,13 +567,14 @@ func (d *DmsgService) UnsubscribePubChannel(userPubKey string) error {
 }
 
 func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientCommon.PubChannelInfo) error {
-	dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService begin:\npubChannelInfo: %+v", pubChannelInfo)
+	dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService begin:\npublic channel key: %s", pubChannelInfo.PubKeyHex)
 	find := false
 
 	hostId := d.BaseService.GetHost().ID().String()
 	servicePeerList, _ := d.BaseService.GetAvailableServicePeerList(hostId)
 	srcPubkey := d.GetCurSrcUserPubKeyHex()
 	for _, servicePeerID := range servicePeerList {
+		dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: servicePeerID: %s", servicePeerID)
 		_, _, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
 		if err != nil {
 			continue
@@ -592,6 +583,7 @@ func (d *DmsgService) requestCreatePubChannelService(pubChannelInfo *dmsgClientC
 		select {
 		case result := <-pubChannelInfo.CreatePubChannelChan:
 			if result {
+				dmsgLog.Logger.Debugf("DmsgService->requestCreatePubChannelService: create public channel success")
 				return nil
 			} else {
 				continue
@@ -835,7 +827,7 @@ func (d *DmsgService) OnCreatePubChannelResponse(
 		return nil, fmt.Errorf("DmsgService->OnCreatePubChannelResponse: fail to convert response to *pb.CreateMailboxRes")
 	}
 
-	pubChannelInfo := d.pubChannelInfoList[request.BasicData.Pubkey]
+	pubChannelInfo := d.pubChannelInfoList[request.ChannelKey]
 	if pubChannelInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->OnCreatePubChannelResponse: pubkey is not exist")
 		return nil, fmt.Errorf("DmsgService->OnCreatePubChannelResponse: pubkey is not exist")

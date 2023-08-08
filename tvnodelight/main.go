@@ -216,20 +216,20 @@ func main() {
 	}
 
 	// publish public user
-	// pubPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(pubPubKey)
-	// if err != nil {
-	// 	tvbase.SetTracerStatus(err)
-	// 	tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
-	// 	return
-	// }
-	// pubPubKeyStr := keyutil.TranslateKeyProtoBufToString(pubPubkeyBytes)
-	// err = dmsgService.SubscribePubChannel(pubPubKeyStr)
-	// // err = dmsgService.SubscribeDestUser(pubPubKeyStr, true)
-	// if err != nil {
-	// 	tvbase.SetTracerStatus(err)
-	// 	tvcLog.Errorf("SubscribeDestUser error: %v", err)
-	// 	return
-	// }
+	pubPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(pubPubKey)
+	if err != nil {
+		tvbase.SetTracerStatus(err)
+		tvcLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+		return
+	}
+	pubPubKeyStr := keyutil.TranslateKeyProtoBufToString(pubPubkeyBytes)
+	err = dmsgService.SubscribePubChannel(pubPubKeyStr)
+	// err = dmsgService.SubscribeDestUser(pubPubKeyStr, true)
+	if err != nil {
+		tvbase.SetTracerStatus(err)
+		tvcLog.Errorf("SubscribeDestUser error: %v", err)
+		return
+	}
 
 	// send msg to dest user with read from stdin
 	go func() {
@@ -247,8 +247,8 @@ func main() {
 				continue
 			}
 
-			pubkeyStr := destPubKeyStr
-			// pubkeyStr := pubPubKeyStr
+			// pubkeyStr := destPubKeyStr
+			pubkeyStr := pubPubKeyStr
 			sendMsgReq, err := dmsgService.SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				tvcLog.Errorf("send msg: error: %v", err)
