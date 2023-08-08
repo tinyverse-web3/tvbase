@@ -578,6 +578,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 						}
 					case <-done:
 						return
+					case <-m.ctx.Done():
+						return
 					}
 				}
 			}()

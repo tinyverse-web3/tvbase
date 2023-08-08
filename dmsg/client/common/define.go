@@ -131,10 +131,9 @@ type UserPubsub struct {
 }
 type SrcUserInfo struct {
 	UserPubsub
-	MailboxPeerID     string
-	MailboxCreateChan chan bool
-	UserKey           *SrcUserKey
-	GetSigCallback    GetSigCallback
+	MailboxPeerID  string
+	UserKey        *SrcUserKey
+	GetSigCallback GetSigCallback
 }
 
 type DestUserInfo struct {

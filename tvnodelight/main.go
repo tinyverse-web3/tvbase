@@ -103,8 +103,8 @@ func initMsgClient(
 	}
 	data := <-done
 	if data != nil {
-		err = data.(error)
-		if err != nil {
+		err, ok := data.(error)
+		if ok || err != nil {
 			tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
 			return nil, nil, err
 		}

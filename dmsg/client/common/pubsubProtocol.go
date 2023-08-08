@@ -51,13 +51,13 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 func (p *PubsubProtocol) Request(
 	srcUserPubKey string,
 	destUserPubkey string,
-	dataList ...any) (protoreflect.ProtoMessage, error) {
+	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsrcUserPubKey:%s", srcUserPubKey)
 
 	dataList = append([]any{destUserPubkey}, dataList...)
 	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
@@ -65,11 +65,11 @@ func (p *PubsubProtocol) Request(
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)
-		return nil, err
+		return nil, nil, err
 	}
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request end")
-	return requestProtoMsg, nil
+	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
 }
 
 func NewPubsubProtocol(
