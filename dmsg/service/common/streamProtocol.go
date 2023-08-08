@@ -23,10 +23,7 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 	// requestProtocolId := p.Adapter.GetRequestPID()
 	responseProtocolId := p.Adapter.GetResponsePID()
 
-	dmsgLog.Logger.Debugf(`StreamProtocol->RequestHandler begin:
-	/nLocalPeer: %s/nRemotePeer: %s/nlocalMultiAddr: %v/nremoteMultiAddr: %v
-	/nsreamRequestProtocolId: %s/nsreamResponseProtocolId: %s,
-	/nresponseProtocolId: %v`,
+	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler begin:\nLocalPeer: %s\nRemotePeer: %s\nlocalMultiAddr: %v\nremoteMultiAddr: %v\nsreamRequestProtocolId: %s\nsreamResponseProtocolId: %s,\nresponseProtocolId: %v",
 		localPeer, remotePeer, localMultiAddr, remoteMultiAddr,
 		sreamRequestProtocolId, sreamResponseProtocolId,
 		/*requestProtocolId,*/ responseProtocolId)
@@ -57,17 +54,17 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream netwo
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData begin")
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: recovered from:", r)
+			dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: recovered from: r: %v", r)
 		}
 	}()
 
 	request := p.Adapter.GetEmptyRequest()
 	err := proto.Unmarshal(requestProtoData, request)
 	if err != nil {
-		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error %v", err)
+		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error: %v", err)
 		return err
 	}
-	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:/np.Request: %v", request)
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:\np.Request: %v", request)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	var retCode *pb.RetCode = nil
@@ -97,7 +94,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream netwo
 	if err != nil {
 		return err
 	}
-	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData: response:/n%v", response)
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData: response:\n%v", response)
 
 	// sign the data
 	requestProtoData, err = proto.Marshal(response)
