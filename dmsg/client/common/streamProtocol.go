@@ -114,7 +114,7 @@ func (p *StreamProtocol) Request(
 	peerID peer.ID,
 	userPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	dmsgLog.Logger.Debugf("StreamProtocol->Request begin:\npeerID:%s", peerID)
+	dmsgLog.Logger.Debugf("StreamProtocol->Request begin:\npeerID: %s", peerID)
 	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(userPubkey, dataList...)
 	if err != nil {
 		return nil, err

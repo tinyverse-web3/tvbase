@@ -699,7 +699,7 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 		fallthrough
 	case 1: // exist mailbox
 		dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		_, err = d.readMailboxMsgPrtocol.Request(peerId, response.BasicData.Pubkey)
+		_, err = d.readMailboxMsgPrtocol.Request(peerId, request.BasicData.Pubkey)
 		if err != nil {
 			return nil, err
 		}
