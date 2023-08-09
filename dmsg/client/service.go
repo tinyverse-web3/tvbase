@@ -152,8 +152,7 @@ func (d *DmsgService) InitUser(
 ) error {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
-	var err error
-	err = d.SubscribeSrcUser(userPubkey, getSigCallback)
+	err := d.SubscribeSrcUser(userPubkey, getSigCallback)
 	if err != nil {
 		return err
 	}
@@ -368,8 +367,8 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg() error {
 func (d *DmsgService) SubscribeDestUser(userPubkey string) error {
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\nuserPubkey: %s", userPubkey)
 	if d.IsExistDestUser(userPubkey) {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user key(%s) is already exist in destUserInfoList")
-		return fmt.Errorf("DmsgService->SubscribeSrcUser: user key(%s) is already exist in destUserInfoList")
+		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
+		return fmt.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
 	}
 
 	userTopic, err := d.Pubsub.Join(userPubkey)
