@@ -21,15 +21,17 @@ func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	if len(p.Addrs) == 0 {
 		return
 	}
-	err := m.host.Connect(m.ctx, p)
-	if err != nil {
-		tvLog.Logger.Errorf("fail connect to mdns peer: %v, err:%v", p, err)
-		return
-	} else {
-		tvLog.Logger.Infof("success connect to mdns peer: %v", p)
-	}
+	go func(addrInfo libp2pPeer.AddrInfo) {
+		err := m.host.Connect(m.ctx, addrInfo)
+		if err != nil {
+			tvLog.Logger.Errorf("fail connect to mdns addrInfo: %+v, err:%+v", addrInfo, err)
+			return
+		} else {
+			tvLog.Logger.Infof("success connect to mdns addrInfo: %+v", addrInfo)
+		}
+		m.registPeerInfo(p.ID)
+	}(p)
 
-	go m.registPeerInfo(p.ID)
 }
 
 func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {

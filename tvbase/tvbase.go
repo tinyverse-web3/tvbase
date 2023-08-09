@@ -23,7 +23,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/pnet"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
-	"github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
@@ -520,37 +519,45 @@ func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 
 func (m *TvBase) bootstrap() error {
 	// Bootstrap the persistence DHT. In the default configuration, this spawns a Background, thread that will refresh the peer table every five minutes.
-	tvLog.Logger.Info("tvBase->bootstrap begin: Bootstrapping the persistence DHT")
+	tvLog.Logger.Debug("tvBase->bootstrap begin")
 	if err := m.dht.Bootstrap(m.ctx); err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
 	for _, peerInfo := range m.nodeCfg.Bootstrap.BootstrapPeers {
-		maddr, err := ma.NewMultiaddr(peerInfo)
+		tvLog.Logger.Debugf("tvBase->bootstrap: peerInfo: %+v", peerInfo)
+		mulitAddr, err := ma.NewMultiaddr(peerInfo)
 		if err != nil {
-			tvLog.Logger.Errorf("tvBase->bootstrap: fail to parse bootstrap peer:%v, error:%v", peerInfo, err)
+			tvLog.Logger.Errorf("tvBase->bootstrap: ma.NewMultiaddr error: %+v", err)
 			return err
 		}
-		addrInfo, _ := peer.AddrInfoFromP2pAddr(maddr)
-		if addrInfo.ID == m.host.ID() {
+		tvLog.Logger.Debugf("tvBase->bootstrap: mulitAddr: %+v", mulitAddr)
+		peerAddrInfo, err := peer.AddrInfoFromP2pAddr(mulitAddr)
+		if err != nil {
+			tvLog.Logger.Errorf("tvBase->bootstrap: peer.AddrInfoFromP2pAddr error: %+v", err)
+			return err
+		}
+		tvLog.Logger.Debugf("tvBase->bootstrap: peerAddrInfo: %+v", peerAddrInfo)
+		if peerAddrInfo.ID == m.host.ID() {
 			continue
 		}
-		m.host.Network().(*swarm.Swarm).Backoff().Clear(addrInfo.ID) //Prevent repeated connection failures
+
+		// m.host.Network().(*swarm.Swarm).Backoff().Clear(peerAddrInfo.ID) //Prevent repeated connection failures
 		wg.Add(1)
-		go func() {
+		go func(addrInfo *peer.AddrInfo) {
 			defer wg.Done()
 			err := m.host.Connect(m.ctx, *addrInfo)
 			if err != nil {
-				tvLog.Logger.Warnf("tvBase->bootstrap: fail connect bootstrap addrInfo:%v, error:%v", addrInfo, err)
+				tvLog.Logger.Warnf("tvBase->bootstrap: host.Connect error: %+v", err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
-				tvLog.Logger.Infof("tvBase->bootstrap: succ connect bootstrap node:%v", addrInfo)
+				tvLog.Logger.Debugf("tvBase->bootstrap: succ connect addrInfo: %+v", addrInfo)
 			}
-		}()
+		}(peerAddrInfo)
 	}
 	wg.Wait()
-	tvLog.Logger.Info("tvBase->bootstrap end")
+	tvLog.Logger.Debug("tvBase->bootstrap end")
 	return nil
 }
 
