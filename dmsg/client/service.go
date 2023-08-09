@@ -272,8 +272,8 @@ func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
 	return d.getDestUserInfo(userPubkey) != nil
 }
 
-func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
-	return d.CurSrcUserInfo.UserKey.PubkeyHex
+func (d *DmsgService) GetUserPubkeyHex() (string, error) {
+	return d.CurSrcUserInfo.UserKey.PubkeyHex, nil
 }
 
 func (d *DmsgService) SubscribeSrcUser(userPubkeyHex string, getSigCallback dmsgClientCommon.GetSigCallback, isReadPubsubMsg bool) (*dmsgClientCommon.SrcUserInfo, error) {
@@ -599,7 +599,11 @@ func (d *DmsgService) createPubChannelService(pubChannelInfo *dmsgClientCommon.P
 
 	hostId := d.BaseService.GetHost().ID().String()
 	servicePeerList, _ := d.BaseService.GetAvailableServicePeerList(hostId)
-	srcPubkey := d.GetCurSrcUserPubKeyHex()
+	srcPubkey, err := d.GetUserPubkeyHex()
+	if err != nil {
+		dmsgLog.Logger.Errorf("DmsgService->createPubChannelService: GetUserPubkeyHex error: %v", err)
+		return err
+	}
 	for _, servicePeerID := range servicePeerList {
 		dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: servicePeerID: %s", servicePeerID)
 		_, createPubChannelDoneChan, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
@@ -639,15 +643,15 @@ func (d *DmsgService) createPubChannelService(pubChannelInfo *dmsgClientCommon.P
 	return nil
 }
 
-func (d *DmsgService) GetCurSrcUserSig(protoData []byte) ([]byte, error) {
+func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
 	srcUserInfo := d.getSrcUserInfo(d.CurSrcUserInfo.UserKey.PubkeyHex)
 	if srcUserInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
-		return nil, fmt.Errorf("DmsgService->GetCurSrcUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+		dmsgLog.Logger.Errorf("DmsgService->GetUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
+		return nil, fmt.Errorf("DmsgService->GetUserSig: user public key(%s) pubsub is not exist", d.CurSrcUserInfo.UserKey.PubkeyHex)
 	}
 	sign, err := srcUserInfo.GetSigCallback(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->GetCurSrcUserSig: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->GetUserSig: %v", err)
 		return nil, err
 	}
 	return sign, nil

@@ -15,8 +15,8 @@ import (
 )
 
 type ProtocolService interface {
-	GetCurSrcUserPubKeyHex() string
-	GetCurSrcUserSig(protoData []byte) ([]byte, error)
+	GetUserPubkeyHex() (string, error)
+	GetUserSig(protoData []byte) ([]byte, error)
 	RegPubsubProtocolResCallback(protocolID pb.PID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.PID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte) error
@@ -49,11 +49,11 @@ type StreamProtocolAdapter interface {
 	CallResponseCallback(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error)
 }
 type StreamProtocol struct {
-	Ctx             context.Context
-	Host            host.Host
-	ProtocolService ProtocolService
-	Callback        StreamProtocolCallback
-	Adapter         StreamProtocolAdapter
+	Ctx      context.Context
+	Host     host.Host
+	Service  ProtocolService
+	Callback StreamProtocolCallback
+	Adapter  StreamProtocolAdapter
 }
 
 // pubsubProtocol

@@ -129,11 +129,11 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	return nil
 }
 
-func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
-	return d.curSrcUserInfo.UserKey.PubKeyHex
+func (d *DmsgService) GetUserPubkeyHex() (string, error) {
+	return d.curSrcUserInfo.UserKey.PubKeyHex, nil
 }
 
-func (d *DmsgService) GetCurSrcUserSig(protoData []byte) ([]byte, error) {
+func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
 	sign, err := tvCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("GetCurUserSign: %v", err)

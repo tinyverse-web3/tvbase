@@ -90,7 +90,13 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 	}
 
 	// generate response message
-	responseBasicData := protocol.NewBasicData(p.Host, p.ProtocolService.GetCurSrcUserPubKeyHex(), p.Adapter.GetResponsePID())
+	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
+	if err != nil {
+		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
+		return err
+	}
+
+	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCode)
 	if err != nil {
@@ -104,7 +110,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: proto.Marshal: error: %v", err)
 		return err
 	}
-	sig, err := p.ProtocolService.GetCurSrcUserSig(requestProtoData)
+	sig, err := p.Service.GetUserSig(requestProtoData)
 	if err != nil {
 		return err
 	}
@@ -119,7 +125,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 		return err
 	}
 
-	dmsgLog.Logger.Debugf("StreamProtocol->sendResponseProtocol end")
+	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData end")
 	return nil
 }
 
@@ -127,7 +133,7 @@ func NewStreamProtocol(ctx context.Context, host host.Host, protocolService Prot
 	protocol := &StreamProtocol{}
 	protocol.Ctx = ctx
 	protocol.Host = host
-	protocol.ProtocolService = protocolService
+	protocol.Service = protocolService
 	protocol.Callback = protocolCallback
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)

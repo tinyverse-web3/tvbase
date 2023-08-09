@@ -41,7 +41,13 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 	}
 
 	// generate response message
-	responseBasicData := protocol.NewBasicData(p.Host, p.Service.GetCurSrcUserPubKeyHex(), p.Adapter.GetResponsePID())
+	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
+	if err != nil {
+		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
+		return err
+	}
+
+	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
 	if err != nil {
@@ -55,9 +61,9 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: proto.marshal response error: %v", err)
 		return err
 	}
-	sig, err := p.Service.GetCurSrcUserSig(protoData)
+	sig, err := p.Service.GetUserSig(protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: GetCurSrcUserSig error: %v", err)
+		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: GetUserSig error: %v", err)
 		return err
 	}
 	err = p.Adapter.SetResponseSig(response, sig)

@@ -41,12 +41,15 @@ func (p *Protocol) HandleRequestData(
 		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: CallRequestCallback error: %v", err)
 		return requestProtoMsg, nil, err
 	}
-	if callbackData != nil {
-		dmsgLog.Logger.Debugf("Protocol->HandleRequestData: callbackData: %v", callbackData)
-	}
 
 	// generate response message
-	responseBasicData := protocol.NewBasicData(p.Host, p.Service.GetCurSrcUserPubKeyHex(), p.Adapter.GetResponsePID())
+	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
+	if err != nil {
+		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
+		return requestProtoMsg, nil, err
+	}
+
+	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	responseProtoMsg, err := p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
@@ -60,9 +63,9 @@ func (p *Protocol) HandleRequestData(
 		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
 		return requestProtoMsg, nil, err
 	}
-	sig, err := p.Service.GetCurSrcUserSig(responseProtoData)
+	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetCurSrcUserSig error: %v", err)
+		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserSig error: %v", err)
 		return requestProtoMsg, nil, err
 	}
 	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
@@ -81,9 +84,14 @@ func (p *Protocol) GetErrResponse(
 	err error) (protoreflect.ProtoMessage, error) {
 	responseErr := err
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
+	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
+	if err != nil {
+		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetUserPubkeyHex error: %v", err)
+		return requestProtoMsg, err
+	}
 	responseBasicData := protocol.NewBasicData(
 		p.Host,
-		p.Service.GetCurSrcUserPubKeyHex(),
+		userPubkeyHex,
 		p.Adapter.GetResponsePID(),
 	)
 	responseBasicData.ID = requestBasicData.ID
@@ -97,9 +105,9 @@ func (p *Protocol) GetErrResponse(
 		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: marshal response error: %v", err)
 		return responseProtoMsg, err
 	}
-	sig, err := p.Service.GetCurSrcUserSig(responseProtoData)
+	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetCurSrcUserSig error: %v", err)
+		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetUserSig error: %v", err)
 		return responseProtoMsg, err
 	}
 	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
@@ -166,9 +174,9 @@ func (p *Protocol) GenRequestInfo(
 		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
 		return "", nil, nil, err
 	}
-	sig, err := p.Service.GetCurSrcUserSig(requestProtoData)
+	sig, err := p.Service.GetUserSig(requestProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: GetCurSrcUserSig error: %v", err)
+		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: GetUserSig error: %v", err)
 		return "", nil, nil, err
 	}
 	err = p.Adapter.SetRequestSig(requestProtoMsg, sig)
