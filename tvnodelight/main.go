@@ -208,7 +208,7 @@ func main() {
 		return
 	}
 	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgService.SubscribeDestUser(destPubKeyStr, false)
+	err = dmsgService.SubscribeDestUser(destPubKeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		tvcLog.Errorf("SubscribeDestUser error: %v", err)

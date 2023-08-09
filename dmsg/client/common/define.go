@@ -123,11 +123,10 @@ type ProtocolService interface {
 }
 
 type UserPubsub struct {
-	Topic           *pubsub.Topic
-	Subscription    *pubsub.Subscription
-	Ctx             context.Context
-	CancelCtx       context.CancelFunc
-	IsReadPubsubMsg bool
+	Topic        *pubsub.Topic
+	Subscription *pubsub.Subscription
+	Ctx          context.Context
+	CancelCtx    context.CancelFunc
 }
 type SrcUserInfo struct {
 	UserPubsub
