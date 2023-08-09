@@ -226,7 +226,7 @@ func main() {
 	err = dmsgService.SubscribePubChannel(pubPubKeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
-		tvcLog.Errorf("SubscribeDestUser error: %v", err)
+		tvcLog.Errorf("SubscribePubChannel error: %v", err)
 		return
 	}
 
