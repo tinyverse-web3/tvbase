@@ -98,7 +98,9 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 		return
 	}
 	err = stream.Close()
-	dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler: error: %v", err)
+	if err != nil {
+		dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler: stream.Close():error: %v", err)
+	}
 
 	err = p.HandleResponseData(protoData)
 	if err != nil {

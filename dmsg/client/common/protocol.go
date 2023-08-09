@@ -121,7 +121,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 	responseProtoMsg := p.Adapter.GetEmptyResponse()
 	err := proto.Unmarshal(responseProtoData, responseProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error %v", err)
+		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error: %v", err)
 		return err
 	}
 

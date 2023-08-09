@@ -6,6 +6,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -37,20 +38,21 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 		}
 		return
 	}
-	defer func() {
-		err = stream.Close()
-		if err != nil {
-			dmsgLog.Logger.Warnf("StreamProtocol->RequestHandler: stream.Close(): error %v", err)
-		}
-	}()
-	err = p.HandleRequestData(protoData, stream)
+	remotePeerID := stream.Conn().RemotePeer()
+
+	err = stream.Close()
+	if err != nil {
+		dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler: stream.Close(): error: %v", err)
+	}
+
+	err = p.HandleRequestData(protoData, remotePeerID)
 	if err != nil {
 		return
 	}
 	dmsgLog.Logger.Debugf("StreamProtocol->RequestHandler end")
 }
 
-func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream network.Stream) error {
+func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID peer.ID) error {
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData begin")
 	defer func() {
 		if r := recover(); r != nil {
@@ -112,7 +114,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, stream netwo
 	}
 
 	// send response message
-	err = protocol.SendProtocolMsg(p.Ctx, p.Host, stream.Conn().RemotePeer(), p.Adapter.GetStreamResponsePID(), response)
+	err = protocol.SendProtocolMsg(p.Ctx, p.Host, remotePeerID, p.Adapter.GetStreamResponsePID(), response)
 	if err != nil {
 		return err
 	}
