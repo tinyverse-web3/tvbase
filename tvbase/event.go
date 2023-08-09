@@ -23,12 +23,11 @@ func (m *TvBase) initEvent() error {
 				var evt libp2pEvent.EvtPeerConnectednessChanged
 				evt, ok := v.(libp2pEvent.EvtPeerConnectednessChanged)
 				if !ok {
-					tvLog.Logger.Errorf("unexpected event:%v", v)
+					tvLog.Logger.Errorf("tvBase->initEvent:\nunexpected event: %+v", v)
 					continue
 				}
-				tvLog.Logger.Debugf("tvBase->initEvent: peer connectedness changed-> connectedness:%v, peer:%v",
-					evt.Connectedness, evt.Peer)
-				tvLog.Logger.Debugf("peer addr: %v", m.host.Peerstore().PeerInfo(evt.Peer))
+				tvLog.Logger.Debugf("tvBase->initEvent:\nevent.connectedness: %+v\nevent.peer: %+v",
+					evt.Connectedness, m.host.Peerstore().PeerInfo(evt.Peer))
 				switch evt.Connectedness {
 				case network.NotConnected:
 					// tvLog.Logger.Debug("NotConnected")

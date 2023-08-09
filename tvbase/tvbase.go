@@ -525,20 +525,20 @@ func (m *TvBase) bootstrap() error {
 	}
 
 	var wg sync.WaitGroup
-	for _, peerInfo := range m.nodeCfg.Bootstrap.BootstrapPeers {
-		tvLog.Logger.Debugf("tvBase->bootstrap: peerInfo: %+v", peerInfo)
-		mulitAddr, err := ma.NewMultiaddr(peerInfo)
+	for _, bootstrapPeer := range m.nodeCfg.Bootstrap.BootstrapPeers {
+		tvLog.Logger.Debugf("tvBase->bootstrap:\nbootstrapPeer: %+v", bootstrapPeer)
+		mulitAddr, err := ma.NewMultiaddr(bootstrapPeer)
 		if err != nil {
 			tvLog.Logger.Errorf("tvBase->bootstrap: ma.NewMultiaddr error: %+v", err)
 			return err
 		}
-		tvLog.Logger.Debugf("tvBase->bootstrap: mulitAddr: %+v", mulitAddr)
+		tvLog.Logger.Debugf("tvBase->bootstrap:\nmulitAddr: %+v", mulitAddr)
 		peerAddrInfo, err := peer.AddrInfoFromP2pAddr(mulitAddr)
 		if err != nil {
 			tvLog.Logger.Errorf("tvBase->bootstrap: peer.AddrInfoFromP2pAddr error: %+v", err)
 			return err
 		}
-		tvLog.Logger.Debugf("tvBase->bootstrap: peerAddrInfo: %+v", peerAddrInfo)
+		tvLog.Logger.Debugf("tvBase->bootstrap:\npeerAddrInfo: %+v", peerAddrInfo)
 		if peerAddrInfo.ID == m.host.ID() {
 			continue
 		}
@@ -552,7 +552,7 @@ func (m *TvBase) bootstrap() error {
 				tvLog.Logger.Warnf("tvBase->bootstrap: host.Connect error: %+v", err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
-				tvLog.Logger.Debugf("tvBase->bootstrap: succ connect addrInfo: %+v", addrInfo)
+				tvLog.Logger.Debugf("tvBase->bootstrap: succ connect \naddrInfo: %+v", addrInfo)
 			}
 		}(peerAddrInfo)
 	}

@@ -121,27 +121,24 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 	responseProtoMsg := p.Adapter.GetEmptyResponse()
 	err := proto.Unmarshal(responseProtoData, responseProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error: %v", err)
+		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error: %+v", err)
 		return err
 	}
 
-	dmsgLog.Logger.Debugf("Protocol->HandleResponseData: ResponseProtoMsg: %v", responseProtoMsg)
+	dmsgLog.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	valid := protocol.AuthProtocolMsg(responseProtoMsg, responseBasicData)
 	if !valid {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %v", responseProtoMsg)
-		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %v", responseProtoMsg)
+		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\n failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
+		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 	}
 
 	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
 	if ok {
-		callbackData, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
+		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {
-			dmsgLog.Logger.Warnf("Protocol->HandleResponseData: CallResponseCallback: error %v", err)
-		}
-		if callbackData != nil {
-			dmsgLog.Logger.Debugf("Protocol->HandleResponseData: callbackData %v", callbackData)
+			dmsgLog.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
 		p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg
 		delete(p.RequestInfoList, responseBasicData.ID)

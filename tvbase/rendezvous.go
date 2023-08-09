@@ -54,27 +54,27 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			if len(peerAddrInfo.Addrs) == 0 {
 				continue
 			}
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: peerAddrInfo.Addrs:%v", peerAddrInfo.Addrs)
+			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\npeerAddrInfo.Addrs: %+v", peerAddrInfo.Addrs)
 			wg.Add(1)
 			go func(addrInfo peer.AddrInfo) {
 				defer wg.Done()
 				err := m.host.Connect(m.ctx, addrInfo)
 				if err != nil {
-					tvLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers: Fail connect to the rendezvous addrInfo: %+v, error: %+v", addrInfo, err)
+					tvLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers:\nFail connect to the rendezvous addrInfo: %+v, error: %+v", addrInfo, err)
 					return
 				}
 				rendezvousPeerCount++
-				tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: It took %+v seconds succcess connect to the rendezvous peerID: %+v",
+				tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nIt took %+v seconds succcess connect to the rendezvous peerID: %+v",
 					time.Since(start).Seconds(), addrInfo.ID)
 				m.registPeerInfo(addrInfo.ID)
 			}(peerAddrInfo)
 		}
 		wg.Wait()
 		if rendezvousPeerCount == 0 {
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: The number of peers is equal to 0, wait 10 second to search again")
+			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of peers is equal to 0, wait 10 second to search again")
 			time.Sleep(10 * time.Second)
 		} else {
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: The number of rendezvous peer is %v", rendezvousPeerCount)
+			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
 			m.IsRendezvous = true
 			for _, cb := range m.rendezvousCbList {
 				cb()

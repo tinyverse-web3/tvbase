@@ -277,7 +277,7 @@ func (d *DmsgService) GetCurSrcUserPubKeyHex() string {
 }
 
 func (d *DmsgService) SubscribeSrcUser(userPubkeyHex string, getSigCallback dmsgClientCommon.GetSigCallback, isReadPubsubMsg bool) (*dmsgClientCommon.SrcUserInfo, error) {
-	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser begin: userPubkey: %s", userPubkeyHex)
+	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser begin:\nuserPubkey: %s", userPubkeyHex)
 
 	if d.IsExistSrcUser(userPubkeyHex) {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user key(%s) is already exist in srcUserInfoList", userPubkeyHex)
@@ -360,7 +360,7 @@ func (d *DmsgService) UnSubscribeSrcUsers() error {
 	return nil
 }
 func (d *DmsgService) StartReadSrcUserPubsubMsg(srcUserPubkey string) error {
-	dmsgLog.Logger.Debugf("DmsgService->StartReadSrcUserPubsubMsg begin: srcUserPubkey: %v", srcUserPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->StartReadSrcUserPubsubMsg begin:\nsrcUserPubkey: %+v", srcUserPubkey)
 	srcUserInfo := d.getSrcUserInfo(srcUserPubkey)
 	if srcUserInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->StartReadSrcUserPubsubMsg: src user info(%v) pubsub is not exist", srcUserInfo)
@@ -848,7 +848,7 @@ func (d *DmsgService) OnCreatePubChannelRequest(requestProtoData protoreflect.Pr
 func (d *DmsgService) OnCreatePubChannelResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelResponse begin:\nrequestProtoData: %v\nresponseProtoData: %v",
+	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
 	dmsgLog.Logger.Debugf("dmsgService->OnCreatePubChannelResponse end")

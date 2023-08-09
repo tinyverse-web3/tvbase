@@ -24,10 +24,10 @@ func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 	go func(addrInfo libp2pPeer.AddrInfo) {
 		err := m.host.Connect(m.ctx, addrInfo)
 		if err != nil {
-			tvLog.Logger.Errorf("fail connect to mdns addrInfo: %+v, err:%+v", addrInfo, err)
+			tvLog.Logger.Errorf("fail connect to mdns addrInfo: %+v, error: %+v", addrInfo, err)
 			return
 		} else {
-			tvLog.Logger.Infof("success connect to mdns addrInfo: %+v", addrInfo)
+			tvLog.Logger.Debugf("success connect to mdns addrInfo: %+v", addrInfo)
 		}
 		m.registPeerInfo(p.ID)
 	}(p)
@@ -50,7 +50,6 @@ func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {
 					return err
 				}
 			}
-			tvLog.Logger.Info("tvBase->initMdns: mdns start...")
 			return nil
 		},
 		OnStop: func(_ context.Context) error {
