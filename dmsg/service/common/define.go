@@ -19,7 +19,7 @@ type ProtocolService interface {
 	GetUserSig(protoData []byte) ([]byte, error)
 	RegPubsubProtocolResCallback(protocolID pb.PID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.PID, subscribe dmsgProtocol.ReqSubscribe) error
-	PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte) error
+	PublishProtocol(ctx context.Context, userPubkey string, protocolID pb.PID, protocolData []byte) error
 }
 
 type StreamProtocolCallback interface {
@@ -79,6 +79,7 @@ type PubsubProtocolCallback interface {
 }
 
 type PubsubProtocol struct {
+	Ctx      context.Context
 	Host     host.Host
 	Service  ProtocolService
 	Callback PubsubProtocolCallback

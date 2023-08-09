@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -78,7 +79,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 	}
 
 	// send the response
-	err = p.Service.PublishProtocol(responseBasicData.PID, requestBasicData.Pubkey, protoData)
+	err = p.Service.PublishProtocol(p.Ctx, requestBasicData.Pubkey, responseBasicData.PID, protoData)
 
 	if err == nil {
 		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v",
@@ -91,11 +92,13 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 }
 
 func NewPubsubProtocol(
+	ctx context.Context,
 	host host.Host,
 	protocolService ProtocolService,
 	protocolCallback PubsubProtocolCallback,
 	adapter PubsubProtocolAdapter) *PubsubProtocol {
 	protocol := &PubsubProtocol{}
+	protocol.Ctx = ctx
 	protocol.Host = host
 	protocol.Service = protocolService
 	protocol.Callback = protocolCallback

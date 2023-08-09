@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"context"
 	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -80,11 +81,12 @@ func (adapter *SeekMailboxProtocolAdapter) CallRequestCallback(requestProtoData 
 }
 
 func NewSeekMailboxProtocol(
+	ctx context.Context,
 	host host.Host,
 	protocolCallback common.PubsubProtocolCallback,
 	dmsgService common.ProtocolService) *common.PubsubProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
-	protocol := common.NewPubsubProtocol(host, dmsgService, protocolCallback, adapter)
+	protocol := common.NewPubsubProtocol(ctx, host, dmsgService, protocolCallback, adapter)
 	adapter.protocol = protocol
 	adapter.init()
 	return protocol

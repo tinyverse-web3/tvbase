@@ -1074,7 +1074,7 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protorefle
 }
 
 // ClientService interface
-func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error {
+func (d *DmsgService) PublishProtocol(ctx context.Context, pubkey string, pid pb.PID, protoData []byte) error {
 	var userPubsub *dmsgClientCommon.UserPubsub = nil
 	destUserInfo := d.getDestUserInfo(pubkey)
 	if destUserInfo == nil {
@@ -1086,8 +1086,6 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 				return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest/pubchannel user Info for key %s", pubkey)
 			}
 			userPubsub = &pubChannelInfo.UserPubsub
-			// dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
-			// return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest user Info for key %s", pubkey)
 		} else {
 			userPubsub = &srcUserInfo.UserPubsub
 		}
@@ -1107,7 +1105,7 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 		return err
 	}
 
-	err = userPubsub.Topic.Publish(d.BaseService.GetCtx(), pubsubBuf.Bytes())
+	err = userPubsub.Topic.Publish(ctx, pubsubBuf.Bytes())
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
 		return err

@@ -110,7 +110,7 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 		fmt.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
 	}()
 
-	err := dmsgService.PublishProtocol(3, pk, []byte("hello"))
+	err := dmsgService.PublishProtocol(ctx, pk, 3, []byte("hello"))
 	if err != nil {
 		panic(err)
 	}

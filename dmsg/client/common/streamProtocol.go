@@ -86,7 +86,7 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 }
 
 func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
-	dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler begin:\nLocalPeer: %s, RemotePeer: %s",
+	dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler begin\nLocalPeer: %s, RemotePeer: %s",
 		stream.Conn().LocalPeer(), stream.Conn().RemotePeer())
 	protoData, err := io.ReadAll(stream)
 	if err != nil {
@@ -102,18 +102,15 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 		dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler: stream.Close():error: %v", err)
 	}
 
-	err = p.HandleResponseData(protoData)
-	if err != nil {
-		return
-	}
-	dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler: end")
+	_ = p.HandleResponseData(protoData)
+	dmsgLog.Logger.Debugf("StreamProtocol->ResponseHandler end")
 }
 
 func (p *StreamProtocol) Request(
 	peerID peer.ID,
 	userPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
-	dmsgLog.Logger.Debugf("StreamProtocol->Request begin:\npeerID: %s", peerID)
+	dmsgLog.Logger.Debugf("StreamProtocol->Request begin\npeerID: %s", peerID)
 	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(userPubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
@@ -161,15 +158,15 @@ func (p *StreamProtocol) Request(
 func NewStreamProtocol(
 	ctx context.Context,
 	host host.Host,
-	protocolCallback StreamProtocolCallback,
-	protocolService ProtocolService,
+	callback StreamProtocolCallback,
+	service ProtocolService,
 	adapter StreamProtocolAdapter) *StreamProtocol {
 	protocol := &StreamProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
 	protocol.RequestInfoList = make(map[string]*RequestInfo)
-	protocol.Callback = protocolCallback
-	protocol.Service = protocolService
+	protocol.Callback = callback
+	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
 	// protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)

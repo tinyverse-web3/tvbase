@@ -129,7 +129,7 @@ func NewCustomPubsubProtocol(
 	protocolService common.ProtocolService,
 	protocolCallback common.PubsubProtocolCallback) *common.PubsubProtocol {
 	adapter := NewCustomPubsubProtocolAdapter()
-	protocol := common.NewPubsubProtocol(host, protocolService, protocolCallback, adapter)
+	protocol := common.NewPubsubProtocol(ctx, host, protocolService, protocolCallback, adapter)
 	adapter.protocol = protocol
 	adapter.init(customProtocolId)
 	return protocol

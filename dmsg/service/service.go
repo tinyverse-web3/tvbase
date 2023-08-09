@@ -78,7 +78,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.createPubChannelProtocol = serviceProtocol.NewCreatePubChannelProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 
 	// pubsub protocol
-	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetHost(), d, d)
+	d.seekMailboxProtocol = serviceProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 
 	// sendMsgProtocol, special pubsub protocol
@@ -677,7 +677,7 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (any,
 	return nil, nil
 }
 
-func (d *DmsgService) PublishProtocol(protocolID pb.PID, userPubkey string, protocolData []byte) error {
+func (d *DmsgService) PublishProtocol(ctx context.Context, userPubkey string, protocolID pb.PID, protocolData []byte) error {
 	userPubsub := d.getDestUserPubsub(userPubkey)
 	if userPubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->PublishProtocol: no find user pubic key %s for pubsub", userPubkey)
@@ -693,7 +693,7 @@ func (d *DmsgService) PublishProtocol(protocolID pb.PID, userPubkey string, prot
 		return err
 	}
 	pubsubData := pubsubBuf.Bytes()
-	if err := userPubsub.Topic.Publish(d.BaseService.GetCtx(), pubsubData); err != nil {
+	if err := userPubsub.Topic.Publish(ctx, pubsubData); err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->PublishProtocol: publish protocol err: %v", err)
 		return fmt.Errorf("dmsgService->PublishProtocol: publish protocol err: %v", err)
 	}
