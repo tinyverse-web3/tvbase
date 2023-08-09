@@ -38,7 +38,6 @@ func (p *Protocol) HandleRequestData(
 
 	callbackData, err := p.Adapter.CallRequestCallback(requestProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: CallRequestCallback error: %v", err)
 		return requestProtoMsg, nil, err
 	}
 
@@ -65,7 +64,6 @@ func (p *Protocol) HandleRequestData(
 	}
 	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserSig error: %v", err)
 		return requestProtoMsg, nil, err
 	}
 	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
@@ -107,7 +105,6 @@ func (p *Protocol) GetErrResponse(
 	}
 	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetUserSig error: %v", err)
 		return responseProtoMsg, err
 	}
 	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
@@ -138,7 +135,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	valid := protocol.AuthProtocolMsg(responseProtoMsg, responseBasicData)
 	if !valid {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\n failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
+		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 	}
 
