@@ -609,7 +609,7 @@ func (d *DmsgService) createPubChannelService(pubChannelInfo *dmsgClientCommon.P
 
 		select {
 		case createPubChannelResponseProtoData := <-createPubChannelDoneChan:
-			dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: createPubChannelResponseProtoData: %+v",
+			dmsgLog.Logger.Debugf("DmsgService->createPubChannelService:\ncreatePubChannelResponseProtoData: %+v",
 				createPubChannelResponseProtoData)
 			response, ok := createPubChannelResponseProtoData.(*pb.CreatePubChannelRes)
 			if !ok || response == nil {
