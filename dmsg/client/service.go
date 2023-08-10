@@ -270,7 +270,7 @@ func (d *DmsgService) SubscribeSrcUser(
 	userPubkeyHex string,
 	getSigCallback dmsgClientCommon.GetSigCallback) error {
 	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser begin\nuserPubkey: %s", userPubkeyHex)
-	if d.SrcUserInfo == nil {
+	if d.SrcUserInfo != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: SrcUserInfo is nil")
 		return fmt.Errorf("DmsgService->SubscribeSrcUser: SrcUserInfo is nil")
 	}
