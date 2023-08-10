@@ -60,9 +60,9 @@ type StreamProtocolCallback interface {
 	OnCustomStreamProtocolResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
-	OnCreatePubChannelRequest(
+	OnCreateChannelRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, error)
-	OnCreatePubChannelResponse(
+	OnCreateChannelResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }

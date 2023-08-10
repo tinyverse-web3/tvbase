@@ -24,7 +24,7 @@ type StreamProtocolCallback interface {
 	OnCreateMailboxResponse(protoreflect.ProtoMessage) (any, error)
 	OnReadMailboxMsgRequest(protoreflect.ProtoMessage) (any, any, error)
 	OnReleaseMailboxRequest(protoreflect.ProtoMessage) (any, any, error)
-	OnCreatePubChannelRequest(protoreflect.ProtoMessage) (any, any, error)
+	OnCreateChannelRequest(protoreflect.ProtoMessage) (any, any, error)
 	OnCustomStreamProtocolRequest(protoreflect.ProtoMessage) (any, any, error)
 	OnCustomStreamProtocolResponse(protoreflect.ProtoMessage, protoreflect.ProtoMessage) (any, error)
 }
@@ -95,7 +95,7 @@ type DestUserInfo struct {
 	LastReciveTimestamp int64
 }
 
-type PubChannelInfo struct {
+type PubChannel struct {
 	UserPubsub
 	LastReciveTimestamp int64
 }

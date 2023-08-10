@@ -17,8 +17,8 @@ enum PID {
     QUERY_PEER_RES = 9;
     SEND_MSG_REQ = 10;
     SEND_MSG_RES = 11;
-    CREATE_PUB_CHANNEL_REQ = 12;
-    CREATE_PUB_CHANNEL_RES = 13;
+    CREATE_CHANNEL_REQ = 12;
+    CREATE_CHANNEL_RES = 13;
     CUSTOM_STREAM_REQ = 14;
     CUSTOM_STREAM_RES = 15;
     CUSTOM_PUBSUB_REQ = 16;
@@ -105,12 +105,12 @@ message SendMsgRes {
     RetCode retCode = 2;
 }
 
-message CreatePubChannelReq {
+message CreateChannelReq {
     BasicData basicData = 1;
     string channelKey = 2;
 }
 
-message CreatePubChannelRes {
+message CreateChannelRes {
     BasicData basicData = 1;
     RetCode retCode = 2;
 }

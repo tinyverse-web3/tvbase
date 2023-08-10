@@ -13,146 +13,146 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type CreatePubChannelProtocolAdapter struct {
+type CreateChannelProtocolAdapter struct {
 	common.CommonProtocolAdapter
 	protocol *common.StreamProtocol
 }
 
-func NewCreatePubChannelProtocolAdapter() *CreatePubChannelProtocolAdapter {
-	ret := &CreatePubChannelProtocolAdapter{}
+func NewCreateChannelProtocolAdapter() *CreateChannelProtocolAdapter {
+	ret := &CreateChannelProtocolAdapter{}
 	return ret
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_CREATE_PUB_CHANNEL_REQ
+func (adapter *CreateChannelProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CREATE_CHANNEL_REQ
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_CREATE_PUB_CHANNEL_RES
+func (adapter *CreateChannelProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_CREATE_CHANNEL_RES
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetStreamRequestPID() protocol.ID {
-	return dmsgProtocol.PidCreatePubChannelReq
+func (adapter *CreateChannelProtocolAdapter) GetStreamRequestPID() protocol.ID {
+	return dmsgProtocol.PidCreateChannelReq
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return dmsgProtocol.PidCreatePubChannelRes
+func (adapter *CreateChannelProtocolAdapter) GetStreamResponsePID() protocol.ID {
+	return dmsgProtocol.PidCreateChannelRes
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
-	return &pb.CreatePubChannelReq{}
+func (adapter *CreateChannelProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+	return &pb.CreateChannelReq{}
 }
-func (adapter *CreatePubChannelProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
-	return &pb.CreatePubChannelRes{}
+func (adapter *CreateChannelProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+	return &pb.CreateChannelRes{}
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) InitRequest(
+func (adapter *CreateChannelProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	requestProtoMsg := &pb.CreatePubChannelReq{
+	requestProtoMsg := &pb.CreateChannelReq{
 		BasicData: basicData,
 	}
 
 	if len(dataList) == 1 {
 		channelKey, ok := dataList[0].(string)
 		if !ok {
-			return requestProtoMsg, errors.New("CreatePubChannelProtocolAdapter->InitRequest: failed to cast datalist[0] to string for channelKey")
+			return requestProtoMsg, errors.New("CreateChannelProtocolAdapter->InitRequest: failed to cast datalist[0] to string for channelKey")
 		}
 		requestProtoMsg.ChannelKey = channelKey
 	} else {
-		return requestProtoMsg, errors.New("CreatePubChannelProtocolAdapter->InitRequest: parameter dataList need contain channelKey")
+		return requestProtoMsg, errors.New("CreateChannelProtocolAdapter->InitRequest: parameter dataList need contain channelKey")
 	}
 
 	return requestProtoMsg, nil
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) InitResponse(
+func (adapter *CreateChannelProtocolAdapter) InitResponse(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.CreatePubChannelRes{
+	responseProtoMsg := &pb.CreateChannelRes{
 		BasicData: basicData,
 		RetCode:   dmsgProtocol.NewSuccRetCode(),
 	}
 	return responseProtoMsg, nil
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetRequestBasicData(
+func (adapter *CreateChannelProtocolAdapter) GetRequestBasicData(
 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.CreatePubChannelReq)
+	request, ok := requestProtoMsg.(*pb.CreateChannelReq)
 	if !ok {
 		return nil
 	}
 	return request.BasicData
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetResponseBasicData(
+func (adapter *CreateChannelProtocolAdapter) GetResponseBasicData(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.CreatePubChannelRes)
+	response, ok := responseProtoMsg.(*pb.CreateChannelRes)
 	if !ok {
 		return nil
 	}
 	return response.BasicData
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) GetResponseRetCode(
+func (adapter *CreateChannelProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
-	response, ok := responseProtoMsg.(*pb.CreatePubChannelRes)
+	response, ok := responseProtoMsg.(*pb.CreateChannelRes)
 	if !ok {
 		return nil
 	}
 	return response.RetCode
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) SetRequestSig(
+func (adapter *CreateChannelProtocolAdapter) SetRequestSig(
 	requestProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
-	request, ok := requestProtoMsg.(*pb.CreatePubChannelReq)
+	request, ok := requestProtoMsg.(*pb.CreateChannelReq)
 	if !ok {
-		return fmt.Errorf("CreatePubChannelProtocolAdapter->SetRequestSig: failed to cast request to *pb.CreatePubChannelReq")
+		return fmt.Errorf("CreateChannelProtocolAdapter->SetRequestSig: failed to cast request to *pb.CreateChannelReq")
 	}
 	request.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) SetResponseSig(
+func (adapter *CreateChannelProtocolAdapter) SetResponseSig(
 	responseProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
-	response, ok := responseProtoMsg.(*pb.CreatePubChannelRes)
+	response, ok := responseProtoMsg.(*pb.CreateChannelRes)
 	if !ok {
-		return fmt.Errorf("CreatePubChannelProtocolAdapter->SetResponseSig: failed to cast request to *pb.CreatePubChannelRes")
+		return fmt.Errorf("CreateChannelProtocolAdapter->SetResponseSig: failed to cast request to *pb.CreateChannelRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) SetResponseRetCode(
+func (adapter *CreateChannelProtocolAdapter) SetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage,
 	code int32,
 	result string) {
-	request, ok := responseProtoMsg.(*pb.CreatePubChannelRes)
+	request, ok := responseProtoMsg.(*pb.CreateChannelRes)
 	if !ok {
 		return
 	}
 	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) CallRequestCallback(
+func (adapter *CreateChannelProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCreatePubChannelRequest(requestProtoData)
+	data, err := adapter.protocol.Callback.OnCreateChannelRequest(requestProtoData)
 	return data, err
 }
 
-func (adapter *CreatePubChannelProtocolAdapter) CallResponseCallback(
+func (adapter *CreateChannelProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCreatePubChannelResponse(requestProtoData, responseProtoData)
+	data, err := adapter.protocol.Callback.OnCreateChannelResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
-func NewCreatePubChannelProtocol(
+func NewCreateChannelProtocol(
 	ctx context.Context,
 	host host.Host, protocolCallback common.StreamProtocolCallback, protocolService common.ProtocolService) *common.StreamProtocol {
-	adapter := NewCreatePubChannelProtocolAdapter()
+	adapter := NewCreateChannelProtocolAdapter()
 	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, adapter)
 	adapter.protocol = protocol
 	return protocol
