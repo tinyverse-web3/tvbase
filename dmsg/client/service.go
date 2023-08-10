@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -839,7 +838,7 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protorefle
 }
 
 // ClientService interface
-func (d *DmsgService) PublishProtocol(ctx context.Context, pubkey string, pid pb.PID, protoData []byte) error {
+func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error {
 	var user *dmsgUser.User = nil
 	destUser := d.getDestUserInfo(pubkey)
 	if destUser == nil {
@@ -863,7 +862,7 @@ func (d *DmsgService) PublishProtocol(ctx context.Context, pubkey string, pid pb
 		return err
 	}
 
-	err = user.Topic.Publish(ctx, buf)
+	err = user.Publish(buf)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: Publish error: %v", err)
 		return err

@@ -117,7 +117,7 @@ type PubsubProtocolCallback interface {
 type ProtocolService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(ctx context.Context, userPubkey string, pid pb.PID, protoData []byte) error
+	PublishProtocol(userPubkey string, pid pb.PID, protoData []byte) error
 }
 
 // type UserPubsub struct {

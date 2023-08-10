@@ -21,20 +21,25 @@ func NewPubsub(p *pubsub.PubSub, pk string) (*Pubsub, error) {
 	return pubsub, err
 }
 
-func (ps *Pubsub) Init(p *pubsub.PubSub, pk string) error {
+func (p *Pubsub) Init(ps *pubsub.PubSub, pk string) error {
 	var err error
-	ps.Topic, err = p.Join(pk)
+	p.Topic, err = ps.Join(pk)
 	if err != nil {
-		dmsgLog.Logger.Errorf("User->InitWithPubkey: Join error: %v", err)
+		dmsgLog.Logger.Errorf("Pubsub->Init: Join error: %v", err)
 		return err
 	}
 
-	ps.Subscription, err = ps.Topic.Subscribe()
+	p.Subscription, err = p.Topic.Subscribe()
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->InitWithPubkey: Subscribe error: %v", err)
+		dmsgLog.Logger.Errorf("Pubsub->Init: Subscribe error: %v", err)
 		return err
 	}
 	return nil
+}
+
+func (p *Pubsub) Publish(ctx context.Context, protoData []byte, opts ...pubsub.PubOpt) error {
+	err := p.Topic.Publish(ctx, protoData, opts...)
+	return err
 }
 
 func NewUser(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) (*User, error) {
@@ -84,6 +89,11 @@ func (s *User) GetSig(protoData []byte) ([]byte, error) {
 		return nil, fmt.Errorf("User->GetSig: Key.GetSig is nil")
 	}
 	return s.Key.GetSig(protoData)
+}
+
+func (s *User) Publish(protoData []byte, opts ...pubsub.PubOpt) error {
+	s.Pubsub.Publish(s.Ctx, protoData, opts...)
+	return nil
 }
 
 func (u *User) Close() error {
