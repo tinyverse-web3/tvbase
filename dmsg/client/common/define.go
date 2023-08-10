@@ -12,6 +12,12 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type ProtocolService interface {
+	GetUserPubkeyHex() (string, error)
+	GetUserSig(protoData []byte) ([]byte, error)
+	PublishProtocol(userPubkey string, pid pb.PID, protoData []byte) error
+}
+
 type RequestInfo struct {
 	ProtoMessage    protoreflect.ProtoMessage
 	CreateTimestamp int64
@@ -113,19 +119,6 @@ type PubsubProtocolCallback interface {
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
-
-type ProtocolService interface {
-	GetUserPubkeyHex() (string, error)
-	GetUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(userPubkey string, pid pb.PID, protoData []byte) error
-}
-
-// type UserPubsub struct {
-// 	Topic        *pubsub.Topic
-// 	Subscription *pubsub.Subscription
-// 	Ctx          context.Context
-// 	CancelCtx    context.CancelFunc
-// }
 
 type OnReceiveMsg func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string)
 
