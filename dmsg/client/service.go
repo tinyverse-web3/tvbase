@@ -8,6 +8,8 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	clientProtocol "github.com/tinyverse-web3/tvbase/dmsg/client/protocol"
@@ -41,6 +43,9 @@ type DmsgService struct {
 	channelList                  map[string]*dmsgUser.Channel
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
+
+	// service
+	datastore db.Datastore
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -102,6 +107,10 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 		return err
 	}
 
+	cfg := d.BaseService.GetConfig()
+	if cfg.Mode == tvConfig.ServiceMode {
+		return nil
+	}
 	defTimeout := 24 * time.Hour
 	if len(opts) > 0 {
 		timeout, ok := opts[0].(time.Duration)
@@ -286,7 +295,7 @@ func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg
 // ProtocolService
 func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	if d.user == nil {
-		return "", fmt.Errorf("MailboxService->GetUserPubkeyHex: user is nil")
+		return "", fmt.Errorf("DmsgService->GetUserPubkeyHex: user is nil")
 	}
 	return d.user.Key.PubkeyHex, nil
 }

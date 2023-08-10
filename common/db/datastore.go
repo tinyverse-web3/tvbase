@@ -8,19 +8,19 @@ import (
 	badgerds "github.com/ipfs/go-ds-badger2"
 	levelds "github.com/ipfs/go-ds-leveldb"
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
-	tvLog "github.com/tinyverse-web3/tvbase/common/log"
+	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
+	tvbaseLog "github.com/tinyverse-web3/tvbase/common/log"
 )
 
 type Datastore interface {
 	ds.Batching // must be thread-safe
 }
 
-func CreateDataStore(dbRootDir string, mode tvConfig.NodeMode) (Datastore, error) {
+func CreateDataStore(dbRootDir string, mode tvbaseConfig.NodeMode) (Datastore, error) {
 	switch mode {
-	case tvConfig.LightMode:
+	case tvbaseConfig.LightMode:
 		return createBadgerDB(dbRootDir)
-	case tvConfig.ServiceMode:
+	case tvbaseConfig.ServiceMode:
 		return createLevelDB(dbRootDir)
 	}
 	return nil, nil
@@ -31,7 +31,7 @@ func createLevelDB(dbRootDir string) (*levelds.Datastore, error) {
 	if !filepath.IsAbs(fullPath) {
 		rootPath, err := os.Getwd()
 		if err != nil {
-			tvLog.Logger.Errorf("createLevelDB: error: %v", err)
+			tvbaseLog.Logger.Errorf("createLevelDB: error: %v", err)
 			return nil, err
 		}
 		fullPath = filepath.Join(rootPath, fullPath)
@@ -46,7 +46,7 @@ func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
 	if !filepath.IsAbs(fullPath) {
 		rootPath, err := os.Getwd()
 		if err != nil {
-			tvLog.Logger.Errorf("createBadgerDB: error: %v", err)
+			tvbaseLog.Logger.Errorf("createBadgerDB: error: %v", err)
 			return nil, err
 		}
 		fullPath = filepath.Join(rootPath, fullPath)
