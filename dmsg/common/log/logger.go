@@ -1,4 +1,4 @@
-package dmsgLog
+package log
 
 import (
 	ipfsLog "github.com/ipfs/go-log/v2"

@@ -9,6 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
@@ -36,6 +37,49 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	return nil
 }
 
+func (d *DmsgService) HandleProtocolWithPubsub(user *dmsgUser.User) {
+	for {
+		m, err := user.Subscription.Next(user.Ctx)
+		if err != nil {
+			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: subscription.Next happen err, %+v", err)
+			return
+		}
+		if d.BaseService.GetHost().ID() == m.ReceivedFrom {
+			continue
+		}
+
+		dmsgLog.Logger.Debugf("dmsgService->HandleProtocolWithPubsub:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
+
+		protocolID, protocolIDLen, err := d.CheckPubsubData(m.Data)
+		if err != nil {
+			dmsgLog.Logger.Errorf("dmsgService->HandleProtocolWithPubsub: CheckPubsubData error %v", err)
+			continue
+		}
+		contentData := m.Data[protocolIDLen:]
+		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
+		if reqSubscribe != nil {
+			err = reqSubscribe.HandleRequestData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: HandleRequestData error %v", err)
+			}
+			continue
+		} else {
+			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
+		}
+		// no protocol for resSubScribe in service
+		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
+		if resSubScribe != nil {
+			err = resSubScribe.HandleResponseData(contentData)
+			if err != nil {
+				dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: HandleResponseData error: %v", err)
+			}
+			continue
+		} else {
+			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: no find protocolId(%d) for resSubscribe", protocolID)
+		}
+	}
+}
+
 func (d *DmsgService) RegPubsubProtocolReqCallback(pid pb.PID, subscribe protocol.ReqSubscribe) error {
 	d.PubsubProtocolReqSubscribes[pid] = subscribe
 	return nil
@@ -46,29 +90,8 @@ func (d *DmsgService) RegPubsubProtocolResCallback(pid pb.PID, subscribe protoco
 	return nil
 }
 
-func (d *DmsgService) Start() error {
-	return nil
-}
-
-func (d *DmsgService) Stop() error {
-	return nil
-}
-
-func (d *DmsgService) GetBasicToMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
-	return MsgPrefix + srcUserPubkey + MsgKeyDelimiter + destUserPubkey
-}
-
 func (d *DmsgService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
 	return MsgPrefix + destUserPubkey + MsgKeyDelimiter + srcUserPubkey
-}
-
-func (d *DmsgService) GetFullToMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicToMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
-	direction := MsgDirection.To
-	return basicPrefix + MsgKeyDelimiter +
-		direction + MsgKeyDelimiter +
-		sendMsgReq.BasicData.ID + MsgKeyDelimiter +
-		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
 }
 
 func (d *DmsgService) GetFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {

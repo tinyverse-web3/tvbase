@@ -3,9 +3,7 @@ package common
 import (
 	"context"
 	"crypto/ecdsa"
-	"sync"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -122,33 +120,12 @@ type ProtocolService interface {
 	PublishProtocol(ctx context.Context, userPubkey string, pid pb.PID, protoData []byte) error
 }
 
-type UserPubsub struct {
-	Topic        *pubsub.Topic
-	Subscription *pubsub.Subscription
-	Ctx          context.Context
-	CancelCtx    context.CancelFunc
-}
-type SrcUserInfo struct {
-	UserPubsub
-	MailboxPeerID  string
-	UserKey        *SrcUserKey
-	GetSigCallback GetSigCallback
-}
-
-type DestUserInfo struct {
-	UserPubsub
-}
-
-type PubChannelInfo struct {
-	UserPubsub
-	PubKeyHex            string
-	LastRequestTimestamp int64
-}
-
-type SrcUserKey struct {
-	PubkeyHex string
-	Pubkey    *ecdsa.PublicKey
-}
+// type UserPubsub struct {
+// 	Topic        *pubsub.Topic
+// 	Subscription *pubsub.Subscription
+// 	Ctx          context.Context
+// 	CancelCtx    context.CancelFunc
+// }
 
 type OnReceiveMsg func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string)
 
@@ -161,8 +138,6 @@ type UserMsg struct {
 	MsgContent     string
 }
 
-type GetSigCallback func(protoData []byte) (sig []byte, err error)
-
 type CustomStreamProtocolInfo struct {
 	Client   customProtocol.CustomStreamProtocolClient
 	Protocol *StreamProtocol
@@ -174,11 +149,6 @@ type CustomPubsubProtocolInfo struct {
 }
 
 // service
-type ServiceDestUserInfo struct {
-	DestUserInfo
-	MsgRWMutex          sync.RWMutex
-	LastReciveTimestamp int64
-}
 
 const MailboxLimitErr = "mailbox is limited"
 const MailboxAlreadyExistErr = "dest pubkey already exists"
@@ -192,8 +162,4 @@ type UserKey struct {
 	PriKeyHex string
 	PubKey    *ecdsa.PublicKey
 	PriKey    *ecdsa.PrivateKey
-}
-
-type CustomProtocolPubsub struct {
-	UserPubsub
 }

@@ -428,20 +428,11 @@ func (d *DmsgService) readPubChannelPubsub(pubsub *dmsgServiceCommon.PubChannelI
 
 // for sdk
 func (d *DmsgService) Start() error {
-	err := d.DmsgService.Start()
-	if err != nil {
-		return err
-	}
 	d.cleanRestResource(d.stopCleanRestResource)
 	return nil
 }
 
 func (d *DmsgService) Stop() error {
-	err := d.DmsgService.Stop()
-	if err != nil {
-		return err
-	}
-
 	d.unsubscribePubChannelList()
 	d.unSubscribeDestUsers()
 	d.stopCleanRestResource <- true
