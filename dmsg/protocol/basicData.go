@@ -12,7 +12,7 @@ func NewBasicData(host host.Host, pubKey string, pid pb.PID) *pb.BasicData {
 	ret := &pb.BasicData{
 		PeerID: host.ID().String(),
 		Pubkey: pubKey,
-		TS:     time.Now().Unix(),
+		TS:     time.Now().UnixNano(),
 		ID:     uuid.New().String(),
 		PID:    pid,
 		Ver:    ProtocolVersion,
