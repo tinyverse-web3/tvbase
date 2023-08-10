@@ -106,12 +106,12 @@ func (u *User) Close() error {
 	return err
 }
 
-type LightDmsgUser struct {
+type LightUser struct {
 	User
 	ServicePeerID string
 }
 
-type PubChannel struct {
+type Channel struct {
 	User
 	LastRequestTimestamp int64
 }

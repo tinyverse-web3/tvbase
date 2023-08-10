@@ -223,7 +223,7 @@ func main() {
 		return
 	}
 	pubPubKeyStr := keyutil.TranslateKeyProtoBufToString(pubPubkeyBytes)
-	err = dmsgService.SubscribePubChannel(pubPubKeyStr)
+	err = dmsgService.SubscribeChannel(pubPubKeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		tvcLog.Errorf("SubscribePubChannel error: %v", err)
