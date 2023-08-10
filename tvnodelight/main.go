@@ -164,10 +164,10 @@ func main() {
 
 	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", pubSeed, pubPrikeyHex, pubPubkeyHex)
 
-	// init dmsg client
+	// init dmsg
 	tvbase, dmsgService, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
 	if err != nil {
-		mainLog.Errorf("init acceptable error: %v", err)
+		mainLog.Errorf("initDmsg error: %v", err)
 		return
 	}
 

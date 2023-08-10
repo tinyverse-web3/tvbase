@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 
 	filelock "github.com/MichaelS11/go-file-lock"
+	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
@@ -170,10 +172,24 @@ func main() {
 	}()
 
 	ctx := context.Background()
-	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
+
+	//src
+	userSeed := "softwarecheng@gmail.com"
+	srcPrikey, srcPubkey, err := getKeyBySeed(userSeed)
 	if err != nil {
-		mainLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
+		mainLog.Errorf("tvnode->main: getKeyBySeed error: %v", err)
+		return
 	}
+	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
+	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	mainLog.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
+
+	tvbase, _, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	if err != nil {
+		mainLog.Errorf("tvnode->main: initDmsg: %v", err)
+		return
+	}
+
 	p, err := pullcid.GetPullCidServiceProtocol(tvbase)
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
@@ -181,8 +197,6 @@ func main() {
 	tvbase.RegistCSSProtocol(p)
 
 	<-ctx.Done()
-	// tvInfrasture.Stop()
-	// Logger.Info("tvnode_->main: Gracefully shut down daemon")
 }
 
 func initDmsg(
@@ -190,12 +204,12 @@ func initDmsg(
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
 	ctx context.Context) (*tvbase.TvBase, *dmsgService.DmsgService, error) {
-	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tvInfra.GetServiceDmsgService()
+	dmsgService := tvbase.GetServiceDmsgService()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -205,7 +219,7 @@ func initDmsg(
 	getSig := func(protoData []byte) ([]byte, error) {
 		sig, err := tvutilCrypto.SignDataByEcdsa(srcPrikey, protoData)
 		if err != nil {
-			mainLog.Errorf("initDmsg: sign error: %v", err)
+			mainLog.Errorf("initDmsg: sig error: %v", err)
 		}
 		return sig, nil
 	}
@@ -224,5 +238,13 @@ func initDmsg(
 		}
 	}
 
-	return tvInfra, dmsgService, nil
+	return tvbase, dmsgService, nil
+}
+
+func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
+	prikey, pubkey, err := tvUtilKey.GenerateEcdsaKey(seed)
+	if err != nil {
+		return nil, nil, err
+	}
+	return prikey, pubkey, nil
 }
