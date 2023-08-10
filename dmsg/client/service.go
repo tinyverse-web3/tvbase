@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -39,7 +40,7 @@ type DmsgService struct {
 	user         *dmsgUser.User
 	onReceiveMsg dmsgClientCommon.OnReceiveMsg
 
-	destUserList                 map[string]*dmsgUser.DestTarget
+	destUserList                 map[string]*dmsgUser.DestUser
 	channelList                  map[string]*dmsgUser.Channel
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
@@ -79,7 +80,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.sendMsgPubPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(d.sendMsgPubPrtocol.Adapter.GetRequestPID(), d.sendMsgPubPrtocol)
 
-	d.destUserList = make(map[string]*dmsgUser.DestTarget)
+	d.destUserList = make(map[string]*dmsgUser.DestUser)
 	d.channelList = make(map[string]*dmsgUser.Channel)
 
 	d.customStreamProtocolInfoList = make(map[string]*dmsgClientCommon.CustomStreamProtocolInfo)
@@ -175,15 +176,19 @@ func (d *DmsgService) SubscribeDestUser(pubkey string) error {
 	}
 	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: NewUser error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: NewTarget error: %v", err)
 		return err
 	}
-	destUser := &dmsgUser.DestTarget{
-		Target: *target,
+	user := &dmsgUser.DestUser{
+		DestTarget: dmsgUser.DestTarget{
+			Target:              *target,
+			LastReciveTimestamp: time.Now().UnixNano(),
+		},
+		MsgRWMutex: sync.RWMutex{},
 	}
-	d.destUserList[pubkey] = destUser
+	d.destUserList[pubkey] = user
 	// go d.BaseService.DiscoverRendezvousPeers()
-	go d.HandleProtocolWithPubsub(&destUser.Target)
+	go d.HandleProtocolWithPubsub(&user.Target)
 
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser end")
 	return nil
@@ -220,7 +225,7 @@ func (d *DmsgService) SubscribeChannel(pubkey string) error {
 
 	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeChannel: NewUser error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->SubscribeChannel: NewTarget error: %v", err)
 		return err
 	}
 
@@ -691,7 +696,7 @@ func (d *DmsgService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback
 
 	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: NewUser error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: NewTarget error: %v", err)
 		return err
 	}
 	d.user = &dmsgUser.User{
