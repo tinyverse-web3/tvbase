@@ -119,8 +119,6 @@ type PubsubProtocolCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type OnReceiveMsg func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string)
-
 type UserMsg struct {
 	ID             string
 	SrcUserPubkey  string

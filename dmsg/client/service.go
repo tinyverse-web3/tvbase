@@ -27,8 +27,8 @@ import (
 )
 
 type ProtocolProxy struct {
-	readMailboxMsgPrtocol *dmsgClientCommon.StreamProtocol
 	createMailboxProtocol *dmsgClientCommon.StreamProtocol
+	readMailboxMsgPrtocol *dmsgClientCommon.StreamProtocol
 	releaseMailboxPrtocol *dmsgClientCommon.StreamProtocol
 	createChannelProtocol *dmsgClientCommon.StreamProtocol
 	seekMailboxProtocol   *dmsgClientCommon.PubsubProtocol
@@ -38,17 +38,14 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	user         *dmsgUser.User
-	onReceiveMsg dmsgClientCommon.OnReceiveMsg
-
+	user                         *dmsgUser.User
+	onReceiveMsg                 dmsg.OnReceiveMsg
 	destUserList                 map[string]*dmsgUser.DestUser
 	channelList                  map[string]*dmsgUser.Channel
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
-
-	stopCleanRestResource chan bool
-	// service
-	datastore db.Datastore
+	datastore                    db.Datastore
+	stopCleanRestResource        chan bool
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -310,7 +307,7 @@ func (d *DmsgService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq
 	return sendMsgReq, nil
 }
 
-func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg) {
+func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsg.OnReceiveMsg) {
 	d.onReceiveMsg = onReceiveMsg
 }
 

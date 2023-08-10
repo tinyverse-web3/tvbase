@@ -37,3 +37,5 @@ type Msg struct {
 	TimeStamp  int64
 	Direction  string
 }
+
+type OnReceiveMsg func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string)
