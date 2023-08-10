@@ -32,13 +32,11 @@ func (k *Key) InitKeyWithPrikey(prikey *ecdsa.PrivateKey) error {
 	getSigCallback := func(data []byte) (sig []byte, err error) {
 		return crypto.SignDataByEcdsa(prikey, data)
 	}
-	k = &Key{
-		PubkeyHex: pubkeyHex,
-		Pubkey:    pubkey,
-		PrikeyHex: prikeyHex,
-		Prikey:    prikey,
-		GetSig:    getSigCallback,
-	}
+	k.PubkeyHex = pubkeyHex
+	k.Pubkey = pubkey
+	k.PrikeyHex = prikeyHex
+	k.Prikey = prikey
+	k.GetSig = getSigCallback
 	return nil
 }
 
@@ -49,13 +47,11 @@ func (k *Key) InitKeyWithPubkeyData(pubkeyData []byte, getSig GetSigCallback) er
 		log.Logger.Errorf("UserManager->AddUserWithPubkeyData: Public key is not ECDSA KEY")
 		return err
 	}
-	k = &Key{
-		PubkeyHex: pubkeyHex,
-		Pubkey:    pubkey,
-		PrikeyHex: "",
-		Prikey:    nil,
-		GetSig:    getSig,
-	}
+	k.PubkeyHex = pubkeyHex
+	k.Pubkey = pubkey
+	k.PrikeyHex = ""
+	k.Prikey = nil
+	k.GetSig = nil
 	return nil
 }
 
@@ -70,12 +66,10 @@ func (k *Key) InitKeyWithPubkeyHex(pubkeyHex string, getSig GetSigCallback) erro
 		log.Logger.Errorf("Key->InitKeyWithPubkeyHex: Public key is not ECDSA KEY")
 		return err
 	}
-	k = &Key{
-		PubkeyHex: pubkeyHex,
-		Pubkey:    pubkey,
-		PrikeyHex: "",
-		Prikey:    nil,
-		GetSig:    getSig,
-	}
+	k.PubkeyHex = pubkeyHex
+	k.Pubkey = pubkey
+	k.PrikeyHex = ""
+	k.Prikey = nil
+	k.GetSig = getSig
 	return nil
 }

@@ -21,15 +21,15 @@ func NewPubsub(p *pubsub.PubSub, pk string) (*Pubsub, error) {
 	return pubsub, err
 }
 
-func (s *Pubsub) Init(p *pubsub.PubSub, pk string) error {
+func (ps *Pubsub) Init(p *pubsub.PubSub, pk string) error {
 	var err error
-	s.Topic, err = p.Join(pk)
+	ps.Topic, err = p.Join(pk)
 	if err != nil {
 		dmsgLog.Logger.Errorf("User->InitWithPubkey: Join error: %v", err)
 		return err
 	}
 
-	s.Subscription, err = s.Topic.Subscribe()
+	ps.Subscription, err = ps.Topic.Subscribe()
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->InitWithPubkey: Subscribe error: %v", err)
 		return err
