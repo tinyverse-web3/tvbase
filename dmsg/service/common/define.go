@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -116,13 +115,3 @@ type CustomPubsubProtocolInfo struct {
 
 const MailboxAlreadyExistCode = 1
 const PubChannelAlreadyExistCode = 1
-
-type UserInfo struct {
-	UserKey *UserKey
-}
-type UserKey struct {
-	PubKeyHex string
-	PriKeyHex string
-	PubKey    *ecdsa.PublicKey
-	PriKey    *ecdsa.PrivateKey
-}
