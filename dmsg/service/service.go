@@ -177,7 +177,7 @@ func (d *DmsgService) cleanRestResource(done chan bool) {
 			case <-ticker.C:
 				cfg := d.BaseService.GetConfig()
 				for userPubkey, pubsub := range d.destUserList {
-					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
+					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
 					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
 					if days >= cfg.DMsg.KeepMailboxMsgDay {
 						var query = query.Query{
@@ -199,7 +199,7 @@ func (d *DmsgService) cleanRestResource(done chan bool) {
 					}
 				}
 				for pubChannelPubkey, pubsub := range d.channelInfoList {
-					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().Unix())
+					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
 					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
 					if days >= cfg.DMsg.KeepPubChannelDay {
 						d.unsubscribePubChannel(pubChannelPubkey)
@@ -310,7 +310,7 @@ func (d *DmsgService) subscribeDestUser(userPubKey string) error {
 			Subscription: userSub,
 		},
 		MsgRWMutex:          sync.RWMutex{},
-		LastReciveTimestamp: time.Now().Unix(),
+		LastReciveTimestamp: time.Now().UnixNano(),
 	}
 	return nil
 }
@@ -377,7 +377,7 @@ func (d *DmsgService) subscribePubChannel(pubkey string) error {
 			Topic:        userTopic,
 			Subscription: userSub,
 		},
-		LastReciveTimestamp: time.Now().Unix(),
+		LastReciveTimestamp: time.Now().UnixNano(),
 	}
 
 	// go d.readPubChannelPubsub(d.pubChannelInfoList[pubkey])
@@ -648,7 +648,7 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (any,
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
 		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
 	}
-	pubsub.LastReciveTimestamp = time.Now().Unix()
+	pubsub.LastReciveTimestamp = time.Now().UnixNano()
 	d.saveUserMsg(protoMsg)
 	return nil, nil
 }

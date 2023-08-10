@@ -130,7 +130,7 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 
 	requestInfo := &clientCommicateInfo{
 		data:            request,
-		createTimestamp: time.Now().Unix(),
+		createTimestamp: time.Now().UnixNano(),
 		responseSignal:  make(chan any),
 	}
 	p.commicateInfoList[request.CID] = requestInfo
