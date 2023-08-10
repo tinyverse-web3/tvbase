@@ -14,6 +14,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/dmsg"
+	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -38,7 +39,7 @@ type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	datastore                    db.Datastore
-	curSrcUserInfo               *dmsgServiceCommon.UserInfo
+	user                         *dmsgServiceCommon.UserInfo
 	destUserInfoList             map[string]*dmsgServiceCommon.DestUserInfo
 	pubChannelInfoList           map[string]*dmsgServiceCommon.PubChannelInfo
 	customProtocolPubsubList     map[string]*dmsgServiceCommon.CustomProtocolPubsub
@@ -116,7 +117,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 	pubKeyHex := keyUtil.TranslateKeyProtoBufToString(pubKeyData)
 
-	d.curSrcUserInfo = &dmsgServiceCommon.UserInfo{
+	d.user = &dmsgServiceCommon.UserInfo{
 		UserKey: &dmsgServiceCommon.UserKey{
 			PubKeyHex: pubKeyHex,
 			PriKeyHex: priKeyHex,
@@ -129,12 +130,17 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	return nil
 }
 
+func (d *DmsgService) InitUser(userPubkeyData []byte, getSigCallback dmsgKey.GetSigCallback, done chan any) error {
+
+	return nil
+}
+
 func (d *DmsgService) GetUserPubkeyHex() (string, error) {
-	return d.curSrcUserInfo.UserKey.PubKeyHex, nil
+	return d.user.UserKey.PubKeyHex, nil
 }
 
 func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
-	sign, err := tvCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
+	sign, err := tvCrypto.SignDataByEcdsa(d.user.UserKey.PriKey, protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("GetCurUserSign: %v", err)
 		return sign, nil

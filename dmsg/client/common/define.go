@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"crypto/ecdsa"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -146,13 +145,3 @@ type CustomPubsubProtocolInfo struct {
 const MailboxLimitErr = "mailbox is limited"
 const MailboxAlreadyExistErr = "dest pubkey already exists"
 const MailboxAlreadyExistCode = 1
-
-type UserInfo struct {
-	UserKey *UserKey
-}
-type UserKey struct {
-	PubKeyHex string
-	PriKeyHex string
-	PubKey    *ecdsa.PublicKey
-	PriKey    *ecdsa.PrivateKey
-}

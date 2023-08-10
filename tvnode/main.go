@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"io"
@@ -17,7 +18,10 @@ import (
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
+	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
+	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
+	tvUtilKey "github.com/tinyverse-web3/tvutil/key"
 )
 
 const (
@@ -27,7 +31,7 @@ const (
 
 const logName = "tvnode"
 
-var tvsLog = ipfsLog.Logger(logName)
+var mainLog = ipfsLog.Logger(logName)
 
 func getPidFileName(rootPath string) (string, error) {
 	rootPath = strings.Trim(rootPath, " ")
@@ -73,54 +77,54 @@ func parseCmdParams() string {
 	flag.Parse()
 
 	if *help {
-		tvsLog.Info("tinverse tvnode")
-		tvsLog.Info("Usage step1: Run './tvnode -init' generate identity key and config.")
-		tvsLog.Info("Usage step2: Run './tvnode' or './tvnode -rootPath .' start tinyverse tvnode service.")
+		mainLog.Info("tinverse tvnode")
+		mainLog.Info("Usage step1: Run './tvnode -init' generate identity key and config.")
+		mainLog.Info("Usage step2: Run './tvnode' or './tvnode -rootPath .' start tinyverse tvnode service.")
 		os.Exit(0)
 	}
 	if *generateCfg {
 		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
 		if err != nil {
-			tvsLog.Fatalf("Failed to generate config file: %v", err)
+			mainLog.Fatalf("Failed to generate config file: %v", err)
 		}
-		tvsLog.Infof("Generate config file successfully.")
+		mainLog.Infof("Generate config file successfully.")
 		os.Exit(0)
 	}
 
 	if *shutDown {
 		pidFile, err := getPidFileName(*rootPath)
 		if err != nil {
-			tvsLog.Infof("Failed to get pidFileName: %v", err)
+			mainLog.Infof("Failed to get pidFileName: %v", err)
 			os.Exit(0)
 		}
 		file, err := os.Open(pidFile)
 		if err != nil {
-			tvsLog.Infof("Failed to open pidFile: %v", err)
+			mainLog.Infof("Failed to open pidFile: %v", err)
 			os.Exit(0)
 		}
 		defer file.Close()
 		content, err := io.ReadAll(file)
 		if err != nil {
-			tvsLog.Infof("Failed to read pidFile: %v", err)
+			mainLog.Infof("Failed to read pidFile: %v", err)
 			os.Exit(0)
 		}
 		pid, err := strconv.Atoi(strings.TrimRight(string(content), "\r\n"))
 		if err != nil {
-			tvsLog.Errorf("The pidFile content is not a number, content: %v ,error: %v", content, err)
+			mainLog.Errorf("The pidFile content is not a number, content: %v ,error: %v", content, err)
 		}
 
 		process, err := os.FindProcess(pid)
 		if err != nil {
-			tvsLog.Infof("Failed to find process: %v", err)
+			mainLog.Infof("Failed to find process: %v", err)
 			os.Exit(0)
 		}
 
 		err = process.Signal(syscall.SIGKILL)
 		if err != nil {
-			tvsLog.Infof("Failed to terminate process: %v", err)
+			mainLog.Infof("Failed to terminate process: %v", err)
 		}
 
-		tvsLog.Infof("Process terminated successfully")
+		mainLog.Infof("Process terminated successfully")
 		os.Exit(0)
 	}
 	return *rootPath
@@ -131,52 +135,94 @@ func main() {
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: %v", err)
+		mainLog.Errorf("tvnode->main: %v", err)
 		return
 	}
 
 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: init log: %v", err)
+		mainLog.Fatalf("tvnode->main: init log: %v", err)
 	}
 
 	pidFileName, err := getPidFileName(rootPath)
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
+		mainLog.Fatalf("tvnode->main: get pid file name: %v", err)
 	}
 	pidFileLockHandle, err := filelock.New(pidFileName)
-	tvsLog.Infof("tvnode->main: PID: %v", os.Getpid())
+	mainLog.Infof("tvnode->main: PID: %v", os.Getpid())
 	if err == filelock.ErrFileIsBeingUsed {
-		tvsLog.Errorf("tvnode->main: pid file is being locked: %v", err)
+		mainLog.Errorf("tvnode->main: pid file is being locked: %v", err)
 		return
 	}
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: pid file lock: %v", err)
+		mainLog.Errorf("tvnode->main: pid file lock: %v", err)
 		return
 	}
 	defer func() {
 		err = pidFileLockHandle.Unlock()
 		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file unlock: %v", err)
+			mainLog.Errorf("tvnode->main: pid file unlock: %v", err)
 		}
 		err = os.Remove(pidFileName)
 		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file remove: %v", err)
+			mainLog.Errorf("tvnode->main: pid file remove: %v", err)
 		}
 	}()
 
 	ctx := context.Background()
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
+		mainLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
 	}
 	p, err := pullcid.GetPullCidServiceProtocol(tvbase)
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
 	tvbase.RegistCSSProtocol(p)
 
 	<-ctx.Done()
 	// tvInfrasture.Stop()
 	// Logger.Info("tvnode_->main: Gracefully shut down daemon")
+}
+
+func initDmsg(
+	srcPubkey *ecdsa.PublicKey,
+	srcPrikey *ecdsa.PrivateKey,
+	rootPath string,
+	ctx context.Context) (*tvbase.TvBase, *dmsgService.DmsgService, error) {
+	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
+	if err != nil {
+		mainLog.Fatalf("initDmsg error: %v", err)
+	}
+
+	dmsgService := tvInfra.GetServiceDmsgService()
+	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
+	if err != nil {
+		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
+		return nil, nil, err
+	}
+
+	getSig := func(protoData []byte) ([]byte, error) {
+		sig, err := tvutilCrypto.SignDataByEcdsa(srcPrikey, protoData)
+		if err != nil {
+			mainLog.Errorf("initDmsg: sign error: %v", err)
+		}
+		return sig, nil
+	}
+
+	done := make(chan any)
+	err = dmsgService.InitUser(userPubkeyData, getSig, done)
+	if err != nil {
+		return nil, nil, err
+	}
+	data := <-done
+	if data != nil {
+		err, ok := data.(error)
+		if ok || err != nil {
+			mainLog.Errorf("initDmsg: InitUser error: %v", err)
+			return nil, nil, err
+		}
+	}
+
+	return tvInfra, dmsgService, nil
 }
