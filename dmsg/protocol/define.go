@@ -1,14 +1,8 @@
 package protocol
 
-import (
-	"time"
-)
-
 const (
 	ProtocolVersion = "0.0.1"
 )
-
-const ProtocolRequestTimeout = 10 * time.Second
 
 const (
 	PidCreateMailboxReq    = "/tvbase/dmsg/createMailbox/req/" + ProtocolVersion

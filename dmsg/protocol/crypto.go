@@ -2,6 +2,9 @@ package protocol
 
 import (
 	// "github.com/libp2p/go-libp2p/core/host"
+	"crypto/ecdsa"
+
+	tvbaseKey "github.com/tinyverse-web3/tvbase/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvutil/crypto"
@@ -40,15 +43,27 @@ func verifyData(protoData []byte, pubkeyHex string, sig []byte) bool {
 	return isVerify
 }
 
-// func GetProtoMsgSignWithHost(message proto.Message, host host.Host) ([]byte, error) {
-// 	data, err := proto.Marshal(message)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	privateKey := host.Peerstore().PrivKey(host.ID())
-// 	signBytes, err := privateKey.Sign(data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return signBytes, nil
-// }
+func AuthProtoMsg(message proto.Message, basicData *pb.BasicData) (bool, error) {
+	sig := basicData.Sig
+	basicData.Sig = nil
+	protoData, err := proto.Marshal(message)
+	if err != nil {
+		dmsgLog.Logger.Errorf("AuthProtoMsg: proto.Marshal error: %v", err)
+		return false, nil
+	}
+	basicData.Sig = sig
+	pubkey, err := crypto.PubkeyFromHex(basicData.Pubkey)
+	if err != nil {
+		return false, err
+	}
+	return tvbaseKey.Verify(pubkey, protoData, sig)
+}
+
+func EcdsaSignProtocolMsg(message proto.Message, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	data, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	signBytes, err := tvbaseKey.Sign(privateKey, data)
+	return signBytes, err
+}

@@ -246,8 +246,8 @@ func main() {
 				continue
 			}
 
-			// pubkeyStr := destPubKeyStr
-			pubkeyStr := pubPubKeyStr
+			pubkeyStr := destPubKeyStr
+			// pubkeyStr := pubPubKeyStr
 			sendMsgReq, err := dmsgService.SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				tvcLog.Errorf("send msg: error: %v", err)
