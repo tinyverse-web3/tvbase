@@ -7,9 +7,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -71,20 +72,20 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	var retCode *pb.RetCode = nil
 	var requestCallbackData any
-	valid := protocol.AuthProtoMsg(request, requestBasicData)
+	valid := dmsgProtocol.AuthProtoMsg(request, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: failed to authenticate message")
-		retCode = protocol.NewFailRetCode("StreamProtocol->HandleRequestData: failed to authenticate message")
+		retCode = dmsgProtocol.NewFailRetCode("StreamProtocol->HandleRequestData: failed to authenticate message")
 	} else {
 		var retCodeData any
 		requestCallbackData, retCodeData, err = p.Adapter.CallRequestCallback(request)
 		if err != nil {
-			retCode = protocol.NewFailRetCode(err.Error())
+			retCode = dmsgProtocol.NewFailRetCode(err.Error())
 		} else {
 			var ok bool
 			retCode, ok = retCodeData.(*pb.RetCode)
 			if !ok {
-				retCode = protocol.NewSuccRetCode()
+				retCode = dmsgProtocol.NewSuccRetCode()
 			}
 		}
 	}
@@ -96,7 +97,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 		return err
 	}
 
-	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
+	responseBasicData := dmsgProtocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCode)
 	if err != nil {
@@ -120,7 +121,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 	}
 
 	// send response message
-	err = protocol.SendProtocolMsg(p.Ctx, p.Host, remotePeerID, p.Adapter.GetStreamResponsePID(), response)
+	err = sendProtoMsg(p.Ctx, p.Host, remotePeerID, p.Adapter.GetStreamResponsePID(), response)
 	if err != nil {
 		return err
 	}
@@ -138,4 +139,28 @@ func NewStreamProtocol(ctx context.Context, host host.Host, protocolService Prot
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	return protocol
+}
+
+func sendProtoMsg(ctx context.Context, host host.Host, peerID peer.ID, pid protocol.ID, protoMsg proto.Message) error {
+	stream, err := host.NewStream(ctx, peerID, pid)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if stream != nil {
+			stream.Close()
+		}
+	}()
+
+	buf, err := proto.Marshal(protoMsg)
+	if err != nil {
+		return err
+	}
+	_, err = stream.Write(buf)
+	if err != nil {
+		stream.Reset()
+		stream = nil
+		return err
+	}
+	return nil
 }
