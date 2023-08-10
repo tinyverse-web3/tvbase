@@ -71,7 +71,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	var retCode *pb.RetCode = nil
 	var requestCallbackData any
-	valid := protocol.AuthProtocolMsg(request, requestBasicData)
+	valid := protocol.AuthProtoMsg(request, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: failed to authenticate message")
 		retCode = protocol.NewFailRetCode("StreamProtocol->HandleRequestData: failed to authenticate message")

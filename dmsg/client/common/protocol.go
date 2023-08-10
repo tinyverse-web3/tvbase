@@ -30,7 +30,7 @@ func (p *Protocol) HandleRequestData(
 	dmsgLog.Logger.Debugf("Protocol->HandleRequestData: protocolRequest: %v", requestProtoMsg)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	valid := protocol.AuthProtocolMsg(requestProtoMsg, requestBasicData)
+	valid := protocol.AuthProtoMsg(requestProtoMsg, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
 		return requestProtoMsg, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
@@ -133,7 +133,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 	dmsgLog.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
-	valid := protocol.AuthProtocolMsg(responseProtoMsg, responseBasicData)
+	valid := protocol.AuthProtoMsg(responseProtoMsg, responseBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)

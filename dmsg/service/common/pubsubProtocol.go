@@ -29,7 +29,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 		requestProtocolId, request)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
-	valid := protocol.AuthProtocolMsg(request, requestBasicData)
+	valid := protocol.AuthProtoMsg(request, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Warnf("PubsubProtocol->HandleRequestData: failed to authenticate message")
 		return fmt.Errorf("PubsubProtocol->HandleRequestData: failed to authenticate message")

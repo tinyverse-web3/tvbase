@@ -41,11 +41,7 @@ func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
 	// 	return fmt.Errorf("SendMsgProtocol->HandleRequestData: sendMsgReq error")
 	// }
 	basicData := sendMsgReq.BasicData
-	valid, err := protocol.AuthProtoMsg(request, basicData)
-	if err != nil {
-		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: authenticate message err:%v", err)
-		return err
-	}
+	valid := protocol.AuthProtoMsg(request, basicData)
 	if !valid {
 		dmsgLog.Logger.Warnf("SendMsgProtocol->HandleRequestData: failed to authenticate message")
 		return err
