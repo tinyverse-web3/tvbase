@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,6 +16,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	keyUtil "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -858,21 +857,15 @@ func (d *DmsgService) PublishProtocol(ctx context.Context, pubkey string, pid pb
 		user = &destUser.User
 	}
 
-	pubsubBuf := new(bytes.Buffer)
-	err := binary.Write(pubsubBuf, binary.LittleEndian, pid)
+	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: error: %v", err)
-		return err
-	}
-	err = binary.Write(pubsubBuf, binary.LittleEndian, protoData)
-	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: GenProtoData error: %v", err)
 		return err
 	}
 
-	err = user.Topic.Publish(ctx, pubsubBuf.Bytes())
+	err = user.Topic.Publish(ctx, buf)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: publish protocol error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: Publish error: %v", err)
 		return err
 	}
 	return nil
