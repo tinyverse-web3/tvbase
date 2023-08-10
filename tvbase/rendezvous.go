@@ -7,7 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
-	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 )
 
@@ -15,13 +14,15 @@ const TvbaseRendezvous = "tvbase/discover-rendzvous/common"
 
 func (m *TvBase) initRendezvous() error {
 	if m.pubRoutingDiscovery == nil {
-		m.rendezvousCbList = make([]tvPeer.RendezvousCallback, 0)
+		m.isRendezvous = false
+		m.isRendezvousChan = make(chan bool)
 		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
 		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TvbaseRendezvous)
 
 		handleNoNet := func(peerID peer.ID) error {
 			if !m.IsExistConnectedPeer() {
-				m.IsRendezvous = false
+				m.isRendezvous = false
+				m.isRendezvousChan <- false
 			}
 			return nil
 		}
@@ -31,13 +32,9 @@ func (m *TvBase) initRendezvous() error {
 	return nil
 }
 
-func (m *TvBase) RegistRendezvousCallback(callback tvPeer.RendezvousCallback) {
-	m.rendezvousCbList = append(m.rendezvousCbList, callback)
-}
-
 func (m *TvBase) DiscoverRendezvousPeers() {
 	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers begin")
-	for !m.IsRendezvous {
+	for !m.isRendezvous {
 		rendezvousPeerCount := 0
 		start := time.Now()
 		peerAddrInfoChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TvbaseRendezvous)
@@ -75,11 +72,17 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			time.Sleep(10 * time.Second)
 		} else {
 			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
-			m.IsRendezvous = true
-			for _, cb := range m.rendezvousCbList {
-				cb()
-			}
+			m.isRendezvous = true
+			m.isRendezvousChan <- true
 		}
 	}
 	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers end")
+}
+
+func (m *TvBase) GetRendezvousChan() chan bool {
+	return m.isRendezvousChan
+}
+
+func (m *TvBase) GetIsRendezvous() bool {
+	return m.isRendezvous
 }

@@ -60,8 +60,8 @@ type TvBase struct {
 	notConnectedCbList   []tvPeer.ConnectCallback
 	nodeInfoService      *tvProtocol.NodeInfoService
 	pubRoutingDiscovery  *drouting.RoutingDiscovery
-	IsRendezvous         bool
-	rendezvousCbList     []tvPeer.RendezvousCallback
+	isRendezvous         bool
+	isRendezvousChan     chan bool
 	launch               *fx.App
 }
 
@@ -579,7 +579,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 							if err != nil {
 								tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
 							} else {
-								m.IsRendezvous = false
+								m.isRendezvous = false
+								m.isRendezvousChan <- false
 								go m.DiscoverRendezvousPeers()
 							}
 						}

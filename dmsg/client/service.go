@@ -17,7 +17,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	keyUtil "github.com/tinyverse-web3/tvutil/key"
+	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -94,106 +94,29 @@ func (d *DmsgService) Stop() error {
 	return nil
 }
 
-func (d *DmsgService) InitUser(userPubkeyData []byte, getSigCallback dmsgKey.GetSigCallback, done chan any) error {
+func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback, opts ...any) error {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
-	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
-	err := d.subscribeUser(userPubkey, getSigCallback)
+	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
+	err := d.subscribeUser(pubkey, getSig)
 	if err != nil {
 		return err
 	}
 
-	initMailbox := func() {
-		dmsgLog.Logger.Debug("DmsgService->InitUser->initMailbox begin")
-		if d == nil {
-			dmsgLog.Logger.Errorf("DmsgService->InitUser: DmsgService is nil")
-			done <- fmt.Errorf("DmsgService is nil")
-			return
-		}
-		if d.user == nil {
-			dmsgLog.Logger.Errorf("DmsgService->InitUser: SrcUserInfo is nil")
-			done <- fmt.Errorf("SrcUserInfo is nil")
-			return
-		}
-		_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.user.Key.PubkeyHex, d.user.Key.PubkeyHex)
-		if err != nil {
-			done <- err
-			return
-		}
-		select {
-		case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
-			dmsgLog.Logger.Debugf("DmsgService->InitUser: seekMailboxProtoData: %+v", seekMailboxResponseProtoData)
-			response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
-			if !ok || response == nil {
-				dmsgLog.Logger.Errorf("DmsgService->InitUser: seekMailboxProtoData is not SeekMailboxRes")
-				// skip seek when seek mailbox quest fail (server err), create a new mailbox
-			}
-			if response.RetCode.Code < 0 {
-				dmsgLog.Logger.Errorf("DmsgService->InitUser: seekMailboxProtoData fail")
-				// skip seek when seek mailbox quest fail, create a new mailbox
-			} else {
-				dmsgLog.Logger.Debugf("DmsgService->InitUser: seekMailboxProtoData success")
-				done <- nil
-
-				go d.releaseUnusedMailbox(response.BasicData.PeerID, userPubkey)
-				return
-			}
-		case <-time.After(3 * time.Second):
-			dmsgLog.Logger.Debugf("DmsgService->InitUser: time.After 3s, create new mailbox")
-			// begin create new mailbox
-
-			hostId := d.BaseService.GetHost().ID().String()
-			servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
-			if err != nil {
-				dmsgLog.Logger.Errorf("DmsgService->InitUser: getAvailableServicePeerList error: %v", err)
-				done <- err
-				return
-			}
-
-			for _, servicePeerID := range servicePeerList {
-				dmsgLog.Logger.Debugf("DmsgService->InitUser: servicePeerID: %v", servicePeerID)
-				_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
-				if err != nil {
-					dmsgLog.Logger.Errorf("DmsgService->InitUser: createMailboxProtocol.Request error: %v", err)
-					continue
-				}
-
-				select {
-				case createMailboxResponseProtoData := <-createMailboxDoneChan:
-					dmsgLog.Logger.Debugf("DmsgService->InitUser: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
-					response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
-					if !ok || response == nil {
-						dmsgLog.Logger.Errorf("DmsgService->InitUser: createMailboxDoneChan is not CreateMailboxRes")
-						continue
-					}
-
-					switch response.RetCode.Code {
-					case 0, 1:
-						dmsgLog.Logger.Debugf("DmsgService->InitUser: createMailboxProtocol success")
-						done <- nil
-						return
-					default:
-						continue
-					}
-				case <-time.After(time.Second * 3):
-					continue
-				case <-d.BaseService.GetCtx().Done():
-					dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
-					done <- fmt.Errorf("DmsgService->InitUser: BaseService.GetCtx().Done()")
-					return
-				}
-			}
-
-			dmsgLog.Logger.Error("DmsgService->InitUser: no available service peers")
-			done <- fmt.Errorf("DmsgService->InitUser: no available service peers")
-			return
-			// end create mailbox
-		case <-d.BaseService.GetCtx().Done():
-			dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
-			done <- fmt.Errorf("DmsgService->InitUser: BaseService.GetCtx().Done()")
-			return
+	defTimeout := 24 * time.Hour
+	if len(opts) > 0 {
+		timeout, ok := opts[0].(time.Duration)
+		if ok {
+			defTimeout = timeout
 		}
 	}
-	d.BaseService.RegistRendezvousCallback(initMailbox)
+	select {
+	case <-d.BaseService.GetRendezvousChan():
+		d.initMailbox(pubkey)
+	case <-time.After(defTimeout):
+	case <-d.BaseService.GetCtx().Done():
+		return d.BaseService.GetCtx().Err()
+	}
+
 	dmsgLog.Logger.Debug("DmsgService->InitUser end")
 	return nil
 }
@@ -240,22 +163,15 @@ func (d *DmsgService) SubscribeDestUser(pubkey string) error {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 		return fmt.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 	}
-	if d.user != nil && d.user.Key.PubkeyHex == pubkey {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: pubkey equal to user pubkey")
-		return fmt.Errorf("DmsgService->SubscribeDestUser: pubkey equal to user pubkey")
-	}
-
 	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: NewUser error: %v", err)
 		return err
 	}
-
 	destUser := &dmsgUser.LightDestUser{
 		User: *user,
 	}
 	d.destUserList[pubkey] = destUser
-
 	// go d.BaseService.DiscoverRendezvousPeers()
 	go d.HandleProtocolWithPubsub(&destUser.User)
 
@@ -754,46 +670,37 @@ func (d *DmsgService) UnregistCustomPubsubProtocol(client customProtocol.CustomP
 
 // user
 func (d *DmsgService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback) error {
-	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser begin\npubkey: %s", pubkey)
+	dmsgLog.Logger.Debugf("DmsgService->subscribeUser begin\npubkey: %s", pubkey)
 	if d.user != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user isn't nil")
-		return fmt.Errorf("DmsgService->SubscribeSrcUser: user isn't nil")
-	}
-
-	if d.destUserList[pubkey] != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: pubkey is already exist in destUserList")
-		return fmt.Errorf("DmsgService->SubscribeSrcUser: pubkey is already exist in destUserList")
+		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: user isn't nil")
+		return fmt.Errorf("DmsgService->subscribeUser: user isn't nil")
 	}
 
 	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: NewUser error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: NewUser error: %v", err)
 		return err
 	}
-
 	d.user = &dmsgUser.LightUser{
 		User:          *user,
 		ServicePeerID: "",
 	}
-
 	// go d.BaseService.DiscoverRendezvousPeers()
 	go d.HandleProtocolWithPubsub(&d.user.User)
 
-	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser end")
+	dmsgLog.Logger.Debugf("DmsgService->subscribeUser end")
 	return nil
 }
 
 func (d *DmsgService) unsubscribeUser() error {
-	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser begin")
+	dmsgLog.Logger.Debugf("DmsgService->unsubscribeUser begin")
 	if d.user == nil {
-		dmsgLog.Logger.Errorf("DmsgService->UnSubscribeSrcUser: userPubkey is not exist in destUserInfoList")
-		return fmt.Errorf("DmsgService->UnSubscribeSrcUser: userPubkey is not exist in destUserInfoList")
+		dmsgLog.Logger.Errorf("DmsgService->unsubscribeUser: userPubkey is not exist in destUserInfoList")
+		return fmt.Errorf("DmsgService->unsubscribeUser: userPubkey is not exist in destUserInfoList")
 	}
-	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser:\nsrcUserInfo: %+v", d.user)
-
 	d.user.Close()
 	d.user = nil
-	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser end")
+	dmsgLog.Logger.Debugf("DmsgService->unsubscribeUser end")
 	return nil
 }
 
@@ -878,6 +785,83 @@ func (d *DmsgService) parseReadMailboxResponse(responseProtoData protoreflect.Pr
 	}
 	dmsgLog.Logger.Debug("DmsgService->parseReadMailboxResponse end")
 	return msgList, nil
+}
+
+func (d *DmsgService) initMailbox(pubkey string) {
+	dmsgLog.Logger.Debug("DmsgService->initMailbox begin")
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.user.Key.PubkeyHex, d.user.Key.PubkeyHex)
+	if err != nil {
+		return
+	}
+	select {
+	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
+		dmsgLog.Logger.Debugf("DmsgService->initMailbox: seekMailboxProtoData: %+v", seekMailboxResponseProtoData)
+		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
+		if !ok || response == nil {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
+			// skip seek when seek mailbox quest fail (server err), create a new mailbox
+		}
+		if response.RetCode.Code < 0 {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtoData fail")
+			// skip seek when seek mailbox quest fail, create a new mailbox
+		} else {
+			dmsgLog.Logger.Debugf("DmsgService->initMailbox: seekMailboxProtoData success")
+			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey)
+			return
+		}
+	case <-time.After(3 * time.Second):
+		dmsgLog.Logger.Debugf("DmsgService->initMailbox: time.After 3s, create new mailbox")
+		// begin create new mailbox
+
+		hostId := d.BaseService.GetHost().ID().String()
+		servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
+		if err != nil {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: getAvailableServicePeerList error: %v", err)
+			return
+		}
+
+		peerID := d.BaseService.GetHost().ID().String()
+		for _, servicePeerID := range servicePeerList {
+			dmsgLog.Logger.Debugf("DmsgService->initMailbox: servicePeerID: %v", servicePeerID)
+			if peerID == servicePeerID.String() {
+				continue
+			}
+			_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
+			if err != nil {
+				dmsgLog.Logger.Errorf("DmsgService->initMailbox: createMailboxProtocol.Request error: %v", err)
+				continue
+			}
+
+			select {
+			case createMailboxResponseProtoData := <-createMailboxDoneChan:
+				dmsgLog.Logger.Debugf("DmsgService->initMailbox: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
+				response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
+				if !ok || response == nil {
+					dmsgLog.Logger.Errorf("DmsgService->initMailbox: createMailboxDoneChan is not CreateMailboxRes")
+					continue
+				}
+
+				switch response.RetCode.Code {
+				case 0, 1:
+					dmsgLog.Logger.Debugf("DmsgService->initMailbox: createMailboxProtocol success")
+					return
+				default:
+					continue
+				}
+			case <-time.After(time.Second * 3):
+				continue
+			case <-d.BaseService.GetCtx().Done():
+				return
+			}
+		}
+
+		dmsgLog.Logger.Error("DmsgService->InitUser: no available service peers")
+		return
+		// end create mailbox
+	case <-d.BaseService.GetCtx().Done():
+		dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
+		return
+	}
 }
 
 // channel

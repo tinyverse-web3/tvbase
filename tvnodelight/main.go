@@ -95,20 +95,10 @@ func initDmsg(
 		return sig, nil
 	}
 
-	done := make(chan any)
-	err = dmsgService.InitUser(userPubkeyData, getSig, done)
+	err = dmsgService.InitUser(userPubkeyData, getSig)
 	if err != nil {
 		return nil, nil, err
 	}
-	data := <-done
-	if data != nil {
-		err, ok := data.(error)
-		if ok || err != nil {
-			mainLog.Errorf("initDmsg: InitUser error: %v", err)
-			return nil, nil, err
-		}
-	}
-
 	return tvInfra, dmsgService, nil
 }
 
