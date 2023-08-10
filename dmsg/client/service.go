@@ -233,8 +233,8 @@ func (d *DmsgService) SubscribeChannel(pubkey string) error {
 	dmsgLog.Logger.Debugf("DmsgService->SubscribeChannel begin:\npubkey: %s", pubkey)
 
 	if d.channelList[pubkey] != nil {
-		dmsgLog.Logger.Errorf("DmsgService->SubscribeChannel: pubkey is already exist in pubChannelInfoList")
-		return fmt.Errorf("DmsgService->SubscribeChannel: pubkey is already exist in pubChannelInfoList")
+		dmsgLog.Logger.Errorf("DmsgService->SubscribeChannel: pubkey is already exist in channelList")
+		return fmt.Errorf("DmsgService->SubscribeChannel: pubkey is already exist in channelList")
 	}
 
 	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
@@ -908,8 +908,12 @@ func (d *DmsgService) createChannelService(pubkey string) error {
 		dmsgLog.Logger.Errorf("DmsgService->createChannelService: GetUserPubkeyHex error: %v", err)
 		return err
 	}
+	peerID := d.BaseService.GetHost().ID().String()
 	for _, servicePeerID := range servicePeerList {
 		dmsgLog.Logger.Debugf("DmsgService->createChannelService: servicePeerID: %s", servicePeerID)
+		if peerID == servicePeerID.String() {
+			continue
+		}
 		_, createChannelDoneChan, err := d.createChannelProtocol.Request(servicePeerID, srcPubkey, pubkey)
 		if err != nil {
 			continue
