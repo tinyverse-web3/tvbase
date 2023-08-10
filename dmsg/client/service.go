@@ -183,7 +183,7 @@ func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, err
 }
 
 func (d *DmsgService) SubscribeDestUser(pubkey string) error {
-	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\npubkey: %s", pubkey)
+	dmsgLog.Logger.Debug("DmsgService->SubscribeDestUser begin\npubkey: %s", pubkey)
 	if d.destUserList[pubkey] != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 		return fmt.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")

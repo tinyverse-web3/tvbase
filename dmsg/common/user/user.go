@@ -67,14 +67,15 @@ func (u *Target) InitWithPubkey(c context.Context, p *pubsub.PubSub, pk string, 
 		dmsgLog.Logger.Errorf("User->InitWithPubkey: key.InitKeyWithPubkeyHex error: %v", err)
 		return err
 	}
+	u.Key = *key
 
 	pubsub, err := NewPubsub(p, pk)
 	if err != nil {
 		dmsgLog.Logger.Errorf("User->InitWithPubkey: NewPubsub error: %v", err)
 		return err
 	}
-	u.Key = *key
 	u.Pubsub = *pubsub
+
 	ctx, cancelFunc := context.WithCancel(c)
 	u.Ctx = ctx
 	u.CancelCtx = cancelFunc
