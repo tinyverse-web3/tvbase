@@ -113,7 +113,6 @@ type LightUser struct {
 
 type Channel struct {
 	User
-	LastRequestTimestamp int64
 }
 
 type LightDestUser struct {
