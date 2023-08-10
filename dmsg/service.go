@@ -87,6 +87,10 @@ func (d *DmsgService) RegPubsubProtocolResCallback(pid pb.PID, subscribe protoco
 	return nil
 }
 
+func (d *DmsgService) GetMsgPrefix(pubkey string) string {
+	return MsgPrefix + pubkey
+}
+
 func (d *DmsgService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
 	return MsgPrefix + destUserPubkey + MsgKeyDelimiter + srcUserPubkey
 }

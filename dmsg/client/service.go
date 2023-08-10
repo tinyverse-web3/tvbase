@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	ds "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/query"
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
@@ -45,6 +47,7 @@ type DmsgService struct {
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
 
+	stopCleanRestResource chan bool
 	// service
 	datastore db.Datastore
 }
@@ -85,11 +88,17 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 	d.customStreamProtocolInfoList = make(map[string]*dmsgClientCommon.CustomStreamProtocolInfo)
 	d.customPubsubProtocolInfoList = make(map[string]*dmsgClientCommon.CustomPubsubProtocolInfo)
+
+	d.stopCleanRestResource = make(chan bool)
 	return nil
 }
 
 // for sdk
 func (d *DmsgService) Start() error {
+	cfg := d.BaseService.GetConfig()
+	if cfg.Mode == tvConfig.ServiceMode {
+		d.cleanRestResource()
+	}
 	return nil
 }
 
@@ -97,6 +106,11 @@ func (d *DmsgService) Stop() error {
 	d.unsubscribeUser()
 	d.UnSubscribeDestUserList()
 	d.UnsubscribeChannelList()
+
+	cfg := d.BaseService.GetConfig()
+	if cfg.Mode == tvConfig.ServiceMode {
+		d.stopCleanRestResource <- true
+	}
 	return nil
 }
 
@@ -192,6 +206,10 @@ func (d *DmsgService) SubscribeDestUser(pubkey string) error {
 
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser end")
 	return nil
+}
+
+func (d *DmsgService) GetDestUser(pubkey string) *dmsgUser.DestUser {
+	return d.destUserList[pubkey]
 }
 
 func (d *DmsgService) UnsubscribeDestUser(pubkey string) error {
@@ -931,4 +949,60 @@ func (d *DmsgService) createChannelService(pubkey string) error {
 	}
 	dmsgLog.Logger.Debug("DmsgService->createChannelService end")
 	return nil
+}
+
+// common
+func (d *DmsgService) cleanRestResource() {
+	go func() {
+		ticker := time.NewTicker(3 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-d.stopCleanRestResource:
+				return
+			case <-ticker.C:
+				cfg := d.BaseService.GetConfig()
+				for pubkey, pubsub := range d.destUserList {
+					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
+					if days >= cfg.DMsg.KeepMailboxMsgDay {
+						var query = query.Query{
+							Prefix:   d.GetMsgPrefix(pubkey),
+							KeysOnly: true,
+						}
+						results, err := d.datastore.Query(d.BaseService.GetCtx(), query)
+						if err != nil {
+							dmsgLog.Logger.Errorf("dmsgService->readDestUserPubsub: query error: %v", err)
+						}
+
+						for result := range results.Next() {
+							d.datastore.Delete(d.BaseService.GetCtx(), ds.NewKey(result.Key))
+							dmsgLog.Logger.Debugf("dmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
+						}
+
+						d.UnsubscribeDestUser(pubkey)
+						return
+					}
+				}
+				for channelPk, pubsub := range d.channelList {
+					days := daysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
+					if days >= cfg.DMsg.KeepPubChannelDay {
+						d.UnsubscribeChannel(channelPk)
+						return
+					}
+				}
+
+				continue
+			case <-d.BaseService.GetCtx().Done():
+				return
+			}
+		}
+	}()
+}
+
+func daysBetween(start, end int64) int {
+	startTime := time.Unix(start, 0)
+	endTime := time.Unix(end, 0)
+	return int(endTime.Sub(startTime).Hours() / 24)
 }
