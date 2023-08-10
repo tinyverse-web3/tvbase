@@ -113,6 +113,7 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 	case <-d.BaseService.GetRendezvousChan():
 		d.initMailbox(pubkey)
 	case <-time.After(defTimeout):
+		return nil
 	case <-d.BaseService.GetCtx().Done():
 		return d.BaseService.GetCtx().Err()
 	}
