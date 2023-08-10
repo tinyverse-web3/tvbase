@@ -32,7 +32,6 @@ type ProtocolProxy struct {
 	releaseMailboxPrtocol *dmsgClientCommon.StreamProtocol
 	createChannelProtocol *dmsgClientCommon.StreamProtocol
 	seekMailboxProtocol   *dmsgClientCommon.PubsubProtocol
-	queryPeerProtocol     *dmsgClientCommon.PubsubProtocol
 	sendMsgPubPrtocol     *dmsgClientCommon.PubsubProtocol
 }
 
@@ -76,9 +75,6 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	// pubsub protocol
 	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
-
-	d.queryPeerProtocol = clientProtocol.NewQueryPeerProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
 
 	d.sendMsgPubPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(d.sendMsgPubPrtocol.Adapter.GetRequestPID(), d.sendMsgPubPrtocol)
