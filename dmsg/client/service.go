@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
@@ -63,6 +63,15 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 		return err
 	}
 
+	cfg := d.BaseService.GetConfig()
+	if cfg.Mode == tvbaseConfig.ServiceMode {
+		d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+		if err != nil {
+			dmsgLog.Logger.Errorf("dmsgService->Init: create datastore error %v", err)
+			return err
+		}
+	}
+
 	// stream protocol
 	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
@@ -89,7 +98,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 // for sdk
 func (d *DmsgService) Start() error {
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvConfig.ServiceMode {
+	if cfg.Mode == tvbaseConfig.ServiceMode {
 		d.cleanRestResource()
 	}
 	return nil
@@ -97,11 +106,11 @@ func (d *DmsgService) Start() error {
 
 func (d *DmsgService) Stop() error {
 	d.unsubscribeUser()
-	d.UnSubscribeDestUserList()
+	d.UnsubscribeDestUserList()
 	d.UnsubscribeChannelList()
 
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvConfig.ServiceMode {
+	if cfg.Mode == tvbaseConfig.ServiceMode {
 		d.stopCleanRestResource <- true
 	}
 	return nil
@@ -116,7 +125,7 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 	}
 
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvConfig.ServiceMode {
+	if cfg.Mode == tvbaseConfig.ServiceMode {
 		return nil
 	}
 	defTimeout := 24 * time.Hour
@@ -220,7 +229,7 @@ func (d *DmsgService) UnsubscribeDestUser(pubkey string) error {
 	return nil
 }
 
-func (d *DmsgService) UnSubscribeDestUserList() {
+func (d *DmsgService) UnsubscribeDestUserList() {
 	for pubkey := range d.destUserList {
 		d.UnsubscribeDestUser(pubkey)
 	}
