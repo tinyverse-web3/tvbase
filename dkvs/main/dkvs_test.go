@@ -426,7 +426,7 @@ func TestTransferKey(t *testing.T) {
 }
 
 func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
-	
+
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err != nil {
 		return nil, nil, (err)
@@ -449,7 +449,7 @@ func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []by
 }
 
 func getNewRecordValue2(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, uint64, uint64, error) {
-	
+
 	var rv *dkvs_pb.CertsRecordValue
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err == nil {
@@ -461,7 +461,7 @@ func getNewRecordValue2(kv common.DkvsService, key string, sk ic.PrivKey, pk []b
 	}
 
 	value2, _ := dkvs.EncodeCertsRecordValueWithCert(rv, cert, nil)
-	
+
 	data := dkvs.GetRecordSignData(key, value2, pk, issuetime, ttl)
 	sign2, err := sk.Sign(data)
 
@@ -555,8 +555,6 @@ func hash(key string) (hashKey string) {
 	return
 }
 
-
-
 func TestMultiWriters(t *testing.T) {
 	tvbase, err := tvbase.NewTvbase()
 	if err != nil {
@@ -623,7 +621,6 @@ func TestMultiWriters(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
 
 func TestMultiWritersWithCert(t *testing.T) {
 	tvbase, err := tvbase.NewTvbase()
@@ -711,7 +708,7 @@ func TestMultiWritersWithCert(t *testing.T) {
 		t.Fatal(err)
 	}
 	value, pubkey, _, _, sign, err = kv.Get(tKey)
-	if err != nil || !bytes.Equal(value, tValue1) || !bytes.Equal(sign, sigData1) || !bytes.Equal(pk1, pubkey){
+	if err != nil || !bytes.Equal(value, tValue1) || !bytes.Equal(sign, sigData1) || !bytes.Equal(pk1, pubkey) {
 		t.Fatal(err)
 	}
 
@@ -814,5 +811,95 @@ func TestMultiWritersWithCert(t *testing.T) {
 	value, pubkey, _, _, sign, err = kv.Get(tKey)
 	if err != nil || !bytes.Equal(value, tValue3) || !bytes.Equal(sign, sigData3) || !bytes.Equal(pk3, pubkey) {
 		t.Fatal(err)
+	}
+}
+
+func TestDkvsTTL(t *testing.T) {
+	maxttl := dkvs.GetMaxTtl()
+	fmt.Printf("maxttl: %v", maxttl)
+
+	tvbase, err := tvbase.NewTvbase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kv := tvbase.GetDkvsService()
+
+	seed := "oIBBgepoPyhdJTYC"
+	priv, err := dkvs.GetPriKeyBySeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := priv.GetPublic()
+	pkBytes, err := ic.MarshalPublicKey(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("seed: ", seed)
+	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
+
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa20")
+	tValue1 := []byte("world1")
+	ttl := dkvs.GetTtlFromDuration(time.Hour)
+	issuetime := dkvs.TimeNow()
+	fmt.Printf("tKey: %v", tKey)
+	data := dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
+	sigData1, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pkBytes, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-time.After(20 * time.Second):
+		fmt.Println("Timeout occurred")
+	}
+	//等待时手工从网络获取这个key
+
+	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, maxttl)
+	sigData2, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pkBytes, issuetime, maxttl, sigData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-time.After(20 * time.Second):
+		fmt.Println("Timeout occurred")
+	}
+	//等待时手工从网络获取这个key
+
+	//删除这个key
+	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, 0, ttl)
+	sigData3, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pkBytes, 0, ttl, sigData3)
+	if err == nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		fmt.Printf("记录过期错误：%s", err.Error())
+	}
+	issuetime = dkvs.TimeNow()
+	ttl = 5000 //代表5000毫秒，ttl与issuetime都是毫秒
+	data = dkvs.GetRecordSignData(tKey, nil, pkBytes, issuetime, ttl)
+	sigData4, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, nil, pkBytes, issuetime, ttl, sigData4)
+	if err != nil {
+		fmt.Printf("记录错误：%s", err.Error())
+	}
+	select {
+	case <-time.After(30 * time.Second):
+		fmt.Println("Timeout occurred")
 	}
 }

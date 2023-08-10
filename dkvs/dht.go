@@ -70,7 +70,7 @@ func (d *Dkvs) putKeyToLocalNode(ctx context.Context, key string, value []byte, 
 	defer span.End()
 
 	Logger.Debugw("putting value", "key", kaddht.LoggableRecordKeyString(key))
-	Logger.Debugf("putting value {dskey: }", d.mkDsKey(key))
+	Logger.Debugf("putting value {dskey: %v}", d.mkDsKey(key))
 
 	// don't even allow local users to put bad values.
 	if err := dht.Validator.Validate(key, value); err != nil {
