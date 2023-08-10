@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/key"
@@ -42,20 +43,24 @@ func (p *Pubsub) Publish(ctx context.Context, protoData []byte, opts ...pubsub.P
 	return err
 }
 
-func NewUser(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) (*User, error) {
-	user := &User{}
+func (p *Pubsub) Next(ctx context.Context) (*pubsub.Message, error) {
+	return p.Subscription.Next(ctx)
+}
+
+func NewTarget(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) (*Target, error) {
+	user := &Target{}
 	err := user.InitWithPubkey(c, p, pk, getSig)
 	return user, err
 }
 
-type User struct {
+type Target struct {
 	Pubsub
 	Key       key.Key
 	Ctx       context.Context
 	CancelCtx context.CancelFunc
 }
 
-func (u *User) InitWithPubkey(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) error {
+func (u *Target) InitWithPubkey(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) error {
 	key := key.NewKey()
 	err := key.InitKeyWithPubkeyHex(pk, getSig)
 	if err != nil {
@@ -76,7 +81,7 @@ func (u *User) InitWithPubkey(c context.Context, p *pubsub.PubSub, pk string, ge
 	return nil
 }
 
-func (s *User) GetSig(protoData []byte) ([]byte, error) {
+func (s *Target) GetSig(protoData []byte) ([]byte, error) {
 	if s.Key.Prikey != nil {
 		sig, err := crypto.SignDataByEcdsa(s.Key.Prikey, protoData)
 		if err != nil {
@@ -91,12 +96,16 @@ func (s *User) GetSig(protoData []byte) ([]byte, error) {
 	return s.Key.GetSig(protoData)
 }
 
-func (s *User) Publish(protoData []byte, opts ...pubsub.PubOpt) error {
+func (s *Target) Publish(protoData []byte, opts ...pubsub.PubOpt) error {
 	s.Pubsub.Publish(s.Ctx, protoData, opts...)
 	return nil
 }
 
-func (u *User) Close() error {
+func (s *Target) WaitMsg() (*pubsub.Message, error) {
+	return s.Pubsub.Next(s.Ctx)
+}
+
+func (u *Target) Close() error {
 	u.CancelCtx()
 	u.Subscription.Cancel()
 	err := u.Topic.Close()
@@ -106,15 +115,21 @@ func (u *User) Close() error {
 	return err
 }
 
-type LightUser struct {
-	User
+type User struct {
+	Target
 	ServicePeerID string
 }
 
-type Channel struct {
-	User
+type DestTarget struct {
+	Target
+	LastReciveTimestamp int64
 }
 
-type LightDestUser struct {
-	User
+type Channel struct {
+	DestTarget
+}
+
+type DestUser struct {
+	DestTarget
+	MsgRWMutex sync.RWMutex
 }

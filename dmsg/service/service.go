@@ -40,7 +40,7 @@ type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	datastore                    db.Datastore
-	user                         *dmsgUser.LightUser
+	user                         *dmsgUser.User
 	destUserList                 map[string]*dmsgServiceCommon.DestUserInfo
 	channelInfoList              map[string]*dmsgServiceCommon.PubChannel
 	customProtocolPubsubList     map[string]*dmsgServiceCommon.CustomProtocolPubsub
@@ -830,19 +830,19 @@ func (d *DmsgService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback
 		return fmt.Errorf("DmsgService->subscribeUser: pubkey is already exist in destUserList")
 	}
 
-	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
+	user, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: NewUser error: %v", err)
 		return err
 	}
 
-	d.user = &dmsgUser.LightUser{
-		User:          *user,
+	d.user = &dmsgUser.User{
+		Target:        *user,
 		ServicePeerID: "",
 	}
 
 	// go d.BaseService.DiscoverRendezvousPeers()
-	go d.HandleProtocolWithPubsub(&d.user.User)
+	go d.HandleProtocolWithPubsub(&d.user.Target)
 
 	dmsgLog.Logger.Debugf("DmsgService->subscribeUser end")
 	return nil

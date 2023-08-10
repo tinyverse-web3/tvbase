@@ -36,10 +36,10 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	user         *dmsgUser.LightUser
+	user         *dmsgUser.User
 	onReceiveMsg dmsgClientCommon.OnReceiveMsg
 
-	destUserList                 map[string]*dmsgUser.LightDestUser
+	destUserList                 map[string]*dmsgUser.DestTarget
 	channelList                  map[string]*dmsgUser.Channel
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
@@ -79,7 +79,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.sendMsgPubPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(d.sendMsgPubPrtocol.Adapter.GetRequestPID(), d.sendMsgPubPrtocol)
 
-	d.destUserList = make(map[string]*dmsgUser.LightDestUser)
+	d.destUserList = make(map[string]*dmsgUser.DestTarget)
 	d.channelList = make(map[string]*dmsgUser.Channel)
 
 	d.customStreamProtocolInfoList = make(map[string]*dmsgClientCommon.CustomStreamProtocolInfo)
@@ -173,17 +173,17 @@ func (d *DmsgService) SubscribeDestUser(pubkey string) error {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 		return fmt.Errorf("DmsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 	}
-	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
+	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeDestUser: NewUser error: %v", err)
 		return err
 	}
-	destUser := &dmsgUser.LightDestUser{
-		User: *user,
+	destUser := &dmsgUser.DestTarget{
+		Target: *target,
 	}
 	d.destUserList[pubkey] = destUser
 	// go d.BaseService.DiscoverRendezvousPeers()
-	go d.HandleProtocolWithPubsub(&destUser.User)
+	go d.HandleProtocolWithPubsub(&destUser.Target)
 
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser end")
 	return nil
@@ -218,26 +218,29 @@ func (d *DmsgService) SubscribeChannel(pubkey string) error {
 		return fmt.Errorf("DmsgService->SubscribeChannel: pubkey is already exist in pubChannelInfoList")
 	}
 
-	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
+	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, nil)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeChannel: NewUser error: %v", err)
 		return err
 	}
 
 	channel := &dmsgUser.Channel{
-		User: *user,
+		DestTarget: dmsgUser.DestTarget{
+			Target:              *target,
+			LastReciveTimestamp: time.Now().UnixNano(),
+		},
 	}
 	d.channelList[pubkey] = channel
 
 	err = d.createChannelService(channel.Key.PubkeyHex)
 	if err != nil {
-		user.Close()
+		target.Close()
 		delete(d.channelList, pubkey)
 		return err
 	}
 
 	// go d.BaseService.DiscoverRendezvousPeers()
-	go d.HandleProtocolWithPubsub(&channel.User)
+	go d.HandleProtocolWithPubsub(&channel.Target)
 
 	dmsgLog.Logger.Debug("DmsgService->SubscribeChannel end")
 	return nil
@@ -571,7 +574,7 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protorefle
 
 // ClientService interface
 func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error {
-	var dmsguser *dmsgUser.User = nil
+	var dmsguser *dmsgUser.Target = nil
 	user := d.destUserList[pubkey]
 	if user == nil {
 		if d.user.Key.PubkeyHex != pubkey {
@@ -580,12 +583,12 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 				dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest/channel user Info for key %s", pubkey)
 				return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest/channel user Info for key %s", pubkey)
 			}
-			dmsguser = &channel.User
+			dmsguser = &channel.Target
 		} else {
-			dmsguser = &d.user.User
+			dmsguser = &d.user.Target
 		}
 	} else {
-		dmsguser = &user.User
+		dmsguser = &user.Target
 	}
 
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
@@ -686,17 +689,17 @@ func (d *DmsgService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback
 		return fmt.Errorf("DmsgService->subscribeUser: user isn't nil")
 	}
 
-	user, err := dmsgUser.NewUser(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
+	target, err := dmsgUser.NewTarget(d.BaseService.GetCtx(), d.Pubsub, pubkey, getSig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->subscribeUser: NewUser error: %v", err)
 		return err
 	}
-	d.user = &dmsgUser.LightUser{
-		User:          *user,
+	d.user = &dmsgUser.User{
+		Target:        *target,
 		ServicePeerID: "",
 	}
 	// go d.BaseService.DiscoverRendezvousPeers()
-	go d.HandleProtocolWithPubsub(&d.user.User)
+	go d.HandleProtocolWithPubsub(&d.user.Target)
 
 	dmsgLog.Logger.Debugf("DmsgService->subscribeUser end")
 	return nil

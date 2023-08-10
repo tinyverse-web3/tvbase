@@ -37,15 +37,12 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	return nil
 }
 
-func (d *DmsgService) HandleProtocolWithPubsub(user *dmsgUser.User) {
+func (d *DmsgService) HandleProtocolWithPubsub(target *dmsgUser.Target) {
 	for {
-		m, err := user.Subscription.Next(user.Ctx)
+		m, err := target.WaitMsg()
 		if err != nil {
 			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: subscription.Next happen err, %+v", err)
 			return
-		}
-		if d.BaseService.GetHost().ID() == m.ReceivedFrom {
-			continue
 		}
 
 		dmsgLog.Logger.Debugf("dmsgService->HandleProtocolWithPubsub:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
