@@ -380,7 +380,7 @@ func (d *DmsgService) UnregistCustomStreamProtocolClient(client customProtocol.C
 	return nil
 }
 
-func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomStreamProtocolService) error {
+func (d *DmsgService) RegistCustomStreamProtocolService(service customProtocol.CustomStreamProtocolService) error {
 	customProtocolID := service.GetProtocolID()
 	if d.customStreamProtocolServiceInfoList[customProtocolID] != nil {
 		dmsgLog.Logger.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
@@ -394,7 +394,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomSt
 	return nil
 }
 
-func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.CustomStreamProtocolService) error {
+func (d *DmsgService) UnregistCustomStreamProtocolService(callback customProtocol.CustomStreamProtocolService) error {
 	customProtocolID := callback.GetProtocolID()
 	if d.customStreamProtocolServiceInfoList[customProtocolID] == nil {
 		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
