@@ -1,5 +1,13 @@
 package protocol
 
+import (
+	"context"
+
+	"github.com/libp2p/go-libp2p/core/host"
+	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
 const (
 	ProtocolVersion = "0.0.1"
 )
@@ -17,10 +25,38 @@ const (
 	PidCreateChannelRes  = "/tvbase/dmsg/createPubChannel/res/" + ProtocolVersion
 )
 
-type ReqSubscribe interface {
-	HandleRequestData(protocolData []byte) error
+const AlreadyExistCode = 1
+
+type RequestInfo struct {
+	ProtoMessage    protoreflect.ProtoMessage
+	CreateTimestamp int64
+	DoneChan        chan any
 }
 
-type ResSubscribe interface {
-	HandleResponseData(protocolData []byte) error
+type Protocol struct {
+	Ctx             context.Context
+	Host            host.Host
+	RequestInfoList map[string]*RequestInfo
+	Service         ProtocolService
+	Adapter         ProtocolAdapter
+}
+
+type StreamProtocol struct {
+	Protocol
+	Callback StreamProtocolCallback
+}
+
+type PubsubProtocol struct {
+	Protocol
+	Callback PubsubProtocolCallback
+}
+
+type CustomStreamProtocolInfo struct {
+	Client   customProtocol.CustomStreamProtocolClient
+	Protocol *StreamProtocol
+}
+
+type CustomPubsubProtocolInfo struct {
+	Client   customProtocol.CustomPubsubProtocolClient
+	Protocol *PubsubProtocol
 }

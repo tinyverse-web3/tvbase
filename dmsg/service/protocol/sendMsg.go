@@ -15,7 +15,7 @@ type SendMsgProtocol struct {
 	dmsgServiceCommon.PubsubProtocol
 }
 
-func (p *SendMsgProtocol) HandleRequestData(protocolData []byte) error {
+func (p *SendMsgProtocol) HandleRequestData(protocolData []byte, dataList ...any) error {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("SendMsgProtocol->HandleRequestData: recovered from:", r)

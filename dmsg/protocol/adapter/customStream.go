@@ -1,4 +1,4 @@
-package protocol
+package adapter
 
 import (
 	"context"
@@ -7,15 +7,14 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CustomStreamProtocolAdapter struct {
-	common.CommonProtocolAdapter
-	protocol *common.StreamProtocol
+	CommonProtocolAdapter
+	protocol *dmsgProtocol.StreamProtocol
 	pid      string
 }
 
@@ -170,12 +169,11 @@ func NewCustomStreamProtocol(
 	ctx context.Context,
 	host host.Host,
 	customProtocolId string,
-	protocolCallback common.StreamProtocolCallback,
-	protocolService common.ProtocolService,
-) *common.StreamProtocol {
+	protocolCallback dmsgProtocol.StreamProtocolCallback,
+	protocolService dmsgProtocol.ProtocolService) *dmsgProtocol.StreamProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = customProtocolId
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, ret)
+	protocol := dmsgProtocol.NewStreamProtocol(ctx, host, protocolCallback, protocolService, ret)
 	ret.protocol = protocol
 	return protocol
 }

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
+func (p *PubsubProtocol) HandleRequestData(protocolData []byte, dataList ...any) error {
 	defer func() {
 		if r := recover(); r != nil {
 			dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: recovered from: r: %v", r)
@@ -79,7 +79,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 	}
 
 	// send the response
-	err = p.Service.PublishProtocol(p.Ctx, requestBasicData.Pubkey, responseBasicData.PID, protoData)
+	err = p.Service.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, protoData)
 
 	if err == nil {
 		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v",

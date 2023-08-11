@@ -1,4 +1,4 @@
-package common
+package protocol
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
+func (p *PubsubProtocol) HandleRequestData(
+	requestProtocolData []byte,
+	dataList ...any) error {
 	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData begin\nrequestPID: %v", p.Adapter.GetRequestPID())
 
 	requestProtoMsg, responseProtoMsg, err := p.Protocol.HandleRequestData(requestProtocolData)

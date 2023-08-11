@@ -1,19 +1,19 @@
-package protocol
+package adapter
 
 import (
 	"context"
 	"errors"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type QueryPeerProtocolAdapter struct {
-	common.CommonProtocolAdapter
-	protocol *common.PubsubProtocol
+	CommonProtocolAdapter
+	protocol *dmsgProtocol.PubsubProtocol
 }
 
 func NewQueryPeerProtocolAdapter() *QueryPeerProtocolAdapter {
@@ -137,9 +137,13 @@ func (adapter *QueryPeerProtocolAdapter) CallResponseCallback(
 	return data, err
 }
 
-func NewQueryPeerProtocol(ctx context.Context, host host.Host, protocolCallback common.PubsubProtocolCallback, dmsgService common.ProtocolService) *common.PubsubProtocol {
+func NewQueryPeerProtocol(
+	ctx context.Context,
+	host host.Host,
+	callback dmsgProtocol.PubsubProtocolCallback,
+	service dmsgProtocol.ProtocolService) *dmsgProtocol.PubsubProtocol {
 	adapter := NewQueryPeerProtocolAdapter()
-	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
+	protocol := dmsgProtocol.NewPubsubProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

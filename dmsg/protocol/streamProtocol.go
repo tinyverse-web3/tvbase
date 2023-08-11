@@ -1,4 +1,4 @@
-package common
+package protocol
 
 import (
 	"context"
@@ -13,7 +13,9 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func (p *StreamProtocol) HandleRequestData(requestProtocolData []byte) error {
+func (p *StreamProtocol) HandleRequestData(
+	requestProtocolData []byte,
+	dataList ...any) error {
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData begin\nrequestPID: %v", p.Adapter.GetRequestPID())
 
 	requestProtoMsg, responseProtoMsg, err := p.Protocol.HandleRequestData(requestProtocolData)
@@ -33,7 +35,13 @@ func (p *StreamProtocol) HandleRequestData(requestProtocolData []byte) error {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 		return fmt.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 	}
-	stream, err := p.Host.NewStream(p.Ctx, p.stream.Conn().RemotePeer(), adapter.GetStreamResponsePID())
+
+	remotePeerID, ok := dataList[0].(peer.ID)
+	if !ok {
+		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: dataList[0] is not peer.ID")
+		return fmt.Errorf("StreamProtocol->HandleRequestData: dataList[0] is not peer.ID")
+	}
+	stream, err := p.Host.NewStream(p.Ctx, remotePeerID, adapter.GetStreamResponsePID())
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: NewStream error: %v", err)
 		return err
@@ -76,8 +84,8 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 			dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error %v", err)
 		}
 	}()
-	p.stream = stream
-	err = p.HandleRequestData(protoData)
+
+	err = p.HandleRequestData(protoData, stream.Conn().RemotePeer())
 	if err != nil {
 		dmsgLog.Logger.Errorf("StreamProtocol->RequestHandler: error %v", err)
 		return

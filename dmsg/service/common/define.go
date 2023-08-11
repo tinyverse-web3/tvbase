@@ -15,7 +15,7 @@ import (
 type ProtocolService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(ctx context.Context, userPubkey string, protocolID pb.PID, protocolData []byte) error
+	PublishProtocol(pubkey string, protocolID pb.PID, protocolData []byte) error
 }
 
 type StreamProtocolCallback interface {
@@ -97,10 +97,6 @@ type DestUserInfo struct {
 type PubChannel struct {
 	UserPubsub
 	LastReciveTimestamp int64
-}
-
-type CustomProtocolPubsub struct {
-	UserPubsub
 }
 
 type CustomStreamProtocolInfo struct {

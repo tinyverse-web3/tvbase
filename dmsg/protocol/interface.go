@@ -1,42 +1,23 @@
-package common
+package protocol
 
 import (
-	"context"
-
-	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+type ReqSubscribe interface {
+	HandleRequestData(protocolData []byte, dataList ...any) error
+}
+
+type ResSubscribe interface {
+	HandleResponseData(protocolData []byte, dataList ...any) error
+}
 
 type ProtocolService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error
-}
-
-type RequestInfo struct {
-	ProtoMessage    protoreflect.ProtoMessage
-	CreateTimestamp int64
-	DoneChan        chan any
-}
-type ProtocolAdapter interface {
-	GetRequestPID() pb.PID
-	GetResponsePID() pb.PID
-	GetEmptyRequest() protoreflect.ProtoMessage
-	GetEmptyResponse() protoreflect.ProtoMessage
-	InitRequest(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
-	InitResponse(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
-	GetRequestBasicData(requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
-	GetResponseBasicData(responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
-	GetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
-	SetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage, code int32, result string)
-	SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error
-	SetResponseSig(responseProtoMsg protoreflect.ProtoMessage, sig []byte) error
-	CallRequestCallback(requestProtoMsg protoreflect.ProtoMessage) (any, error)
-	CallResponseCallback(requestProtoMsg protoreflect.ProtoMessage, responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type StreamProtocolCallback interface {
@@ -67,35 +48,6 @@ type StreamProtocolCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type StreamProtocolAdapter interface {
-	ProtocolAdapter
-	GetStreamRequestPID() protocol.ID
-	GetStreamResponsePID() protocol.ID
-}
-
-type Protocol struct {
-	Ctx             context.Context
-	Host            host.Host
-	RequestInfoList map[string]*RequestInfo
-	Service         ProtocolService
-	Adapter         ProtocolAdapter
-}
-
-type StreamProtocol struct {
-	Protocol
-	Callback StreamProtocolCallback
-	stream   network.Stream
-}
-
-type PubsubProtocolAdapter interface {
-	ProtocolAdapter
-}
-
-type PubsubProtocol struct {
-	Protocol
-	Callback PubsubProtocolCallback
-}
-
 type PubsubProtocolCallback interface {
 	OnSeekMailboxRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, error)
@@ -119,14 +71,29 @@ type PubsubProtocolCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type CustomStreamProtocolInfo struct {
-	Client   customProtocol.CustomStreamProtocolClient
-	Protocol *StreamProtocol
+type ProtocolAdapter interface {
+	GetRequestPID() pb.PID
+	GetResponsePID() pb.PID
+	GetEmptyRequest() protoreflect.ProtoMessage
+	GetEmptyResponse() protoreflect.ProtoMessage
+	InitRequest(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
+	InitResponse(basicData *pb.BasicData, dataList ...any) (protoreflect.ProtoMessage, error)
+	GetRequestBasicData(requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseBasicData(responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	GetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
+	SetResponseRetCode(responseProtoMsg protoreflect.ProtoMessage, code int32, result string)
+	SetRequestSig(requestProtoMsg protoreflect.ProtoMessage, sig []byte) error
+	SetResponseSig(responseProtoMsg protoreflect.ProtoMessage, sig []byte) error
+	CallRequestCallback(requestProtoMsg protoreflect.ProtoMessage) (any, error)
+	CallResponseCallback(requestProtoMsg protoreflect.ProtoMessage, responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type CustomPubsubProtocolInfo struct {
-	Client   customProtocol.CustomPubsubProtocolClient
-	Protocol *PubsubProtocol
+type StreamProtocolAdapter interface {
+	ProtocolAdapter
+	GetStreamRequestPID() protocol.ID
+	GetStreamResponsePID() protocol.ID
 }
 
-const AlreadyExistCode = 1
+type PubsubProtocolAdapter interface {
+	ProtocolAdapter
+}

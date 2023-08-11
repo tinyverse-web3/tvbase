@@ -1,4 +1,4 @@
-package protocol
+package adapter
 
 import (
 	"context"
@@ -6,15 +6,14 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SendMsgProtocolAdapter struct {
-	common.CommonProtocolAdapter
-	Protocol *common.PubsubProtocol
+	CommonProtocolAdapter
+	Protocol *dmsgProtocol.PubsubProtocol
 }
 
 func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
@@ -147,10 +146,10 @@ func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
 func NewSendMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	protocolCallback common.PubsubProtocolCallback,
-	dmsgService common.ProtocolService) *common.PubsubProtocol {
+	callback dmsgProtocol.PubsubProtocolCallback,
+	service dmsgProtocol.ProtocolService) *dmsgProtocol.PubsubProtocol {
 	adapter := NewSendMsgProtocolAdapter()
-	protocol := common.NewPubsubProtocol(ctx, host, protocolCallback, dmsgService, adapter)
+	protocol := dmsgProtocol.NewPubsubProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol
 	return protocol
 }

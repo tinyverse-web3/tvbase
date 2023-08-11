@@ -1,4 +1,4 @@
-package protocol
+package adapter
 
 import (
 	"context"
@@ -7,15 +7,15 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/client/common"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CreateChannelProtocolAdapter struct {
-	common.CommonProtocolAdapter
-	protocol *common.StreamProtocol
+	CommonProtocolAdapter
+	protocol *dmsgProtocol.StreamProtocol
 }
 
 func NewCreateChannelProtocolAdapter() *CreateChannelProtocolAdapter {
@@ -151,9 +151,11 @@ func (adapter *CreateChannelProtocolAdapter) CallResponseCallback(
 
 func NewCreateChannelProtocol(
 	ctx context.Context,
-	host host.Host, protocolCallback common.StreamProtocolCallback, protocolService common.ProtocolService) *common.StreamProtocol {
+	host host.Host,
+	callback dmsgProtocol.StreamProtocolCallback,
+	service dmsgProtocol.ProtocolService) *dmsgProtocol.StreamProtocol {
 	adapter := NewCreateChannelProtocolAdapter()
-	protocol := common.NewStreamProtocol(ctx, host, protocolCallback, protocolService, adapter)
+	protocol := dmsgProtocol.NewStreamProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

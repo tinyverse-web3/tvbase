@@ -14,26 +14,25 @@ import (
 	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/dmsg"
-	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
-	clientProtocol "github.com/tinyverse-web3/tvbase/dmsg/client/protocol"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ProtocolProxy struct {
-	createMailboxProtocol *dmsgClientCommon.StreamProtocol
-	readMailboxMsgPrtocol *dmsgClientCommon.StreamProtocol
-	releaseMailboxPrtocol *dmsgClientCommon.StreamProtocol
-	createChannelProtocol *dmsgClientCommon.StreamProtocol
-	seekMailboxProtocol   *dmsgClientCommon.PubsubProtocol
-	sendMsgPubPrtocol     *dmsgClientCommon.PubsubProtocol
+	createMailboxProtocol *dmsgProtocol.StreamProtocol
+	readMailboxMsgPrtocol *dmsgProtocol.StreamProtocol
+	releaseMailboxPrtocol *dmsgProtocol.StreamProtocol
+	createChannelProtocol *dmsgProtocol.StreamProtocol
+	seekMailboxProtocol   *dmsgProtocol.PubsubProtocol
+	sendMsgPubPrtocol     *dmsgProtocol.PubsubProtocol
 }
 
 type DmsgService struct {
@@ -43,8 +42,8 @@ type DmsgService struct {
 	onReceiveMsg                 msg.OnReceiveMsg
 	destUserList                 map[string]*dmsgUser.DestUser
 	channelList                  map[string]*dmsgUser.Channel
-	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
-	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
+	customStreamProtocolInfoList map[string]*dmsgProtocol.CustomStreamProtocolInfo
+	customPubsubProtocolInfoList map[string]*dmsgProtocol.CustomPubsubProtocolInfo
 	datastore                    db.Datastore
 	stopCleanRestResource        chan bool
 }
@@ -74,23 +73,23 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	// stream protocol
-	d.createMailboxProtocol = clientProtocol.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.releaseMailboxPrtocol = clientProtocol.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.readMailboxMsgPrtocol = clientProtocol.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.createChannelProtocol = clientProtocol.NewCreateChannelProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.createChannelProtocol = adapter.NewCreateChannelProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 
 	// pubsub protocol
-	d.seekMailboxProtocol = clientProtocol.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
 
-	d.sendMsgPubPrtocol = clientProtocol.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.sendMsgPubPrtocol = adapter.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolReqCallback(d.sendMsgPubPrtocol.Adapter.GetRequestPID(), d.sendMsgPubPrtocol)
 
 	d.destUserList = make(map[string]*dmsgUser.DestUser)
 	d.channelList = make(map[string]*dmsgUser.Channel)
 
-	d.customStreamProtocolInfoList = make(map[string]*dmsgClientCommon.CustomStreamProtocolInfo)
-	d.customPubsubProtocolInfoList = make(map[string]*dmsgClientCommon.CustomPubsubProtocolInfo)
+	d.customStreamProtocolInfoList = make(map[string]*dmsgProtocol.CustomStreamProtocolInfo)
+	d.customPubsubProtocolInfoList = make(map[string]*dmsgProtocol.CustomPubsubProtocolInfo)
 
 	d.stopCleanRestResource = make(chan bool)
 	return nil
@@ -663,8 +662,8 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStr
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomStreamProtocolInfo{
-		Protocol: clientProtocol.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+	d.customStreamProtocolInfoList[customProtocolID] = &dmsgProtocol.CustomStreamProtocolInfo{
+		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Client:   client,
 	}
 	client.SetCtx(d.BaseService.GetCtx())
@@ -688,8 +687,8 @@ func (d *DmsgService) RegistCustomPubsubProtocol(client customProtocol.CustomPub
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgClientCommon.CustomPubsubProtocolInfo{
-		Protocol: clientProtocol.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d),
+	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgProtocol.CustomPubsubProtocolInfo{
+		Protocol: adapter.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d),
 		Client:   client,
 	}
 	client.SetCtx(d.BaseService.GetCtx())

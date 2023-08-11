@@ -13,9 +13,9 @@ import (
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
-	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -87,11 +87,11 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 	dmsgService := node.DmsgService.(*dmsgService.DmsgService)
 
 	pk := "0400d3192b5e36d458bce6b8b7c9fbe19c90acfd01a6da7f01cf4729ac3976c957c2ac4ab38ff899fcdca6ddba661785c34eb00c2cd5b2b6d014ca6911463b3fa2"
-	var destPubsub *common.DestUserInfo
+	var destPubsub *dmsgUser.DestUser
 
 	// wait tvnodelight connect
 	for {
-		pubsub := dmsgService.GetDestUserPubsub(pk)
+		pubsub := dmsgService.GetDestUser(pk)
 		if pubsub != nil {
 			destPubsub = pubsub
 			break
@@ -110,7 +110,7 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 		fmt.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
 	}()
 
-	err := dmsgService.PublishProtocol(ctx, pk, 3, []byte("hello"))
+	err := dmsgService.PublishProtocol(pk, 3, []byte("hello"))
 	if err != nil {
 		panic(err)
 	}

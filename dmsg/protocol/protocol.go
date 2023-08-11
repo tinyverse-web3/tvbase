@@ -1,17 +1,17 @@
-package common
+package protocol
 
 import (
 	"fmt"
 	"time"
 
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func (p *Protocol) HandleRequestData(
-	requestProtoData []byte) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, error) {
+	requestProtoData []byte,
+	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, error) {
 	dmsgLog.Logger.Debugf("Protocol->HandleRequestData begin\nrequestPId: %v", p.Adapter.GetRequestPID())
 
 	defer func() {
@@ -30,7 +30,7 @@ func (p *Protocol) HandleRequestData(
 	dmsgLog.Logger.Debugf("Protocol->HandleRequestData: protocolRequest: %v", requestProtoMsg)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	valid := protocol.AuthProtoMsg(requestProtoMsg, requestBasicData)
+	valid := AuthProtoMsg(requestProtoMsg, requestBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
 		return requestProtoMsg, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
@@ -48,7 +48,7 @@ func (p *Protocol) HandleRequestData(
 		return requestProtoMsg, nil, err
 	}
 
-	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
+	responseBasicData := NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	responseProtoMsg, err := p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
@@ -87,7 +87,7 @@ func (p *Protocol) GetErrResponse(
 		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetUserPubkeyHex error: %v", err)
 		return requestProtoMsg, err
 	}
-	responseBasicData := protocol.NewBasicData(
+	responseBasicData := NewBasicData(
 		p.Host,
 		userPubkeyHex,
 		p.Adapter.GetResponsePID(),
@@ -115,7 +115,9 @@ func (p *Protocol) GetErrResponse(
 	return responseProtoMsg, nil
 }
 
-func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
+func (p *Protocol) HandleResponseData(
+	responseProtoData []byte,
+	dataList ...any) error {
 	dmsgLog.Logger.Debugf("Protocol->HandleResponseData begin:\nresponsePID:%s", p.Adapter.GetResponsePID())
 	defer func() {
 		if r := recover(); r != nil {
@@ -133,7 +135,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 	dmsgLog.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
-	valid := protocol.AuthProtoMsg(responseProtoMsg, responseBasicData)
+	valid := AuthProtoMsg(responseProtoMsg, responseBasicData)
 	if !valid {
 		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
@@ -160,7 +162,7 @@ func (p *Protocol) GenRequestInfo(
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
 	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\ndataList:%v\nrequestPID:%v",
 		srcUserPubkey, dataList, p.Adapter.GetRequestPID())
-	requestBasicData := protocol.NewBasicData(p.Host, srcUserPubkey, p.Adapter.GetRequestPID())
+	requestBasicData := NewBasicData(p.Host, srcUserPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)
