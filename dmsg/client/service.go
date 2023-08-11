@@ -42,8 +42,8 @@ type DmsgService struct {
 	onReceiveMsg                 msg.OnReceiveMsg
 	destUserList                 map[string]*dmsgUser.DestUser
 	channelList                  map[string]*dmsgUser.Channel
-	customStreamProtocolInfoList map[string]*dmsgProtocol.CustomStreamProtocolInfo
-	customPubsubProtocolInfoList map[string]*dmsgProtocol.CustomPubsubProtocolInfo
+	customStreamProtocolInfoList map[string]*customProtocol.CustomStreamProtocolInfo
+	customPubsubProtocolInfoList map[string]*customProtocol.CustomPubsubProtocolInfo
 	datastore                    db.Datastore
 	stopCleanRestResource        chan bool
 }
@@ -88,8 +88,8 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.destUserList = make(map[string]*dmsgUser.DestUser)
 	d.channelList = make(map[string]*dmsgUser.Channel)
 
-	d.customStreamProtocolInfoList = make(map[string]*dmsgProtocol.CustomStreamProtocolInfo)
-	d.customPubsubProtocolInfoList = make(map[string]*dmsgProtocol.CustomPubsubProtocolInfo)
+	d.customStreamProtocolInfoList = make(map[string]*customProtocol.CustomStreamProtocolInfo)
+	d.customPubsubProtocolInfoList = make(map[string]*customProtocol.CustomPubsubProtocolInfo)
 
 	d.stopCleanRestResource = make(chan bool)
 	return nil
@@ -676,7 +676,7 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStr
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &dmsgProtocol.CustomStreamProtocolInfo{
+	d.customStreamProtocolInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolInfo{
 		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Client:   client,
 	}
@@ -701,7 +701,7 @@ func (d *DmsgService) RegistCustomPubsubProtocol(client customProtocol.CustomPub
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgProtocol.CustomPubsubProtocolInfo{
+	d.customPubsubProtocolInfoList[customProtocolID] = &customProtocol.CustomPubsubProtocolInfo{
 		Protocol: adapter.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d),
 		Client:   client,
 	}

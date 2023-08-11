@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -39,24 +38,4 @@ type Protocol struct {
 	RequestInfoList map[string]*RequestInfo
 	Service         ProtocolService
 	Adapter         ProtocolAdapter
-}
-
-type StreamProtocol struct {
-	Protocol
-	Callback StreamProtocolCallback
-}
-
-type PubsubProtocol struct {
-	Protocol
-	Callback PubsubProtocolCallback
-}
-
-type CustomStreamProtocolInfo struct {
-	Client   customProtocol.CustomStreamProtocolClient
-	Protocol *StreamProtocol
-}
-
-type CustomPubsubProtocolInfo struct {
-	Client   customProtocol.CustomPubsubProtocolClient
-	Protocol *PubsubProtocol
 }

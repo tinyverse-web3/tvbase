@@ -1,4 +1,4 @@
-package customProtocol
+package custom
 
 import (
 	"context"

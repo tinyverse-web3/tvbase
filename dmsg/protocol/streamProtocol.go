@@ -13,6 +13,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type StreamProtocol struct {
+	Protocol
+	Callback StreamProtocolCallback
+}
+
 func (p *StreamProtocol) HandleRequestData(
 	requestProtocolData []byte,
 	dataList ...any) error {

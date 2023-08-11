@@ -1,4 +1,4 @@
-package customProtocol
+package custom
 
 import (
 	ipfsLog "github.com/ipfs/go-log/v2"

@@ -9,6 +9,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type PubsubProtocol struct {
+	Protocol
+	Callback PubsubProtocolCallback
+}
+
 func (p *PubsubProtocol) HandleRequestData(
 	requestProtocolData []byte,
 	dataList ...any) error {
