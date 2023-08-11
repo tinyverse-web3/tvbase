@@ -46,22 +46,32 @@ func (adapter *QueryPeerProtocolAdapter) InitRequest(
 }
 
 func (adapter *QueryPeerProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.QueryPeerRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
-	if len(dataList) == 1 {
+	response := &pb.QueryPeerRes{
+		BasicData: basicData,
+		RetCode:   retCode,
+	}
+
+	if len(dataList) > 0 {
 		peerID, ok := dataList[0].(string)
 		if !ok {
-			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+			return response, errors.New("QueryPeerProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
-		responseProtoMsg.PeerID = peerID
+		response.PeerID = peerID
 	} else {
-		return responseProtoMsg, errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
+		return response, errors.New("QueryPeerProtocolAdapter->InitRequest: parameter dataList need contain content")
 	}
-	return responseProtoMsg, nil
+	return response, nil
 }
 
 func (adapter *QueryPeerProtocolAdapter) GetRequestBasicData(
@@ -125,14 +135,14 @@ func (adapter *QueryPeerProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *QueryPeerProtocolAdapter) CallResquestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnQueryPeerRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnQueryPeerRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *QueryPeerProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnQueryPeerResponse(requestProtoData, responseProtoData)
 	return data, err
 }

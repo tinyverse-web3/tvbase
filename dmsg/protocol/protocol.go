@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -12,80 +12,80 @@ import (
 func (p *Protocol) HandleRequestData(
 	requestProtoData []byte,
 	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, error) {
-	dmsgLog.Logger.Debugf("Protocol->HandleRequestData begin\nrequestPId: %v", p.Adapter.GetRequestPID())
+	log.Logger.Debugf("Protocol->HandleRequestData begin\nrequestPId: %v", p.Adapter.GetRequestPID())
 
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("Protocol->HandleRequestData: recovered from: err: %v", r)
+			log.Logger.Errorf("Protocol->HandleRequestData: recovered from: err: %v", r)
 		}
 	}()
 
-	requestProtoMsg := p.Adapter.GetEmptyRequest()
-	err := proto.Unmarshal(requestProtoData, requestProtoMsg)
+	request := p.Adapter.GetEmptyRequest()
+	err := proto.Unmarshal(requestProtoData, request)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: unmarshal request error: %v", err)
+		log.Logger.Errorf("Protocol->HandleRequestData: unmarshal request error: %v", err)
 		return nil, nil, err
 	}
 
-	dmsgLog.Logger.Debugf("Protocol->HandleRequestData: protocolRequest: %v", requestProtoMsg)
+	log.Logger.Debugf("Protocol->HandleRequestData: protocolRequest: %v", request)
 
-	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	valid := AuthProtoMsg(requestProtoMsg, requestBasicData)
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	valid := AuthProtoMsg(request, requestBasicData)
 	if !valid {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
-		return requestProtoMsg, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
+		log.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
+		return request, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
 	}
 
-	callbackData, err := p.Adapter.CallRequestCallback(requestProtoMsg)
+	requestCallbackData, retCodeData, err := p.Adapter.CallRequestCallback(request)
 	if err != nil {
-		return requestProtoMsg, nil, err
+		return request, nil, err
 	}
 
 	// generate response message
 	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
-		return requestProtoMsg, nil, err
+		log.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
+		return request, nil, err
 	}
 
 	responseBasicData := NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
-	responseProtoMsg, err := p.Adapter.InitResponse(responseBasicData, callbackData)
+	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: InitResponse error: %v", err)
-		return requestProtoMsg, nil, err
+		log.Logger.Errorf("Protocol->HandleRequestData: InitResponse error: %v", err)
+		return request, nil, err
 	}
 
 	// sign the data
-	responseProtoData, err := proto.Marshal(responseProtoMsg)
+	responseProtoData, err := proto.Marshal(response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
-		return requestProtoMsg, nil, err
+		log.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
+		return request, nil, err
 	}
 	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		return requestProtoMsg, nil, err
+		return request, nil, err
 	}
-	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
+	err = p.Adapter.SetResponseSig(response, sig)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleRequestData: SetResponseSig error: %v", err)
-		return requestProtoMsg, nil, err
+		log.Logger.Errorf("Protocol->HandleRequestData: SetResponseSig error: %v", err)
+		return request, nil, err
 	}
-	dmsgLog.Logger.Debugf("Protocol->HandleRequestData: protocolResponse: %v", responseProtoMsg)
+	log.Logger.Debugf("Protocol->HandleRequestData: protocolResponse: %v", response)
 
-	dmsgLog.Logger.Debugf("Protocol->HandleRequestData end")
-	return requestProtoMsg, responseProtoMsg, nil
+	log.Logger.Debugf("Protocol->HandleRequestData end")
+	return request, response, nil
 }
 
 func (p *Protocol) GetErrResponse(
-	requestProtoMsg protoreflect.ProtoMessage,
+	request protoreflect.ProtoMessage,
 	err error) (protoreflect.ProtoMessage, error) {
 	responseErr := err
-	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: GetUserPubkeyHex error: %v", err)
-		return requestProtoMsg, err
+		log.Logger.Errorf("Protocol->GetErrResponse: GetUserPubkeyHex error: %v", err)
+		return request, err
 	}
 	responseBasicData := NewBasicData(
 		p.Host,
@@ -93,14 +93,15 @@ func (p *Protocol) GetErrResponse(
 		p.Adapter.GetResponsePID(),
 	)
 	responseBasicData.ID = requestBasicData.ID
-	responseProtoMsg, err := p.Adapter.InitResponse(responseBasicData)
+	responseProtoMsg, err := p.Adapter.InitResponse(
+		request, responseBasicData, nil, NewFailRetCode(responseErr.Error()))
 	if err != nil {
-		dmsgLog.Logger.Warnf("Protocol->GetErrResponse: InitResponse error: %v", err)
+		log.Logger.Warnf("Protocol->GetErrResponse: InitResponse error: %v", err)
 	}
 	p.Adapter.SetResponseRetCode(responseProtoMsg, -1, responseErr.Error())
 	responseProtoData, err := proto.Marshal(responseProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: marshal response error: %v", err)
+		log.Logger.Errorf("Protocol->GetErrResponse: marshal response error: %v", err)
 		return responseProtoMsg, err
 	}
 	sig, err := p.Service.GetUserSig(responseProtoData)
@@ -109,7 +110,7 @@ func (p *Protocol) GetErrResponse(
 	}
 	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GetErrResponse: SetResponseSig error: %v", err)
+		log.Logger.Errorf("Protocol->GetErrResponse: SetResponseSig error: %v", err)
 		return responseProtoMsg, err
 	}
 	return responseProtoMsg, nil
@@ -118,26 +119,26 @@ func (p *Protocol) GetErrResponse(
 func (p *Protocol) HandleResponseData(
 	responseProtoData []byte,
 	dataList ...any) error {
-	dmsgLog.Logger.Debugf("Protocol->HandleResponseData begin:\nresponsePID:%s", p.Adapter.GetResponsePID())
+	log.Logger.Debugf("Protocol->HandleResponseData begin:\nresponsePID:%s", p.Adapter.GetResponsePID())
 	defer func() {
 		if r := recover(); r != nil {
-			dmsgLog.Logger.Errorf("Protocol->HandleResponseData: recovered from: r: %v", r)
+			log.Logger.Errorf("Protocol->HandleResponseData: recovered from: r: %v", r)
 		}
 	}()
 
 	responseProtoMsg := p.Adapter.GetEmptyResponse()
 	err := proto.Unmarshal(responseProtoData, responseProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error: %+v", err)
+		log.Logger.Errorf("Protocol->HandleResponseData: unmarshal responseProtoMsg error: %+v", err)
 		return err
 	}
 
-	dmsgLog.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
+	log.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
 	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	valid := AuthProtoMsg(responseProtoMsg, responseBasicData)
 	if !valid {
-		dmsgLog.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
+		log.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 	}
 
@@ -145,48 +146,48 @@ func (p *Protocol) HandleResponseData(
 	if ok {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {
-			dmsgLog.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
+			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
 		p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg
 		delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
-		dmsgLog.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
+		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
 
-	dmsgLog.Logger.Debugf("Protocol->HandleResponseData end")
+	log.Logger.Debugf("Protocol->HandleResponseData end")
 	return nil
 }
 
 func (p *Protocol) GenRequestInfo(
 	srcUserPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
-	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\ndataList:%v\nrequestPID:%v",
+	log.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\ndataList:%v\nrequestPID:%v",
 		srcUserPubkey, dataList, p.Adapter.GetRequestPID())
 	requestBasicData := NewBasicData(p.Host, srcUserPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)
 		return "", nil, nil, err
 	}
 	requestProtoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
 		return "", nil, nil, err
 	}
 	sig, err := p.Service.GetUserSig(requestProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: GetUserSig error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: GetUserSig error: %v", err)
 		return "", nil, nil, err
 	}
 	err = p.Adapter.SetRequestSig(requestProtoMsg, sig)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: SetRequestSig error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: SetRequestSig error: %v", err)
 		return "", nil, nil, err
 	}
 
 	requestProtoData, err = proto.Marshal(requestProtoMsg)
 	if err != nil {
-		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: Marshal error: %v", err)
 		return "", nil, nil, err
 	}
 
@@ -196,7 +197,7 @@ func (p *Protocol) GenRequestInfo(
 		DoneChan:        make(chan any),
 	}
 
-	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo end")
+	log.Logger.Debugf("Protocol->GenRequestInfo end")
 	return requestBasicData.ID, requestProtoMsg, requestProtoData, nil
 }
 
@@ -210,11 +211,11 @@ func (p *Protocol) TickCleanRequest() {
 					delete(p.RequestInfoList, id)
 				}
 			}
-			dmsgLog.Logger.Debug("Protocol->TickCleanRequest: clean request data")
+			log.Logger.Debug("Protocol->TickCleanRequest: clean request data")
 		case <-p.Ctx.Done():
 			err := p.Ctx.Err()
 			if err != nil {
-				dmsgLog.Logger.Errorf("Protocol->TickCleanRequest: %v", err)
+				log.Logger.Errorf("Protocol->TickCleanRequest: %v", err)
 				return
 			}
 		}

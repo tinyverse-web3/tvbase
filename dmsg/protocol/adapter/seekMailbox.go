@@ -45,13 +45,22 @@ func (adapter *SeekMailboxProtocolAdapter) InitRequest(
 }
 
 func (adapter *SeekMailboxProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.SeekMailboxRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
-	return responseProtoMsg, nil
+	response := &pb.SeekMailboxRes{
+		BasicData: basicData,
+		RetCode:   retCode,
+	}
+	return response, nil
 }
 
 func (adapter *SeekMailboxProtocolAdapter) GetRequestBasicData(
@@ -115,14 +124,14 @@ func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnSeekMailboxRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnSeekMailboxRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnSeekMailboxResponse(requestProtoData, responseProtoData)
 	return data, err
 }

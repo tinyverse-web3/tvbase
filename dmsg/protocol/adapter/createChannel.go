@@ -49,31 +49,41 @@ func (adapter *CreateChannelProtocolAdapter) GetEmptyResponse() protoreflect.Pro
 func (adapter *CreateChannelProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	requestProtoMsg := &pb.CreateChannelReq{
+	request := &pb.CreateChannelReq{
 		BasicData: basicData,
 	}
 
 	if len(dataList) == 1 {
 		channelKey, ok := dataList[0].(string)
 		if !ok {
-			return requestProtoMsg, errors.New("CreateChannelProtocolAdapter->InitRequest: failed to cast datalist[0] to string for channelKey")
+			return request, errors.New("CreateChannelProtocolAdapter->InitRequest: failed to cast datalist[0] to string for channelKey")
 		}
-		requestProtoMsg.ChannelKey = channelKey
+		request.ChannelKey = channelKey
 	} else {
-		return requestProtoMsg, errors.New("CreateChannelProtocolAdapter->InitRequest: parameter dataList need contain channelKey")
+		return request, errors.New("CreateChannelProtocolAdapter->InitRequest: parameter dataList need contain channelKey")
 	}
 
-	return requestProtoMsg, nil
+	return request, nil
 }
 
 func (adapter *CreateChannelProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.CreateChannelRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
-	return responseProtoMsg, nil
+	response := &pb.CreateChannelRes{
+		BasicData: basicData,
+		RetCode:   retCode,
+	}
+
+	return response, nil
 }
 
 func (adapter *CreateChannelProtocolAdapter) GetRequestBasicData(
@@ -137,14 +147,14 @@ func (adapter *CreateChannelProtocolAdapter) SetResponseRetCode(
 }
 
 func (adapter *CreateChannelProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCreateChannelRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCreateChannelRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *CreateChannelProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnCreateChannelResponse(requestProtoData, responseProtoData)
 	return data, err
 }

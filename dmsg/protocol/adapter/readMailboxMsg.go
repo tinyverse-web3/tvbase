@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -54,14 +55,33 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.ReadMailboxRes{
-		BasicData: basicData,
-		// TODO	ContentList
-		RetCode: dmsgProtocol.NewSuccRetCode(),
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
-	return responseProtoMsg, nil
+	response := &pb.ReadMailboxRes{
+		BasicData: basicData,
+		RetCode:   retCode,
+	}
+
+	if len(dataList) < 1 {
+		return nil, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: dataList need contain MailboxItemList")
+	}
+	mailboxItemList, ok := dataList[0].([]*pb.MailboxItem)
+	if !ok {
+		return response, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []*pb.MailboxMsgData")
+	}
+
+	response.ContentList = mailboxItemList
+
+	return response, nil
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestBasicData(
@@ -123,14 +143,14 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(requestProtoData, responseProtoData)
 	return data, err
 }

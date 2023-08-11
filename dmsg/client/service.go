@@ -337,19 +337,21 @@ func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
 }
 
 // StreamProtocolCallback interface
-func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
 	_, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxReq", requestProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxReq", requestProtoData)
+		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", requestProtoData)
+		return nil, nil, fmt.Errorf("DmsgService->OnCreateMailboxRequest: cannot convert %v to *pb.CreateMailboxReq", requestProtoData)
 	}
 
 	dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxRequest end")
-	return nil, nil
+	return nil, nil, nil
 }
 
-func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnCreateMailboxResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
@@ -381,11 +383,11 @@ func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.Prot
 	return nil, nil
 }
 
-func (d *DmsgService) OnCreateChannelRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnCreateChannelRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	dmsgLog.Logger.Debugf("DmsgService->OnCreateChannelRequest: begin\nrequestProtoData: %+v", requestProtoData)
 
 	dmsgLog.Logger.Debugf("DmsgService->OnCreateChannelRequest end")
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnCreateChannelResponse(
@@ -398,11 +400,11 @@ func (d *DmsgService) OnCreateChannelResponse(
 	return nil, nil
 }
 
-func (d *DmsgService) OnReleaseMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnReleaseMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	dmsgLog.Logger.Debugf("DmsgService->OnReleaseMailboxRequest: begin\nrequestProtoData: %+v", requestProtoData)
 
 	dmsgLog.Logger.Debugf("DmsgService->OnReleaseMailboxRequest end")
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnReleaseMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
@@ -427,11 +429,11 @@ func (d *DmsgService) OnReleaseMailboxResponse(requestProtoData protoreflect.Pro
 	return nil, nil
 }
 
-func (d *DmsgService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnReadMailboxMsgRequest: begin\nrequestProtoData: %+v", requestProtoData)
 
 	dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgRequest: end")
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnReadMailboxMsgResponse(
@@ -466,11 +468,11 @@ func (d *DmsgService) OnReadMailboxMsgResponse(
 }
 
 // PubsubProtocolCallback interface
-func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	dmsgLog.Logger.Debug("DmsgService->OnSeekMailboxRequest begin")
 
 	dmsgLog.Logger.Debug("DmsgService->OnSeekMailboxRequest end")
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnSeekMailboxResponse(
@@ -482,9 +484,9 @@ func (d *DmsgService) OnSeekMailboxResponse(
 	return nil, nil
 }
 
-func (d *DmsgService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	// TODO implement it
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnQueryPeerResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
@@ -492,29 +494,41 @@ func (d *DmsgService) OnQueryPeerResponse(requestProtoData protoreflect.ProtoMes
 	return nil, nil
 }
 
-func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
-	sendMsgReq, ok := requestProtoData.(*pb.SendMsgReq)
+func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
-		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
+		return nil, nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
 	}
 
-	if d.onReceiveMsg != nil {
-		srcPubkey := sendMsgReq.BasicData.Pubkey
-		destPubkey := sendMsgReq.DestPubkey
-		msgDirection := msg.MsgDirection.From
-		d.onReceiveMsg(
-			srcPubkey,
-			destPubkey,
-			sendMsgReq.Content,
-			sendMsgReq.BasicData.TS,
-			sendMsgReq.BasicData.ID,
-			msgDirection)
-	} else {
-		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: OnReceiveMsg is nil")
+	cfg := d.BaseService.GetConfig()
+	switch cfg.Mode {
+	case tvbaseConfig.ServiceMode:
+		pubkey := request.BasicData.Pubkey
+		user := d.GetDestUser(pubkey)
+		if user == nil {
+			dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
+			return nil, nil, fmt.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
+		}
+		user.LastReciveTimestamp = time.Now().UnixNano()
+		// d.saveUserMsg(requestProtoData)
+	case tvbaseConfig.LightMode:
+		if d.onReceiveMsg != nil {
+			srcPubkey := request.BasicData.Pubkey
+			destPubkey := request.DestPubkey
+			msgDirection := msg.MsgDirection.From
+			d.onReceiveMsg(
+				srcPubkey,
+				destPubkey,
+				request.Content,
+				request.BasicData.TS,
+				request.BasicData.ID,
+				msgDirection)
+		} else {
+			dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: OnReceiveMsg is nil")
+		}
 	}
-
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnSendMsgResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
@@ -530,8 +544,8 @@ func (d *DmsgService) OnSendMsgResponse(requestProtoData protoreflect.ProtoMessa
 	return nil, nil
 }
 
-func (d *DmsgService) OnCustomStreamProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
-	return nil, nil
+func (d *DmsgService) OnCustomStreamProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnCustomStreamProtocolResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
@@ -564,8 +578,8 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(requestProtoData protorefle
 	return nil, nil
 }
 
-func (d *DmsgService) OnCustomPubsubProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
-	return nil, nil
+func (d *DmsgService) OnCustomPubsubProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	return nil, nil, nil
 }
 
 func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {

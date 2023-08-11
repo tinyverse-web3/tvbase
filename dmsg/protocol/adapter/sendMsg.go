@@ -61,13 +61,22 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(
 }
 
 func (adapter *SendMsgProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.SendMsgRes{
-		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
 	}
-	return responseProtoMsg, nil
+	response := &pb.SendMsgRes{
+		BasicData: basicData,
+		RetCode:   retCode,
+	}
+	return response, nil
 }
 
 func (adapter *SendMsgProtocolAdapter) GetRequestBasicData(
@@ -131,14 +140,14 @@ func (adapter *SendMsgProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *SendMsgProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.Protocol.Callback.OnSendMsgRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.Protocol.Callback.OnSendMsgRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.Protocol.Callback.OnSendMsgResponse(requestProtoData, responseProtoData)
 	return data, err
 }

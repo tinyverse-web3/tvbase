@@ -8,8 +8,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+type CustomStreamProtocolResponseParam struct {
+	PID     string
+	Service customProtocol.CustomStreamProtocolService
+}
 
 type CustomPubsubProtocolAdapter struct {
 	CommonProtocolAdapter
@@ -60,27 +66,44 @@ func (adapter *CustomPubsubProtocolAdapter) InitRequest(
 }
 
 func (adapter *CustomPubsubProtocolAdapter) InitResponse(
+	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	responseProtoMsg := &pb.CustomProtocolRes{
+	var retCode *pb.RetCode
+	if len(dataList) > 1 {
+		var ok bool
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
+	}
+	response := &pb.CustomProtocolRes{
 		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+		RetCode:   retCode,
 	}
-	if len(dataList) == 2 {
-		pid, ok := dataList[0].(string)
-		if !ok {
-			return nil, errors.New("CustomPubsubProtocolAdapter->InitResponse: failed to cast datalist[0] to string for get customProtocolID")
-		}
-		content, ok := dataList[1].([]byte)
-		if !ok {
-			return nil, errors.New("CustomPubsubProtocolAdapter->InitResponse: failed to cast datalist[1] to []byte for get content")
-		}
-		responseProtoMsg.PID = pid
-		responseProtoMsg.Content = content
-	} else {
-		return responseProtoMsg, errors.New("CustomPubsubProtocolAdapter->InitResponse: parameter dataList need contain customProtocolID and content")
+
+	request, ok := requestProtoData.(*pb.CustomProtocolReq)
+	if !ok {
+		return response, fmt.Errorf("CustomPubsubProtocolAdapter->InitResponse: fail to cast requestProtoData to *pb.CustomContentReq")
 	}
-	return responseProtoMsg, nil
+
+	if len(dataList) < 1 {
+		return nil, errors.New("CustomPubsubProtocolAdapter:InitResponse: dataList need contain customStreamProtocolResponseParam")
+	}
+	customStreamProtocolResponseParam, ok := dataList[0].(*CustomStreamProtocolResponseParam)
+	if !ok {
+		return response, fmt.Errorf("CustomPubsubProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
+	}
+
+	response.PID = customStreamProtocolResponseParam.PID
+
+	// get response.Content
+	err := customStreamProtocolResponseParam.Service.HandleResponse(request, response)
+	if err != nil {
+		return response, err
+	}
+
+	return response, nil
 }
 
 func (adapter *CustomPubsubProtocolAdapter) GetRequestBasicData(
@@ -144,14 +167,14 @@ func (adapter *CustomPubsubProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (interface{}, error) {
-	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(requestProtoData)
-	return data, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	data, retCode, err := adapter.protocol.Callback.OnCustomPubsubProtocolRequest(requestProtoData)
+	return data, retCode, err
 }
 
 func (adapter *CustomPubsubProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (interface{}, error) {
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnCustomPubsubProtocolResponse(requestProtoData, responseProtoData)
 	return data, err
 }
