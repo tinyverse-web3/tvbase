@@ -2,9 +2,10 @@ package protocol
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -17,41 +18,43 @@ type PubsubProtocol struct {
 func (p *PubsubProtocol) HandleRequestData(
 	requestProtocolData []byte,
 	dataList ...any) error {
-	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData begin\nrequestPID: %v", p.Adapter.GetRequestPID())
+	log.Logger.Debugf(
+		"PubsubProtocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
+		requestProtocolData, dataList)
 
-	requestProtoMsg, responseProtoMsg, err := p.Protocol.HandleRequestData(requestProtocolData)
+	request, response, err := p.Protocol.HandleRequestData(requestProtocolData)
 	if err != nil {
-		if requestProtoMsg == nil {
+		if request == nil {
 			return err
 		}
-		responseProtoMsg, err = p.GetErrResponse(requestProtoMsg, err)
+		response, err = p.GetErrResponse(request, err)
 		if err != nil {
 			return err
 		}
 	}
-	if requestProtoMsg == nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: requestProtoMsg is nil")
-		return err
+	if request == nil {
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: request is nil")
+		return fmt.Errorf("PubsubProtocol->HandleRequestData: request is nil")
+	}
+	if response == nil {
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: response is nil")
+		return fmt.Errorf("PubsubProtocol->HandleRequestData: response is nil")
 	}
 
-	if responseProtoMsg == nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: responseProtoMsg is nil")
-		return err
-	}
-
-	responseProtoData, err := proto.Marshal(responseProtoMsg)
+	responseProtoData, err := proto.Marshal(response)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 		return err
 	}
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	responseBasicData := p.Adapter.GetResponseBasicData(response)
+
 	// send the response
-	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	err = p.Service.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, responseProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
 	}
-	dmsgLog.Logger.Debugf("PubsubProtocol->HandleRequestData end")
+	log.Logger.Debugf("PubsubProtocol->HandleRequestData end")
 	return nil
 }
 
@@ -59,7 +62,9 @@ func (p *PubsubProtocol) Request(
 	srcUserPubKey string,
 	destUserPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
-	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nsrcUserPubKey:%s", srcUserPubKey)
+	log.Logger.Debugf(
+		"PubsubProtocol->Request begin:\nsrcUserPubKey: %s\ndestUserPubkey: %s\ndataList: %v",
+		srcUserPubKey, destUserPubkey, dataList)
 
 	dataList = append([]any{destUserPubkey}, dataList...)
 	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
@@ -70,12 +75,12 @@ func (p *PubsubProtocol) Request(
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
 	err = p.Service.PublishProtocol(destUserPubkey, requestBasicData.PID, requestProtoData)
 	if err != nil {
-		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
+		log.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)
 		return nil, nil, err
 	}
 
-	dmsgLog.Logger.Debugf("PubsubProtocol->Request end")
+	log.Logger.Debugf("PubsubProtocol->Request end")
 	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
 }
 

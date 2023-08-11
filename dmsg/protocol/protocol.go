@@ -28,7 +28,9 @@ type Protocol struct {
 func (p *Protocol) HandleRequestData(
 	requestProtoData []byte,
 	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, error) {
-	log.Logger.Debugf("Protocol->HandleRequestData begin\nrequestPId: %v", p.Adapter.GetRequestPID())
+	log.Logger.Debugf(
+		"Protocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
+		requestProtoData, dataList)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -43,7 +45,7 @@ func (p *Protocol) HandleRequestData(
 		return nil, nil, err
 	}
 
-	log.Logger.Debugf("Protocol->HandleRequestData: protocolRequest: %v", request)
+	log.Logger.Debugf("Protocol->HandleRequestData:\nrequest: %v", request)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	valid := AuthProtoMsg(request, requestBasicData)
@@ -52,18 +54,18 @@ func (p *Protocol) HandleRequestData(
 		return request, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
 	}
 
-	requestCallbackData, retCodeData, err := p.Adapter.CallRequestCallback(request)
-	if err != nil {
-		return request, nil, err
-	}
-
-	// generate response message
 	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
 		return request, nil, err
 	}
 
+	requestCallbackData, retCodeData, err := p.Adapter.CallRequestCallback(request)
+	if err != nil {
+		return request, nil, err
+	}
+
+	// generate response message
 	responseBasicData := NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
