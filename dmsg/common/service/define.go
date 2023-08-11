@@ -1,10 +1,9 @@
-package common
+package service
 
 import (
 	"context"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
@@ -22,6 +21,7 @@ type RequestInfo struct {
 	CreateTimestamp int64
 	DoneChan        chan any
 }
+
 type ProtocolAdapter interface {
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
@@ -84,7 +84,6 @@ type Protocol struct {
 type StreamProtocol struct {
 	Protocol
 	Callback StreamProtocolCallback
-	stream   network.Stream
 }
 
 type PubsubProtocolAdapter interface {

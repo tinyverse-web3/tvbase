@@ -1,12 +1,4 @@
-package dmsg
-
-import (
-	"time"
-)
-
-const (
-	DiscoveryConnTimeout = time.Second * 30
-)
+package msg
 
 const (
 	MsgPrefix              = "/dmsg/"

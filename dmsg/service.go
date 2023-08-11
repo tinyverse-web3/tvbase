@@ -9,6 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -88,19 +89,19 @@ func (d *DmsgService) RegPubsubProtocolResCallback(pid pb.PID, subscribe protoco
 }
 
 func (d *DmsgService) GetMsgPrefix(pubkey string) string {
-	return MsgPrefix + pubkey
+	return msg.MsgPrefix + pubkey
 }
 
 func (d *DmsgService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
-	return MsgPrefix + destUserPubkey + MsgKeyDelimiter + srcUserPubkey
+	return msg.MsgPrefix + destUserPubkey + msg.MsgKeyDelimiter + srcUserPubkey
 }
 
 func (d *DmsgService) GetFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
 	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
-	direction := MsgDirection.From
-	return basicPrefix + MsgKeyDelimiter +
-		direction + MsgKeyDelimiter +
-		sendMsgReq.BasicData.ID + MsgKeyDelimiter +
+	direction := msg.MsgDirection.From
+	return basicPrefix + msg.MsgKeyDelimiter +
+		direction + msg.MsgKeyDelimiter +
+		sendMsgReq.BasicData.ID + msg.MsgKeyDelimiter +
 		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
 }
 

@@ -16,8 +16,8 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsg "github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	tvUtilKey "github.com/tinyverse-web3/tvutil/key"
@@ -172,13 +172,13 @@ func main() {
 		decrypedContent := []byte("")
 
 		switch direction {
-		case dmsg.MsgDirection.To:
+		case msg.MsgDirection.To:
 			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(destPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
 				mainLog.Errorf("decrypt error: %v", err)
 			}
-		case dmsg.MsgDirection.From:
+		case msg.MsgDirection.From:
 			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(srcPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())

@@ -18,6 +18,7 @@ import (
 	clientProtocol "github.com/tinyverse-web3/tvbase/dmsg/client/protocol"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -39,7 +40,7 @@ type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
 	user                         *dmsgUser.User
-	onReceiveMsg                 dmsg.OnReceiveMsg
+	onReceiveMsg                 msg.OnReceiveMsg
 	destUserList                 map[string]*dmsgUser.DestUser
 	channelList                  map[string]*dmsgUser.Channel
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
@@ -148,8 +149,8 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 	return nil
 }
 
-func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, error) {
-	var msgList []dmsg.Msg
+func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]msg.Msg, error) {
+	var msgList []msg.Msg
 	peerID, err := peer.Decode(d.user.ServicePeerID)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: peer.Decode error: %v", err)
@@ -169,7 +170,7 @@ func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, err
 			return msgList, fmt.Errorf("DmsgService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
 		}
 		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: readMailboxChanDoneChan success")
-		msgList, err = d.parseReadMailboxResponse(response, dmsg.MsgDirection.From)
+		msgList, err = d.parseReadMailboxResponse(response, msg.MsgDirection.From)
 		if err != nil {
 			return msgList, err
 		}
@@ -316,7 +317,7 @@ func (d *DmsgService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq
 	return sendMsgReq, nil
 }
 
-func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsg.OnReceiveMsg) {
+func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
 	d.onReceiveMsg = onReceiveMsg
 }
 
@@ -448,7 +449,7 @@ func (d *DmsgService) OnReadMailboxMsgResponse(
 
 	dmsgLog.Logger.Debugf("DmsgService->OnReadMailboxMsgResponse: found (%d) new message", len(response.ContentList))
 
-	msgList, err := d.parseReadMailboxResponse(responseProtoData, dmsg.MsgDirection.From)
+	msgList, err := d.parseReadMailboxResponse(responseProtoData, msg.MsgDirection.From)
 	if err != nil {
 		return nil, err
 	}
@@ -502,7 +503,7 @@ func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessag
 	if d.onReceiveMsg != nil {
 		srcPubkey := sendMsgReq.BasicData.Pubkey
 		destPubkey := sendMsgReq.DestPubkey
-		msgDirection := dmsg.MsgDirection.From
+		msgDirection := msg.MsgDirection.From
 		d.onReceiveMsg(
 			srcPubkey,
 			destPubkey,
@@ -599,21 +600,21 @@ func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protorefle
 
 // ClientService interface
 func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error {
-	var dmsguser *dmsgUser.Target = nil
+	var target *dmsgUser.Target = nil
 	user := d.destUserList[pubkey]
 	if user == nil {
 		if d.user.Key.PubkeyHex != pubkey {
 			channel := d.channelList[pubkey]
 			if channel == nil {
-				dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find src/dest/channel user Info for key %s", pubkey)
-				return fmt.Errorf("DmsgService->PublishProtocol: cannot find src/dest/channel user Info for key %s", pubkey)
+				dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: cannot find user/dest/channel for key %s", pubkey)
+				return fmt.Errorf("DmsgService->PublishProtocol: cannot find user/dest/channel for key %s", pubkey)
 			}
-			dmsguser = &channel.Target
+			target = &channel.Target
 		} else {
-			dmsguser = &d.user.Target
+			target = &d.user.Target
 		}
 	} else {
-		dmsguser = &user.Target
+		target = &user.Target
 	}
 
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
@@ -622,7 +623,7 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 		return err
 	}
 
-	err = dmsguser.Publish(buf)
+	err = target.Publish(buf)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->PublishProtocol: Publish error: %v", err)
 		return err
@@ -783,9 +784,9 @@ func (d *DmsgService) releaseUnusedMailbox(peerIdHex string, pubkey string) erro
 	return nil
 }
 
-func (d *DmsgService) parseReadMailboxResponse(responseProtoData protoreflect.ProtoMessage, direction string) ([]dmsg.Msg, error) {
+func (d *DmsgService) parseReadMailboxResponse(responseProtoData protoreflect.ProtoMessage, direction string) ([]msg.Msg, error) {
 	dmsgLog.Logger.Debugf("DmsgService->parseReadMailboxResponse begin:\nresponseProtoData: %v", responseProtoData)
-	msgList := []dmsg.Msg{}
+	msgList := []msg.Msg{}
 	response, ok := responseProtoData.(*pb.ReadMailboxRes)
 	if response == nil || !ok {
 		dmsgLog.Logger.Errorf("DmsgService->parseReadMailboxResponse: fail to convert to *pb.ReadMailboxMsgRes")
@@ -796,23 +797,23 @@ func (d *DmsgService) parseReadMailboxResponse(responseProtoData protoreflect.Pr
 		dmsgLog.Logger.Debugf("DmsgService->parseReadMailboxResponse: msg key = %s", mailboxItem.Key)
 		msgContent := mailboxItem.Content
 
-		fields := strings.Split(mailboxItem.Key, dmsg.MsgKeyDelimiter)
-		if len(fields) < dmsg.MsgFieldsLen {
+		fields := strings.Split(mailboxItem.Key, msg.MsgKeyDelimiter)
+		if len(fields) < msg.MsgFieldsLen {
 			dmsgLog.Logger.Errorf("DmsgService->parseReadMailboxResponse: msg key fields len not enough")
 			return msgList, fmt.Errorf("DmsgService->parseReadMailboxResponse: msg key fields len not enough")
 		}
 
-		timeStamp, err := strconv.ParseInt(fields[dmsg.MsgTimeStampIndex], 10, 64)
+		timeStamp, err := strconv.ParseInt(fields[msg.MsgTimeStampIndex], 10, 64)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->parseReadMailboxResponse: msg timeStamp parse error : %v", err)
 			return msgList, fmt.Errorf("DmsgService->parseReadMailboxResponse: msg timeStamp parse error : %v", err)
 		}
 
-		destPubkey := fields[dmsg.MsgSrcUserPubKeyIndex]
-		srcPubkey := fields[dmsg.MsgDestUserPubKeyIndex]
-		msgID := fields[dmsg.MsgIDIndex]
+		destPubkey := fields[msg.MsgSrcUserPubKeyIndex]
+		srcPubkey := fields[msg.MsgDestUserPubKeyIndex]
+		msgID := fields[msg.MsgIDIndex]
 
-		msgList = append(msgList, dmsg.Msg{
+		msgList = append(msgList, msg.Msg{
 			ID:         msgID,
 			SrcPubkey:  srcPubkey,
 			DestPubkey: destPubkey,
