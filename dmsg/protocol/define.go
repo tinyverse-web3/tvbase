@@ -1,12 +1,5 @@
 package protocol
 
-import (
-	"context"
-
-	"github.com/libp2p/go-libp2p/core/host"
-	"google.golang.org/protobuf/reflect/protoreflect"
-)
-
 const (
 	ProtocolVersion = "0.0.1"
 )
@@ -25,17 +18,3 @@ const (
 )
 
 const AlreadyExistCode = 1
-
-type RequestInfo struct {
-	ProtoMessage    protoreflect.ProtoMessage
-	CreateTimestamp int64
-	DoneChan        chan any
-}
-
-type Protocol struct {
-	Ctx             context.Context
-	Host            host.Host
-	RequestInfoList map[string]*RequestInfo
-	Service         ProtocolService
-	Adapter         ProtocolAdapter
-}

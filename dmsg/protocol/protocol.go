@@ -1,13 +1,29 @@
 package protocol
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+type RequestInfo struct {
+	ProtoMessage    protoreflect.ProtoMessage
+	CreateTimestamp int64
+	DoneChan        chan any
+}
+
+type Protocol struct {
+	Ctx             context.Context
+	Host            host.Host
+	RequestInfoList map[string]*RequestInfo
+	Service         ProtocolService
+	Adapter         ProtocolAdapter
+}
 
 func (p *Protocol) HandleRequestData(
 	requestProtoData []byte,
