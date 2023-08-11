@@ -137,7 +137,7 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 	}
 	select {
 	case <-d.BaseService.GetRendezvousChan():
-		// d.initMailbox(pubkey)
+		d.initMailbox(pubkey)
 	case <-time.After(defTimeout):
 		return nil
 	case <-d.BaseService.GetCtx().Done():
@@ -329,7 +329,7 @@ func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
 	d.onReceiveMsg = onReceiveMsg
 }
 
-// sdk-custom-protocol
+// sdk-custom-stream-protocol
 func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid string, content []byte) error {
 	protocolInfo := d.customStreamProtocolClientInfoList[pid]
 	if protocolInfo == nil {
@@ -358,8 +358,8 @@ func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid strin
 func (d *DmsgService) RegistCustomStreamProtocolClient(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
 	if d.customStreamProtocolClientInfoList[customProtocolID] != nil {
-		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
-		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
+		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocolClient: protocol %s is already exist", customProtocolID)
+		return fmt.Errorf("DmsgService->RegistCustomStreamProtocolClient: protocol %s is already exist", customProtocolID)
 	}
 	d.customStreamProtocolClientInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolClientInfo{
 		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
@@ -373,10 +373,34 @@ func (d *DmsgService) RegistCustomStreamProtocolClient(client customProtocol.Cus
 func (d *DmsgService) UnregistCustomStreamProtocolClient(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
 	if d.customStreamProtocolClientInfoList[customProtocolID] == nil {
-		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
+		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocolClient: protocol %s is not exist", customProtocolID)
 		return nil
 	}
 	d.customStreamProtocolClientInfoList[customProtocolID] = nil
+	return nil
+}
+
+func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomStreamProtocolService) error {
+	customProtocolID := service.GetProtocolID()
+	if d.customStreamProtocolServiceInfoList[customProtocolID] != nil {
+		dmsgLog.Logger.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
+		return fmt.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
+	}
+	d.customStreamProtocolServiceInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolServiceInfo{
+		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
+		Service:  service,
+	}
+	service.SetCtx(d.BaseService.GetCtx())
+	return nil
+}
+
+func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.CustomStreamProtocolService) error {
+	customProtocolID := callback.GetProtocolID()
+	if d.customStreamProtocolServiceInfoList[customProtocolID] == nil {
+		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
+		return nil
+	}
+	d.customStreamProtocolServiceInfoList[customProtocolID] = nil
 	return nil
 }
 
@@ -527,7 +551,7 @@ func (d *DmsgService) OnReleaseMailboxResponse(
 		dmsgLog.Logger.Errorf("DmsgService->OnReleaseMailboxResponse: fail to convert responseProtoData to *pb.ReleaseMailboxRes")
 		return nil, fmt.Errorf("DmsgService->OnReleaseMailboxResponse: fail to convert responseProtoData to *pb.ReleaseMailboxRes")
 	}
-	if response.RetCode.Code != 0 {
+	if response.RetCode.Code < 0 {
 		dmsgLog.Logger.Warnf("DmsgService->OnReleaseMailboxResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("DmsgService->OnReleaseMailboxResponse: fail RetCode: %+v", response.RetCode)
 	}
@@ -839,31 +863,6 @@ func (d *DmsgService) OnSendMsgResponse(
 	return nil, nil
 }
 
-// custom stream protocol
-func (d *DmsgService) RegistCustomStreamProtocol(service customProtocol.CustomStreamProtocolService) error {
-	customProtocolID := service.GetProtocolID()
-	if d.customStreamProtocolServiceInfoList[customProtocolID] != nil {
-		dmsgLog.Logger.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
-		return fmt.Errorf("dmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
-	}
-	d.customStreamProtocolServiceInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolServiceInfo{
-		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
-		Service:  service,
-	}
-	service.SetCtx(d.BaseService.GetCtx())
-	return nil
-}
-
-func (d *DmsgService) UnregistCustomStreamProtocol(callback customProtocol.CustomStreamProtocolService) error {
-	customProtocolID := callback.GetProtocolID()
-	if d.customStreamProtocolServiceInfoList[customProtocolID] == nil {
-		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
-		return nil
-	}
-	d.customStreamProtocolServiceInfoList[customProtocolID] = nil
-	return nil
-}
-
 // common
 func (d *DmsgService) cleanRestResource() {
 	go func() {
@@ -1017,6 +1016,83 @@ func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
 	destUserCount := len(d.destUserList)
 	cfg := d.BaseService.GetConfig()
 	return destUserCount < cfg.DMsg.MaxMailboxPubsubCount
+}
+
+func (d *DmsgService) initMailbox(pubkey string) {
+	dmsgLog.Logger.Debug("DmsgService->initMailbox begin")
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.user.Key.PubkeyHex, d.user.Key.PubkeyHex)
+	if err != nil {
+		return
+	}
+	select {
+	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
+		dmsgLog.Logger.Debugf("DmsgService->initMailbox: seekMailboxProtoData: %+v", seekMailboxResponseProtoData)
+		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
+		if !ok || response == nil {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
+			// skip seek when seek mailbox quest fail (server err), create a new mailbox
+		}
+		if response.RetCode.Code < 0 {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: seekMailboxProtoData fail")
+			// skip seek when seek mailbox quest fail, create a new mailbox
+		} else {
+			dmsgLog.Logger.Debugf("DmsgService->initMailbox: seekMailboxProtoData success")
+			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey)
+			return
+		}
+	case <-time.After(3 * time.Second):
+		dmsgLog.Logger.Debugf("DmsgService->initMailbox: time.After 3s, create new mailbox")
+		// begin create new mailbox
+
+		hostId := d.BaseService.GetHost().ID().String()
+		servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
+		if err != nil {
+			dmsgLog.Logger.Errorf("DmsgService->initMailbox: getAvailableServicePeerList error: %v", err)
+			return
+		}
+
+		peerID := d.BaseService.GetHost().ID().String()
+		for _, servicePeerID := range servicePeerList {
+			dmsgLog.Logger.Debugf("DmsgService->initMailbox: servicePeerID: %v", servicePeerID)
+			if peerID == servicePeerID.String() {
+				continue
+			}
+			_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
+			if err != nil {
+				dmsgLog.Logger.Errorf("DmsgService->initMailbox: createMailboxProtocol.Request error: %v", err)
+				continue
+			}
+
+			select {
+			case createMailboxResponseProtoData := <-createMailboxDoneChan:
+				dmsgLog.Logger.Debugf("DmsgService->initMailbox: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
+				response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
+				if !ok || response == nil {
+					dmsgLog.Logger.Errorf("DmsgService->initMailbox: createMailboxDoneChan is not CreateMailboxRes")
+					continue
+				}
+
+				switch response.RetCode.Code {
+				case 0, 1:
+					dmsgLog.Logger.Debugf("DmsgService->initMailbox: createMailboxProtocol success")
+					return
+				default:
+					continue
+				}
+			case <-time.After(time.Second * 3):
+				continue
+			case <-d.BaseService.GetCtx().Done():
+				return
+			}
+		}
+
+		dmsgLog.Logger.Error("DmsgService->InitUser: no available service peers")
+		return
+		// end create mailbox
+	case <-d.BaseService.GetCtx().Done():
+		dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
+		return
+	}
 }
 
 func (d *DmsgService) releaseUnusedMailbox(peerIdHex string, pubkey string) error {
