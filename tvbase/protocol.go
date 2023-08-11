@@ -44,33 +44,3 @@ func (m *TvBase) RegistCSSProtocol(protocol customProtocol.CustomStreamProtocolS
 	service.RegistCustomStreamProtocol(protocol)
 	return nil
 }
-
-// regist custom pubsub client protocol
-func (m *TvBase) RegistCPCProtocol(protocol customProtocol.CustomPubsubProtocolClient) error {
-	if m.DmsgService == nil {
-		tvLog.Logger.Errorf("tvBase->RegistCPCProtocol: m.DmsgService is nil")
-		return fmt.Errorf("tvBase->RegistCPCProtocol: m.DmsgService is nil")
-	}
-	service, ok := m.DmsgService.(*dmsgClient.DmsgService)
-	if !ok {
-		tvLog.Logger.Errorf("tvBase->RegistCPCProtocol: service is not ClientDmsgService")
-		return fmt.Errorf("tvBase->RegistCPCProtocol: service is not ClientDmsgService")
-	}
-	service.RegistCustomPubsubProtocol(protocol)
-	return nil
-}
-
-// regist custom pubsub service protocol
-func (m *TvBase) RegistCPSProtocol(protocol customProtocol.CustomPubsubProtocolService, destPubkey string) error {
-	if m.DmsgService == nil {
-		tvLog.Logger.Errorf("tvBase->RegistCPSProtocol: service is nil")
-		return fmt.Errorf("tvBase->RegistCPSProtocol: service is nil")
-	}
-	service, ok := m.DmsgService.(*dmsgService.DmsgService)
-	if !ok {
-		tvLog.Logger.Errorf("tvBase->RegistCPSProtocol: service is not ServiceDmsgService")
-		return fmt.Errorf("tvBase->RegistCPSProtocol: service is not ServiceDmsgService")
-	}
-	service.RegistCustomPubsubProtocol(protocol, destPubkey)
-	return nil
-}

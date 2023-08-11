@@ -10,6 +10,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -95,7 +96,7 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	if len(dataList) < 1 {
 		return nil, errors.New("CustomStreamProtocolAdapter:InitResponse: dataList need contain customStreamProtocolResponseParam")
 	}
-	customStreamProtocolResponseParam, ok := dataList[0].(*CustomStreamProtocolResponseParam)
+	customStreamProtocolResponseParam, ok := dataList[0].(*customProtocol.CustomStreamProtocolResponseParam)
 	if !ok {
 		return response, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
 	}

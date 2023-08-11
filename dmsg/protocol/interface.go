@@ -64,11 +64,6 @@ type PubsubProtocolCallback interface {
 	OnSendMsgResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
-	OnCustomPubsubProtocolRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnCustomPubsubProtocolResponse(
-		requestProtoMsg protoreflect.ProtoMessage,
-		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type ProtocolAdapter interface {

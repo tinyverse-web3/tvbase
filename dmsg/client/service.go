@@ -32,20 +32,19 @@ type ProtocolProxy struct {
 	releaseMailboxPrtocol *dmsgProtocol.StreamProtocol
 	createChannelProtocol *dmsgProtocol.StreamProtocol
 	seekMailboxProtocol   *dmsgProtocol.PubsubProtocol
-	sendMsgPubPrtocol     *dmsgProtocol.PubsubProtocol
+	sendMsgPrtocol        *dmsgProtocol.PubsubProtocol
 }
 
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	user                         *dmsgUser.User
-	onReceiveMsg                 msg.OnReceiveMsg
-	destUserList                 map[string]*dmsgUser.DestUser
-	channelList                  map[string]*dmsgUser.Channel
-	customStreamProtocolInfoList map[string]*customProtocol.CustomStreamProtocolInfo
-	customPubsubProtocolInfoList map[string]*customProtocol.CustomPubsubProtocolInfo
-	datastore                    db.Datastore
-	stopCleanRestResource        chan bool
+	user                               *dmsgUser.User
+	onReceiveMsg                       msg.OnReceiveMsg
+	destUserList                       map[string]*dmsgUser.DestUser
+	channelList                        map[string]*dmsgUser.Channel
+	customStreamProtocolClientInfoList map[string]*customProtocol.CustomStreamProtocolClientInfo
+	datastore                          db.Datastore
+	stopCleanRestResource              chan bool
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -82,14 +81,13 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
 	d.RegPubsubProtocolResCallback(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
 
-	d.sendMsgPubPrtocol = adapter.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
-	d.RegPubsubProtocolReqCallback(d.sendMsgPubPrtocol.Adapter.GetRequestPID(), d.sendMsgPubPrtocol)
+	d.sendMsgPrtocol = adapter.NewSendMsgProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d)
+	d.RegPubsubProtocolReqCallback(d.sendMsgPrtocol.Adapter.GetRequestPID(), d.sendMsgPrtocol)
 
 	d.destUserList = make(map[string]*dmsgUser.DestUser)
 	d.channelList = make(map[string]*dmsgUser.Channel)
 
-	d.customStreamProtocolInfoList = make(map[string]*customProtocol.CustomStreamProtocolInfo)
-	d.customPubsubProtocolInfoList = make(map[string]*customProtocol.CustomPubsubProtocolInfo)
+	d.customStreamProtocolClientInfoList = make(map[string]*customProtocol.CustomStreamProtocolClientInfo)
 
 	d.stopCleanRestResource = make(chan bool)
 	return nil
@@ -298,7 +296,7 @@ func (d *DmsgService) UnsubscribeChannelList() {
 func (d *DmsgService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg begin:\ndestPubkey: %v", destPubkey)
 	sigPubkey := d.user.Key.PubkeyHex
-	protoData, _, err := d.sendMsgPubPrtocol.Request(
+	protoData, _, err := d.sendMsgPrtocol.Request(
 		sigPubkey,
 		destPubkey,
 		content,
@@ -411,8 +409,8 @@ func (d *DmsgService) OnReleaseMailboxResponse(requestProtoData protoreflect.Pro
 	dmsgLog.Logger.Debug("DmsgService->OnReleaseMailboxResponse begin")
 	_, ok := requestProtoData.(*pb.ReleaseMailboxReq)
 	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
+		dmsgLog.Logger.Errorf("DmsgService->OnReleaseMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
+		return nil, fmt.Errorf("DmsgService->OnReleaseMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
 	}
 
 	response, ok := responseProtoData.(*pb.ReleaseMailboxRes)
@@ -484,12 +482,15 @@ func (d *DmsgService) OnSeekMailboxResponse(
 	return nil, nil
 }
 
-func (d *DmsgService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+func (d *DmsgService) OnQueryPeerRequest(
+	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	// TODO implement it
 	return nil, nil, nil
 }
 
-func (d *DmsgService) OnQueryPeerResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnQueryPeerResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	// TODO implement it
 	return nil, nil
 }
@@ -560,7 +561,7 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(requestProtoData protorefle
 		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", responseProtoData)
 	}
 
-	customProtocolInfo := d.customStreamProtocolInfoList[response.PID]
+	customProtocolInfo := d.customStreamProtocolClientInfoList[response.PID]
 	if customProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", response.PID)
 		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", customProtocolInfo)
@@ -580,35 +581,6 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(requestProtoData protorefle
 
 func (d *DmsgService) OnCustomPubsubProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	return nil, nil, nil
-}
-
-func (d *DmsgService) OnCustomPubsubProtocolResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
-	request, ok := requestProtoData.(*pb.CustomProtocolReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", requestProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", requestProtoData)
-	}
-	response, ok := responseProtoData.(*pb.CustomProtocolRes)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: cannot convert %v to *pb.CustomContentRes", responseProtoData)
-	}
-	customPubsubProtocolInfo := d.customPubsubProtocolInfoList[response.PID]
-	if customPubsubProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo(%v) is nil", response.PID)
-		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: customProtocolInfo(%v) is nil", customPubsubProtocolInfo)
-	}
-	if customPubsubProtocolInfo.Client == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: Client is nil")
-		return nil, fmt.Errorf("DmsgService->OnCustomPubsubProtocolResponse: Client is nil")
-	}
-
-	err := customPubsubProtocolInfo.Client.HandleResponse(request, response)
-	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomPubsubProtocolResponse: HandleResponse error: %v", err)
-		return nil, err
-	}
-	return nil, nil
 }
 
 // ClientService interface
@@ -646,7 +618,7 @@ func (d *DmsgService) PublishProtocol(pubkey string, pid pb.PID, protoData []byt
 
 // cmd protocol
 func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid string, content []byte) error {
-	protocolInfo := d.customStreamProtocolInfoList[pid]
+	protocolInfo := d.customStreamProtocolClientInfoList[pid]
 	if protocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", pid)
 		return fmt.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", pid)
@@ -672,11 +644,11 @@ func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid strin
 
 func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
-	if d.customStreamProtocolInfoList[customProtocolID] != nil {
+	if d.customStreamProtocolClientInfoList[customProtocolID] != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("DmsgService->RegistCustomStreamProtocol: protocol %s is already exist", customProtocolID)
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolInfo{
+	d.customStreamProtocolClientInfoList[customProtocolID] = &customProtocol.CustomStreamProtocolClientInfo{
 		Protocol: adapter.NewCustomStreamProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
 		Client:   client,
 	}
@@ -687,36 +659,11 @@ func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStr
 
 func (d *DmsgService) UnregistCustomStreamProtocol(client customProtocol.CustomStreamProtocolClient) error {
 	customProtocolID := client.GetProtocolID()
-	if d.customStreamProtocolInfoList[customProtocolID] == nil {
+	if d.customStreamProtocolClientInfoList[customProtocolID] == nil {
 		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
 		return nil
 	}
-	d.customStreamProtocolInfoList[customProtocolID] = nil
-	return nil
-}
-
-func (d *DmsgService) RegistCustomPubsubProtocol(client customProtocol.CustomPubsubProtocolClient) error {
-	customProtocolID := client.GetProtocolID()
-	if d.customPubsubProtocolInfoList[customProtocolID] != nil {
-		dmsgLog.Logger.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
-		return fmt.Errorf("DmsgService->RegistCustomPubsubProtocol: protocol %s is already exist", customProtocolID)
-	}
-	d.customPubsubProtocolInfoList[customProtocolID] = &customProtocol.CustomPubsubProtocolInfo{
-		Protocol: adapter.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), d, d),
-		Client:   client,
-	}
-	client.SetCtx(d.BaseService.GetCtx())
-	client.SetService(d)
-	return nil
-}
-
-func (d *DmsgService) UnregistCustomPubsubProtocol(client customProtocol.CustomPubsubProtocolClient) error {
-	customProtocolID := client.GetProtocolID()
-	if d.customPubsubProtocolInfoList[customProtocolID] == nil {
-		dmsgLog.Logger.Warnf("DmsgService->UnregistCustomPubsubProtocol: protocol %s is not exist", customProtocolID)
-		return nil
-	}
-	d.customPubsubProtocolInfoList[customProtocolID] = nil
+	d.customStreamProtocolClientInfoList[customProtocolID] = nil
 	return nil
 }
 
