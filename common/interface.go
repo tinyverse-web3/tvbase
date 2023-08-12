@@ -37,8 +37,6 @@ type DkvsService interface {
 
 type TraceSpanCallback func(ctx context.Context)
 
-type NoArgCallback func() error
-
 type TvBaseService interface {
 	DiscoverRendezvousPeers()
 	GetServicePeerList() tvPeer.PeerInfoList

@@ -12,8 +12,8 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
@@ -65,7 +65,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvbaseConfig.ServiceMode {
+	if cfg.Mode == define.ServiceMode {
 		d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
 		if err != nil {
 			dmsgLog.Logger.Errorf("dmsgService->Init: create datastore error %v", err)
@@ -98,7 +98,7 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 // sdk-common
 func (d *DmsgService) Start() error {
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvbaseConfig.ServiceMode {
+	if cfg.Mode == define.ServiceMode {
 		d.cleanRestResource()
 	}
 	return nil
@@ -110,7 +110,7 @@ func (d *DmsgService) Stop() error {
 	d.UnsubscribeChannelList()
 
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvbaseConfig.ServiceMode {
+	if cfg.Mode == define.ServiceMode {
 		d.stopCleanRestResource <- true
 	}
 	return nil
@@ -125,7 +125,7 @@ func (d *DmsgService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback,
 	}
 
 	cfg := d.BaseService.GetConfig()
-	if cfg.Mode == tvbaseConfig.ServiceMode {
+	if cfg.Mode == define.ServiceMode {
 		return nil
 	}
 	defTimeout := 24 * time.Hour
@@ -225,7 +225,7 @@ func (d *DmsgService) SubscribeChannel(pubkey string) error {
 
 	cfg := d.BaseService.GetConfig()
 	switch cfg.Mode {
-	case tvbaseConfig.LightMode:
+	case define.LightMode:
 		err = d.createChannelService(channel.Key.PubkeyHex)
 		if err != nil {
 			target.Close()
@@ -735,7 +735,7 @@ func (d *DmsgService) OnCustomStreamProtocolResponse(
 
 	cfg := d.BaseService.GetConfig()
 	switch cfg.Mode {
-	case tvbaseConfig.LightMode:
+	case define.LightMode:
 
 	}
 	customProtocolInfo := d.customStreamProtocolClientInfoList[response.PID]
@@ -815,7 +815,7 @@ func (d *DmsgService) OnSendMsgRequest(
 
 	cfg := d.BaseService.GetConfig()
 	switch cfg.Mode {
-	case tvbaseConfig.ServiceMode:
+	case define.ServiceMode:
 		pubkey := request.BasicData.Pubkey
 		user := d.GetDestUser(pubkey)
 		if user == nil {
@@ -824,7 +824,7 @@ func (d *DmsgService) OnSendMsgRequest(
 		}
 		user.LastReciveTimestamp = time.Now().UnixNano()
 		d.saveUserMsg(requestProtoData)
-	case tvbaseConfig.LightMode:
+	case define.LightMode:
 		if d.onReceiveMsg != nil {
 			srcPubkey := request.BasicData.Pubkey
 			destPubkey := request.DestPubkey

@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	"go.opentelemetry.io/otel/attribute"
@@ -85,9 +86,9 @@ func (m *TvBase) SetTracerStatus(err error) {
 }
 
 func (m *TvBase) GetAvailableServicePeerList(key string) ([]peer.ID, error) {
-	return m.getAvailablePeerList(key, tvConfig.ServiceMode)
+	return m.getAvailablePeerList(key, define.ServiceMode)
 }
 
 func (m *TvBase) GetAvailableLightPeerList(key string) ([]peer.ID, error) {
-	return m.getAvailablePeerList(key, tvConfig.LightMode)
+	return m.getAvailablePeerList(key, define.LightMode)
 }

@@ -11,10 +11,11 @@ import (
 	"github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 )
 
-func GenConfig2IdentityFile(rootPath string, mode tvbaseConfig.NodeMode) error {
+func GenConfig2IdentityFile(rootPath string, mode define.NodeMode) error {
 	rootPath = strings.Trim(rootPath, " ")
 	if rootPath == "" {
 		rootPath = "."
@@ -48,9 +49,9 @@ func GenConfig2IdentityFile(rootPath string, mode tvbaseConfig.NodeMode) error {
 	var config tvbaseConfig.NodeConfig
 	defaultPort := tvbaseConfig.DefaultPort
 	switch mode {
-	case tvbaseConfig.ServiceMode:
+	case define.ServiceMode:
 		tvbaseConfig.DefaultPort = tvbaseConfig.ServicePort
-	case tvbaseConfig.LightMode:
+	case define.LightMode:
 		tvbaseConfig.DefaultPort = tvbaseConfig.LightPort
 	}
 

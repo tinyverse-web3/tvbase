@@ -14,7 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -45,7 +45,7 @@ func parseCmdParams() (string, string, string, string) {
 	}
 	if *generateCfg {
 
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.LightMode)
+		err := tvUtil.GenConfig2IdentityFile(*rootPath, define.LightMode)
 		if err != nil {
 			mainLog.Fatal(err)
 		}

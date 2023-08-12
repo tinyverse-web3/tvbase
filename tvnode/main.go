@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
@@ -85,7 +85,7 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
+		err := tvUtil.GenConfig2IdentityFile(*rootPath, define.ServiceMode)
 		if err != nil {
 			mainLog.Fatalf("Failed to generate config file: %v", err)
 		}

@@ -27,6 +27,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
@@ -105,9 +106,9 @@ func NewTvbase(options ...any) (*TvBase, error) {
 		return m, err
 	}
 	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
+	case define.LightMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "LightMode")
-	case tvConfig.ServiceMode:
+	case define.ServiceMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "ServiceMode")
 	default:
 		tvLog.Logger.Errorf("NewTvbase: mode is not exist: mode: %s", m.nodeCfg.Mode)
@@ -125,8 +126,8 @@ func NewTvbase(options ...any) (*TvBase, error) {
 
 func (m *TvBase) Start() error {
 	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
+	case define.LightMode:
+	case define.ServiceMode:
 		m.initMetric()
 	}
 
@@ -167,8 +168,8 @@ func (m *TvBase) Start() error {
 	}
 
 	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
+	case define.LightMode:
+	case define.ServiceMode:
 		coreHttp.InitHttpServer(m)
 	}
 
@@ -235,8 +236,8 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 
 	var intrOpt fx.Option
 	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
+	case define.LightMode:
+	case define.ServiceMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -389,7 +390,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 
 	// resource manager
 	switch m.nodeCfg.Mode {
-	case tvConfig.ServiceMode:
+	case define.ServiceMode:
 		rmgr, err := m.initResourceManager()
 		if err != nil {
 			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
@@ -500,9 +501,9 @@ func (m *TvBase) init(rootPath string) error {
 func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	var err error
 	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
+	case define.LightMode:
 		m.DmsgService, err = dmsgClient.CreateService(m)
-	case tvConfig.ServiceMode:
+	case define.ServiceMode:
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {

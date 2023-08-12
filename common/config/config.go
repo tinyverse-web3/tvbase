@@ -13,13 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	relayv2 "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
-)
-
-type NodeMode int32
-
-const (
-	ServiceMode NodeMode = iota
-	LightMode
+	"github.com/tinyverse-web3/tvbase/common/define"
 )
 
 var (
@@ -33,7 +27,7 @@ var (
 // that influence behaviour of a relay daemon.
 type NodeConfig struct {
 	RootPath     string
-	Mode         NodeMode
+	Mode         define.NodeMode
 	Network      NetworkConfig
 	Swarm        config.SwarmConfig
 	AutoNAT      AutoNATConfig
@@ -170,7 +164,7 @@ type CoreHttpConfig struct {
 // returns a default relay configuration using default resource
 func NewDefaultNodeConfig() NodeConfig {
 	return NodeConfig{
-		Mode: LightMode,
+		Mode: define.LightMode,
 		Network: NetworkConfig{
 			IsLocalNet: false,
 			ListenAddrs: []string{

@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/common/pb"
 	"google.golang.org/protobuf/proto"
@@ -27,12 +27,12 @@ const (
 )
 
 type NodeInfoService struct {
-	Host       host.Host
-	NodeConfig *config.NodeConfig
+	Host     host.Host
+	nodeMode define.NodeMode
 }
 
-func NewNodeInfoService(h host.Host, c *config.NodeConfig) *NodeInfoService {
-	ps := &NodeInfoService{h, c}
+func NewNodeInfoService(h host.Host, m define.NodeMode) *NodeInfoService {
+	ps := &NodeInfoService{h, m}
 	h.SetStreamHandler(ID, ps.requestHandler)
 	return ps
 }
@@ -60,10 +60,10 @@ func (p *NodeInfoService) requestHandler(s network.Stream) {
 	}
 
 	nodeType := pb.NodeType_Light
-	switch p.NodeConfig.Mode {
-	case config.LightMode:
+	switch p.nodeMode {
+	case define.LightMode:
 		nodeType = pb.NodeType_Light
-	case config.ServiceMode:
+	case define.ServiceMode:
 		nodeType = pb.NodeType_Full
 	}
 	nodeInfo := &pb.NodeInfo{

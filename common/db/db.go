@@ -8,7 +8,7 @@ import (
 	badgerds "github.com/ipfs/go-ds-badger2"
 	levelds "github.com/ipfs/go-ds-leveldb"
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
-	tvbaseConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvbaseLog "github.com/tinyverse-web3/tvbase/common/log"
 )
 
@@ -16,11 +16,11 @@ type Datastore interface {
 	ds.Batching // must be thread-safe
 }
 
-func CreateDataStore(dbRootDir string, mode tvbaseConfig.NodeMode) (Datastore, error) {
+func CreateDataStore(dbRootDir string, mode define.NodeMode) (Datastore, error) {
 	switch mode {
-	case tvbaseConfig.LightMode:
+	case define.LightMode:
 		return createBadgerDB(dbRootDir)
-	case tvbaseConfig.ServiceMode:
+	case define.ServiceMode:
 		return createLevelDB(dbRootDir)
 	}
 	return nil, nil

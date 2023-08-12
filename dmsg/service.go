@@ -7,7 +7,8 @@ import (
 	"unsafe"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -16,14 +17,15 @@ import (
 )
 
 type DmsgService struct {
-	BaseService tvCommon.TvBaseService
+	BaseService common.TvBaseService
 	Pubsub      *pubsub.PubSub
 
 	PubsubProtocolResSubscribes map[pb.PID]protocol.ResSubscribe
 	PubsubProtocolReqSubscribes map[pb.PID]protocol.ReqSubscribe
+	NodeMode                    define.NodeMode
 }
 
-func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
+func (d *DmsgService) Init(nodeService common.TvBaseService) error {
 	d.BaseService = nodeService
 
 	var err error

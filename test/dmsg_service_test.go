@@ -10,7 +10,7 @@ import (
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -74,7 +74,7 @@ func parseServiceCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
+		err := tvUtil.GenConfig2IdentityFile(*rootPath, define.ServiceMode)
 		if err != nil {
 			tvLog.Logger.Fatal(err)
 		}
