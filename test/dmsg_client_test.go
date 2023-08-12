@@ -16,7 +16,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
+	"github.com/tinyverse-web3/tvbase/dmsg"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
@@ -166,14 +166,18 @@ func TestPubsubMsg(t *testing.T) {
 	<-ctx.Done()
 }
 
-func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, rootPath string, ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
+func initMsgClient(
+	srcPubkey *ecdsa.PublicKey,
+	srcPrikey *ecdsa.PrivateKey,
+	rootPath string,
+	ctx context.Context) (*tvbase.TvBase, *dmsg.DmsgService, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		testLog.Errorf("InitMsgClient error: %v", err)
 		return nil, nil, err
 	}
 
-	dmsgService := tvbase.GetClientDmsgService()
+	dmsgService := tvbase.GetDmsgService()
 	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)

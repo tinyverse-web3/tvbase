@@ -1,4 +1,4 @@
-package client
+package dmsg
 
 import (
 	"errors"
@@ -14,7 +14,6 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
-	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -37,7 +36,7 @@ type ProtocolProxy struct {
 }
 
 type DmsgService struct {
-	dmsg.DmsgService
+	CommonService
 	ProtocolProxy
 	user                                *dmsgUser.User
 	onReceiveMsg                        msg.OnReceiveMsg
@@ -49,17 +48,17 @@ type DmsgService struct {
 	stopCleanRestResource               chan bool
 }
 
-func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
+func CreateDmsgService(baseService tvCommon.TvBaseService, m define.NodeMode) (*DmsgService, error) {
 	d := &DmsgService{}
-	err := d.Init(nodeService)
+	err := d.Init(baseService, m)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
-	err := d.DmsgService.Init(nodeService)
+func (d *DmsgService) Init(baseService tvCommon.TvBaseService, m define.NodeMode) error {
+	err := d.CommonService.Init(baseService, m)
 	if err != nil {
 		return err
 	}

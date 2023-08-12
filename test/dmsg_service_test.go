@@ -13,9 +13,9 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
-	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -84,7 +84,7 @@ func parseServiceCmdParams() string {
 }
 
 func readConsoleToSendMsg(node *tvbase.TvBase) {
-	dmsgService := node.DmsgService.(*dmsgService.DmsgService)
+	dmsgService := node.DmsgService.(*dmsg.DmsgService)
 
 	pk := "0400d3192b5e36d458bce6b8b7c9fbe19c90acfd01a6da7f01cf4729ac3976c957c2ac4ab38ff899fcdca6ddba661785c34eb00c2cd5b2b6d014ca6911463b3fa2"
 	var destPubsub *dmsgUser.DestUser

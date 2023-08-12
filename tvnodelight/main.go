@@ -16,7 +16,7 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
+	"github.com/tinyverse-web3/tvbase/dmsg"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
@@ -74,13 +74,13 @@ func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *dmsg.DmsgService, error) {
 	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tvInfra.GetClientDmsgService()
+	dmsgService := tvInfra.GetDmsgService()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)

@@ -34,8 +34,7 @@ import (
 	tvutil "github.com/tinyverse-web3/tvbase/common/util"
 	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
-	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
-	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
+	"github.com/tinyverse-web3/tvbase/dmsg"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -498,14 +497,11 @@ func (m *TvBase) init(rootPath string) error {
 	return nil
 }
 
-func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
+func (m *TvBase) initDmsgService(lc fx.Lifecycle, mode define.NodeMode) error {
 	var err error
-	switch m.nodeCfg.Mode {
-	case define.LightMode:
-		m.DmsgService, err = dmsgClient.CreateService(m)
-	case define.ServiceMode:
-		m.DmsgService, err = dmsgService.CreateService(m)
-	}
+
+	m.DmsgService, err = dmsg.CreateDmsgService(m, mode)
+
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
 		return nil
@@ -602,12 +598,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 	return nil
 }
 
-func (m *TvBase) GetClientDmsgService() *dmsgClient.DmsgService {
-	return m.DmsgService.(*dmsgClient.DmsgService)
-}
-
-func (m *TvBase) GetServiceDmsgService() *dmsgService.DmsgService {
-	return m.DmsgService.(*dmsgService.DmsgService)
+func (m *TvBase) GetDmsgService() *dmsg.DmsgService {
+	return m.DmsgService.(*dmsg.DmsgService)
 }
 
 func (m *TvBase) GetDkvsService() tvCommon.DkvsService {
