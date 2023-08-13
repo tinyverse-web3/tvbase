@@ -16,7 +16,7 @@ import (
 
 type CustomStreamProtocolAdapter struct {
 	CommonProtocolAdapter
-	protocol *dmsgProtocol.StreamProtocol
+	protocol *dmsgProtocol.MsgSProtocol
 	pid      string
 }
 
@@ -189,11 +189,11 @@ func NewCustomStreamProtocol(
 	ctx context.Context,
 	host host.Host,
 	customProtocolId string,
-	protocolCallback dmsgProtocol.StreamProtocolCallback,
-	protocolService dmsgProtocol.ProtocolService) *dmsgProtocol.StreamProtocol {
+	protocolCallback dmsgProtocol.MsgSpCallback,
+	protocolService dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MsgSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = customProtocolId
-	protocol := dmsgProtocol.NewStreamProtocol(ctx, host, protocolCallback, protocolService, ret)
+	protocol := dmsgProtocol.NewMsgSProtocol(ctx, host, protocolCallback, protocolService, ret)
 	ret.protocol = protocol
 	return protocol
 }

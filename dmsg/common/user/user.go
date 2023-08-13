@@ -47,9 +47,9 @@ func (p *Pubsub) Next(ctx context.Context) (*pubsub.Message, error) {
 	return p.Subscription.Next(ctx)
 }
 
-func NewTarget(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) (*Target, error) {
+func NewTarget(c context.Context, pk string, getSig key.GetSigCallback) (*Target, error) {
 	user := &Target{}
-	err := user.InitWithPubkey(c, p, pk, getSig)
+	err := user.InitWithPubkey(c, pk, getSig)
 	return user, err
 }
 
@@ -60,41 +60,44 @@ type Target struct {
 	CancelCtx context.CancelFunc
 }
 
-func (u *Target) InitWithPubkey(c context.Context, p *pubsub.PubSub, pk string, getSig key.GetSigCallback) error {
+func (t *Target) InitWithPubkey(c context.Context, pk string, getSig key.GetSigCallback) error {
 	key := key.NewKey()
 	err := key.InitKeyWithPubkeyHex(pk, getSig)
 	if err != nil {
 		dmsgLog.Logger.Errorf("User->InitWithPubkey: key.InitKeyWithPubkeyHex error: %v", err)
 		return err
 	}
-	u.Key = *key
+	t.Key = *key
 
+	ctx, cancelFunc := context.WithCancel(c)
+	t.Ctx = ctx
+	t.CancelCtx = cancelFunc
+	return nil
+}
+
+func (t *Target) InitPubsub(p *pubsub.PubSub, pk string) error {
 	pubsub, err := NewPubsub(p, pk)
 	if err != nil {
 		dmsgLog.Logger.Errorf("User->InitWithPubkey: NewPubsub error: %v", err)
 		return err
 	}
-	u.Pubsub = *pubsub
-
-	ctx, cancelFunc := context.WithCancel(c)
-	u.Ctx = ctx
-	u.CancelCtx = cancelFunc
+	t.Pubsub = *pubsub
 	return nil
 }
 
-func (s *Target) GetSig(protoData []byte) ([]byte, error) {
-	if s.Key.Prikey != nil {
-		sig, err := crypto.SignDataByEcdsa(s.Key.Prikey, protoData)
+func (t *Target) GetSig(protoData []byte) ([]byte, error) {
+	if t.Key.Prikey != nil {
+		sig, err := crypto.SignDataByEcdsa(t.Key.Prikey, protoData)
 		if err != nil {
 			dmsgLog.Logger.Errorf("User->GetSig: %v", err)
 			return sig, err
 		}
 		return sig, nil
 	}
-	if s.Key.GetSig == nil {
+	if t.Key.GetSig == nil {
 		return nil, fmt.Errorf("User->GetSig: Key.GetSig is nil")
 	}
-	return s.Key.GetSig(protoData)
+	return t.Key.GetSig(protoData)
 }
 
 func (s *Target) Publish(protoData []byte, opts ...pubsub.PubOpt) error {
@@ -121,6 +124,11 @@ type User struct {
 	ServicePeerID string
 }
 
+type LightMailboxUser struct {
+	Target
+	ServicePeerID string
+}
+
 type DestTarget struct {
 	Target
 	LastReciveTimestamp int64
@@ -130,7 +138,11 @@ type Channel struct {
 	DestTarget
 }
 
-type DestUser struct {
+type LightMsgUser struct {
+	Target
+}
+
+type ServiceMailboxUser struct {
 	DestTarget
 	MsgRWMutex sync.RWMutex
 }

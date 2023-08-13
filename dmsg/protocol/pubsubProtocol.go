@@ -10,9 +10,18 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type MailboxPProtocol struct {
+	PubsubProtocol
+	Callback MailboxPpCallback
+}
+
+type MsgPProtocol struct {
+	PubsubProtocol
+	Callback MsgPpCallback
+}
+
 type PubsubProtocol struct {
 	Protocol
-	Callback PubsubProtocolCallback
 }
 
 func (p *PubsubProtocol) HandleRequestData(
@@ -50,7 +59,8 @@ func (p *PubsubProtocol) HandleRequestData(
 	responseBasicData := p.Adapter.GetResponseBasicData(response)
 
 	// send the response
-	err = p.Service.PublishProtocol(requestBasicData.Pubkey, responseBasicData.PID, responseProtoData)
+	target := p.Service.GetPublishTarget(requestBasicData.Pubkey)
+	err = p.Service.PublishProtocol(target, responseBasicData.PID, responseProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
 	}
@@ -73,7 +83,8 @@ func (p *PubsubProtocol) Request(
 	}
 
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	err = p.Service.PublishProtocol(destUserPubkey, requestBasicData.PID, requestProtoData)
+	target := p.Service.GetPublishTarget(destUserPubkey)
+	err = p.Service.PublishProtocol(target, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)
@@ -84,17 +95,34 @@ func (p *PubsubProtocol) Request(
 	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
 }
 
-func NewPubsubProtocol(
+func NewMsgPProtocol(
 	ctx context.Context,
 	host host.Host,
-	protocolCallback PubsubProtocolCallback,
-	protocolService ProtocolService,
-	adapter PubsubProtocolAdapter) *PubsubProtocol {
-	ret := &PubsubProtocol{}
+	callback MsgPpCallback,
+	dmsg DmsgServiceInterface,
+	adapter PpAdapter) *MsgPProtocol {
+	ret := &MsgPProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
-	ret.Callback = protocolCallback
-	ret.Service = protocolService
+	ret.Callback = callback
+	ret.Service = dmsg
+	ret.RequestInfoList = make(map[string]*RequestInfo)
+	ret.Adapter = adapter
+	go ret.TickCleanRequest()
+	return ret
+}
+
+func NewMailboxPProtocol(
+	ctx context.Context,
+	host host.Host,
+	callback MailboxPpCallback,
+	dmsg DmsgServiceInterface,
+	adapter PpAdapter) *MailboxPProtocol {
+	ret := &MailboxPProtocol{}
+	ret.Ctx = ctx
+	ret.Host = host
+	ret.Callback = callback
+	ret.Service = dmsg
 	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()

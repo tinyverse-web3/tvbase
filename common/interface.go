@@ -16,7 +16,7 @@ import (
 )
 
 type DmsgService interface {
-	Start() error
+	Init(tvbaseService TvBaseService) error
 	Stop() error
 }
 

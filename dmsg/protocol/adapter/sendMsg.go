@@ -13,7 +13,7 @@ import (
 
 type SendMsgProtocolAdapter struct {
 	CommonProtocolAdapter
-	Protocol *dmsgProtocol.PubsubProtocol
+	Protocol *dmsgProtocol.MsgPProtocol
 }
 
 func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
@@ -155,10 +155,10 @@ func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
 func NewSendMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.PubsubProtocolCallback,
-	service dmsgProtocol.ProtocolService) *dmsgProtocol.PubsubProtocol {
+	callback dmsgProtocol.MsgPpCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MsgPProtocol {
 	adapter := NewSendMsgProtocolAdapter()
-	protocol := dmsgProtocol.NewPubsubProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewMsgPProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol
 	return protocol
 }

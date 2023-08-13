@@ -2,25 +2,29 @@ package protocol
 
 import (
 	"github.com/libp2p/go-libp2p/core/protocol"
+	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type ReqSubscribe interface {
-	HandleRequestData(protocolData []byte, dataList ...any) error
+type ProtocolHandle interface {
+	HandleRequestData(
+		protocolData []byte,
+		moreList ...any) error
 }
 
-type ResSubscribe interface {
-	HandleResponseData(protocolData []byte, dataList ...any) error
-}
-
-type ProtocolService interface {
+type DmsgServiceInterface interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	PublishProtocol(pubkey string, pid pb.PID, protoData []byte) error
+	GetPublishTarget(pubkey string) *dmsgUser.Target
+	PublishProtocol(
+		target *dmsgUser.Target,
+		pid pb.PID,
+		protoData []byte) error
+	IsEnableService() bool
 }
 
-type StreamProtocolCallback interface {
+type MailboxSpCallback interface {
 	OnCreateMailboxRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
 	OnCreateMailboxResponse(
@@ -36,6 +40,17 @@ type StreamProtocolCallback interface {
 	OnReleaseMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+}
+
+type MailboxPpCallback interface {
+	OnSeekMailboxRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+	OnSeekMailboxResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+}
+
+type MsgSpCallback interface {
 	OnCustomStreamProtocolRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
 	OnCustomStreamProtocolResponse(
@@ -48,17 +63,7 @@ type StreamProtocolCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type PubsubProtocolCallback interface {
-	OnSeekMailboxRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnSeekMailboxResponse(
-		requestProtoMsg protoreflect.ProtoMessage,
-		responseProtoMsg protoreflect.ProtoMessage) (any, error)
-	OnQueryPeerRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnQueryPeerResponse(
-		requestProtoMsg protoreflect.ProtoMessage,
-		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+type MsgPpCallback interface {
 	OnSendMsgRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
 	OnSendMsgResponse(
@@ -66,18 +71,18 @@ type PubsubProtocolCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type ProtocolAdapter interface {
+type Adapter interface {
 	GetRequestPID() pb.PID
 	GetResponsePID() pb.PID
 	GetEmptyRequest() protoreflect.ProtoMessage
 	GetEmptyResponse() protoreflect.ProtoMessage
 	InitRequest(
 		basicData *pb.BasicData,
-		dataList ...any) (protoreflect.ProtoMessage, error)
+		moreList ...any) (protoreflect.ProtoMessage, error)
 	InitResponse(
 		requestProtoData protoreflect.ProtoMessage,
 		basicData *pb.BasicData,
-		dataList ...any) (protoreflect.ProtoMessage, error)
+		moreList ...any) (protoreflect.ProtoMessage, error)
 	GetRequestBasicData(
 		requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseBasicData(
@@ -100,12 +105,12 @@ type ProtocolAdapter interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type StreamProtocolAdapter interface {
-	ProtocolAdapter
+type SpAdapter interface {
+	Adapter
 	GetStreamRequestPID() protocol.ID
 	GetStreamResponsePID() protocol.ID
 }
 
-type PubsubProtocolAdapter interface {
-	ProtocolAdapter
+type PpAdapter interface {
+	Adapter
 }

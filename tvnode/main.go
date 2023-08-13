@@ -203,7 +203,7 @@ func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsg.DmsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *dmsg.MsgService, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
@@ -224,7 +224,7 @@ func initDmsg(
 		return sig, nil
 	}
 
-	err = dmsgService.InitUser(userPubkeyData, getSig)
+	err = dmsgService.Start(true, userPubkeyData, getSig)
 	if err != nil {
 		return nil, nil, err
 	}

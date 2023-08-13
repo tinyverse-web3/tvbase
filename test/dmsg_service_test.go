@@ -84,10 +84,10 @@ func parseServiceCmdParams() string {
 }
 
 func readConsoleToSendMsg(node *tvbase.TvBase) {
-	dmsgService := node.DmsgService.(*dmsg.DmsgService)
+	dmsgService := node.DmsgService.(*dmsg.MsgService)
 
 	pk := "0400d3192b5e36d458bce6b8b7c9fbe19c90acfd01a6da7f01cf4729ac3976c957c2ac4ab38ff899fcdca6ddba661785c34eb00c2cd5b2b6d014ca6911463b3fa2"
-	var destPubsub *dmsgUser.DestUser
+	var destPubsub *dmsgUser.LightMsgUser
 
 	// wait tvnodelight connect
 	for {
@@ -110,7 +110,8 @@ func readConsoleToSendMsg(node *tvbase.TvBase) {
 		fmt.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
 	}()
 
-	err := dmsgService.PublishProtocol(pk, 3, []byte("hello"))
+	target := dmsgService.GetPublishTarget(pk)
+	err := dmsgService.PublishProtocol(target, 3, []byte("hello"))
 	if err != nil {
 		panic(err)
 	}

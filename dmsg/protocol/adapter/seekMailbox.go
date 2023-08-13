@@ -12,7 +12,7 @@ import (
 
 type SeekMailboxProtocolAdapter struct {
 	CommonProtocolAdapter
-	protocol *dmsgProtocol.PubsubProtocol
+	protocol *dmsgProtocol.MailboxPProtocol
 }
 
 func NewSeekMailboxProtocolAdapter() *SeekMailboxProtocolAdapter {
@@ -139,10 +139,10 @@ func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback(
 func NewSeekMailboxProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.PubsubProtocolCallback,
-	service dmsgProtocol.ProtocolService) *dmsgProtocol.PubsubProtocol {
+	callback dmsgProtocol.MailboxPpCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MailboxPProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
-	protocol := dmsgProtocol.NewPubsubProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewMailboxPProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

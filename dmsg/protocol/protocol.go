@@ -21,8 +21,8 @@ type Protocol struct {
 	Ctx             context.Context
 	Host            host.Host
 	RequestInfoList map[string]*RequestInfo
-	Service         ProtocolService
-	Adapter         ProtocolAdapter
+	Service         DmsgServiceInterface
+	Adapter         Adapter
 }
 
 func (p *Protocol) HandleRequestData(

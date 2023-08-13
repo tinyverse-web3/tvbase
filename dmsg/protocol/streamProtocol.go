@@ -13,9 +13,18 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type MailboxSProtocol struct {
+	StreamProtocol
+	Callback MailboxSpCallback
+}
+
+type MsgSProtocol struct {
+	StreamProtocol
+	Callback MsgSpCallback
+}
+
 type StreamProtocol struct {
 	Protocol
-	Callback StreamProtocolCallback
 }
 
 func (p *StreamProtocol) HandleRequestData(
@@ -49,7 +58,7 @@ func (p *StreamProtocol) HandleRequestData(
 		return err
 	}
 
-	adapter, ok := p.Adapter.(StreamProtocolAdapter)
+	adapter, ok := p.Adapter.(SpAdapter)
 	if !ok {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 		return fmt.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
@@ -89,7 +98,7 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 	remotePeer := stream.Conn().RemotePeer()
 	localMultiAddr := stream.Conn().LocalMultiaddr()
 	remoteMultiAddr := stream.Conn().RemoteMultiaddr()
-	streamAdapter := p.Adapter.(StreamProtocolAdapter)
+	streamAdapter := p.Adapter.(SpAdapter)
 	sreamRequestProtocolId := streamAdapter.GetStreamRequestPID()
 	sreamResponseProtocolId := streamAdapter.GetStreamResponsePID()
 	requestProtocolId := streamAdapter.GetRequestPID()
@@ -157,7 +166,7 @@ func (p *StreamProtocol) Request(
 		return nil, nil, err
 	}
 
-	adapter, ok := p.Adapter.(StreamProtocolAdapter)
+	adapter, ok := p.Adapter.(SpAdapter)
 	if !ok {
 		log.Logger.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 		return nil, nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
@@ -189,13 +198,13 @@ func (p *StreamProtocol) Request(
 	return requestProtoMsg, p.RequestInfoList[requestInfoId].DoneChan, nil
 }
 
-func NewStreamProtocol(
+func NewMsgSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback StreamProtocolCallback,
-	service ProtocolService,
-	adapter StreamProtocolAdapter) *StreamProtocol {
-	protocol := &StreamProtocol{}
+	callback MsgSpCallback,
+	service DmsgServiceInterface,
+	adapter SpAdapter) *MsgSProtocol {
+	protocol := &MsgSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
 	protocol.RequestInfoList = make(map[string]*RequestInfo)
@@ -203,7 +212,30 @@ func NewStreamProtocol(
 	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+	if service.IsEnableService() {
+		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+	}
+	go protocol.TickCleanRequest()
+	return protocol
+}
+
+func NewMailboxSProtocol(
+	ctx context.Context,
+	host host.Host,
+	callback MailboxSpCallback,
+	service DmsgServiceInterface,
+	adapter SpAdapter) *MailboxSProtocol {
+	protocol := &MailboxSProtocol{}
+	protocol.Host = host
+	protocol.Ctx = ctx
+	protocol.RequestInfoList = make(map[string]*RequestInfo)
+	protocol.Callback = callback
+	protocol.Service = service
+	protocol.Adapter = adapter
+	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	if service.IsEnableService() {
+		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+	}
 	go protocol.TickCleanRequest()
 	return protocol
 }

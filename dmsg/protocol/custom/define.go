@@ -6,9 +6,9 @@ import (
 
 type CustomStreamProtocolClientInfo struct {
 	Client   CustomStreamProtocolClient
-	Protocol *protocol.StreamProtocol
+	Protocol *protocol.MsgSProtocol
 }
 type CustomStreamProtocolServiceInfo struct {
 	Service  CustomStreamProtocolService
-	Protocol *protocol.StreamProtocol
+	Protocol *protocol.MsgSProtocol
 }

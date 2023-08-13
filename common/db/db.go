@@ -19,14 +19,14 @@ type Datastore interface {
 func CreateDataStore(dbRootDir string, mode define.NodeMode) (Datastore, error) {
 	switch mode {
 	case define.LightMode:
-		return createBadgerDB(dbRootDir)
+		return CreateBadgerDB(dbRootDir)
 	case define.ServiceMode:
-		return createLevelDB(dbRootDir)
+		return CreateLevelDB(dbRootDir)
 	}
 	return nil, nil
 }
 
-func createLevelDB(dbRootDir string) (*levelds.Datastore, error) {
+func CreateLevelDB(dbRootDir string) (*levelds.Datastore, error) {
 	fullPath := dbRootDir
 	if !filepath.IsAbs(fullPath) {
 		rootPath, err := os.Getwd()
@@ -41,7 +41,7 @@ func createLevelDB(dbRootDir string) (*levelds.Datastore, error) {
 	})
 }
 
-func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
+func CreateBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
 	fullPath := dbRootDir
 	if !filepath.IsAbs(fullPath) {
 		rootPath, err := os.Getwd()

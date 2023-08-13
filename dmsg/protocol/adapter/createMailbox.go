@@ -14,7 +14,7 @@ import (
 
 type CreateMailboxProtocolAdapter struct {
 	CommonProtocolAdapter
-	protocol *dmsgProtocol.StreamProtocol
+	protocol *dmsgProtocol.MailboxSProtocol
 }
 
 func NewCreateMailboxProtocolAdapter() *CreateMailboxProtocolAdapter {
@@ -149,10 +149,10 @@ func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback(
 func NewCreateMailboxProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.StreamProtocolCallback,
-	service dmsgProtocol.ProtocolService) *dmsgProtocol.StreamProtocol {
+	callback dmsgProtocol.MailboxSpCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MailboxSProtocol {
 	adapter := NewCreateMailboxProtocolAdapter()
-	protocol := dmsgProtocol.NewStreamProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

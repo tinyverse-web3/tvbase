@@ -3,127 +3,114 @@ package dmsg
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"unsafe"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/tinyverse-web3/tvbase/common"
-	"github.com/tinyverse-web3/tvbase/common/define"
-	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
 
-type CommonService struct {
-	BaseService common.TvBaseService
-	Pubsub      *pubsub.PubSub
-
-	PubsubProtocolResSubscribes map[pb.PID]protocol.ResSubscribe
-	PubsubProtocolReqSubscribes map[pb.PID]protocol.ReqSubscribe
-	NodeMode                    define.NodeMode
+type Service struct {
+	baseService        common.TvBaseService
+	pubsub             *pubsub.PubSub
+	protocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
+	enableService      bool
 }
 
-func (d *CommonService) Init(baseService common.TvBaseService, m define.NodeMode) error {
-	d.BaseService = baseService
-	d.NodeMode = m
+func (d *Service) Start(enableService bool) error {
+	d.enableService = enableService
+	return nil
+}
+
+func (d *Service) Stop() error {
+	return nil
+}
+
+func (d *Service) Init(baseService common.TvBaseService) error {
+	d.baseService = baseService
 	var err error
-	d.Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
+	d.pubsub, err = pubsub.NewGossipSub(d.baseService.GetCtx(), d.baseService.GetHost())
 	if err != nil {
-		dmsgLog.Logger.Errorf("Init: failed to create pubsub: %v", err)
+		log.Logger.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
 
-	d.PubsubProtocolReqSubscribes = make(map[pb.PID]protocol.ReqSubscribe)
-	d.PubsubProtocolResSubscribes = make(map[pb.PID]protocol.ResSubscribe)
+	d.protocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
 	return nil
 }
 
-func (d *CommonService) HandleProtocolWithPubsub(target *dmsgUser.Target) {
-	for {
-		m, err := target.WaitMsg()
-		if err != nil {
-			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: subscription.Next happen err, %+v", err)
-			return
-		}
+func (d *Service) GetConfig() *config.DMsgConfig {
+	return &d.baseService.GetConfig().DMsg
+}
 
-		dmsgLog.Logger.Debugf("dmsgService->HandleProtocolWithPubsub:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
+func (d *Service) IsEnableService() bool {
+	return d.enableService
+}
 
-		protocolID, protocolIDLen, err := d.CheckPubsubData(m.Data)
-		if err != nil {
-			dmsgLog.Logger.Errorf("dmsgService->HandleProtocolWithPubsub: CheckPubsubData error %v", err)
-			continue
-		}
-		contentData := m.Data[protocolIDLen:]
-		reqSubscribe := d.PubsubProtocolReqSubscribes[protocolID]
-		if reqSubscribe != nil {
-			err = reqSubscribe.HandleRequestData(contentData)
-			if err != nil {
-				dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: HandleRequestData error %v", err)
-			}
-			continue
-		} else {
-			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: no find protocolId(%d) for reqSubscribe", protocolID)
-		}
-		// no protocol for resSubScribe in service
-		resSubScribe := d.PubsubProtocolResSubscribes[protocolID]
-		if resSubScribe != nil {
-			err = resSubScribe.HandleResponseData(contentData)
-			if err != nil {
-				dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: HandleResponseData error: %v", err)
-			}
-			continue
-		} else {
-			dmsgLog.Logger.Warnf("dmsgService->HandleProtocolWithPubsub: no find protocolId(%d) for resSubscribe", protocolID)
-		}
+func (d *Service) registPubsubProtocol(pid pb.PID, handle dmsgProtocol.ProtocolHandle) {
+	d.protocolHandleList[pid] = handle
+}
+
+func (d *Service) unregistPubsubProtocol(pid pb.PID) {
+	delete(d.protocolHandleList, pid)
+}
+
+func (d *Service) checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
+	var protocolID pb.PID
+	protocolIDLen := int(unsafe.Sizeof(protocolID))
+	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
+	if err != nil {
+		log.Logger.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
+		return protocolID, protocolIDLen, err
 	}
+	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
+	if protocolID > maxProtocolId {
+		log.Logger.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
+		return protocolID, protocolIDLen, err
+	}
+	dataLen := len(pubsubData)
+	if dataLen <= protocolIDLen {
+		log.Logger.Errorf("CommonService->checkProtocolData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
+		return protocolID, protocolIDLen, err
+	}
+	return protocolID, protocolIDLen, nil
 }
 
-func (d *CommonService) RegPubsubProtocolReqCallback(pid pb.PID, subscribe protocol.ReqSubscribe) error {
-	d.PubsubProtocolReqSubscribes[pid] = subscribe
+func (d *Service) PublishProtocol(target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
+	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
+	if err != nil {
+		log.Logger.Errorf("Service->PublishProtocol: GenProtoData error: %v", err)
+		return err
+	}
+
+	if err := target.Publish(buf); err != nil {
+		log.Logger.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
+		return fmt.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
+	}
 	return nil
 }
 
-func (d *CommonService) RegPubsubProtocolResCallback(pid pb.PID, subscribe protocol.ResSubscribe) error {
-	d.PubsubProtocolResSubscribes[pid] = subscribe
-	return nil
-}
-
-func (d *CommonService) GetMsgPrefix(pubkey string) string {
+func (d *Service) getMsgPrefix(pubkey string) string {
 	return msg.MsgPrefix + pubkey
 }
 
-func (d *CommonService) GetBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
+func (d *Service) getBasicFromMsgPrefix(srcUserPubkey string, destUserPubkey string) string {
 	return msg.MsgPrefix + destUserPubkey + msg.MsgKeyDelimiter + srcUserPubkey
 }
 
-func (d *CommonService) GetFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.GetBasicFromMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
+func (d *Service) getFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
+	basicPrefix := d.getBasicFromMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
 	direction := msg.MsgDirection.From
 	return basicPrefix + msg.MsgKeyDelimiter +
 		direction + msg.MsgKeyDelimiter +
 		sendMsgReq.BasicData.ID + msg.MsgKeyDelimiter +
 		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
-}
-
-func (d *CommonService) CheckPubsubData(pubsubData []byte) (pb.PID, int, error) {
-	var protocolID pb.PID
-	protocolIDLen := int(unsafe.Sizeof(protocolID))
-	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
-	if err != nil {
-		dmsgLog.Logger.Errorf("CommonService->CheckPubsubData: protocolID parse error: %v", err)
-		return protocolID, protocolIDLen, err
-	}
-	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
-	if protocolID > maxProtocolId {
-		dmsgLog.Logger.Errorf("CommonService->CheckPubsubData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
-		return protocolID, protocolIDLen, err
-	}
-	dataLen := len(pubsubData)
-	if dataLen <= protocolIDLen {
-		dmsgLog.Logger.Errorf("CommonService->CheckPubsubData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
-		return protocolID, protocolIDLen, err
-	}
-	return protocolID, protocolIDLen, nil
 }

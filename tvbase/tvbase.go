@@ -157,7 +157,7 @@ func (m *TvBase) Start() error {
 	}
 	go m.DiscoverRendezvousPeers()
 
-	err = m.DmsgService.Start()
+	err = m.DmsgService.Init(m)
 	if err != nil {
 		return err
 	}
@@ -497,10 +497,10 @@ func (m *TvBase) init(rootPath string) error {
 	return nil
 }
 
-func (m *TvBase) initDmsgService(lc fx.Lifecycle, mode define.NodeMode) error {
+func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	var err error
 
-	m.DmsgService, err = dmsg.CreateDmsgService(m, mode)
+	m.DmsgService, err = dmsg.CreateDmsgService(m)
 
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
@@ -598,8 +598,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 	return nil
 }
 
-func (m *TvBase) GetDmsgService() *dmsg.DmsgService {
-	return m.DmsgService.(*dmsg.DmsgService)
+func (m *TvBase) GetDmsgService() *dmsg.MsgService {
+	return m.DmsgService.(*dmsg.MsgService)
 }
 
 func (m *TvBase) GetDkvsService() tvCommon.DkvsService {

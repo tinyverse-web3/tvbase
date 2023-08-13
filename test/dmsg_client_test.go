@@ -170,7 +170,7 @@ func initMsgClient(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsg.DmsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *dmsg.MsgService, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		testLog.Errorf("InitMsgClient error: %v", err)
@@ -193,7 +193,7 @@ func initMsgClient(
 		return sig, nil
 	}
 	done := make(chan any)
-	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback, done)
+	err = dmsgService.Start(false, srcPubkeyBytes, getSigCallback, done)
 	if err != nil {
 		return nil, nil, err
 	}

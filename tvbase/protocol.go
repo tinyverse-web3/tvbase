@@ -20,7 +20,7 @@ func (m *TvBase) RegistCSCProtocol(protocol customProtocol.CustomStreamProtocolC
 		tvLog.Logger.Errorf("tvBase->RegistCSCProtocol: m.DmsgService is nil")
 		return fmt.Errorf("tvBase->RegistCSCProtocol: m.DmsgService is nil")
 	}
-	service, ok := m.DmsgService.(*dmsg.DmsgService)
+	service, ok := m.DmsgService.(*dmsg.MsgService)
 	if !ok {
 		tvLog.Logger.Errorf("tvBase->RegistCSCProtocol: m.DmsgService is not ClientDmsgService")
 		return fmt.Errorf("tvBase->RegistCSCProtocol: m.DmsgService is not ClientDmsgService")
@@ -35,7 +35,7 @@ func (m *TvBase) RegistCSSProtocol(protocol customProtocol.CustomStreamProtocolS
 		tvLog.Logger.Errorf("tvBase->RegistCSSProtocol: m.DmsgService is nil")
 		return fmt.Errorf("tvBase->RegistCSSProtocol: m.DmsgService is nil")
 	}
-	service, ok := m.DmsgService.(*dmsg.DmsgService)
+	service, ok := m.DmsgService.(*dmsg.MsgService)
 	if !ok {
 		tvLog.Logger.Errorf("tvBase->RegistCSSProtocol: m.DmsgService is not ServiceDmsgService")
 		return fmt.Errorf("tvBase->RegistCSSProtocol: m.DmsgService is not ServiceDmsgService")
