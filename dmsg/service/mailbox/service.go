@@ -21,18 +21,18 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
-	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxService struct {
-	dmsgCommonService.BaseService
+	dmsgServiceCommon.BaseService
 	createMailboxProtocol *dmsgProtocol.MailboxSProtocol
 	releaseMailboxPrtocol *dmsgProtocol.MailboxSProtocol
 	readMailboxMsgPrtocol *dmsgProtocol.MailboxSProtocol
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
-	sendMsgProtocol       *dmsgProtocol.MsgPProtocol
+	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
 	onReceiveMsg          msg.OnReceiveMsg
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
@@ -85,9 +85,11 @@ func (d *MailboxService) Start(
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
-	d.sendMsgProtocol = adapter.NewSendMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.sendMsgProtocol.Adapter.GetRequestPID(), d.sendMsgProtocol)
+	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
 
+	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
+	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	// user
 	d.initUser(pubkeyData, getSig)
 	log.Logger.Debug("DmsgService->Start end")
@@ -179,17 +181,17 @@ func (d *MailboxService) GetPublishTarget(pubkey string) (*dmsgUser.Target, erro
 
 // MailboxSpCallback
 func (d *MailboxService) OnCreateMailboxRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Logger.Debugf("dmsgService->OnCreateMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
 		log.Logger.Errorf("dmsgService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, nil, fmt.Errorf("dmsgService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		return nil, nil, false, fmt.Errorf("dmsgService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
 	}
 	isAvailable := d.isAvailableMailbox(request.BasicData.Pubkey)
 	if !isAvailable {
 		log.Logger.Errorf("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
-		return nil, nil, errors.New("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
+		return nil, nil, false, errors.New("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 	}
 	user := d.getServiceUser(request.BasicData.Pubkey)
 	if user != nil {
@@ -198,15 +200,15 @@ func (d *MailboxService) OnCreateMailboxRequest(
 			Code:   dmsgProtocol.AlreadyExistCode,
 			Result: "dmsgService->OnCreateMailboxRequest: user public key pubsub already exist",
 		}
-		return nil, retCode, nil
+		return nil, retCode, false, nil
 	}
 
 	err := d.subscribeServiceUser(request.BasicData.Pubkey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	log.Logger.Debugf("dmsgService->OnCreateMailboxRequest end")
-	return nil, nil, nil
+	return nil, nil, false, nil
 }
 
 func (d *MailboxService) OnCreateMailboxResponse(
@@ -245,19 +247,19 @@ func (d *MailboxService) OnCreateMailboxResponse(
 }
 
 func (d *MailboxService) OnReleaseMailboxRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Logger.Debugf("dmsgService->OnReleaseMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.ReleaseMailboxReq)
 	if !ok {
 		log.Logger.Errorf("dmsgService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-		return nil, nil, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
+		return nil, nil, false, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
 	}
 	err := d.unsubscribeServiceUser(request.BasicData.Pubkey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	log.Logger.Debugf("dmsgService->OnReleaseMailboxRequest end")
-	return nil, nil, nil
+	return nil, nil, false, nil
 }
 
 func (d *MailboxService) OnReleaseMailboxResponse(
@@ -286,19 +288,19 @@ func (d *MailboxService) OnReleaseMailboxResponse(
 	return nil, nil
 }
 
-func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Logger.Debugf("dmsgService->OnReadMailboxMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.ReadMailboxReq)
 	if !ok {
 		log.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
-		return nil, nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+		return nil, nil, false, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
 	}
 
 	pubkey := request.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
-		return nil, nil, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
+		return nil, nil, false, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
 	}
 	user.MsgRWMutex.RLock()
 	defer user.MsgRWMutex.RUnlock()
@@ -308,7 +310,7 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	}
 	results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 	defer results.Close()
 
@@ -336,7 +338,7 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 		log.Logger.Debug("dmsgService->OnReadMailboxMsgRequest: user msgs is empty")
 	}
 	log.Logger.Debugf("dmsgService->OnReadMailboxMsgRequest end")
-	return mailboxMsgDataList, nil, nil
+	return mailboxMsgDataList, nil, false, nil
 }
 
 func (d *MailboxService) OnReadMailboxMsgResponse(
@@ -371,21 +373,21 @@ func (d *MailboxService) OnReadMailboxMsgResponse(
 }
 
 // MailboxPpCallback
-func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Logger.Debug("DmsgService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
 		log.Logger.Errorf("DmsgService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
-		return nil, nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
+		return nil, nil, false, fmt.Errorf("DmsgService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
 	}
 
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
 		log.Logger.Debugf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
-		return nil, nil, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		return nil, nil, false, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
 	}
 
 	log.Logger.Debug("DmsgService->OnSeekMailboxRequest end")
-	return nil, nil, nil
+	return nil, nil, false, nil
 }
 
 func (d *MailboxService) OnSeekMailboxResponse(
@@ -399,46 +401,38 @@ func (d *MailboxService) OnSeekMailboxResponse(
 	return nil, nil
 }
 
-func (d *MailboxService) OnSendMsgRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	log.Logger.Debugf("MailboxService->OnSendMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+func (d *MailboxService) OnPubsubMsgRequest(
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	log.Logger.Debugf("MailboxService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
-		log.Logger.Errorf("MailboxService->OnSendMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, nil, fmt.Errorf("MailboxService->OnSendMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Logger.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 	}
 
 	if d.EnableService {
 		pubkey := request.BasicData.Pubkey
 		user := d.getServiceUser(pubkey)
 		if user == nil {
-			log.Logger.Errorf("MailboxService->OnSendMsgRequest: public key %s is not exist", pubkey)
-			return nil, nil, fmt.Errorf("MailboxService->OnSendMsgRequest: public key %s is not exist", pubkey)
+			log.Logger.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
+			return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 		}
 		user.LastReciveTimestamp = time.Now().UnixNano()
 		d.saveUserMsg(requestProtoData)
 	}
 
-	log.Logger.Debugf("MailboxService->OnSendMsgRequest end")
-	return nil, nil, nil
+	log.Logger.Debugf("MailboxService->OnPubsubMsgRequest end")
+	return nil, nil, true, nil
 }
 
-func (d *MailboxService) OnSendMsgResponse(
+func (d *MailboxService) OnPubsubMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	log.Logger.Debugf(
-		"dmsgService->OnSendMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
+		"dmsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-	response, ok := responseProtoData.(*pb.SendMsgRes)
-	if !ok {
-		log.Logger.Errorf("DmsgService->OnSendMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnSendMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
-	}
-	if response.RetCode.Code != 0 {
-		log.Logger.Warnf("DmsgService->OnSendMsgResponse: fail RetCode: %+v", response.RetCode)
-		return nil, fmt.Errorf("DmsgService->OnSendMsgResponse: fail RetCode: %+v", response.RetCode)
-	}
-	log.Logger.Debugf("dmsgService->OnSendMsgResponse end")
+	// never here
+	log.Logger.Debugf("dmsgService->OnPubsubMsgResponse end")
 	return nil, nil
 }
 
@@ -484,29 +478,27 @@ func (d *MailboxService) cleanRestResource() {
 
 func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) {
 	for {
-		m, err := target.WaitMsg()
+		protocolID, protocolData, protocolHandle, err := d.WaitPubsubProtocolData(target)
 		if err != nil {
-			log.Logger.Warnf("dmsgService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
+			log.Logger.Warnf("MailboxService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
 			return
 		}
 
-		log.Logger.Debugf("dmsgService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
-
-		protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
-		if err != nil {
-			log.Logger.Errorf("dmsgService->handlePubsubProtocol: CheckPubsubData error: %v", err)
+		if protocolHandle == nil {
 			continue
 		}
-		protocolData := m.Data[protocolIDLen:]
-		protocolHandle := d.ProtocolHandleList[protocolID]
-		if protocolHandle != nil {
+
+		requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+		responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+		switch protocolID {
+		case requestPID:
 			err = protocolHandle.HandleRequestData(protocolData)
 			if err != nil {
-				log.Logger.Warnf("dmsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				log.Logger.Warnf("MailboxService->handlePubsubProtocol: HandleRequestData error: %v", err)
 			}
 			continue
-		} else {
-			log.Logger.Warnf("dmsgService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
+		case responsePID:
+			continue
 		}
 	}
 }

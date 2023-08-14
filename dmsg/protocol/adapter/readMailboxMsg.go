@@ -143,9 +143,9 @@ func (adapter *ReadMailboxMsgProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
-	return data, retCode, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback(

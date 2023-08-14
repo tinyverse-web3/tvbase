@@ -173,15 +173,15 @@ func (adapter *CustomStreamProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnRequest(requestProtoData)
-	return data, retCode, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.protocol.Callback.OnCustomRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	data, err := adapter.protocol.Callback.OnResponse(requestProtoData, responseProtoData)
+	data, err := adapter.protocol.Callback.OnCustomResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 

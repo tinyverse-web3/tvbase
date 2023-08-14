@@ -134,9 +134,9 @@ func (adapter *CreateMailboxProtocolAdapter) SetResponseRetCode(
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnCreateMailboxRequest(requestProtoData)
-	return data, retCode, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.protocol.Callback.OnCreateMailboxRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallResponseCallback(

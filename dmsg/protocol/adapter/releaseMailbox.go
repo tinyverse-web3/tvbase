@@ -132,9 +132,9 @@ func (adapter *ReleaseMailboxProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnReleaseMailboxRequest(requestProtoData)
-	return data, retCode, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.protocol.Callback.OnReleaseMailboxRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) CallResponseCallback(

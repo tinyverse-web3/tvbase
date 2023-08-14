@@ -124,9 +124,9 @@ func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnSeekMailboxRequest(requestProtoData)
-	return data, retCode, err
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.protocol.Callback.OnSeekMailboxRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback(

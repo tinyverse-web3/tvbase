@@ -1,34 +1,17 @@
-package service
+package common
 
 import (
 	"fmt"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
-	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 )
 
 type LightUserService struct {
 	BaseService
 	LightUser *dmsgUser.LightUser
-}
-
-func (d *LightUserService) Init(baseService common.TvBaseService) error {
-	d.TvBase = baseService
-	var err error
-	d.Pubsub, err = pubsub.NewGossipSub(d.TvBase.GetCtx(), d.TvBase.GetHost())
-	if err != nil {
-		log.Logger.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
-		return err
-	}
-
-	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
-	return nil
 }
 
 func (d *LightUserService) Start(

@@ -11,32 +11,32 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type SendMsgProtocolAdapter struct {
+type PubsubMsgProtocolAdapter struct {
 	CommonProtocolAdapter
-	Protocol *dmsgProtocol.MsgPProtocol
+	Protocol *dmsgProtocol.PubsubMsgProtocol
 }
 
-func NewSendMsgProtocolAdapter() *SendMsgProtocolAdapter {
-	ret := &SendMsgProtocolAdapter{}
+func NewSendMsgProtocolAdapter() *PubsubMsgProtocolAdapter {
+	ret := &PubsubMsgProtocolAdapter{}
 	return ret
 }
 
-func (adapter *SendMsgProtocolAdapter) GetRequestPID() pb.PID {
+func (adapter *PubsubMsgProtocolAdapter) GetRequestPID() pb.PID {
 	return pb.PID_SEND_MSG_REQ
 }
 
-func (adapter *SendMsgProtocolAdapter) GetResponsePID() pb.PID {
+func (adapter *PubsubMsgProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_SEND_MSG_RES
 }
 
-func (adapter *SendMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+func (adapter *PubsubMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
 	return &pb.SendMsgReq{}
 }
-func (adapter *SendMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+func (adapter *PubsubMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
 	return &pb.SendMsgRes{}
 }
 
-func (adapter *SendMsgProtocolAdapter) InitRequest(
+func (adapter *PubsubMsgProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	requestProtoMsg := &pb.SendMsgReq{
@@ -60,7 +60,7 @@ func (adapter *SendMsgProtocolAdapter) InitRequest(
 	return requestProtoMsg, nil
 }
 
-func (adapter *SendMsgProtocolAdapter) InitResponse(
+func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
@@ -79,7 +79,7 @@ func (adapter *SendMsgProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *SendMsgProtocolAdapter) GetRequestBasicData(
+func (adapter *PubsubMsgProtocolAdapter) GetRequestBasicData(
 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
 	request, ok := requestProtoMsg.(*pb.SendMsgReq)
 	if !ok {
@@ -88,7 +88,7 @@ func (adapter *SendMsgProtocolAdapter) GetRequestBasicData(
 	return request.BasicData
 }
 
-func (adapter *SendMsgProtocolAdapter) GetResponseBasicData(
+func (adapter *PubsubMsgProtocolAdapter) GetResponseBasicData(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
 	response, ok := responseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
@@ -97,7 +97,7 @@ func (adapter *SendMsgProtocolAdapter) GetResponseBasicData(
 	return response.BasicData
 }
 
-func (adapter *SendMsgProtocolAdapter) GetResponseRetCode(
+func (adapter *PubsubMsgProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
 	response, ok := responseProtoMsg.(*pb.SendMsgRes)
 	if !ok {
@@ -106,7 +106,7 @@ func (adapter *SendMsgProtocolAdapter) GetResponseRetCode(
 	return response.RetCode
 }
 
-func (adapter *SendMsgProtocolAdapter) SetResponseRetCode(
+func (adapter *PubsubMsgProtocolAdapter) SetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage,
 	code int32,
 	result string) {
@@ -117,7 +117,7 @@ func (adapter *SendMsgProtocolAdapter) SetResponseRetCode(
 	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
-func (adapter *SendMsgProtocolAdapter) SetRequestSig(
+func (adapter *PubsubMsgProtocolAdapter) SetRequestSig(
 	requestProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
 	request, ok := requestProtoMsg.(*pb.SendMsgReq)
@@ -128,7 +128,7 @@ func (adapter *SendMsgProtocolAdapter) SetRequestSig(
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) SetResponseSig(
+func (adapter *PubsubMsgProtocolAdapter) SetResponseSig(
 	responseProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
 	response, ok := responseProtoMsg.(*pb.SendMsgRes)
@@ -139,26 +139,26 @@ func (adapter *SendMsgProtocolAdapter) SetResponseSig(
 	return nil
 }
 
-func (adapter *SendMsgProtocolAdapter) CallRequestCallback(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.Protocol.Callback.OnSendMsgRequest(requestProtoData)
-	return data, retCode, err
+func (adapter *PubsubMsgProtocolAdapter) CallRequestCallback(
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	data, retCode, abort, err := adapter.Protocol.Callback.OnPubsubMsgRequest(requestProtoData)
+	return data, retCode, abort, err
 }
 
-func (adapter *SendMsgProtocolAdapter) CallResponseCallback(
+func (adapter *PubsubMsgProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	data, err := adapter.Protocol.Callback.OnSendMsgResponse(requestProtoData, responseProtoData)
+	data, err := adapter.Protocol.Callback.OnPubsubMsgResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
-func NewSendMsgProtocol(
+func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.MsgPpCallback,
-	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MsgPProtocol {
+	callback dmsgProtocol.PubsubMsgCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.PubsubMsgProtocol {
 	adapter := NewSendMsgProtocolAdapter()
-	protocol := dmsgProtocol.NewMsgPProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewPubsubMsgProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol
 	return protocol
 }

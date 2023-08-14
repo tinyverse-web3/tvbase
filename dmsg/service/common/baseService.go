@@ -1,4 +1,4 @@
-package service
+package common
 
 import (
 	"bytes"
@@ -57,12 +57,12 @@ func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) 
 	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
 	if err != nil {
 		log.Logger.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
-		return protocolID, protocolIDLen, err
+		return -1, 0, err
 	}
 	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
 	if protocolID > maxProtocolId {
 		log.Logger.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
-		return protocolID, protocolIDLen, err
+		return -1, 0, err
 	}
 	dataLen := len(pubsubData)
 	if dataLen <= protocolIDLen {
@@ -70,6 +70,32 @@ func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) 
 		return protocolID, protocolIDLen, err
 	}
 	return protocolID, protocolIDLen, nil
+}
+
+func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
+	m, err := target.WaitMsg()
+	if err != nil {
+		log.Logger.Warnf("BaseService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
+		return -1, nil, nil, err
+	}
+
+	log.Logger.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
+
+	protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
+	if err != nil {
+		log.Logger.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
+		return -1, nil, nil, nil
+	}
+
+	protocolData := m.Data[protocolIDLen:]
+	protocolHandle := d.ProtocolHandleList[protocolID]
+
+	if protocolHandle == nil {
+		log.Logger.Warnf("BaseService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
+		return -1, nil, nil, nil
+	}
+
+	return protocolID, protocolData, protocolHandle, nil
 }
 
 // DmsgServiceInterface

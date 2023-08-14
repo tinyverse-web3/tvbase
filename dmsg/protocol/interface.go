@@ -8,9 +8,8 @@ import (
 )
 
 type ProtocolHandle interface {
-	HandleRequestData(
-		protocolData []byte,
-		moreList ...any) error
+	HandleRequestData(protocolData []byte, moreList ...any) error
+	HandleResponseData(protocolData []byte, moreList ...any) error
 }
 
 type DmsgServiceInterface interface {
@@ -26,17 +25,17 @@ type DmsgServiceInterface interface {
 
 type MailboxSpCallback interface {
 	OnCreateMailboxRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	OnCreateMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 	OnReadMailboxMsgRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	OnReadMailboxMsgResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 	OnReleaseMailboxRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	OnReleaseMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
@@ -44,7 +43,7 @@ type MailboxSpCallback interface {
 
 type MailboxPpCallback interface {
 	OnSeekMailboxRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	OnSeekMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
@@ -52,24 +51,24 @@ type MailboxPpCallback interface {
 
 type ChannelSpCallback interface {
 	OnCreateChannelRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	OnCreateChannelResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type MsgPpCallback interface {
-	OnSendMsgRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnSendMsgResponse(
+type PubsubMsgCallback interface {
+	OnPubsubMsgRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
+	OnPubsubMsgResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
 type CustomSpCallback interface {
-	OnRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnResponse(
+	OnCustomRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
+	OnCustomResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
@@ -102,7 +101,7 @@ type Adapter interface {
 		responseProtoMsg protoreflect.ProtoMessage,
 		sig []byte) error
 	CallRequestCallback(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	CallResponseCallback(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)

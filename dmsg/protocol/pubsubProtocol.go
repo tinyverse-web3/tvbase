@@ -15,9 +15,9 @@ type MailboxPProtocol struct {
 	Callback MailboxPpCallback
 }
 
-type MsgPProtocol struct {
+type PubsubMsgProtocol struct {
 	PubsubProtocol
-	Callback MsgPpCallback
+	Callback PubsubMsgCallback
 }
 
 type PubsubProtocol struct {
@@ -31,7 +31,10 @@ func (p *PubsubProtocol) HandleRequestData(
 		"PubsubProtocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
 		requestProtocolData, dataList)
 
-	request, response, err := p.Protocol.HandleRequestData(requestProtocolData)
+	request, response, abort, err := p.Protocol.HandleRequestData(requestProtocolData)
+	if abort {
+		return nil
+	}
 	if err != nil {
 		if request == nil {
 			return err
@@ -55,10 +58,10 @@ func (p *PubsubProtocol) HandleRequestData(
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: marshal response error: %v", err)
 		return err
 	}
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
-	responseBasicData := p.Adapter.GetResponseBasicData(response)
 
 	// send the response
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	responseBasicData := p.Adapter.GetResponseBasicData(response)
 	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
 	if err != nil {
 		return err
@@ -101,13 +104,13 @@ func (p *PubsubProtocol) Request(
 	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
 }
 
-func NewMsgPProtocol(
+func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback MsgPpCallback,
+	callback PubsubMsgCallback,
 	dmsg DmsgServiceInterface,
-	adapter PpAdapter) *MsgPProtocol {
-	ret := &MsgPProtocol{}
+	adapter PpAdapter) *PubsubMsgProtocol {
+	ret := &PubsubMsgProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = callback

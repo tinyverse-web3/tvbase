@@ -39,7 +39,10 @@ func (p *StreamProtocol) HandleRequestData(
 		"StreamProtocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
 		requestProtocolData, dataList)
 
-	request, response, err := p.Protocol.HandleRequestData(requestProtocolData)
+	request, response, abort, err := p.Protocol.HandleRequestData(requestProtocolData)
+	if abort {
+		return nil
+	}
 	if err != nil {
 		if request == nil {
 			return err
@@ -57,18 +60,18 @@ func (p *StreamProtocol) HandleRequestData(
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: response is nil")
 		return fmt.Errorf("StreamProtocol->HandleRequestData: response is nil")
 	}
-	responseData, err := proto.Marshal(response)
+	responseProtoData, err := proto.Marshal(response)
 	if err != nil {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: proto.marshal response error: %v", err)
 		return err
 	}
 
+	// send the response
 	adapter, ok := p.Adapter.(SpAdapter)
 	if !ok {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 		return fmt.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 	}
-	streamResponseID := adapter.GetStreamResponsePID()
 
 	remotePeerID, ok := dataList[0].(peer.ID)
 	if !ok {
@@ -76,13 +79,13 @@ func (p *StreamProtocol) HandleRequestData(
 		return fmt.Errorf("StreamProtocol->HandleRequestData: dataList[0] is not peer.ID")
 	}
 
-	// send the response
+	streamResponseID := adapter.GetStreamResponsePID()
 	stream, err := p.Host.NewStream(p.Ctx, remotePeerID, streamResponseID)
 	if err != nil {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: NewStream error: %v", err)
 		return err
 	}
-	writeLen, err := stream.Write(responseData)
+	writeLen, err := stream.Write(responseProtoData)
 	if err != nil {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: stream.Write error: %v", err)
 		stream.Reset()

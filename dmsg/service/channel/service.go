@@ -14,30 +14,30 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
-	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ChannelService struct {
-	dmsgCommonService.LightUserService
+	dmsgServiceCommon.LightUserService
 	createChannelProtocol *dmsgProtocol.ChannelSProtocol
-	sendMsgProtocol       *dmsgProtocol.MsgPProtocol
+	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	channelList           map[string]*dmsgUser.Channel
 	stopCleanRestResource chan bool
 	onReceiveMsg          msg.OnReceiveMsg
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*ChannelService, error) {
+func CreateService(tvbase tvbaseCommon.TvBaseService) (*ChannelService, error) {
 	d := &ChannelService{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbase)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *ChannelService) Init(tvbaseService tvbaseCommon.TvBaseService) error {
-	err := d.LightUserService.Init(tvbaseService)
+func (d *ChannelService) Init(tvbase tvbaseCommon.TvBaseService) error {
+	err := d.LightUserService.Init(tvbase)
 	if err != nil {
 		return err
 	}
@@ -66,9 +66,9 @@ func (d *ChannelService) Start(
 	d.createChannelProtocol = adapter.NewCreateChannelProtocol(ctx, host, d, d)
 
 	// pubsub protocol
-	d.sendMsgProtocol = adapter.NewSendMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.sendMsgProtocol.Adapter.GetRequestPID(), d.sendMsgProtocol)
-
+	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
+	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	// user
 	go d.handlePubsubProtocol(&d.LightUser.Target)
 
@@ -163,7 +163,7 @@ func (d *ChannelService) UnsubscribeChannelList() error {
 // sdk-msg
 func (d *ChannelService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error) {
 	log.Logger.Debugf("ChannelService->SendMsg begin:\ndestPubkey: %s", destPubkey)
-	requestProtoData, _, err := d.sendMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
+	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
 	if err != nil {
 		log.Logger.Errorf("ChannelService->SendMsg: sendMsgProtocol.Request error: %v", err)
 		return nil, err
@@ -200,18 +200,18 @@ func (d *ChannelService) GetPublishTarget(pubkey string) (*dmsgUser.Target, erro
 
 // MsgSpCallback
 func (d *ChannelService) OnCreateChannelRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Logger.Debugf("dmsgService->OnCreateChannelRequest begin:\nrequestProtoData: %+v", requestProtoData)
 
 	request, ok := requestProtoData.(*pb.CreateChannelReq)
 	if !ok {
 		log.Logger.Errorf("dmsgService->OnCreateChannelRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, nil, fmt.Errorf("dmsgService->OnCreateChannelRequest: cannot convert to *pb.CreateMailboxReq")
+		return nil, nil, false, fmt.Errorf("dmsgService->OnCreateChannelRequest: cannot convert to *pb.CreateMailboxReq")
 	}
 	channelKey := request.ChannelKey
 	isAvailable := d.isAvailablePubChannel(channelKey)
 	if !isAvailable {
-		return nil, nil, errors.New("dmsgService->OnCreateChannelRequest: exceeded the maximum number of mailbox service")
+		return nil, nil, false, errors.New("dmsgService->OnCreateChannelRequest: exceeded the maximum number of mailbox service")
 	}
 	channel := d.channelList[channelKey]
 	if channel != nil {
@@ -220,16 +220,16 @@ func (d *ChannelService) OnCreateChannelRequest(
 			Code:   dmsgProtocol.AlreadyExistCode,
 			Result: "dmsgService->OnCreateChannelRequest: channel already exist",
 		}
-		return nil, retCode, nil
+		return nil, retCode, false, nil
 	}
 
 	err := d.SubscribeChannel(channelKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 
 	log.Logger.Debugf("dmsgService->OnCreateChannelRequest end")
-	return nil, nil, nil
+	return nil, nil, false, nil
 }
 
 func (d *ChannelService) OnCreateChannelResponse(
@@ -244,13 +244,13 @@ func (d *ChannelService) OnCreateChannelResponse(
 }
 
 // MsgPpCallback
-func (d *ChannelService) OnSendMsgRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	log.Logger.Debugf("dmsgService->OnSendMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+func (d *ChannelService) OnPubsubMsgRequest(
+	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	log.Logger.Debugf("dmsgService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
-		log.Logger.Errorf("ChannelService->OnSendMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, nil, fmt.Errorf("ChannelService->OnSendMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Logger.Errorf("ChannelService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 	}
 
 	if d.onReceiveMsg != nil {
@@ -265,29 +265,21 @@ func (d *ChannelService) OnSendMsgRequest(
 			request.BasicData.ID,
 			msgDirection)
 	} else {
-		log.Logger.Errorf("ChannelService->OnSendMsgRequest: OnReceiveMsg is nil")
+		log.Logger.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
 
-	log.Logger.Debugf("dmsgService->OnSendMsgRequest end")
-	return nil, nil, nil
+	log.Logger.Debugf("dmsgService->OnPubsubMsgRequest end")
+	return nil, nil, true, nil
 }
 
-func (d *ChannelService) OnSendMsgResponse(
+func (d *ChannelService) OnPubsubMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	log.Logger.Debugf(
-		"dmsgService->OnSendMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
+		"dmsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-	response, ok := responseProtoData.(*pb.SendMsgRes)
-	if !ok {
-		log.Logger.Errorf("ChannelService->OnSendMsgResponse: cannot convert responseProtoData to *pb.SendMsgRes")
-		return nil, fmt.Errorf("ChannelService->OnSendMsgResponse: cannot convert responseProtoData to *pb.SendMsgRes")
-	}
-	if response.RetCode.Code != 0 {
-		log.Logger.Warnf("ChannelService->OnSendMsgResponse: fail RetCode: %+v", response.RetCode)
-		return nil, fmt.Errorf("ChannelService->OnSendMsgResponse: fail RetCode: %+v", response.RetCode)
-	}
-	log.Logger.Debugf("dmsgService->OnSendMsgResponse end")
+	// never here
+	log.Logger.Debugf("dmsgService->OnPubsubMsgResponse end")
 	return nil, nil
 }
 
@@ -319,29 +311,27 @@ func (d *ChannelService) cleanRestResource() {
 
 func (d *ChannelService) handlePubsubProtocol(target *dmsgUser.Target) {
 	for {
-		m, err := target.WaitMsg()
+		protocolID, protocolData, protocolHandle, err := d.WaitPubsubProtocolData(target)
 		if err != nil {
-			log.Logger.Warnf("dmsgService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
+			log.Logger.Warnf("ChannelService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
 			return
 		}
 
-		log.Logger.Debugf("dmsgService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
-
-		protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
-		if err != nil {
-			log.Logger.Errorf("dmsgService->handlePubsubProtocol: CheckPubsubData error: %v", err)
+		if protocolHandle == nil {
 			continue
 		}
-		protocolData := m.Data[protocolIDLen:]
-		protocolHandle := d.ProtocolHandleList[protocolID]
-		if protocolHandle != nil {
+
+		requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+		responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+		switch protocolID {
+		case requestPID:
 			err = protocolHandle.HandleRequestData(protocolData)
 			if err != nil {
-				log.Logger.Warnf("dmsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				log.Logger.Warnf("ChannelService->handlePubsubProtocol: HandleRequestData error: %v", err)
 			}
 			continue
-		} else {
-			log.Logger.Warnf("dmsgService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
+		case responsePID:
+			continue
 		}
 	}
 }

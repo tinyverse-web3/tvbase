@@ -27,7 +27,7 @@ type Protocol struct {
 
 func (p *Protocol) HandleRequestData(
 	requestProtoData []byte,
-	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, error) {
+	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, bool, error) {
 	log.Logger.Debugf(
 		"Protocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
 		requestProtoData, dataList)
@@ -42,7 +42,7 @@ func (p *Protocol) HandleRequestData(
 	err := proto.Unmarshal(requestProtoData, request)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: unmarshal request error: %v", err)
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 
 	log.Logger.Debugf("Protocol->HandleRequestData:\nrequest: %v", request)
@@ -51,18 +51,18 @@ func (p *Protocol) HandleRequestData(
 	valid := AuthProtoMsg(request, requestBasicData)
 	if !valid {
 		log.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
-		return request, nil, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
+		return request, nil, false, fmt.Errorf("Protocol->HandleRequestData: failed to authenticate message")
 	}
 
 	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: GetUserPubkeyHex error: %+v", err)
-		return request, nil, err
+		return request, nil, false, err
 	}
 
-	requestCallbackData, retCodeData, err := p.Adapter.CallRequestCallback(request)
-	if err != nil {
-		return request, nil, err
+	requestCallbackData, retCodeData, abort, err := p.Adapter.CallRequestCallback(request)
+	if err != nil || abort {
+		return request, nil, abort, err
 	}
 
 	// generate response message
@@ -71,28 +71,28 @@ func (p *Protocol) HandleRequestData(
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: InitResponse error: %v", err)
-		return request, nil, err
+		return request, nil, false, err
 	}
 
 	// sign the data
 	responseProtoData, err := proto.Marshal(response)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: marshal response error: %v", err)
-		return request, nil, err
+		return request, nil, false, err
 	}
 	sig, err := p.Service.GetUserSig(responseProtoData)
 	if err != nil {
-		return request, nil, err
+		return request, nil, false, err
 	}
 	err = p.Adapter.SetResponseSig(response, sig)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: SetResponseSig error: %v", err)
-		return request, nil, err
+		return request, nil, false, err
 	}
 	log.Logger.Debugf("Protocol->HandleRequestData: protocolResponse: %v", response)
 
 	log.Logger.Debugf("Protocol->HandleRequestData end")
-	return request, response, nil
+	return request, response, false, nil
 }
 
 func (p *Protocol) GetErrResponse(
