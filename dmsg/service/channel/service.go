@@ -183,17 +183,16 @@ func (d *ChannelService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
 
 // DmsgServiceInterface
 func (d *ChannelService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
-	var target *dmsgUser.Target = nil
-	user := d.channelList[pubkey]
-	if user == nil {
-		if d.LightUser.Key.PubkeyHex != pubkey {
-			log.Logger.Errorf("ChannelService->GetPublishTarget: pubkey not exist")
-			return nil, fmt.Errorf("ChannelService->GetPublishTarget: pubkey not exist")
-		} else {
-			target = &d.LightUser.Target
-		}
-	} else {
-		target = &user.Target
+	var target *dmsgUser.Target
+	if d.channelList[pubkey] != nil {
+		target = &d.channelList[pubkey].Target
+	} else if d.LightUser.Key.PubkeyHex == pubkey {
+		target = &d.LightUser.Target
+	}
+
+	if target == nil {
+		log.Logger.Errorf("ChannelService->GetPublishTarget: target is nil")
+		return nil, fmt.Errorf("ChannelService->GetPublishTarget: target is nil")
 	}
 	return target, nil
 }
@@ -321,16 +320,18 @@ func (d *ChannelService) handlePubsubProtocol(target *dmsgUser.Target) {
 			continue
 		}
 
-		requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
-		responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+		msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+		msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+		log.Logger.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d", protocolID)
+
 		switch protocolID {
-		case requestPID:
+		case msgRequestPID:
 			err = protocolHandle.HandleRequestData(protocolData)
 			if err != nil {
 				log.Logger.Warnf("ChannelService->handlePubsubProtocol: HandleRequestData error: %v", err)
 			}
 			continue
-		case responsePID:
+		case msgResponsePID:
 			continue
 		}
 	}

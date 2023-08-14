@@ -176,9 +176,9 @@ func (d *MsgService) OnPubsubMsgRequest(
 		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 	}
 
-	if request.BasicData.Pubkey != d.LightUser.Key.PubkeyHex {
-		log.Logger.Errorf("MsgService->OnPubsubMsgRequest: request.BasicData.Pubkey != d.LightUser.Key.PubkeyHex")
-		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.BasicData.Pubkey != d.LightUser.Key.PubkeyHex")
+	if request.DestPubkey != d.LightUser.Key.PubkeyHex {
+		log.Logger.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
+		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 	}
 	if d.onReceiveMsg != nil {
 		srcPubkey := request.BasicData.Pubkey
