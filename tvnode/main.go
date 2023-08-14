@@ -19,8 +19,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/dmsg"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
+	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	tvUtilKey "github.com/tinyverse-web3/tvutil/key"
@@ -194,7 +194,7 @@ func main() {
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
-	tvbase.RegistCSSProtocol(p)
+	tvbase.GetDmsg().GetCustomProtocolService().RegistServer(p)
 
 	<-ctx.Done()
 }
@@ -203,13 +203,13 @@ func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsg.MsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tvbase.GetDmsgService()
+	dmsgService := tvbase.GetDmsg()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)

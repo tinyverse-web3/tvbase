@@ -4,11 +4,11 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
 
-type CustomStreamProtocolClientInfo struct {
-	Client   CustomStreamProtocolClient
-	Protocol *protocol.MsgSProtocol
+type ClientStreamProtocol struct {
+	Handle   ClientHandle
+	Protocol *protocol.CustomSProtocol
 }
-type CustomStreamProtocolServiceInfo struct {
-	Service  CustomStreamProtocolService
-	Protocol *protocol.MsgSProtocol
+type ServerStreamProtocol struct {
+	Handle   ServerHandle
+	Protocol *protocol.CustomSProtocol
 }

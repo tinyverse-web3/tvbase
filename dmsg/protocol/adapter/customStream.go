@@ -16,7 +16,7 @@ import (
 
 type CustomStreamProtocolAdapter struct {
 	CommonProtocolAdapter
-	protocol *dmsgProtocol.MsgSProtocol
+	protocol *dmsgProtocol.CustomSProtocol
 	pid      string
 }
 
@@ -96,7 +96,7 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	if len(dataList) < 1 {
 		return nil, errors.New("CustomStreamProtocolAdapter:InitResponse: dataList need contain customStreamProtocolResponseParam")
 	}
-	customStreamProtocolResponseParam, ok := dataList[0].(*customProtocol.CustomStreamProtocolResponseParam)
+	customStreamProtocolResponseParam, ok := dataList[0].(*customProtocol.ResponseParam)
 	if !ok {
 		return response, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
 	}
@@ -174,26 +174,26 @@ func (adapter *CustomStreamProtocolAdapter) SetResponseSig(
 
 func (adapter *CustomStreamProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	data, retCode, err := adapter.protocol.Callback.OnCustomStreamProtocolRequest(requestProtoData)
+	data, retCode, err := adapter.protocol.Callback.OnRequest(requestProtoData)
 	return data, retCode, err
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	data, err := adapter.protocol.Callback.OnCustomStreamProtocolResponse(requestProtoData, responseProtoData)
+	data, err := adapter.protocol.Callback.OnResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
 func NewCustomStreamProtocol(
 	ctx context.Context,
 	host host.Host,
-	customProtocolId string,
-	protocolCallback dmsgProtocol.MsgSpCallback,
-	protocolService dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MsgSProtocol {
+	pid string,
+	callbck dmsgProtocol.CustomSpCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
-	ret.pid = customProtocolId
-	protocol := dmsgProtocol.NewMsgSProtocol(ctx, host, protocolCallback, protocolService, ret)
+	ret.pid = pid
+	protocol := dmsgProtocol.NewCustomSProtocol(ctx, host, callbck, service, ret)
 	ret.protocol = protocol
 	return protocol
 }

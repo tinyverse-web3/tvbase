@@ -34,7 +34,7 @@ import (
 	tvutil "github.com/tinyverse-web3/tvbase/common/util"
 	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
-	"github.com/tinyverse-web3/tvbase/dmsg"
+	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -44,7 +44,7 @@ import (
 )
 
 type TvBase struct {
-	DmsgService          tvCommon.DmsgService
+	dmsg                 *service.Dmsg
 	DkvsService          tvCommon.DkvsService
 	TracerSpan           trace.Span
 	ctx                  context.Context
@@ -157,7 +157,7 @@ func (m *TvBase) Start() error {
 	}
 	go m.DiscoverRendezvousPeers()
 
-	err = m.DmsgService.Init(m)
+	err = m.dmsg.Init(m)
 	if err != nil {
 		return err
 	}
@@ -500,7 +500,7 @@ func (m *TvBase) init(rootPath string) error {
 func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	var err error
 
-	m.DmsgService, err = dmsg.CreateDmsgService(m)
+	m.dmsg, err = service.CreateService(m)
 
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
@@ -508,7 +508,7 @@ func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	}
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			return m.DmsgService.Stop()
+			return m.dmsg.Stop()
 		},
 	})
 	return nil
@@ -598,8 +598,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 	return nil
 }
 
-func (m *TvBase) GetDmsgService() *dmsg.MsgService {
-	return m.DmsgService.(*dmsg.MsgService)
+func (m *TvBase) GetDmsg() *service.Dmsg {
+	return m.dmsg
 }
 
 func (m *TvBase) GetDkvsService() tvCommon.DkvsService {

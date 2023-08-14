@@ -15,7 +15,7 @@ import (
 
 type CreateChannelProtocolAdapter struct {
 	CommonProtocolAdapter
-	protocol *dmsgProtocol.MsgSProtocol
+	protocol *dmsgProtocol.ChannelSProtocol
 }
 
 func NewCreateChannelProtocolAdapter() *CreateChannelProtocolAdapter {
@@ -162,10 +162,10 @@ func (adapter *CreateChannelProtocolAdapter) CallResponseCallback(
 func NewCreateChannelProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.MsgSpCallback,
-	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MsgSProtocol {
+	callback dmsgProtocol.ChannelSpCallback,
+	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.ChannelSProtocol {
 	adapter := NewCreateChannelProtocolAdapter()
-	protocol := dmsgProtocol.NewMsgSProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewChannelSProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

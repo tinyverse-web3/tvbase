@@ -49,7 +49,7 @@ type CustomStreamProtocol struct {
 
 type CustomStreamClientProtocol struct {
 	CustomStreamProtocol
-	Service ClientService
+	Service Service
 }
 
 type CustomStreamServiceProtocol struct {
@@ -61,7 +61,7 @@ func (p *CustomStreamClientProtocol) Init(customProtocolID string) {
 	p.CustomStreamProtocol.Init(customProtocolID)
 }
 
-func (p *CustomStreamClientProtocol) SetService(service ClientService) {
+func (p *CustomStreamClientProtocol) SetService(service Service) {
 	p.Service = service
 }
 
@@ -109,7 +109,7 @@ func (p *CustomStreamClientProtocol) Request(peerId string, data any) error {
 		return fmt.Errorf("CustomStreamProtocol->Request: marshal error: %v", err)
 	}
 
-	err = p.Service.RequestCustomStreamProtocol(peerId, p.PID, content)
+	err = p.Service.Request(peerId, p.PID, content)
 	if err != nil {
 		Logger.Errorf("CustomStreamProtocol->Request: %v", err)
 		return err

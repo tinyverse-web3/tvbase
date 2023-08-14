@@ -119,16 +119,6 @@ func (u *Target) Close() error {
 	return err
 }
 
-type User struct {
-	Target
-	ServicePeerID string
-}
-
-type LightMailboxUser struct {
-	Target
-	ServicePeerID string
-}
-
 type DestTarget struct {
 	Target
 	LastReciveTimestamp int64
@@ -138,8 +128,13 @@ type Channel struct {
 	DestTarget
 }
 
-type LightMsgUser struct {
+type LightUser struct {
 	Target
+}
+
+type LightMailboxUser struct {
+	Target
+	ServicePeerID string
 }
 
 type ServiceMailboxUser struct {

@@ -6,25 +6,25 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 )
 
-type ClientService interface {
-	RequestCustomStreamProtocol(customProtocolId string, peerId string, content []byte) error
+type Service interface {
+	Request(customProtocolId string, peerId string, content []byte) error
 }
 
-type CustomStreamProtocolClient interface {
+type ClientHandle interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
-	SetService(service ClientService)
+	SetService(service Service)
 	HandleResponse(request *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
-type CustomStreamProtocolService interface {
+type ServerHandle interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
 	HandleRequest(req *pb.CustomProtocolReq) error
 	HandleResponse(req *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
-type CustomStreamProtocolResponseParam struct {
+type ResponseParam struct {
 	PID     string
-	Service CustomStreamProtocolService
+	Service ServerHandle
 }

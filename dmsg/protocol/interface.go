@@ -14,14 +14,14 @@ type ProtocolHandle interface {
 }
 
 type DmsgServiceInterface interface {
+	IsEnableService() bool
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	GetPublishTarget(pubkey string) *dmsgUser.Target
+	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
 	PublishProtocol(
 		target *dmsgUser.Target,
 		pid pb.PID,
 		protoData []byte) error
-	IsEnableService() bool
 }
 
 type MailboxSpCallback interface {
@@ -50,12 +50,7 @@ type MailboxPpCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type MsgSpCallback interface {
-	OnCustomStreamProtocolRequest(
-		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
-	OnCustomStreamProtocolResponse(
-		requestProtoMsg protoreflect.ProtoMessage,
-		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+type ChannelSpCallback interface {
 	OnCreateChannelRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
 	OnCreateChannelResponse(
@@ -67,6 +62,14 @@ type MsgPpCallback interface {
 	OnSendMsgRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
 	OnSendMsgResponse(
+		requestProtoMsg protoreflect.ProtoMessage,
+		responseProtoMsg protoreflect.ProtoMessage) (any, error)
+}
+
+type CustomSpCallback interface {
+	OnRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, error)
+	OnResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }

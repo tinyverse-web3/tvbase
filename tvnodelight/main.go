@@ -16,8 +16,8 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/dmsg"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
+	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	tvUtilKey "github.com/tinyverse-web3/tvutil/key"
@@ -74,13 +74,13 @@ func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsg.MsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
 	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tvInfra.GetDmsgService()
+	dmsg := tvInfra.GetDmsg()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -95,11 +95,11 @@ func initDmsg(
 		return sig, nil
 	}
 
-	err = dmsgService.Start(false, userPubkeyData, getSig)
+	err = dmsg.Start(false, userPubkeyData, getSig)
 	if err != nil {
 		return nil, nil, err
 	}
-	return tvInfra, dmsgService, nil
+	return tvInfra, dmsg, nil
 }
 
 func main() {
@@ -155,14 +155,13 @@ func main() {
 	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", pubSeed, pubPrikeyHex, pubPubkeyHex)
 
 	// init dmsg
-	tvbase, dmsgService, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
 	if err != nil {
 		mainLog.Errorf("initDmsg error: %v", err)
 		return
 	}
 
-	// set src user msg receive callback
-	dmsgService.SetOnReceiveMsg(func(
+	onReceiveMsg := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -187,7 +186,10 @@ func main() {
 		}
 		mainLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
-	})
+	}
+	// set  user msg receive callback
+	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
 
 	// publish dest user
 	destPubkeyBytes, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
@@ -197,7 +199,7 @@ func main() {
 		return
 	}
 	destPubKeyStr := tvUtilKey.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgService.SubscribeDestUser(destPubKeyStr)
+	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("SubscribeDestUser error: %v", err)
@@ -212,7 +214,7 @@ func main() {
 		return
 	}
 	pubPubKeyStr := tvUtilKey.TranslateKeyProtoBufToString(pubPubkeyBytes)
-	err = dmsgService.SubscribeChannel(pubPubKeyStr)
+	err = dmsg.GetChannelService().SubscribeChannel(pubPubKeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("SubscribeChannel error: %v", err)
@@ -237,7 +239,7 @@ func main() {
 
 			pubkeyStr := destPubKeyStr
 			// pubkeyStr := pubPubKeyStr
-			sendMsgReq, err := dmsgService.SendMsg(pubkeyStr, encrypedContent)
+			sendMsgReq, err := dmsg.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				mainLog.Errorf("send msg: error: %v", err)
 			}

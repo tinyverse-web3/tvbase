@@ -59,7 +59,10 @@ func (p *PubsubProtocol) HandleRequestData(
 	responseBasicData := p.Adapter.GetResponseBasicData(response)
 
 	// send the response
-	target := p.Service.GetPublishTarget(requestBasicData.Pubkey)
+	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
+	if err != nil {
+		return err
+	}
 	err = p.Service.PublishProtocol(target, responseBasicData.PID, responseProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
@@ -83,7 +86,10 @@ func (p *PubsubProtocol) Request(
 	}
 
 	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	target := p.Service.GetPublishTarget(destUserPubkey)
+	target, err := p.Service.GetPublishTarget(destUserPubkey)
+	if err != nil {
+		return nil, nil, err
+	}
 	err = p.Service.PublishProtocol(target, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)

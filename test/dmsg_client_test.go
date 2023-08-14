@@ -16,8 +16,8 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/dmsg"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
+	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	keyutil "github.com/tinyverse-web3/tvutil/key"
@@ -107,19 +107,25 @@ func TestPubsubMsg(t *testing.T) {
 	testLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
 	// init dmsg client
-	_, dmsgService, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
+	_, dmsg, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
 	if err != nil {
 		testLog.Errorf("init acceptable error: %v", err)
 		return
 	}
 
 	// set src user msg receive callback
-
-	dmsgService.SetOnReceiveMsg(func(srcUserPubkey, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) {
+	onReceiveMsg := func(
+		srcUserPubkey string,
+		destUserPubkey string,
+		msgContent []byte,
+		timeStamp int64,
+		msgID string,
+		direction string) {
 		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
-	})
-
+	}
+	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
@@ -127,7 +133,7 @@ func TestPubsubMsg(t *testing.T) {
 		return
 	}
 	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgService.SubscribeDestUser(destPubKeyStr)
+	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
 	if err != nil {
 		testLog.Errorf("SubscribeDestUser error: %v", err)
 		return
@@ -149,7 +155,7 @@ func TestPubsubMsg(t *testing.T) {
 				continue
 			}
 
-			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent)
+			sendMsgReq, err := dmsg.GetMsgService().SendMsg(destPubKeyStr, encrypedContent)
 
 			if err != nil {
 				testLog.Errorf("send msg: error: %v", err)
@@ -170,14 +176,14 @@ func initMsgClient(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsg.MsgService, error) {
+	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		testLog.Errorf("InitMsgClient error: %v", err)
 		return nil, nil, err
 	}
 
-	dmsgService := tvbase.GetDmsgService()
+	dmsg := tvbase.GetDmsg()
 	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -192,21 +198,13 @@ func initMsgClient(
 		testLog.Debugf("sign = %v", sig)
 		return sig, nil
 	}
-	done := make(chan any)
-	err = dmsgService.Start(false, srcPubkeyBytes, getSigCallback, done)
+
+	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback)
 	if err != nil {
 		return nil, nil, err
 	}
-	data := <-done
-	if data != nil {
-		err = data.(error)
-		if err != nil {
-			testLog.Errorf("initMsgClient: InitUser error: %v", data)
-			return nil, nil, err
-		}
-	}
 
-	return tvbase, dmsgService, nil
+	return tvbase, dmsg, nil
 }
 
 func TestIpfsCmd(t *testing.T) {
@@ -289,10 +287,11 @@ func TestPullCID(t *testing.T) {
 		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
 		return
 	}
-	err = tvbase.RegistCSCProtocol(pullCidProtocol)
+
+	err = tvbase.GetDmsg().GetCustomProtocolService().RegistClient(pullCidProtocol)
 	if err != nil {
-		testLog.Errorf("node.RegistCSCProtocol error: %v", err)
-		t.Errorf("node.RegistCSCProtocol error: %v", err)
+		testLog.Errorf("RegistClient error: %v", err)
+		t.Errorf("RegistClient error: %v", err)
 		return
 	}
 	bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"

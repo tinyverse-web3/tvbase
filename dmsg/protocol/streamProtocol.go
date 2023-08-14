@@ -18,9 +18,14 @@ type MailboxSProtocol struct {
 	Callback MailboxSpCallback
 }
 
-type MsgSProtocol struct {
+type ChannelSProtocol struct {
 	StreamProtocol
-	Callback MsgSpCallback
+	Callback ChannelSpCallback
+}
+
+type CustomSProtocol struct {
+	StreamProtocol
+	Callback CustomSpCallback
 }
 
 type StreamProtocol struct {
@@ -198,13 +203,13 @@ func (p *StreamProtocol) Request(
 	return requestProtoMsg, p.RequestInfoList[requestInfoId].DoneChan, nil
 }
 
-func NewMsgSProtocol(
+func NewChannelSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback MsgSpCallback,
+	callback ChannelSpCallback,
 	service DmsgServiceInterface,
-	adapter SpAdapter) *MsgSProtocol {
-	protocol := &MsgSProtocol{}
+	adapter SpAdapter) *ChannelSProtocol {
+	protocol := &ChannelSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
 	protocol.RequestInfoList = make(map[string]*RequestInfo)
@@ -226,6 +231,27 @@ func NewMailboxSProtocol(
 	service DmsgServiceInterface,
 	adapter SpAdapter) *MailboxSProtocol {
 	protocol := &MailboxSProtocol{}
+	protocol.Host = host
+	protocol.Ctx = ctx
+	protocol.RequestInfoList = make(map[string]*RequestInfo)
+	protocol.Callback = callback
+	protocol.Service = service
+	protocol.Adapter = adapter
+	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	if service.IsEnableService() {
+		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+	}
+	go protocol.TickCleanRequest()
+	return protocol
+}
+
+func NewCustomSProtocol(
+	ctx context.Context,
+	host host.Host,
+	callback CustomSpCallback,
+	service DmsgServiceInterface,
+	adapter SpAdapter) *CustomSProtocol {
+	protocol := &CustomSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
 	protocol.RequestInfoList = make(map[string]*RequestInfo)
