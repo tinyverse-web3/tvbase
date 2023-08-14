@@ -5,7 +5,8 @@ import (
 
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
+
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -14,6 +15,8 @@ import (
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+var log = ipfsLog.Logger("msgservice")
 
 type MsgService struct {
 	dmsgServiceCommon.LightUserService
@@ -46,7 +49,7 @@ func (d *MsgService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
-	log.Logger.Debug("MsgService->Start begin")
+	log.Debug("MsgService->Start begin")
 	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
 	if err != nil {
 		return err
@@ -60,19 +63,19 @@ func (d *MsgService) Start(
 	// user
 	go d.handlePubsubProtocol(&d.LightUser.Target)
 
-	log.Logger.Debug("MsgService->Start end")
+	log.Debug("MsgService->Start end")
 	return nil
 }
 
 func (d *MsgService) Stop() error {
-	log.Logger.Debug("MsgService->Stop begin")
+	log.Debug("MsgService->Stop begin")
 	err := d.LightUserService.Stop()
 	if err != nil {
 		return err
 	}
 
 	d.UnsubscribeDestUserList()
-	log.Logger.Debug("MsgService->Stop end")
+	log.Debug("MsgService->Stop end")
 	return nil
 }
 
@@ -82,19 +85,19 @@ func (d *MsgService) GetDestUser(pubkey string) *dmsgUser.LightUser {
 }
 
 func (d *MsgService) SubscribeDestUser(pubkey string) error {
-	log.Logger.Debug("MsgService->SubscribeDestUser begin\npubkey: %s", pubkey)
+	log.Debug("MsgService->SubscribeDestUser begin\npubkey: %s", pubkey)
 	if d.destUserList[pubkey] != nil {
-		log.Logger.Errorf("MsgService->SubscribeDestUser: pubkey is already exist in destUserList")
+		log.Errorf("MsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 		return fmt.Errorf("MsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 	}
 	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, nil)
 	if err != nil {
-		log.Logger.Errorf("MsgService->SubscribeDestUser: NewTarget error: %v", err)
+		log.Errorf("MsgService->SubscribeDestUser: NewTarget error: %v", err)
 		return err
 	}
 	err = target.InitPubsub(d.Pubsub, pubkey)
 	if err != nil {
-		log.Logger.Errorf("MsgService->subscribeUser: InitPubsub error: %v", err)
+		log.Errorf("MsgService->subscribeUser: InitPubsub error: %v", err)
 		return err
 	}
 
@@ -107,17 +110,17 @@ func (d *MsgService) SubscribeDestUser(pubkey string) error {
 }
 
 func (d *MsgService) UnsubscribeDestUser(pubkey string) error {
-	log.Logger.Debugf("MsgService->UnSubscribeDestUser begin\npubkey: %s", pubkey)
+	log.Debugf("MsgService->UnSubscribeDestUser begin\npubkey: %s", pubkey)
 
 	user := d.destUserList[pubkey]
 	if user == nil {
-		log.Logger.Errorf("MsgService->UnSubscribeDestUser: pubkey is not exist in destUserList")
+		log.Errorf("MsgService->UnSubscribeDestUser: pubkey is not exist in destUserList")
 		return fmt.Errorf("MsgService->UnSubscribeDestUser: pubkey is not exist in destUserList")
 	}
 	user.Close()
 	delete(d.destUserList, pubkey)
 
-	log.Logger.Debug("MsgService->unSubscribeDestUser end")
+	log.Debug("MsgService->unSubscribeDestUser end")
 	return nil
 }
 
@@ -130,18 +133,18 @@ func (d *MsgService) UnsubscribeDestUserList() error {
 
 // sdk-msg
 func (d *MsgService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error) {
-	log.Logger.Debugf("MsgService->SendMsg begin:\ndestPubkey: %s", destPubkey)
+	log.Debugf("MsgService->SendMsg begin:\ndestPubkey: %s", destPubkey)
 	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
 	if err != nil {
-		log.Logger.Errorf("MsgService->SendMsg: sendMsgProtocol.Request error: %v", err)
+		log.Errorf("MsgService->SendMsg: sendMsgProtocol.Request error: %v", err)
 		return nil, err
 	}
 	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
-		log.Logger.Errorf("MsgService->SendMsg: requestProtoData is not SendMsgReq")
+		log.Errorf("MsgService->SendMsg: requestProtoData is not SendMsgReq")
 		return nil, fmt.Errorf("MsgService->SendMsg: requestProtoData is not SendMsgReq")
 	}
-	log.Logger.Debugf("MsgService->SendMsg end")
+	log.Debugf("MsgService->SendMsg end")
 	return request, nil
 }
 
@@ -155,7 +158,7 @@ func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	user := d.destUserList[pubkey]
 	if user == nil {
 		if d.LightUser.Key.PubkeyHex != pubkey {
-			log.Logger.Errorf("MsgService->GetPublishTarget: pubkey not exist")
+			log.Errorf("MsgService->GetPublishTarget: pubkey not exist")
 			return nil, fmt.Errorf("MsgService->GetPublishTarget: pubkey not exist")
 		} else {
 			target = &d.LightUser.Target
@@ -169,15 +172,15 @@ func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 // MsgPpCallback
 func (d *MsgService) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Logger.Debugf("MsgService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("MsgService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
-		log.Logger.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 	}
 
 	if request.DestPubkey != d.LightUser.Key.PubkeyHex {
-		log.Logger.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
+		log.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 	}
 	if d.onReceiveMsg != nil {
@@ -192,29 +195,29 @@ func (d *MsgService) OnPubsubMsgRequest(
 			request.BasicData.ID,
 			msgDirection)
 	} else {
-		log.Logger.Errorf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
+		log.Errorf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
 
-	log.Logger.Debugf("MsgService->OnPubsubMsgRequest end")
+	log.Debugf("MsgService->OnPubsubMsgRequest end")
 	return nil, nil, false, nil
 }
 
 func (d *MsgService) OnPubsubMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Logger.Debugf(
+	log.Debugf(
 		"MsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	response, ok := responseProtoData.(*pb.SendMsgRes)
 	if !ok {
-		log.Logger.Errorf("MsgService->OnPubsubMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
+		log.Errorf("MsgService->OnPubsubMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
 	}
 	if response.RetCode.Code != 0 {
-		log.Logger.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
+		log.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	}
-	log.Logger.Debugf("MsgService->OnPubsubMsgResponse end")
+	log.Debugf("MsgService->OnPubsubMsgResponse end")
 	return nil, nil
 }
 
@@ -223,7 +226,7 @@ func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
 	for {
 		protocolID, protocolData, protocolHandle, err := d.WaitPubsubProtocolData(target)
 		if err != nil {
-			log.Logger.Warnf("MsgService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
+			log.Warnf("MsgService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
 			return
 		}
 
@@ -237,13 +240,13 @@ func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
 		case requestPID:
 			err = protocolHandle.HandleRequestData(protocolData)
 			if err != nil {
-				log.Logger.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
 			}
 			continue
 		case responsePID:
 			err = protocolHandle.HandleResponseData(protocolData)
 			if err != nil {
-				log.Logger.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
 			}
 			continue
 		}

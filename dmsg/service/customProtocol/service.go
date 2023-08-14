@@ -6,13 +6,16 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
+
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+var log = ipfsLog.Logger("customprotocolservice")
 
 type CustomProtocolService struct {
 	dmsgServiceCommon.LightUserService
@@ -46,22 +49,22 @@ func (d *CustomProtocolService) Start(
 	EnableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
-	log.Logger.Debug("CustomProtocolService->Start begin")
+	log.Debug("CustomProtocolService->Start begin")
 	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, false)
 	if err != nil {
 		return err
 	}
-	log.Logger.Debug("CustomProtocolService->Start end")
+	log.Debug("CustomProtocolService->Start end")
 	return nil
 }
 
 func (d *CustomProtocolService) Stop() error {
-	log.Logger.Debug("CustomProtocolService->Stop begin")
+	log.Debug("CustomProtocolService->Stop begin")
 	err := d.LightUserService.Stop()
 	if err != nil {
 		return err
 	}
-	log.Logger.Debug("CustomProtocolService->Stop end")
+	log.Debug("CustomProtocolService->Stop end")
 	return nil
 }
 
@@ -69,13 +72,13 @@ func (d *CustomProtocolService) Stop() error {
 func (d *CustomProtocolService) Request(peerIdStr string, pid string, content []byte) error {
 	protocolInfo := d.clientStreamProtocolList[pid]
 	if protocolInfo == nil {
-		log.Logger.Errorf("CustomProtocolService->Request: protocol %s is not exist", pid)
+		log.Errorf("CustomProtocolService->Request: protocol %s is not exist", pid)
 		return fmt.Errorf("CustomProtocolService->Request: protocol %s is not exist", pid)
 	}
 
 	peerID, err := peer.Decode(peerIdStr)
 	if err != nil {
-		log.Logger.Errorf("CustomProtocolService->Request: err: %v", err)
+		log.Errorf("CustomProtocolService->Request: err: %v", err)
 		return err
 	}
 	_, _, err = protocolInfo.Protocol.Request(
@@ -84,7 +87,7 @@ func (d *CustomProtocolService) Request(peerIdStr string, pid string, content []
 		pid,
 		content)
 	if err != nil {
-		log.Logger.Errorf("CustomProtocolService->Request: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
+		log.Errorf("CustomProtocolService->Request: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
 			err, peerID, d.LightUser.Key.PubkeyHex, content)
 		return err
 	}
@@ -94,7 +97,7 @@ func (d *CustomProtocolService) Request(peerIdStr string, pid string, content []
 func (d *CustomProtocolService) RegistClient(client customProtocol.ClientHandle) error {
 	customProtocolID := client.GetProtocolID()
 	if d.clientStreamProtocolList[customProtocolID] != nil {
-		log.Logger.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
+		log.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
 	}
 	d.clientStreamProtocolList[customProtocolID] = &customProtocol.ClientStreamProtocol{
@@ -109,7 +112,7 @@ func (d *CustomProtocolService) RegistClient(client customProtocol.ClientHandle)
 func (d *CustomProtocolService) UnregistClient(client customProtocol.ClientHandle) error {
 	customProtocolID := client.GetProtocolID()
 	if d.clientStreamProtocolList[customProtocolID] == nil {
-		log.Logger.Warnf("CustomProtocolService->UnregistCSPClient: protocol %s is not exist", customProtocolID)
+		log.Warnf("CustomProtocolService->UnregistCSPClient: protocol %s is not exist", customProtocolID)
 		return nil
 	}
 	d.clientStreamProtocolList[customProtocolID] = nil
@@ -119,7 +122,7 @@ func (d *CustomProtocolService) UnregistClient(client customProtocol.ClientHandl
 func (d *CustomProtocolService) RegistServer(service customProtocol.ServerHandle) error {
 	customProtocolID := service.GetProtocolID()
 	if d.serverStreamProtocolList[customProtocolID] != nil {
-		log.Logger.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
+		log.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 	}
 	d.serverStreamProtocolList[customProtocolID] = &customProtocol.ServerStreamProtocol{
@@ -133,7 +136,7 @@ func (d *CustomProtocolService) RegistServer(service customProtocol.ServerHandle
 func (d *CustomProtocolService) UnregistServer(callback customProtocol.ServerHandle) error {
 	customProtocolID := callback.GetProtocolID()
 	if d.serverStreamProtocolList[customProtocolID] == nil {
-		log.Logger.Warnf("CustomProtocolService->UnregistCSPServer: protocol %s is not exist", customProtocolID)
+		log.Warnf("CustomProtocolService->UnregistCSPServer: protocol %s is not exist", customProtocolID)
 		return nil
 	}
 	d.serverStreamProtocolList[customProtocolID] = nil
@@ -143,16 +146,16 @@ func (d *CustomProtocolService) UnregistServer(callback customProtocol.ServerHan
 // MsgSpCallback
 func (d *CustomProtocolService) OnCustomRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Logger.Debugf("CustomProtocolService->OnCustomRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("CustomProtocolService->OnCustomRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		log.Logger.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
+		log.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
 	}
 
 	customProtocolInfo := d.serverStreamProtocolList[request.PID]
 	if customProtocolInfo == nil {
-		log.Logger.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
+		log.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 	}
 	err := customProtocolInfo.Handle.HandleRequest(request)
@@ -164,41 +167,41 @@ func (d *CustomProtocolService) OnCustomRequest(
 		Service: customProtocolInfo.Handle,
 	}
 
-	log.Logger.Debugf("CustomProtocolService->OnRequest end")
+	log.Debugf("CustomProtocolService->OnRequest end")
 	return param, nil, false, nil
 }
 
 func (d *CustomProtocolService) OnCustomResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Logger.Debugf(
+	log.Debugf(
 		"CustomProtocolService->OnCustomResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		log.Logger.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
+		log.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
 		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
 	}
 	response, ok := responseProtoData.(*pb.CustomProtocolRes)
 	if !ok {
-		log.Logger.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentRes")
+		log.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentRes")
 		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentRes")
 	}
 
 	customProtocolInfo := d.clientStreamProtocolList[response.PID]
 	if customProtocolInfo == nil {
-		log.Logger.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo is nil, response: %+v", response)
+		log.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo is nil, response: %+v", response)
 		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo is nil, response: %+v", response)
 	}
 	if customProtocolInfo.Handle == nil {
-		log.Logger.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo.Client is nil")
+		log.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo.Client is nil")
 		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo.Client is nil")
 	}
 
 	err := customProtocolInfo.Handle.HandleResponse(request, response)
 	if err != nil {
-		log.Logger.Errorf("CustomProtocolService->OnCustomResponse: Client.HandleResponse error: %v", err)
+		log.Errorf("CustomProtocolService->OnCustomResponse: Client.HandleResponse error: %v", err)
 		return nil, err
 	}
 	return nil, nil

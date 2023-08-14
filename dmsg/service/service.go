@@ -3,7 +3,6 @@ package service
 import (
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-
 	channelService "github.com/tinyverse-web3/tvbase/dmsg/service/channel"
 	customProtocolService "github.com/tinyverse-web3/tvbase/dmsg/service/customProtocol"
 	mailboxService "github.com/tinyverse-web3/tvbase/dmsg/service/mailbox"

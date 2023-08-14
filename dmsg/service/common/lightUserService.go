@@ -3,11 +3,13 @@ package common
 import (
 	"fmt"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 )
+
+var log = ipfsLog.Logger("commonservice")
 
 type LightUserService struct {
 	BaseService
@@ -43,7 +45,7 @@ func (d *LightUserService) GetUserPubkeyHex() (string, error) {
 
 func (d *LightUserService) GetUserSig(protoData []byte) ([]byte, error) {
 	if d.LightUser == nil {
-		log.Logger.Errorf("LightUserService->GetUserSig: user is nil")
+		log.Errorf("LightUserService->GetUserSig: user is nil")
 		return nil, fmt.Errorf("LightUserService->GetUserSig: user is nil")
 	}
 	return d.LightUser.GetSig(protoData)
@@ -51,7 +53,7 @@ func (d *LightUserService) GetUserSig(protoData []byte) ([]byte, error) {
 
 func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	if d.LightUser == nil {
-		log.Logger.Errorf("LightUserService->GetPublishTarget: user is nil")
+		log.Errorf("LightUserService->GetPublishTarget: user is nil")
 		return nil, fmt.Errorf("LightUserService->GetPublishTarget: user is nil")
 	}
 	return &d.LightUser.Target, nil
@@ -59,34 +61,34 @@ func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, er
 
 // user
 func (d *LightUserService) InitUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback, subscribeUser bool) error {
-	log.Logger.Debug("LightUserService->InitUser begin")
+	log.Debug("LightUserService->InitUser begin")
 	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
 	err := d.SubscribeUser(pubkey, getSig, subscribeUser)
 	if err != nil {
 		return err
 	}
 
-	log.Logger.Debug("LightUserService->InitUser end")
+	log.Debug("LightUserService->InitUser end")
 	return nil
 }
 
 func (d *LightUserService) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallback, subscribeUser bool) error {
-	log.Logger.Debugf("LightUserService->SubscribeUser begin\npubkey: %s", pubkey)
+	log.Debugf("LightUserService->SubscribeUser begin\npubkey: %s", pubkey)
 	if d.LightUser != nil {
-		log.Logger.Errorf("LightUserService->SubscribeUser: user isn't nil")
+		log.Errorf("LightUserService->SubscribeUser: user isn't nil")
 		return fmt.Errorf("LightUserService->SubscribeUser: user isn't nil")
 	}
 
 	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, getSig)
 	if err != nil {
-		log.Logger.Errorf("LightUserService->SubscribeUser: NewUser error: %v", err)
+		log.Errorf("LightUserService->SubscribeUser: NewUser error: %v", err)
 		return err
 	}
 
 	if subscribeUser {
 		err = target.InitPubsub(d.Pubsub, pubkey)
 		if err != nil {
-			log.Logger.Errorf("LightUserService->SubscribeUser: InitPubsub error: %v", err)
+			log.Errorf("LightUserService->SubscribeUser: InitPubsub error: %v", err)
 			return err
 		}
 	}
@@ -95,21 +97,21 @@ func (d *LightUserService) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCal
 		Target: *target,
 	}
 
-	log.Logger.Debugf("LightUserService->SubscribeUser end")
+	log.Debugf("LightUserService->SubscribeUser end")
 	return nil
 }
 
 func (d *LightUserService) UnsubscribeUser() error {
-	log.Logger.Debugf("LightUserService->UnsubscribeUser begin")
+	log.Debugf("LightUserService->UnsubscribeUser begin")
 	if d.LightUser == nil {
-		log.Logger.Warnf("LightUserService->UnsubscribeUser: user is nil")
+		log.Warnf("LightUserService->UnsubscribeUser: user is nil")
 		return nil
 	}
 	err := d.LightUser.Close()
 	if err != nil {
-		log.Logger.Warnf("LightUserService->UnsubscribeUser: Close error: %v", err)
+		log.Warnf("LightUserService->UnsubscribeUser: Close error: %v", err)
 	}
 	d.LightUser = nil
-	log.Logger.Debugf("LightUserService->UnsubscribeUser end")
+	log.Debugf("LightUserService->UnsubscribeUser end")
 	return nil
 }
