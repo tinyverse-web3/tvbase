@@ -217,7 +217,7 @@ func (d *ChannelService) OnCreateChannelRequest(
 	}
 	channel := d.channelList[channelKey]
 	if channel != nil {
-		log.Errorf("dmsgService->OnCreateChannelRequest: channel already exist")
+		log.Debugf("dmsgService->OnCreateChannelRequest: channel already exist")
 		retCode := &pb.RetCode{
 			Code:   dmsgProtocol.AlreadyExistCode,
 			Result: "dmsgService->OnCreateChannelRequest: channel already exist",
