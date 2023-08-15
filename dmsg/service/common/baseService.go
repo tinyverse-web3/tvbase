@@ -7,7 +7,6 @@ import (
 	"unsafe"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -18,8 +17,8 @@ import (
 var baseLog = ipfsLog.Logger("dmsg.service.base")
 
 type BaseService struct {
-	TvBase             common.TvBaseService
-	Pubsub             *pubsub.PubSub
+	TvBase common.TvBaseService
+
 	EnableService      bool
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 }
@@ -31,7 +30,6 @@ func (d *BaseService) Start(enableService bool) {
 func (d *BaseService) Init(baseService common.TvBaseService) error {
 	d.TvBase = baseService
 	var err error
-	d.Pubsub, err = pubsub.NewGossipSub(d.TvBase.GetCtx(), d.TvBase.GetHost())
 	if err != nil {
 		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err

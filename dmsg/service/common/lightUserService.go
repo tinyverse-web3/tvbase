@@ -86,7 +86,7 @@ func (d *LightUserService) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCal
 	}
 
 	if subscribeUser {
-		err = target.InitPubsub(d.Pubsub, pubkey)
+		err = target.InitPubsub(pubkey)
 		if err != nil {
 			lightUserLog.Errorf("LightUserService->SubscribeUser: InitPubsub error: %v", err)
 			return err

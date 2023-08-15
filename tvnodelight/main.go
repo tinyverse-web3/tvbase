@@ -75,12 +75,12 @@ func initDmsg(
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
 	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
-	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsg := tvInfra.GetDmsg()
+	dmsg := tvbase.GetDmsg()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -99,7 +99,7 @@ func initDmsg(
 	if err != nil {
 		return nil, nil, err
 	}
-	return tvInfra, dmsg, nil
+	return tvbase, dmsg, nil
 }
 
 func main() {

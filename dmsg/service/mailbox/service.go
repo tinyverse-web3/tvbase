@@ -586,7 +586,7 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		return err
 	}
 
-	err = target.InitPubsub(d.Pubsub, pubkey)
+	err = target.InitPubsub(pubkey)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeUser: InitPubsub error: %v", err)
 		return err
@@ -629,7 +629,7 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 		log.Errorf("MailboxService->subscribeServiceUser: NewTarget error: %v", err)
 		return err
 	}
-	err = target.InitPubsub(d.Pubsub, pubkey)
+	err = target.InitPubsub(pubkey)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeServiceUser: InitPubsub error: %v", err)
 		return err

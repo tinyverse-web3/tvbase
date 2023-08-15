@@ -108,7 +108,7 @@ func (d *ChannelService) SubscribeChannel(pubkey string) error {
 		return err
 	}
 
-	err = target.InitPubsub(d.Pubsub, pubkey)
+	err = target.InitPubsub(pubkey)
 	if err != nil {
 		log.Errorf("ChannelService->subscribeUser: InitPubsub error: %v", err)
 		return err

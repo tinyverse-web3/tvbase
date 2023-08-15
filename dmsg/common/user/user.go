@@ -8,6 +8,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
+	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	"github.com/tinyverse-web3/tvutil/crypto"
 )
 
@@ -16,21 +17,18 @@ type Pubsub struct {
 	Subscription *pubsub.Subscription
 }
 
-func NewPubsub(p *pubsub.PubSub, pk string) (*Pubsub, error) {
+func NewPubsub(pk string) (*Pubsub, error) {
 	pubsub := &Pubsub{}
-	err := pubsub.Init(p, pk)
+	err := pubsub.Init(pk)
 	return pubsub, err
 }
 
-func (p *Pubsub) Init(ps *pubsub.PubSub, pk string) error {
+func (p *Pubsub) Init(pk string) error {
 	var err error
-	p.Topic, err = ps.Join(pk)
-	if err != nil {
-		dmsgLog.Logger.Errorf("Pubsub->Init: Join error: %v", err)
-		return err
-	}
 
-	p.Subscription, err = p.Topic.Subscribe()
+	mgr := dmsgCommonPubsub.GetPubsubMgr()
+
+	p.Topic, p.Subscription, err = mgr.Subscribe(pk)
 	if err != nil {
 		dmsgLog.Logger.Errorf("Pubsub->Init: Subscribe error: %v", err)
 		return err
@@ -75,10 +73,10 @@ func (t *Target) InitWithPubkey(c context.Context, pk string, getSig key.GetSigC
 	return nil
 }
 
-func (t *Target) InitPubsub(p *pubsub.PubSub, pk string) error {
-	pubsub, err := NewPubsub(p, pk)
+func (t *Target) InitPubsub(pk string) error {
+	pubsub, err := NewPubsub(pk)
 	if err != nil {
-		dmsgLog.Logger.Errorf("User->InitWithPubkey: NewPubsub error: %v", err)
+		dmsgLog.Logger.Errorf("User->InitPubsub: NewPubsub error: %v", err)
 		return err
 	}
 	t.Pubsub = *pubsub
@@ -111,8 +109,9 @@ func (s *Target) WaitMsg() (*pubsub.Message, error) {
 
 func (u *Target) Close() error {
 	u.CancelCtx()
-	u.Subscription.Cancel()
-	err := u.Topic.Close()
+
+	topicName := u.Subscription.Topic()
+	err := dmsgCommonPubsub.GetPubsubMgr().Unsubscribe(topicName, u.Subscription)
 	if err != nil {
 		dmsgLog.Logger.Errorf("User->Close: Topic.Close error: %v", err)
 	}
