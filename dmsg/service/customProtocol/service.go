@@ -3,25 +3,24 @@ package customProtocol
 import (
 	"fmt"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
-	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
+	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
-	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
+	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var log = ipfsLog.Logger("customprotocolservice")
+var log = ipfsLog.Logger("dmsg.service.customprotocol")
 
 type CustomProtocolService struct {
 	dmsgServiceCommon.LightUserService
 
-	serverStreamProtocolList map[string]*customProtocol.ServerStreamProtocol
-	clientStreamProtocolList map[string]*customProtocol.ClientStreamProtocol
+	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
+	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
 }
 
 func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*CustomProtocolService, error) {
@@ -38,8 +37,8 @@ func (d *CustomProtocolService) Init(tvbaseService tvbaseCommon.TvBaseService) e
 	if err != nil {
 		return err
 	}
-	d.clientStreamProtocolList = make(map[string]*customProtocol.ClientStreamProtocol)
-	d.serverStreamProtocolList = make(map[string]*customProtocol.ServerStreamProtocol)
+	d.clientStreamProtocolList = make(map[string]*dmsgProtocolCustom.ClientStreamProtocol)
+	d.serverStreamProtocolList = make(map[string]*dmsgProtocolCustom.ServerStreamProtocol)
 
 	return nil
 }
@@ -48,7 +47,7 @@ func (d *CustomProtocolService) Init(tvbaseService tvbaseCommon.TvBaseService) e
 func (d *CustomProtocolService) Start(
 	EnableService bool,
 	pubkeyData []byte,
-	getSig dmsgKey.GetSigCallback) error {
+	getSig dmsgCommonKey.GetSigCallback) error {
 	log.Debug("CustomProtocolService->Start begin")
 	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, false)
 	if err != nil {
@@ -94,13 +93,13 @@ func (d *CustomProtocolService) Request(peerIdStr string, pid string, content []
 	return nil
 }
 
-func (d *CustomProtocolService) RegistClient(client customProtocol.ClientHandle) error {
+func (d *CustomProtocolService) RegistClient(client dmsgProtocolCustom.ClientHandle) error {
 	customProtocolID := client.GetProtocolID()
 	if d.clientStreamProtocolList[customProtocolID] != nil {
 		log.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
 	}
-	d.clientStreamProtocolList[customProtocolID] = &customProtocol.ClientStreamProtocol{
+	d.clientStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ClientStreamProtocol{
 		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d),
 		Handle:   client,
 	}
@@ -109,7 +108,7 @@ func (d *CustomProtocolService) RegistClient(client customProtocol.ClientHandle)
 	return nil
 }
 
-func (d *CustomProtocolService) UnregistClient(client customProtocol.ClientHandle) error {
+func (d *CustomProtocolService) UnregistClient(client dmsgProtocolCustom.ClientHandle) error {
 	customProtocolID := client.GetProtocolID()
 	if d.clientStreamProtocolList[customProtocolID] == nil {
 		log.Warnf("CustomProtocolService->UnregistCSPClient: protocol %s is not exist", customProtocolID)
@@ -119,13 +118,13 @@ func (d *CustomProtocolService) UnregistClient(client customProtocol.ClientHandl
 	return nil
 }
 
-func (d *CustomProtocolService) RegistServer(service customProtocol.ServerHandle) error {
+func (d *CustomProtocolService) RegistServer(service dmsgProtocolCustom.ServerHandle) error {
 	customProtocolID := service.GetProtocolID()
 	if d.serverStreamProtocolList[customProtocolID] != nil {
 		log.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 	}
-	d.serverStreamProtocolList[customProtocolID] = &customProtocol.ServerStreamProtocol{
+	d.serverStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ServerStreamProtocol{
 		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d),
 		Handle:   service,
 	}
@@ -133,7 +132,7 @@ func (d *CustomProtocolService) RegistServer(service customProtocol.ServerHandle
 	return nil
 }
 
-func (d *CustomProtocolService) UnregistServer(callback customProtocol.ServerHandle) error {
+func (d *CustomProtocolService) UnregistServer(callback dmsgProtocolCustom.ServerHandle) error {
 	customProtocolID := callback.GetProtocolID()
 	if d.serverStreamProtocolList[customProtocolID] == nil {
 		log.Warnf("CustomProtocolService->UnregistCSPServer: protocol %s is not exist", customProtocolID)
@@ -162,7 +161,7 @@ func (d *CustomProtocolService) OnCustomRequest(
 	if err != nil {
 		return nil, nil, false, err
 	}
-	param := &customProtocol.ResponseParam{
+	param := &dmsgProtocolCustom.ResponseParam{
 		PID:     request.PID,
 		Service: customProtocolInfo.Handle,
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
@@ -58,6 +59,10 @@ import (
 
 const demoPID = "demo"
 
+const LoggerName = "dmsg.protocol.custom.demo"
+
+var log = ipfsLog.Logger(LoggerName)
+
 type clientCommicateInfo struct {
 	data           any
 	responseSignal chan any
@@ -106,12 +111,12 @@ func (p *DemoClientProtocol) HandleResponse(request *pb.CustomProtocolReq, respo
 	pullCidResponse := &DemoResponse{}
 	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
+		log.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 		return fmt.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 	}
 	requestInfo := p.commicateInfoList[pullCidResponse.ID]
 	if requestInfo == nil {
-		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
+		log.Errorf("DemoClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
 		return fmt.Errorf("DemoClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.ID)
 	}
 
@@ -132,7 +137,7 @@ func (p *DemoClientProtocol) Request(peerID string, request *DemoRequest, option
 		var ok bool
 		defaultTimeout, ok = options[0].(time.Duration)
 		if !ok {
-			customProtocol.Logger.Errorf("DemoClientProtocol->Request: timeout is not time.Duration")
+			log.Errorf("DemoClientProtocol->Request: timeout is not time.Duration")
 			return nil, fmt.Errorf("DemoClientProtocol->Request: timeout is not time.Duration")
 		}
 	}
@@ -145,12 +150,12 @@ func (p *DemoClientProtocol) Request(peerID string, request *DemoRequest, option
 
 	err := p.CustomStreamClientProtocol.Request(peerID, request)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoClientProtocol->Request: err: %v", err)
+		log.Errorf("DemoClientProtocol->Request: err: %v", err)
 		return nil, fmt.Errorf("DemoClientProtocol->Request err: %v", err)
 	}
 
 	if defaultTimeout <= 0 {
-		customProtocol.Logger.Warnf("DemoClientProtocol->Request: timeout <= 0")
+		log.Warnf("DemoClientProtocol->Request: timeout <= 0")
 		return nil, nil
 	}
 
@@ -158,7 +163,7 @@ func (p *DemoClientProtocol) Request(peerID string, request *DemoRequest, option
 	case responseObject := <-requestInfo.responseSignal:
 		pullCidResponse, ok := responseObject.(*DemoResponse)
 		if !ok {
-			customProtocol.Logger.Errorf("DemoClientProtocol->Request: responseData is not DemoResponse")
+			log.Errorf("DemoClientProtocol->Request: responseData is not DemoResponse")
 			return nil, fmt.Errorf("DemoClientProtocol->Request: responseData is not DemoResponse")
 		}
 		return pullCidResponse, nil
@@ -199,7 +204,7 @@ func (p *DemoServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) error
 	pullCidRequest := &DemoRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoServiceProtocol->HandleRequest: err: %v", err)
+		log.Errorf("DemoServiceProtocol->HandleRequest: err: %v", err)
 		return err
 	}
 
@@ -217,7 +222,7 @@ func (p *DemoServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, resp
 	pullCidRequest := &DemoRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
+		log.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
@@ -228,7 +233,7 @@ func (p *DemoServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, resp
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
+		log.Errorf("DemoClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 

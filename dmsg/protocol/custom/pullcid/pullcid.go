@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
@@ -18,6 +19,10 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
+
+const LoggerName = "dmsg.protocol.custom.pullcid"
+
+var log = ipfsLog.Logger(LoggerName)
 
 const pullCidPID = "pullcid"
 const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
@@ -72,32 +77,32 @@ func (p *PullCidClientProtocol) Init() error {
 }
 
 func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: begin\nrequest: %v\nresponse: %v", request, response)
+	log.Debugf("PullCidClientProtocol->HandleResponse: begin\nrequest: %v\nresponse: %v", request, response)
 	pullCidResponse := &PullCidResponse{
 		Status: tvIpfs.PinStatus_UNKNOW,
 	}
 	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
+		log.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 	requestInfo := p.commicateInfoList[pullCidResponse.CID]
 	if requestInfo == nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
+		log.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
 		return fmt.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
 	}
 
 	requestInfo.responseSignal <- pullCidResponse
 	delete(p.commicateInfoList, pullCidResponse.CID)
-	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: end")
+	log.Debugf("PullCidClientProtocol->HandleResponse: end")
 	return nil
 }
 
 func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, options ...any) (*PullCidResponse, error) {
-	customProtocol.Logger.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v\noptions:%v", peerId, request, options)
+	log.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v\noptions:%v", peerId, request, options)
 	_, err := cid.Decode(request.CID)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
+		log.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
 		return nil, err
 	}
 
@@ -110,7 +115,7 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 	contentSize := len(content)
 	if contentSize >= 100*1024*1024 {
 		// TODO over 100MB need to be split using CAR,, implement it
-		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
+		log.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
 		return nil, fmt.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
 	}
 
@@ -119,7 +124,7 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		var ok bool
 		timeout, ok = options[0].(time.Duration)
 		if !ok {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
+			log.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
 			return nil, fmt.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
 		}
 	}
@@ -137,12 +142,12 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 
 	err = p.CustomStreamClientProtocol.Request(peerId, request)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: err: %v", err)
+		log.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err
 	}
 
 	if timeout <= 0 {
-		customProtocol.Logger.Warnf("PullCidClientProtocol->Request: timeout <= 0")
+		log.Warnf("PullCidClientProtocol->Request: timeout <= 0")
 		return nil, nil
 	}
 
@@ -150,18 +155,18 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 	case responseObject := <-requestInfo.responseSignal:
 		pullCidResponse, ok := responseObject.(*PullCidResponse)
 		if !ok {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
+			log.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
 			return nil, fmt.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
 		}
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end")
+		log.Debugf("PullCidClientProtocol->Request end")
 		return pullCidResponse, nil
 	case <-time.After(timeout):
 		delete(p.commicateInfoList, request.CID)
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: time.After(timeout)")
+		log.Debugf("PullCidClientProtocol->Request end: time.After(timeout)")
 		return nil, nil
 	case <-p.Ctx.Done():
 		delete(p.commicateInfoList, request.CID)
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
+		log.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
 		return nil, p.Ctx.Err()
 	}
 }
@@ -172,7 +177,7 @@ func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration)
 			delete(p.commicateInfoList, id)
 		}
 	}
-	customProtocol.Logger.Debug("PullCidClientProtocol->cleanCommicateInfoList: clean commicateInfoList")
+	log.Debug("PullCidClientProtocol->cleanCommicateInfoList: clean commicateInfoList")
 }
 
 // service
@@ -233,7 +238,7 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 	if p.PriKey == nil {
 		prikey, err := dkvs.GetPriKeyBySeed(pullCidPID)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidServiceProtocol->Init: GetPriKeyBySeed err: %v", err)
+			log.Errorf("PullCidServiceProtocol->Init: GetPriKeyBySeed err: %v", err)
 			return err
 		}
 		p.PriKey = prikey
@@ -250,7 +255,7 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 }
 
 func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) error {
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest begin:\nrequest: %v", request)
+	log.Debugf("PullCidServiceProtocol->HandleRequest begin:\nrequest: %v", request)
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
@@ -280,7 +285,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	go func() {
 		cidContentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
+			log.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
 			return
 		}
 
@@ -295,39 +300,39 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
 			data: pullCidResponse,
 		}
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v",
+		log.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v",
 			pullCidRequest.CID, pullCidResponse)
 	}()
 
 	<-timer.C
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest end")
+	log.Debugf("PullCidServiceProtocol->HandleRequest end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse begin:\nrequest: %v \nresponse: %v", request, response)
+	log.Debugf("PullCidServiceProtocol->HandleResponse begin:\nrequest: %v \nresponse: %v", request, response)
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
+		log.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
 	if commicateInfo == nil {
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
+		log.Debugf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
 		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
 	}
 
 	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
 	if !ok {
-		customProtocol.Logger.Infof("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
+		log.Infof("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
 		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
 	}
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
+		log.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
 
@@ -335,7 +340,7 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_TIMEOUT:
 		delete(p.commicateInfoList, pullCidRequest.CID)
 	default:
-		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
+		log.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
 			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
 	}
 
@@ -349,27 +354,27 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 			return err
 		}
 	}
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse end")
+	log.Debugf("PullCidServiceProtocol->HandleResponse end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string) error {
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
+	log.Debugf("PullCidServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
 		cid, storageProviderList)
 	for _, storageProvider := range storageProviderList {
 		(*p.storageInfoList)[storageProvider] = storageProvider
 		p.asyncUploadCidContent(storageProvider, cid)
 	}
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider end")
+	log.Debugf("PullCidServiceProtocol->uploadContentToProvider end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
+	log.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
 	dkvsKey := StorageKeyPrefix + cid
 	pubkeyData, err := crypto.MarshalPublicKey(p.PriKey.GetPublic())
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: crypto.MarshalPublicKey error: %v", err)
+		log.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: crypto.MarshalPublicKey error: %v", err)
 		return err
 	}
 	peerID := p.tvBaseService.GetHost().ID().String()
@@ -377,16 +382,16 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	if isExistKey {
 		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
+			log.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
 			return err
 		}
 		err = json.Unmarshal(value, p.storageInfoList)
 		if err != nil {
-			customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
+			log.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
 			return nil
 		}
 		if (*p.storageInfoList)[peerID] != nil {
-			customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
+			log.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
 			return nil
 		}
 	}
@@ -394,33 +399,33 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 	(*p.storageInfoList)[peerID] = peerID
 	value, err := json.Marshal(p.storageInfoList)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
+		log.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
 		return err
 	}
 	issuetime := dkvs.TimeNow()
 	ttl := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
 	sig, err := p.PriKey.Sign(dkvs.GetRecordSignData(dkvsKey, value, pubkeyData, issuetime, ttl))
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
+		log.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
 		return err
 	}
 
 	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, value, pubkeyData, issuetime, ttl, sig)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
+		log.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
 		return err
 	}
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs end")
+	log.Debugf("PullCidServiceProtocol->saveCidInfoToDkvs end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid string) error {
 	// the same API key exceeds 30 request within 10 seconds, the rate limit will be triggered
 	// https://nft.storage/api-docs/  https://web3.storage/docs/reference/http-api/
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
+	log.Debugf("PullCidServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
 	provider := p.ipfsProviderList[providerName]
 	if provider == nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
+		log.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
 		return fmt.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
 	}
 
@@ -435,7 +440,7 @@ func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid s
 	bufSize := len(buf.Bytes())
 	if bufSize >= 100*1024*1024 {
 		// TODO over 100MB need to be split using CAR,, implement it
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
+		log.Errorf("PullCidServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
 		return fmt.Errorf("PullCidServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
 	}
 
@@ -444,7 +449,7 @@ func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid s
 	}
 	req, err := http.NewRequest("POST", provider.uploadUrl, buf)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: http.NewRequest error: %v", err)
+		log.Errorf("PullCidServiceProtocol->httpUploadCidContent: http.NewRequest error: %v", err)
 		return nil
 	}
 
@@ -452,25 +457,25 @@ func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid s
 
 	resp, err := client.Do(req)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: client.Do error: %v", err)
+		log.Errorf("PullCidServiceProtocol->httpUploadCidContent: client.Do error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: ioutil.ReadAll error: %v", err)
+		log.Errorf("PullCidServiceProtocol->httpUploadCidContent: ioutil.ReadAll error: %v", err)
 		return err
 	}
 
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent: body: %s", string(responseBody))
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent end")
+	log.Debugf("PullCidServiceProtocol->httpUploadCidContent: body: %s", string(responseBody))
+	log.Debugf("PullCidServiceProtocol->httpUploadCidContent end")
 	return nil
 }
 
 func (p *PullCidServiceProtocol) initIpfsProviderTask(providerName string, apiKey string, uploadUrl string, interval time.Duration, timeout time.Duration, uploadFunc ipfsUpload) error {
 	if p.ipfsProviderList[providerName] != nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
+		log.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 		return fmt.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 	}
 	p.ipfsProviderList[providerName] = &ipfsProviderList{
@@ -486,30 +491,30 @@ func (p *PullCidServiceProtocol) initIpfsProviderTask(providerName string, apiKe
 }
 
 func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid string) error {
-	customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
+	log.Debugf("PullCidServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
 		providerName, cid)
 	dkvsKey := StorageKeyPrefix + cid
 	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
 	if isExistKey {
 		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
 		if err != nil {
-			customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
+			log.Errorf("PullCidServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
 			return err
 		}
 		err = json.Unmarshal(value, p.storageInfoList)
 		if err != nil {
-			customProtocol.Logger.Warnf("PullCidServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
+			log.Warnf("PullCidServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
 			return err
 		}
 		if (*p.storageInfoList)[providerName] != nil {
-			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent: provider is already exist in dkvs, providerName: %s", providerName)
+			log.Debugf("PullCidServiceProtocol->asyncUploadCidContent: provider is already exist in dkvs, providerName: %s", providerName)
 			return nil
 		}
 	}
 
 	ipfsProviderTask := p.ipfsProviderList[providerName]
 	if ipfsProviderTask == nil {
-		customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
+		log.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
 		return fmt.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
 	}
 	ipfsProviderTask.mutex.Lock()
@@ -557,16 +562,16 @@ func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid 
 		select {
 		case <-ipfsProviderTask.timer.C:
 			ipfsProviderTask.taskQueue <- true
-			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderTask.timer.C")
+			log.Debugf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderTask.timer.C")
 		case <-done:
 			ipfsProviderTask.timer.Stop()
 			ipfsProviderTask.isRun = false
-			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: done")
+			log.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: done")
 			return nil
 		case <-p.Ctx.Done():
 			ipfsProviderTask.timer.Stop()
 			ipfsProviderTask.isRun = false
-			customProtocol.Logger.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: p.Ctx.Done()")
+			log.Debugf("PullCidServiceProtocol->asyncUploadCidContent end: p.Ctx.Done()")
 			return p.Ctx.Err()
 		}
 	}

@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"unsafe"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
-
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 )
+
+var baseLog = ipfsLog.Logger("dmsg.service.base")
 
 type BaseService struct {
 	TvBase             common.TvBaseService
@@ -31,7 +33,7 @@ func (d *BaseService) Init(baseService common.TvBaseService) error {
 	var err error
 	d.Pubsub, err = pubsub.NewGossipSub(d.TvBase.GetCtx(), d.TvBase.GetHost())
 	if err != nil {
-		log.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
+		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
 
@@ -56,17 +58,17 @@ func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) 
 	protocolIDLen := int(unsafe.Sizeof(protocolID))
 	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
 	if err != nil {
-		log.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
+		baseLog.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
 		return -1, 0, err
 	}
 	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
 	if protocolID > maxProtocolId {
-		log.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
+		baseLog.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
 		return -1, 0, err
 	}
 	dataLen := len(pubsubData)
 	if dataLen <= protocolIDLen {
-		log.Errorf("CommonService->checkProtocolData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
+		baseLog.Errorf("CommonService->checkProtocolData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
 		return protocolID, protocolIDLen, err
 	}
 	return protocolID, protocolIDLen, nil
@@ -75,15 +77,15 @@ func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) 
 func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
 	m, err := target.WaitMsg()
 	if err != nil {
-		log.Warnf("BaseService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
+		baseLog.Warnf("BaseService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
 		return -1, nil, nil, err
 	}
 
-	log.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
+	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
 
 	protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
 	if err != nil {
-		log.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
+		baseLog.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
 		return -1, nil, nil, nil
 	}
 
@@ -91,7 +93,7 @@ func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, [
 	protocolHandle := d.ProtocolHandleList[protocolID]
 
 	if protocolHandle == nil {
-		log.Warnf("BaseService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
+		baseLog.Warnf("BaseService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
 		return -1, nil, nil, nil
 	}
 
@@ -106,12 +108,12 @@ func (d *BaseService) IsEnableService() bool {
 func (d *BaseService) PublishProtocol(target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
 	if err != nil {
-		log.Errorf("Service->PublishProtocol: GenProtoData error: %v", err)
+		baseLog.Errorf("Service->PublishProtocol: GenProtoData error: %v", err)
 		return err
 	}
 
 	if err := target.Publish(buf); err != nil {
-		log.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
+		baseLog.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
 		return fmt.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
 	}
 	return nil

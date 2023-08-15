@@ -26,7 +26,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var log = ipfsLog.Logger("mailboxservice")
+var log = ipfsLog.Logger("dmsg.service.mailbox")
 
 type MailboxService struct {
 	dmsgServiceCommon.BaseService

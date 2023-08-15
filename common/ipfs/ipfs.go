@@ -11,7 +11,7 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
-const LoggerName = "tvipfs"
+const LoggerName = "tvbase.ipfs"
 
 var Logger = ipfsLog.Logger(LoggerName)
 

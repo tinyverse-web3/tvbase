@@ -7,7 +7,6 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
@@ -106,7 +105,6 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	// get response.Content
 	err := customStreamProtocolResponseParam.Service.HandleResponse(request, response)
 	if err != nil {
-		log.Logger.Errorf("dmsgService->CustomStreamProtocolAdapter: Service.HandleResponse error: %v", err)
 		return response, err
 	}
 

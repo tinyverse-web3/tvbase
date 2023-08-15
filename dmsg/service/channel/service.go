@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var log = ipfsLog.Logger("channelservice")
+var log = ipfsLog.Logger("dmsg.service.channel")
 
 type ChannelService struct {
 	dmsgServiceCommon.LightUserService

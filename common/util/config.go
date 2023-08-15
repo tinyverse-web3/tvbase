@@ -115,13 +115,16 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 }
 
 func SetLogModule(moduleLevels map[string]string) error {
-	// ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
 	for module, level := range moduleLevels {
-		ipfsLog.SetLogLevel(module, level)
+		err := ipfsLog.SetLogLevelRegex(module, level)
+		if err != nil {
+			fmt.Printf("SetLogModule->SetLogLevelRegex: %v\n", err)
+		}
 	}
 	return nil
 }
 
+// TOOD : need delete
 func SetLogLevel(lv string, moreModuleList ...string) {
 	interalModuleList := []string{
 		"tvbase",
