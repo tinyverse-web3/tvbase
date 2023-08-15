@@ -79,7 +79,7 @@ func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, [
 		return -1, nil, nil, err
 	}
 
-	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", m.Topic, m.ReceivedFrom)
+	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
 
 	protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
 	if err != nil {
