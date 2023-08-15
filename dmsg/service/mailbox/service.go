@@ -65,7 +65,8 @@ func (d *MailboxService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
-	log.Debug("MailboxService->Start begin")
+	log.Debug("MailboxService->Start begin\nenableService: %v", enableService)
+	d.BaseService.Start(true)
 	if d.EnableService {
 		var err error
 		d.datastore, err = db.CreateBadgerDB(d.GetConfig().DatastorePath)
