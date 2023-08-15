@@ -65,7 +65,7 @@ func (d *MailboxService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
-	log.Debug("MailboxService->Start begin\nenableService: %v", enableService)
+	log.Debugf("MailboxService->Start begin\nenableService: %v", enableService)
 	d.BaseService.Start(enableService)
 	if d.EnableService {
 		var err error
