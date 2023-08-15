@@ -205,10 +205,10 @@ func (d *MailboxService) OnCreateMailboxRequest(
 	}
 	user := d.getServiceUser(request.BasicData.Pubkey)
 	if user != nil {
-		log.Errorf("dmsgService->OnCreateMailboxRequest: user public key pubsub already exist")
+		log.Errorf("dmsgService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
 		retCode := &pb.RetCode{
 			Code:   dmsgProtocol.AlreadyExistCode,
-			Result: "dmsgService->OnCreateMailboxRequest: user public key pubsub already exist",
+			Result: "dmsgService->OnCreateMailboxRequest: pubkey already exist in serviceUserList",
 		}
 		return nil, retCode, false, nil
 	}
