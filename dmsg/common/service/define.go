@@ -11,6 +11,10 @@ import (
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
 
+const ChannelTopicNameSuffix = "channel"
+const MsgTopicNameSuffix = "msg"
+const MailboxTopicNameSuffix = "mailbox"
+
 type BaseService interface {
 	IsEnableService() bool
 	GetConfig() *config.DMsgConfig

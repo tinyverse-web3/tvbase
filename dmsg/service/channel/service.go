@@ -10,6 +10,7 @@ import (
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
+	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -54,7 +55,8 @@ func (d *ChannelService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
 	log.Debug("ChannelService->Start begin")
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
+	err := d.LightUserService.Start(
+		enableService, pubkeyData, getSig, dmsgCommonService.ChannelTopicNameSuffix)
 	if err != nil {
 		return err
 	}
@@ -108,7 +110,8 @@ func (d *ChannelService) SubscribeChannel(pubkey string) error {
 		return err
 	}
 
-	err = target.InitPubsub(pubkey)
+	topicName := pubkey + "/" + dmsgCommonService.ChannelTopicNameSuffix
+	err = target.InitPubsub(topicName)
 	if err != nil {
 		log.Errorf("ChannelService->subscribeUser: InitPubsub error: %v", err)
 		return err

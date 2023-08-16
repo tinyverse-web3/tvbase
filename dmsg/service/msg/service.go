@@ -8,6 +8,7 @@ import (
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
+	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -50,7 +51,8 @@ func (d *MsgService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
 	log.Debug("MsgService->Start begin\nenableService: %v", enableService)
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
+
+	err := d.LightUserService.Start(enableService, pubkeyData, getSig, dmsgCommonService.MsgTopicNameSuffix)
 	if err != nil {
 		return err
 	}
