@@ -50,7 +50,7 @@ func (d *MsgService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback) error {
-	log.Debug("MsgService->Start begin\nenableService: %v", enableService)
+	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 
 	err := d.LightUserService.Start(enableService, pubkeyData, getSig, dmsgCommonService.MsgTopicNameSuffix)
 	if err != nil {

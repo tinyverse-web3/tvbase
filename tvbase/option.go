@@ -1,6 +1,7 @@
 package tvbase
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -75,7 +76,7 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 
 	switch m.nodeCfg.AutoNAT.ServiceMode {
 	default:
-		panic("BUG: unhandled autonat service mode")
+		return nil, fmt.Errorf("TvBase->createNATOpts: unhandled autonat service mode")
 	case tvConfig.AutoNATServiceDisabled:
 	case tvConfig.AutoNATServiceUnset:
 		// TODO

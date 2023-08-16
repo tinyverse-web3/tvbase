@@ -149,7 +149,6 @@ func (m *TvBase) Start() error {
 	err = m.bootstrap()
 	if err != nil {
 		tvLog.Logger.Warn(err)
-		return nil
 	}
 
 	err = m.initRendezvous()

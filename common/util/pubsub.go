@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	b4 "github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p/core/discovery"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/routing"
@@ -31,8 +32,16 @@ func CreateDiscovery(host host.Host, cr routing.ContentRouting) (service discove
 // @REF: github.com/libp2p/go-libp2p/p2p/discovery/util:PubsubAdvertise()
 func PubsubAdvertise(ctx context.Context, a discovery.Advertiser, ns string, opts ...discovery.Option) {
 	go func() {
+		bo := b4.NewExponentialBackOff()
+		bo.InitialInterval = 2 * time.Second
+		bo.Multiplier = 1.5
+		bo.MaxInterval = 30 * time.Second
+		bo.MaxElapsedTime = 0 // never stop
+		t := b4.NewTicker(bo)
+
 		for {
 			ttl, err := a.Advertise(ctx, ns, opts...)
+
 			if err != nil {
 				tvLog.Logger.Warnf("Advertising failure, ns:%s, err: %v", ns, err)
 				if ctx.Err() != nil {
@@ -40,22 +49,25 @@ func PubsubAdvertise(ctx context.Context, a discovery.Advertiser, ns string, opt
 				}
 
 				select {
-				//@ADJUST 2 * time.Minute to 30 * time.Second
-				case <-time.After(30 * time.Second):
+				case <-t.C:
 					continue
+				// case <-time.After(30 * time.Second):
+				// 	continue
 				case <-ctx.Done():
 					return
 				}
 			}
 			tvLog.Logger.Infof("Advertising success, ns:%s, ttl:%v", ns, ttl)
 
+			t.Stop()
 			wait := 7 * ttl / 8
-			//@ADJUST wait time is too short
 			if wait > 10*time.Minute {
 				wait = 10 * time.Minute
 			}
+
 			select {
 			case <-time.After(wait):
+				t = b4.NewTicker(bo)
 			case <-ctx.Done():
 				return
 			}
