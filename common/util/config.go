@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -115,8 +116,13 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 }
 
 func SetLogModule(moduleLevels map[string]string) error {
-	// ipfsLog.ColorizedOutput = true
-	for module, level := range moduleLevels {
+	var sortedModuleList []string
+	for module := range moduleLevels {
+		sortedModuleList = append(sortedModuleList, module)
+	}
+	sort.Strings(sortedModuleList)
+	for _, module := range sortedModuleList {
+		level := moduleLevels[module]
 		err := ipfsLog.SetLogLevelRegex(module, level)
 		if err != nil {
 			fmt.Printf("SetLogModule->SetLogLevelRegex: %v\n", err)
