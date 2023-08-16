@@ -192,6 +192,9 @@ func (d *MailboxService) GetPublishTarget(pubkey string) (*dmsgUser.Target, erro
 		log.Errorf("MailboxService->GetPublishTarget: target is nil")
 		return nil, fmt.Errorf("MailboxService->GetPublishTarget: target is nil")
 	}
+
+	topicName := target.Pubsub.Topic.String()
+	log.Debugf("MailboxService->GetPublishTarget: target's topic name: %s", topicName)
 	return target, nil
 }
 
