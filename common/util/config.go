@@ -47,7 +47,7 @@ func GenConfig2IdentityFile(rootPath string, mode define.NodeMode) error {
 		}
 	}
 
-	var config tvbaseConfig.NodeConfig
+	var config *tvbaseConfig.NodeConfig
 	defaultPort := tvbaseConfig.DefaultPort
 	switch mode {
 	case define.ServiceMode:
@@ -58,7 +58,7 @@ func GenConfig2IdentityFile(rootPath string, mode define.NodeMode) error {
 
 	config = tvbaseConfig.NewDefaultNodeConfig()
 	config.Mode = mode
-	err = tvbaseConfig.GenConfigFile(fullPath, &config)
+	err = tvbaseConfig.GenConfigFile(fullPath, config)
 	if err != nil {
 		fmt.Println("GenConfig2IdentityFile->GenConfigFile: err:" + err.Error())
 	}
@@ -107,6 +107,13 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	nodeCfgPath := fullPath + tvbaseConfig.NodeConfigFileName
+	_, err = os.Stat(nodeCfgPath)
+	if os.IsNotExist(err) {
+		config = tvbaseConfig.NewDefaultNodeConfig()
+	}
+
 	err = tvbaseConfig.InitConfig(fullPath, config)
 	if err != nil {
 		fmt.Println("InitConfig: err:" + err.Error())

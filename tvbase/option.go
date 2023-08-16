@@ -35,12 +35,12 @@ import (
 
 func (m *TvBase) initConfig(rootPath string) error {
 	cfg := tvConfig.NewDefaultNodeConfig()
-	err := tvConfig.InitConfig(rootPath, &cfg)
+	err := tvConfig.InitConfig(rootPath, cfg)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->initConfig: error: %v", err)
 		return err
 	}
-	m.nodeCfg = &cfg
+	m.nodeCfg = cfg
 	return nil
 }
 

@@ -162,8 +162,8 @@ type CoreHttpConfig struct {
 // var DefaultNodeCfg NodeConfig = NewDefaultNodeConfig()
 
 // returns a default relay configuration using default resource
-func NewDefaultNodeConfig() NodeConfig {
-	return NodeConfig{
+func NewDefaultNodeConfig() *NodeConfig {
+	return &NodeConfig{
 		Mode: define.LightMode,
 		Network: NetworkConfig{
 			IsLocalNet: false,
@@ -301,7 +301,7 @@ func GenConfigFile(rootPath string, nodeCfg *NodeConfig) error {
 			return err
 		}
 		defaultCfg := NewDefaultNodeConfig()
-		err := mergeJSON(nodeCfg, &defaultCfg)
+		err := MergeJSON(nodeCfg, &defaultCfg)
 		if err != nil {
 			return err
 		}
@@ -356,7 +356,7 @@ func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
 	return nil
 }
 
-func mergeJSON(srcObj, destObj any) error {
+func MergeJSON(srcObj, destObj any) error {
 	srcBytes, _ := json.Marshal(srcObj)
 	destBytes, _ := json.Marshal(destObj)
 
