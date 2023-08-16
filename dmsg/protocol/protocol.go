@@ -28,9 +28,7 @@ type Protocol struct {
 func (p *Protocol) HandleRequestData(
 	requestProtoData []byte,
 	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, bool, error) {
-	log.Logger.Debugf(
-		"Protocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
-		requestProtoData, dataList)
+	log.Logger.Debugf("Protocol->HandleRequestData begin\ndataList: %v", dataList)
 
 	defer func() {
 		if r := recover(); r != nil {
