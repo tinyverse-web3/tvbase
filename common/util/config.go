@@ -100,21 +100,22 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 			return nil, fmt.Errorf("LoadNodeConfig: options[0](rootPath) is not string")
 		}
 	}
-	config := tvbaseConfig.NewDefaultNodeConfig()
 
+	config := &tvbaseConfig.NodeConfig{}
 	fullPath, err := GetRootPath(rootPath)
 	if err != nil {
 		return nil, err
 	}
-	err = tvbaseConfig.InitConfig(fullPath, &config)
+	err = tvbaseConfig.InitConfig(fullPath, config)
 	if err != nil {
 		fmt.Println("InitConfig: err:" + err.Error())
 		return nil, err
 	}
-	return &config, nil
+	return config, nil
 }
 
 func SetLogModule(moduleLevels map[string]string) error {
+	// ipfsLog.ColorizedOutput = true
 	for module, level := range moduleLevels {
 		err := ipfsLog.SetLogLevelRegex(module, level)
 		if err != nil {
