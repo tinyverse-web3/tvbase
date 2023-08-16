@@ -526,7 +526,9 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) {
 		msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
 		seekRequestPID := d.seekMailboxProtocol.Adapter.GetRequestPID()
 		seekResponsePID := d.seekMailboxProtocol.Adapter.GetResponsePID()
-		log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d", protocolID)
+
+		topicName := target.Pubsub.Topic.String()
+		log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", protocolID, topicName)
 
 		switch protocolID {
 		case msgRequestPID:
