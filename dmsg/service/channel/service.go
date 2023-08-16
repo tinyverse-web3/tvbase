@@ -405,7 +405,7 @@ func (d *ChannelService) createChannelService(pubkey string) error {
 // channel
 func (d *ChannelService) isAvailablePubChannel(pubKey string) bool {
 	pubChannelInfo := len(d.channelList)
-	if pubChannelInfo >= d.GetConfig().MaxPubChannelPubsubCount {
+	if pubChannelInfo >= d.GetConfig().MaxChannelCount {
 		log.Warnf("dmsgService->isAvailableMailbox: exceeded the maximum number of mailbox services, current destUserCount:%v", pubChannelInfo)
 		return false
 	}

@@ -691,7 +691,7 @@ func (d *MailboxService) unsubscribeServiceUserList() error {
 // mailbox
 func (d *MailboxService) isAvailableMailbox(pubKey string) bool {
 	destUserCount := len(d.serviceUserList)
-	return destUserCount < d.GetConfig().MaxMailboxPubsubCount
+	return destUserCount < d.GetConfig().MaxMailboxCount
 }
 
 func (d *MailboxService) initMailbox(pubkey string) {
