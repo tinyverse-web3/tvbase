@@ -613,6 +613,7 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		ServicePeerID: "",
 	}
 
+	go d.handlePubsubProtocol(&d.lightMailboxUser.Target)
 	log.Debugf("MailboxService->subscribeUser end")
 	return nil
 }
