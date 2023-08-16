@@ -25,9 +25,9 @@ type Protocol struct {
 	Adapter         Adapter
 }
 
-func (p *Protocol) HandleRequestData(
-	requestProtoData []byte,
-	dataList ...any) (protoreflect.ProtoMessage, protoreflect.ProtoMessage, bool, error) {
+func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
+	protoreflect.ProtoMessage,
+	protoreflect.ProtoMessage, bool, error) {
 	log.Logger.Debugf("Protocol->HandleRequestData begin\ndataList: %v", dataList)
 
 	defer func() {

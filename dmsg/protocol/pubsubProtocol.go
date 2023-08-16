@@ -24,12 +24,8 @@ type PubsubProtocol struct {
 	Protocol
 }
 
-func (p *PubsubProtocol) HandleRequestData(
-	requestProtocolData []byte,
-	dataList ...any) error {
-	log.Logger.Debugf(
-		"PubsubProtocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
-		requestProtocolData, dataList)
+func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList ...any) error {
+	log.Logger.Debugf("PubsubProtocol->HandleRequestData begin:\ndataList: %v", dataList)
 
 	request, response, abort, err := p.Protocol.HandleRequestData(requestProtocolData)
 	if abort {
