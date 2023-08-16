@@ -390,14 +390,14 @@ func (d *MailboxService) OnReadMailboxMsgResponse(
 
 // MailboxPpCallback
 func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debug("MailboxService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("MailboxService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
 		log.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
 		return nil, nil, false, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
 	}
 
-	// not responding to self
+	// no responding to self
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
 		log.Debugf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
 		return nil, nil, true, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
