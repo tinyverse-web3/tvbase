@@ -230,7 +230,7 @@ func (d *MailboxService) OnCreateMailboxRequest(
 func (d *MailboxService) OnCreateMailboxResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debug("MailboxService->OnCreateMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
+	log.Debugf("MailboxService->OnCreateMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
