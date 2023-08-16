@@ -113,7 +113,6 @@ func (u *Target) Close() error {
 	topicName := u.Subscription.Topic()
 	err := dmsgCommonPubsub.GetPubsubMgr().Unsubscribe(topicName, u.Subscription)
 	if err != nil {
-		dmsgLog.Logger.Errorf("User->Close: Topic.Close error: %v", err)
 	}
 	return err
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/db"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
+	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -591,7 +592,8 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		return err
 	}
 
-	err = target.InitPubsub(pubkey)
+	topicName := pubkey + "/" + dmsgCommonService.MailboxTopicNameSuffix
+	err = target.InitPubsub(topicName)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeUser: InitPubsub error: %v", err)
 		return err
