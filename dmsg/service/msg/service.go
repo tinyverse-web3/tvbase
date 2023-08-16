@@ -97,7 +97,9 @@ func (d *MsgService) SubscribeDestUser(pubkey string) error {
 		log.Errorf("MsgService->SubscribeDestUser: NewTarget error: %v", err)
 		return err
 	}
-	err = target.InitPubsub(pubkey)
+
+	topicName := pubkey + "/" + dmsgCommonService.MsgTopicNameSuffix
+	err = target.InitPubsub(topicName)
 	if err != nil {
 		log.Errorf("MsgService->subscribeUser: InitPubsub error: %v", err)
 		return err

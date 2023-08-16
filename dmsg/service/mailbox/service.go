@@ -640,7 +640,9 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 		log.Errorf("MailboxService->subscribeServiceUser: NewTarget error: %v", err)
 		return err
 	}
-	err = target.InitPubsub(pubkey)
+
+	topicName := pubkey + "/" + dmsgCommonService.MailboxTopicNameSuffix
+	err = target.InitPubsub(topicName)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeServiceUser: InitPubsub error: %v", err)
 		return err
