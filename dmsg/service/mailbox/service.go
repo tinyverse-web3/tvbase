@@ -560,7 +560,9 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 	}
 
 	if !d.EnableService {
-		if !d.TvBase.GetIsRendezvous() {
+		if d.TvBase.GetIsRendezvous() {
+			d.initMailbox(pubkey)
+		} else {
 			select {
 			case <-d.TvBase.GetRendezvousChan():
 				d.initMailbox(pubkey)
@@ -570,7 +572,6 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 				return d.TvBase.GetCtx().Err()
 			}
 		}
-		d.initMailbox(pubkey)
 	}
 
 	log.Debug("MailboxService->initUser end")
