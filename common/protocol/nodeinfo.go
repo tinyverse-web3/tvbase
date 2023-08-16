@@ -93,11 +93,11 @@ type Result struct {
 }
 
 func (ps *NodeInfoService) Request(ctx context.Context, p peer.ID) *Result {
-	return RequestNodeInfo(ctx, ps.Host, p)
+	return requestNodeInfo(ctx, ps.Host, p)
 }
 
 // Request NodeInfo the remote peer until the context is canceled, returning a stream of RTTs or errors.
-func RequestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
+func requestNodeInfo(ctx context.Context, h host.Host, p peer.ID) *Result {
 	s, err := h.NewStream(network.WithUseTransient(ctx, "tvbase/nodeinfo"), p, ID)
 	if err != nil {
 		return &Result{Error: err}

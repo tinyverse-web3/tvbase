@@ -109,7 +109,12 @@ func (d *MailboxService) Stop() error {
 		d.datastore.Close()
 		d.datastore = nil
 	}
-	d.stopCleanRestResource <- true
+	select {
+	case d.stopCleanRestResource <- true:
+		log.Debugf("MailboxService->Stop: succ send stopCleanRestResource")
+	default:
+		log.Debugf("MailboxService->Stop: no receiver for stopCleanRestResource")
+	}
 	close(d.stopCleanRestResource)
 	log.Debug("MailboxService->Stop end")
 	return nil

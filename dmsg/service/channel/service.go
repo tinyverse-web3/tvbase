@@ -87,7 +87,12 @@ func (d *ChannelService) Stop() error {
 	}
 
 	d.UnsubscribeChannelList()
-	d.stopCleanRestResource <- true
+	select {
+	case d.stopCleanRestResource <- true:
+		log.Debugf("ChannelService->Stop: succ send stopCleanRestResource")
+	default:
+		log.Debugf("ChannelService->Stop: no receiver for stopCleanRestResource")
+	}
 	close(d.stopCleanRestResource)
 	log.Debug("ChannelService->Stop end")
 	return nil
@@ -380,7 +385,6 @@ func (d *ChannelService) createChannelService(pubkey string) error {
 				find = true
 				return nil
 			}
-
 		case <-time.After(time.Second * 3):
 			continue
 		case <-d.TvBase.GetCtx().Done():

@@ -21,8 +21,13 @@ func (m *TvBase) initRendezvous() error {
 
 		handleNoNet := func(peerID peer.ID) error {
 			if !m.IsExistConnectedPeer() {
+				select {
+				case m.isRendezvousChan <- false:
+					tvLog.Logger.Debugf("TvBase-initRendezvous: succ send isRendezvousChan")
+				default:
+					tvLog.Logger.Debugf("TvBase-initRendezvous: no receiver for isRendezvousChan")
+				}
 				m.isRendezvous = false
-				m.isRendezvousChan <- false
 			}
 			return nil
 		}
@@ -35,6 +40,7 @@ func (m *TvBase) initRendezvous() error {
 func (m *TvBase) DiscoverRendezvousPeers() {
 	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers begin")
 	for !m.isRendezvous {
+		m.isDiscoverRendzvousing = true
 		rendezvousPeerCount := 0
 		start := time.Now()
 		peerAddrInfoChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TvbaseRendezvous)
@@ -73,7 +79,13 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 		} else {
 			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
 			m.isRendezvous = true
-			m.isRendezvousChan <- true
+			select {
+			case m.isRendezvousChan <- true:
+				tvLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: succ send isRendezvousChan")
+			default:
+				tvLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: no receiver for isRendezvousChan")
+			}
+			m.isDiscoverRendzvousing = false
 		}
 	}
 	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers end")

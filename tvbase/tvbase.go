@@ -44,25 +44,26 @@ import (
 )
 
 type TvBase struct {
-	dmsg                 *service.Dmsg
-	DkvsService          tvCommon.DkvsService
-	TracerSpan           trace.Span
-	ctx                  context.Context
-	host                 host.Host
-	dht                  *kaddht.IpfsDHT
-	dhtDatastore         db.Datastore
-	nodeCfg              *tvConfig.NodeConfig
-	lightPeerListMutex   sync.Mutex
-	servicePeerListMutex sync.Mutex
-	servicePeerList      tvPeer.PeerInfoList
-	lightPeerList        tvPeer.PeerInfoList
-	connectedCbList      []tvPeer.ConnectCallback
-	notConnectedCbList   []tvPeer.ConnectCallback
-	nodeInfoService      *tvProtocol.NodeInfoService
-	pubRoutingDiscovery  *drouting.RoutingDiscovery
-	isRendezvous         bool
-	isRendezvousChan     chan bool
-	launch               *fx.App
+	dmsg                   *service.Dmsg
+	DkvsService            tvCommon.DkvsService
+	TracerSpan             trace.Span
+	ctx                    context.Context
+	host                   host.Host
+	dht                    *kaddht.IpfsDHT
+	dhtDatastore           db.Datastore
+	nodeCfg                *tvConfig.NodeConfig
+	lightPeerListMutex     sync.Mutex
+	servicePeerListMutex   sync.Mutex
+	servicePeerList        tvPeer.PeerInfoList
+	lightPeerList          tvPeer.PeerInfoList
+	connectedCbList        []tvPeer.ConnectCallback
+	notConnectedCbList     []tvPeer.ConnectCallback
+	nodeInfoService        *tvProtocol.NodeInfoService
+	pubRoutingDiscovery    *drouting.RoutingDiscovery
+	isRendezvous           bool
+	isDiscoverRendzvousing bool
+	isRendezvousChan       chan bool
+	launch                 *fx.App
 }
 
 // new tvbase
@@ -565,15 +566,16 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 				for {
 					select {
 					case <-t.C:
-						if len(ph.Network().Peers()) == 0 {
+						if !m.IsExistConnectedPeer() {
 							tvLog.Logger.Warn("tvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
 							err := m.bootstrap()
 							if err != nil {
 								tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
 							} else {
-								m.isRendezvous = false
-								m.isRendezvousChan <- false
-								go m.DiscoverRendezvousPeers()
+								if !m.isDiscoverRendzvousing {
+									m.isRendezvous = false
+									go m.DiscoverRendezvousPeers()
+								}
 							}
 						}
 					case <-done:
