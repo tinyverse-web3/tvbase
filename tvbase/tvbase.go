@@ -567,11 +567,9 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 					select {
 					case <-t.C:
 						if !m.IsExistConnectedPeer() {
-							tvLog.Logger.Warn("tvBase->netCheck: We are in private network and have no peers, might be configuration mistake, try to connect bootstrap peer node again")
+							tvLog.Logger.Warn("tvBase->netCheck: no peers")
 							err := m.bootstrap()
-							if err != nil {
-								tvLog.Logger.Warnf("TvBase-netCheck: fail to connect bootstrap peer node, error: %v", err)
-							} else {
+							if err == nil {
 								if !m.isDiscoverRendzvousing {
 									m.isRendezvous = false
 									go m.DiscoverRendezvousPeers()
