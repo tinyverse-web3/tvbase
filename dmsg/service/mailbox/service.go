@@ -363,7 +363,7 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 func (d *MailboxService) OnReadMailboxMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debug("MailboxService->OnReadMailboxMsgResponse: begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
+	log.Debugf("MailboxService->OnReadMailboxMsgResponse: begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
 	response, ok := responseProtoData.(*pb.ReadMailboxRes)
