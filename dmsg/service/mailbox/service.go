@@ -614,12 +614,22 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		return err
 	}
 
-	d.lightMailboxUser = &dmsgUser.LightMailboxUser{
+	user := &dmsgUser.LightMailboxUser{
 		Target:        *target,
 		ServicePeerID: "",
 	}
 
-	go d.handlePubsubProtocol(&d.lightMailboxUser.Target)
+	err = d.handlePubsubProtocol(&d.lightMailboxUser.Target)
+	if err != nil {
+		log.Errorf("MailboxService->subscribeUser: handlePubsubProtocol error: %v", err)
+		err := user.Target.Close()
+		if err != nil {
+			log.Warnf("MailboxService->subscribeUser: Target.Close error: %v", err)
+			return err
+		}
+		return err
+	}
+	d.lightMailboxUser = user
 	log.Debugf("MailboxService->subscribeUser end")
 	return nil
 }
@@ -671,7 +681,7 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 		log.Errorf("MailboxService->subscribeServiceUser: handlePubsubProtocol error: %v", err)
 		err := user.Target.Close()
 		if err != nil {
-			log.Warnf("MailboxService->subscribeServiceUser: handlePubsubProtocol error: %v", err)
+			log.Warnf("MailboxService->subscribeServiceUser: Target.Close error: %v", err)
 			return err
 		}
 		return err
