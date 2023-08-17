@@ -135,7 +135,7 @@ func parseCmdParams() string {
 func main() {
 	rootPath := parseCmdParams()
 
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath, define.ServiceMode)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: %v", err)
 		return

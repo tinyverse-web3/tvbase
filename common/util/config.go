@@ -34,7 +34,6 @@ func GenConfig2IdentityFile(rootPath string, mode define.NodeMode) error {
 		}
 		fullPath = filepath.Join(defaultRootPath, fullPath)
 	}
-
 	if !strings.HasSuffix(fullPath, string(filepath.Separator)) {
 		fullPath += string(filepath.Separator)
 	}
@@ -47,22 +46,10 @@ func GenConfig2IdentityFile(rootPath string, mode define.NodeMode) error {
 		}
 	}
 
-	var config *tvbaseConfig.NodeConfig
-	defaultPort := tvbaseConfig.DefaultPort
-	switch mode {
-	case define.ServiceMode:
-		tvbaseConfig.DefaultPort = tvbaseConfig.ServicePort
-	case define.LightMode:
-		tvbaseConfig.DefaultPort = tvbaseConfig.LightPort
-	}
-
-	config = tvbaseConfig.NewDefaultNodeConfig()
-	config.Mode = mode
-	err = tvbaseConfig.GenConfigFile(fullPath, config)
+	err = tvbaseConfig.Merge2GenConfigFile(fullPath, mode)
 	if err != nil {
 		fmt.Println("GenConfig2IdentityFile->GenConfigFile: err:" + err.Error())
 	}
-	tvbaseConfig.DefaultPort = defaultPort
 
 	fmt.Println("GenConfig2IdentityFile->generate node config file: " + fullPath + tvbaseConfig.NodeConfigFileName)
 	err = identity.GenIdenityFile(fullPath)
@@ -101,22 +88,23 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 			return nil, fmt.Errorf("LoadNodeConfig: options[0](rootPath) is not string")
 		}
 	}
+	defaultMode := define.LightMode
+	if len(options) > 1 {
+		ok := false
+		defaultMode, ok = options[1].(define.NodeMode)
+		if !ok {
+			fmt.Println("LoadNodeConfig: options[0](rootPath) is not string")
+			return nil, fmt.Errorf("LoadNodeConfig: options[0](rootPath) is not string")
+		}
+	}
 
-	config := &tvbaseConfig.NodeConfig{}
 	fullPath, err := GetRootPath(rootPath)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeCfgPath := fullPath + tvbaseConfig.NodeConfigFileName
-	_, err = os.Stat(nodeCfgPath)
-	if os.IsNotExist(err) {
-		config = tvbaseConfig.NewDefaultNodeConfig()
-	}
-
-	err = tvbaseConfig.InitConfig(fullPath, config)
+	config, err := tvbaseConfig.InitNodeConfigFile(fullPath, defaultMode)
 	if err != nil {
-		fmt.Println("InitConfig: err:" + err.Error())
 		return nil, err
 	}
 	return config, nil

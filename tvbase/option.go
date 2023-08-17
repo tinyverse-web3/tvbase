@@ -33,14 +33,12 @@ import (
 	"go.uber.org/fx"
 )
 
-func (m *TvBase) initConfig(rootPath string) error {
-	cfg := tvConfig.NewDefaultNodeConfig()
-	err := tvConfig.InitConfig(rootPath, cfg)
+func (m *TvBase) initConfig(rootPath string, defaultMode define.NodeMode) error {
+	var err error
+	m.nodeCfg, err = tvConfig.InitNodeConfigFile(rootPath, defaultMode)
 	if err != nil {
-		tvLog.Logger.Errorf("tvbase->initConfig: error: %v", err)
 		return err
 	}
-	m.nodeCfg = cfg
 	return nil
 }
 

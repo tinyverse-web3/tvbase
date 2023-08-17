@@ -92,8 +92,17 @@ func NewTvbase(options ...any) (*TvBase, error) {
 	if len(options) > 2 {
 		isStart, ok = options[2].(bool)
 		if !ok {
-			tvLog.Logger.Errorf("NewTvbase: options[0](isStart) is not bool")
-			return nil, fmt.Errorf("NewTvbase: options[0](isStart) is not bool")
+			tvLog.Logger.Errorf("NewTvbase: options[2](isStart) is not bool")
+			return nil, fmt.Errorf("NewTvbase: options[2](isStart) is not bool")
+		}
+	}
+
+	defaultMode := define.LightMode
+	if len(options) > 3 {
+		defaultMode, ok = options[3].(define.NodeMode)
+		if !ok {
+			tvLog.Logger.Errorf("NewTvbase: options[3](mode) is not NodeMode")
+			return nil, fmt.Errorf("NewTvbase: options[3](mode) is not NodeMode")
 		}
 	}
 
@@ -101,7 +110,7 @@ func NewTvbase(options ...any) (*TvBase, error) {
 		ctx: ctx,
 	}
 
-	err := m.init(rootPath)
+	err := m.init(rootPath, defaultMode)
 	if err != nil {
 		return m, err
 	}
@@ -454,13 +463,13 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 	return m.host, nil
 }
 
-func (m *TvBase) init(rootPath string) error {
+func (m *TvBase) init(rootPath string, defaultMode define.NodeMode) error {
 	fullPath, err := tvutil.GetRootPath(rootPath)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err
 	}
-	err = m.initConfig(fullPath)
+	err = m.initConfig(fullPath, defaultMode)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/ipfs/kubo/config"
@@ -20,7 +19,6 @@ var (
 	NodeConfigFileName = "config.json"
 	LightPort          = "0"
 	ServicePort        = "9000"
-	DefaultPort        = LightPort
 )
 
 // NodeConfig stores the full configuration of the relays, ACLs and other settings
@@ -159,19 +157,22 @@ type CoreHttpConfig struct {
 	ApiPort int
 }
 
-// var DefaultNodeCfg NodeConfig = NewDefaultNodeConfig()
-
 // returns a default relay configuration using default resource
-func NewDefaultNodeConfig() *NodeConfig {
+func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
+	listenPort := LightPort
+	switch mode {
+	case define.ServiceMode:
+		listenPort = ServicePort
+	}
 	return &NodeConfig{
 		Mode: define.LightMode,
 		Network: NetworkConfig{
 			IsLocalNet: false,
 			ListenAddrs: []string{
-				"/ip4/0.0.0.0/udp/" + DefaultPort + "/quic",
-				"/ip6/::/udp/" + DefaultPort + "/quic",
-				"/ip4/0.0.0.0/tcp/" + DefaultPort,
-				"/ip6/::/tcp/" + DefaultPort,
+				"/ip4/0.0.0.0/udp/" + listenPort + "/quic",
+				"/ip6/::/udp/" + listenPort + "/quic",
+				"/ip4/0.0.0.0/tcp/" + listenPort,
+				"/ip6/::/tcp/" + listenPort,
 			},
 			Libp2pForceReachability: "",
 			Peers:                   []peer.AddrInfo{},
@@ -285,103 +286,104 @@ func (cfg *NodeConfig) LoadConfig(filePath string) error {
 	return nil
 }
 
-func GenConfigFile(rootPath string, nodeCfg *NodeConfig) error {
-	rootPath = strings.Trim(rootPath, " ")
-	if rootPath == "" {
-		rootPath = "."
-	}
-	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
-		rootPath = rootPath + string(filepath.Separator)
-	}
-	nodeCfgPath := rootPath + NodeConfigFileName
-	_, err := os.Stat(nodeCfgPath)
-	if !os.IsNotExist(err) {
-		err = nodeCfg.LoadConfig(nodeCfgPath)
+func Merge2GenConfigFile(rootPath string, mode define.NodeMode) error {
+	cfg := &NodeConfig{}
+	cfgPath := rootPath + NodeConfigFileName
+	defaultCfg := NewDefaultNodeConfig(mode)
+	_, err := os.Stat(cfgPath)
+	if os.IsNotExist(err) {
+		cfg = defaultCfg
+	} else {
+		err = cfg.LoadConfig(cfgPath)
 		if err != nil {
 			return err
 		}
-		defaultCfg := NewDefaultNodeConfig()
-		err := MergeJSON(nodeCfg, defaultCfg)
+		cfg, err = mergeJSON(cfg, defaultCfg)
 		if err != nil {
 			return err
 		}
 	}
-	file, err := json.MarshalIndent(nodeCfg, "", " ")
+	file, err := json.MarshalIndent(cfg, "", " ")
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(nodeCfgPath, file, 0644)
+	err = os.WriteFile(cfgPath, file, 0644)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func InitConfig(rootPath string, nodeCfg *NodeConfig) error {
-	rootPath = strings.Trim(rootPath, " ")
-	if rootPath == "" {
-		rootPath = "."
-	}
-	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
-		rootPath = rootPath + string(filepath.Separator)
-	}
+func InitNodeConfigFile(rootPath string, defaultMode define.NodeMode) (*NodeConfig, error) {
+	var cfg *NodeConfig = &NodeConfig{}
 	_, err := os.Stat(rootPath)
 	if os.IsNotExist(err) {
 		err := os.MkdirAll(rootPath, 0755)
 		if err != nil {
-			fmt.Println("InitConfig: Failed to create directory:", err)
-			return err
+			fmt.Println("GenConfig: Failed to create directory:", err)
+			return nil, err
 		}
 	}
-	nodeCfgPath := rootPath + NodeConfigFileName
-	_, err = os.Stat(nodeCfgPath)
+	cfgPath := rootPath + NodeConfigFileName
+	_, err = os.Stat(cfgPath)
 	if os.IsNotExist(err) {
-		file, _ := json.MarshalIndent(nodeCfg, "", " ")
+		cfg = NewDefaultNodeConfig(defaultMode)
+		file, _ := json.MarshalIndent(cfg, "", " ")
 		if err := os.WriteFile(rootPath+NodeConfigFileName, file, 0644); err != nil {
 			fmt.Println("InitConfig: Failed to WriteFile:", err)
-			return err
+			return nil, err
+		}
+	} else {
+		err = cfg.LoadConfig(cfgPath)
+		if err != nil {
+			return nil, err
 		}
 	}
-	err = nodeCfg.LoadConfig(nodeCfgPath)
-	if err != nil {
-		return err
+
+	cfg.RootPath = rootPath
+	if !filepath.IsAbs(cfg.DHT.DatastorePath) {
+		cfg.DHT.DatastorePath = rootPath + cfg.DHT.DatastorePath
 	}
-	nodeCfg.RootPath = rootPath
-	if !filepath.IsAbs(nodeCfg.DHT.DatastorePath) {
-		nodeCfg.DHT.DatastorePath = rootPath + nodeCfg.DHT.DatastorePath
+	if !filepath.IsAbs(cfg.DMsg.DatastorePath) {
+		cfg.DMsg.DatastorePath = rootPath + cfg.DMsg.DatastorePath
 	}
-	if !filepath.IsAbs(nodeCfg.DMsg.DatastorePath) {
-		nodeCfg.DMsg.DatastorePath = rootPath + nodeCfg.DMsg.DatastorePath
-	}
-	return nil
+	return cfg, nil
 }
 
-func MergeJSON(srcObj, destObj any) error {
-	srcBytes, _ := json.Marshal(srcObj)
-	destBytes, _ := json.Marshal(destObj)
+func mergeJSON(srcCfg, destCfg *NodeConfig) (*NodeConfig, error) {
+	srcBytes, err := json.Marshal(srcCfg)
+	if err != nil {
+		return nil, err
+	}
+	destBytes, err := json.Marshal(destCfg)
+	if err != nil {
+		return nil, err
+	}
 
 	var srcMap map[string]any
 	var destMap map[string]any
-	err := json.Unmarshal(srcBytes, &srcMap)
+	err = json.Unmarshal(srcBytes, &srcMap)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = json.Unmarshal(destBytes, &destMap)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mergeJsonFields(srcMap, destMap)
 
-	result, err := json.Marshal(srcMap)
+	data, err := json.Marshal(srcMap)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = json.Unmarshal(result, &srcObj)
+
+	ret := &NodeConfig{}
+	err = json.Unmarshal(data, ret)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return ret, nil
 }
 
 func mergeJsonFields(srcObj, destObj map[string]any) error {

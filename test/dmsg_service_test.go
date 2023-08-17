@@ -24,7 +24,7 @@ func TestMsgService(t *testing.T) {
 	// t.Skip()
 	rootPath := parseServiceCmdParams()
 
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath, define.ServiceMode)
 	if err != nil {
 		t.Errorf("TestMsgService error: %v", err)
 		return
