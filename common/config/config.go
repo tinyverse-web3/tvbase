@@ -301,7 +301,7 @@ func GenConfigFile(rootPath string, nodeCfg *NodeConfig) error {
 			return err
 		}
 		defaultCfg := NewDefaultNodeConfig()
-		err := MergeJSON(nodeCfg, &defaultCfg)
+		err := MergeJSON(nodeCfg, defaultCfg)
 		if err != nil {
 			return err
 		}
