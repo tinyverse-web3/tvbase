@@ -117,7 +117,7 @@ func readConsoleToSendMsg(base *tvbase.TvBase) {
 	if err != nil {
 		panic(err)
 	}
-	err = dmsg.GetMsgService().PublishProtocol(target, 3, []byte("hello"))
+	err = dmsg.GetMsgService().PublishProtocol(ctx, target, 3, []byte("hello"))
 	if err != nil {
 		panic(err)
 	}

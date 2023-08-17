@@ -108,7 +108,7 @@ func (d *ChannelService) SubscribeChannel(pubkey string) error {
 		return fmt.Errorf("ChannelService->SubscribeChannel: pubkey is already exist in channelList")
 	}
 
-	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, nil)
+	target, err := dmsgUser.NewTarget(pubkey, nil)
 	if err != nil {
 		log.Errorf("ChannelService->SubscribeChannel: NewTarget error: %v", err)
 		return err

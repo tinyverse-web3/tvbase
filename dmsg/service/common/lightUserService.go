@@ -87,7 +87,7 @@ func (d *LightUserService) subscribeUser(
 		return fmt.Errorf("LightUserService->subscribeUser: user isn't nil")
 	}
 
-	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, getSig)
+	target, err := dmsgUser.NewTarget(pubkey, getSig)
 	if err != nil {
 		lightUserLog.Errorf("LightUserService->subscribeUser: NewUser error: %v", err)
 		return err

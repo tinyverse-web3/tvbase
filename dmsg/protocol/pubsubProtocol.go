@@ -62,7 +62,7 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	if err != nil {
 		return err
 	}
-	err = p.Service.PublishProtocol(target, responseBasicData.PID, responseProtoData)
+	err = p.Service.PublishProtocol(p.Ctx, target, responseBasicData.PID, responseProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)
 	}
@@ -89,7 +89,7 @@ func (p *PubsubProtocol) Request(
 	if err != nil {
 		return nil, nil, err
 	}
-	err = p.Service.PublishProtocol(target, requestBasicData.PID, requestProtoData)
+	err = p.Service.PublishProtocol(p.Ctx, target, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
 		delete(p.RequestInfoList, requestInfoId)

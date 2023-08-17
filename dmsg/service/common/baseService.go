@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"unsafe"
@@ -16,9 +17,13 @@ import (
 
 var baseLog = ipfsLog.Logger("dmsg.service.base")
 
+type waitMessage struct {
+	target      *dmsgUser.Target
+	messageChan chan bool
+}
 type BaseService struct {
-	TvBase common.TvBaseService
-
+	TvBase             common.TvBaseService
+	waitMessageList    map[string]*waitMessage
 	EnableService      bool
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 }
@@ -34,7 +39,7 @@ func (d *BaseService) Init(baseService common.TvBaseService) error {
 		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
-
+	d.waitMessageList = make(map[string]*waitMessage)
 	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
 	return nil
 }
@@ -51,7 +56,54 @@ func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 	delete(d.ProtocolHandleList, pid)
 }
 
-func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) {
+func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan bool, error) {
+	target := dmsgUser.GetTarget(pk)
+	if target == nil {
+		baseLog.Errorf("CommonService->WaitMessage: target is nil")
+		return nil, fmt.Errorf("CommonService->WaitMessage: target is nil")
+	}
+
+	if d.waitMessageList[pk] == nil {
+		d.waitMessageList[pk] = &waitMessage{
+			target:      target,
+			messageChan: make(chan bool),
+		}
+
+		go func() {
+			for {
+				m, err := target.WaitMsg(ctx)
+				if err != nil {
+					close(d.waitMessageList[pk].messageChan)
+					delete(d.waitMessageList, pk)
+					baseLog.Warnf("BaseService->WaitMessage: target.WaitMsg error: %+v", err)
+					return
+				}
+
+				baseLog.Debugf("BaseService->WaitMessage:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
+
+				protocolID, protocolIDLen, err := d.checkProtocolData(m.Data)
+				if err != nil {
+					baseLog.Errorf("BaseService->WaitMessage: CheckPubsubData error: %v", err)
+					return
+				}
+
+				protocolData := m.Data[protocolIDLen:]
+				protocolHandle := d.ProtocolHandleList[protocolID]
+
+				if protocolHandle == nil {
+					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID, protocolData)
+				}
+
+				d.waitMessageList[pk].messageChan <- true
+			}
+		}()
+
+	}
+
+	return d.waitMessageList[pk].messageChan, nil
+}
+
+func (d *BaseService) checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
 	var protocolID pb.PID
 	protocolIDLen := int(unsafe.Sizeof(protocolID))
 	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
@@ -73,7 +125,7 @@ func (d *BaseService) CheckProtocolData(pubsubData []byte) (pb.PID, int, error) 
 }
 
 func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
-	m, err := target.WaitMsg()
+	m, err := target.WaitMsg(d.TvBase.GetCtx())
 	if err != nil {
 		baseLog.Warnf("BaseService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
 		return -1, nil, nil, err
@@ -81,7 +133,7 @@ func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, [
 
 	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
 
-	protocolID, protocolIDLen, err := d.CheckProtocolData(m.Data)
+	protocolID, protocolIDLen, err := d.checkProtocolData(m.Data)
 	if err != nil {
 		baseLog.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
 		return -1, nil, nil, nil
@@ -103,14 +155,14 @@ func (d *BaseService) IsEnableService() bool {
 	return d.EnableService
 }
 
-func (d *BaseService) PublishProtocol(target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
+func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
 	if err != nil {
 		baseLog.Errorf("Service->PublishProtocol: GenProtoData error: %v", err)
 		return err
 	}
 
-	if err := target.Publish(buf); err != nil {
+	if err := target.Publish(ctx, buf); err != nil {
 		baseLog.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
 		return fmt.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
 	}

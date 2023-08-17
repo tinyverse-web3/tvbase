@@ -91,7 +91,7 @@ func (d *MsgService) SubscribeDestUser(pubkey string) error {
 		log.Errorf("MsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 		return fmt.Errorf("MsgService->SubscribeDestUser: pubkey is already exist in destUserList")
 	}
-	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, nil)
+	target, err := dmsgUser.NewTarget(pubkey, nil)
 	if err != nil {
 		log.Errorf("MsgService->SubscribeDestUser: NewTarget error: %v", err)
 		return err

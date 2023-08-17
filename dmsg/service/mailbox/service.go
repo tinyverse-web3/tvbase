@@ -594,7 +594,7 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		return fmt.Errorf("MailboxService->subscribeUser: pubkey is already exist in serviceUserList")
 	}
 
-	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, getSig)
+	target, err := dmsgUser.NewTarget(pubkey, getSig)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeUser: NewUser error: %v", err)
 		return err
@@ -639,7 +639,7 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 		log.Errorf("MailboxService->subscribeServiceUser: pubkey is already exist in serviceUserList")
 		return fmt.Errorf("MailboxService->subscribeServiceUser: pubkey is already exist in serviceUserList")
 	}
-	target, err := dmsgUser.NewTarget(d.TvBase.GetCtx(), pubkey, nil)
+	target, err := dmsgUser.NewTarget(pubkey, nil)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeServiceUser: NewTarget error: %v", err)
 		return err

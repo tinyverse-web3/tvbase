@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/tinyverse-web3/tvbase/common/config"
@@ -14,7 +15,7 @@ import (
 type BaseService interface {
 	IsEnableService() bool
 	GetConfig() *config.DMsgConfig
-	PublishProtocol(target *dmsgUser.Target, pid pb.PID, protoData []byte) error
+	PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error
 }
 
 type LightService interface {

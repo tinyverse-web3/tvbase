@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"context"
+
 	"github.com/libp2p/go-libp2p/core/protocol"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -18,6 +20,7 @@ type DmsgServiceInterface interface {
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
 	PublishProtocol(
+		ctx context.Context,
 		target *dmsgUser.Target,
 		pid pb.PID,
 		protoData []byte) error
