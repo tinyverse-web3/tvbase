@@ -9,8 +9,9 @@ import (
 )
 
 type Topic struct {
-	pt      *pubsub.Topic
-	subList map[*pubsub.Subscription]*pubsub.Subscription
+	refCount int32
+	pt       *pubsub.Topic
+	sub      *pubsub.Subscription
 }
 
 type PubsubMgr struct {
@@ -50,44 +51,43 @@ func (d *PubsubMgr) Subscribe(topicName string) (*pubsub.Topic, *pubsub.Subscrip
 		if err != nil {
 			return nil, nil, err
 		}
+
+		sub, err := topic.pt.Subscribe()
+		if err != nil {
+			return nil, nil, err
+		}
 		topic = &Topic{
-			pt:      pt,
-			subList: make(map[*pubsub.Subscription]*pubsub.Subscription),
+			pt:       pt,
+			sub:      sub,
+			refCount: 1,
 		}
 		d.topicList[topicName] = topic
+	} else {
+		topic.refCount++
 	}
 
-	sub, err := topic.pt.Subscribe()
-	topic.subList[sub] = sub
-	if err != nil {
-		return topic.pt, nil, err
-	}
-
-	return topic.pt, sub, nil
+	return topic.pt, topic.sub, nil
 }
 
-func (d *PubsubMgr) Unsubscribe(topicName string, subscription *pubsub.Subscription) error {
+func (d *PubsubMgr) Unsubscribe(topicName string) error {
 	topic := d.topicList[topicName]
 	if topic == nil {
 		return fmt.Errorf("PubsubMgr->Cancel: topic %s is not exist", topicName)
 	}
-	sub := topic.subList[subscription]
+	sub := topic.sub
 	if sub == nil {
 		return fmt.Errorf("PubsubMgr->Cancel: subscription is not exist")
 	}
-
-	sub.Cancel()
-	delete(topic.subList, sub)
-
-	if len(topic.subList) != 0 {
+	topic.refCount--
+	if topic.refCount > 0 {
 		return nil
+	} else {
+		sub.Cancel()
+		err := topic.pt.Close()
+		if err != nil {
+			return err
+		}
+		delete(d.topicList, topicName)
 	}
-
-	err := topic.pt.Close()
-	if err != nil {
-		return err
-	}
-
-	delete(d.topicList, topicName)
 	return nil
 }

@@ -109,12 +109,8 @@ func (s *Target) WaitMsg() (*pubsub.Message, error) {
 
 func (u *Target) Close() error {
 	u.CancelCtx()
-
 	topicName := u.Subscription.Topic()
-	err := dmsgCommonPubsub.GetPubsubMgr().Unsubscribe(topicName, u.Subscription)
-	if err != nil {
-	}
-	return err
+	return dmsgCommonPubsub.GetPubsubMgr().Unsubscribe(topicName)
 }
 
 type DestTarget struct {
