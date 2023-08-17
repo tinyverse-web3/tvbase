@@ -17,9 +17,15 @@ import (
 
 var baseLog = ipfsLog.Logger("dmsg.service.base")
 
+type ProtocolHandle struct {
+	PID    pb.PID
+	Data   []byte
+	Handle dmsgProtocol.ProtocolHandle
+}
+
 type waitMessage struct {
 	target      *dmsgUser.Target
-	messageChan chan bool
+	messageChan chan *ProtocolHandle
 }
 type BaseService struct {
 	TvBase             common.TvBaseService
@@ -56,7 +62,7 @@ func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 	delete(d.ProtocolHandleList, pid)
 }
 
-func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan bool, error) {
+func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan *ProtocolHandle, error) {
 	target := dmsgUser.GetTarget(pk)
 	if target == nil {
 		baseLog.Errorf("CommonService->WaitMessage: target is nil")
@@ -66,7 +72,7 @@ func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan bool, er
 	if d.waitMessageList[pk] == nil {
 		d.waitMessageList[pk] = &waitMessage{
 			target:      target,
-			messageChan: make(chan bool),
+			messageChan: make(chan *ProtocolHandle),
 		}
 
 		go func() {
@@ -91,37 +97,20 @@ func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan bool, er
 				protocolHandle := d.ProtocolHandleList[protocolID]
 
 				if protocolHandle == nil {
-					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID, protocolData)
+					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID)
+				} else {
+					d.waitMessageList[pk].messageChan <- &ProtocolHandle{
+						PID:    protocolID,
+						Data:   protocolData,
+						Handle: protocolHandle,
+					}
 				}
-
-				d.waitMessageList[pk].messageChan <- true
 			}
 		}()
 
 	}
 
 	return d.waitMessageList[pk].messageChan, nil
-}
-
-func (d *BaseService) checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
-	var protocolID pb.PID
-	protocolIDLen := int(unsafe.Sizeof(protocolID))
-	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
-	if err != nil {
-		baseLog.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
-		return -1, 0, err
-	}
-	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
-	if protocolID > maxProtocolId {
-		baseLog.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
-		return -1, 0, err
-	}
-	dataLen := len(pubsubData)
-	if dataLen <= protocolIDLen {
-		baseLog.Errorf("CommonService->checkProtocolData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
-		return protocolID, protocolIDLen, err
-	}
-	return protocolID, protocolIDLen, nil
 }
 
 func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
@@ -167,4 +156,25 @@ func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Targ
 		return fmt.Errorf("Service->PublishProtocol: target.Publish error: %v", err)
 	}
 	return nil
+}
+
+func (d *BaseService) checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
+	var protocolID pb.PID
+	protocolIDLen := int(unsafe.Sizeof(protocolID))
+	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)
+	if err != nil {
+		baseLog.Errorf("CommonService->checkProtocolData: protocolID parse error: %v", err)
+		return -1, 0, err
+	}
+	maxProtocolId := pb.PID(len(pb.PID_name) - 1)
+	if protocolID > maxProtocolId {
+		baseLog.Errorf("CommonService->checkProtocolData: protocolID(%d) > maxProtocolId(%d)", protocolID, maxProtocolId)
+		return -1, 0, err
+	}
+	dataLen := len(pubsubData)
+	if dataLen <= protocolIDLen {
+		baseLog.Errorf("CommonService->checkProtocolData: dataLen(%d) <= protocolIDLen(%d)", dataLen, protocolIDLen)
+		return protocolID, protocolIDLen, err
+	}
+	return protocolID, protocolIDLen, nil
 }

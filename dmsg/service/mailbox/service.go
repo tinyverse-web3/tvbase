@@ -509,49 +509,57 @@ func (d *MailboxService) cleanRestResource() {
 	}()
 }
 
-func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) {
-	for {
-		protocolID, protocolData, protocolHandle, err := d.WaitPubsubProtocolData(target)
-		if err != nil {
-			log.Warnf("MailboxService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
-			return
-		}
+func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
+	ctx := d.TvBase.GetCtx()
+	protocolHandleChan, err := d.WaitMessage(ctx, target.Key.PubkeyHex)
 
-		if protocolHandle == nil {
-			continue
-		}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case protocolHandle, ok := <-protocolHandleChan:
+				if !ok {
+					return
+				}
+				pid := protocolHandle.PID
+				handle := protocolHandle.Handle
+				data := protocolHandle.Data
 
-		msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
-		msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
-		seekRequestPID := d.seekMailboxProtocol.Adapter.GetRequestPID()
-		seekResponsePID := d.seekMailboxProtocol.Adapter.GetResponsePID()
+				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+				msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+				seekRequestPID := d.seekMailboxProtocol.Adapter.GetRequestPID()
+				seekResponsePID := d.seekMailboxProtocol.Adapter.GetResponsePID()
 
-		topicName := target.Pubsub.Topic.String()
-		log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", protocolID, topicName)
+				topicName := target.Pubsub.Topic.String()
+				log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", pid, topicName)
 
-		switch protocolID {
-		case msgRequestPID:
-			err = protocolHandle.HandleRequestData(protocolData)
-			if err != nil {
-				log.Warnf("MailboxService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				switch pid {
+				case msgRequestPID:
+					err = handle.HandleRequestData(data)
+					if err != nil {
+						log.Warnf("MailboxService->handlePubsubProtocol: HandleRequestData error: %v", err)
+					}
+					continue
+				case msgResponsePID:
+					continue
+				case seekRequestPID:
+					err = handle.HandleRequestData(data)
+					if err != nil {
+						log.Warnf("MailboxService->handlePubsubProtocol: HandleRequestData error: %v", err)
+					}
+					continue
+				case seekResponsePID:
+					err = handle.HandleResponseData(data)
+					if err != nil {
+						log.Warnf("MailboxService->handlePubsubProtocol: HandleResponseData error: %v", err)
+					}
+					continue
+				}
 			}
-			continue
-		case msgResponsePID:
-			continue
-		case seekRequestPID:
-			err = protocolHandle.HandleRequestData(protocolData)
-			if err != nil {
-				log.Warnf("MailboxService->handlePubsubProtocol: HandleRequestData error: %v", err)
-			}
-			continue
-		case seekResponsePID:
-			err = protocolHandle.HandleResponseData(protocolData)
-			if err != nil {
-				log.Warnf("MailboxService->handlePubsubProtocol: HandleResponseData error: %v", err)
-			}
-			continue
 		}
-	}
+	}()
+	return nil
 }
 
 // user
@@ -658,8 +666,17 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 		MsgRWMutex: sync.RWMutex{},
 	}
 
+	err = d.handlePubsubProtocol(&user.Target)
+	if err != nil {
+		log.Errorf("MailboxService->subscribeServiceUser: handlePubsubProtocol error: %v", err)
+		err := user.Target.Close()
+		if err != nil {
+			log.Warnf("MailboxService->subscribeServiceUser: handlePubsubProtocol error: %v", err)
+			return err
+		}
+		return err
+	}
 	d.serviceUserList[pubkey] = user
-	go d.handlePubsubProtocol(&user.Target)
 	return nil
 }
 
