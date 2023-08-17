@@ -8,7 +8,6 @@ import (
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
-	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -52,7 +51,7 @@ func (d *MsgService) Start(
 	getSig dmsgKey.GetSigCallback) error {
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, dmsgCommonService.MsgTopicNameSuffix)
+	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
 	if err != nil {
 		return err
 	}
@@ -98,8 +97,7 @@ func (d *MsgService) SubscribeDestUser(pubkey string) error {
 		return err
 	}
 
-	topicName := pubkey + "/" + dmsgCommonService.MsgTopicNameSuffix
-	err = target.InitPubsub(topicName)
+	err = target.InitPubsub(pubkey)
 	if err != nil {
 		log.Errorf("MsgService->subscribeUser: InitPubsub error: %v", err)
 		return err

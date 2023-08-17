@@ -20,10 +20,10 @@ func (d *LightUserService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
-	userTopicNameSuffix string,
+	enableUserPubsub bool,
 ) error {
 	d.BaseService.Start(enableService)
-	return d.InitUser(pubkeyData, userTopicNameSuffix, getSig)
+	return d.InitUser(pubkeyData, getSig, enableUserPubsub)
 }
 
 func (d *LightUserService) Stop() error {
@@ -62,12 +62,12 @@ func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, er
 // user
 func (d *LightUserService) InitUser(
 	pubkeyData []byte,
-	userTopicNameSuffix string,
 	getSig dmsgKey.GetSigCallback,
+	enableUserPubsub bool,
 ) error {
 	lightUserLog.Debug("LightUserService->InitUser begin")
 	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
-	err := d.subscribeUser(pubkey, userTopicNameSuffix, getSig)
+	err := d.subscribeUser(pubkey, getSig, enableUserPubsub)
 	if err != nil {
 		return err
 	}
@@ -78,8 +78,9 @@ func (d *LightUserService) InitUser(
 
 func (d *LightUserService) subscribeUser(
 	pubkey string,
-	userTopicNameSuffix string,
-	getSig dmsgKey.GetSigCallback) error {
+	getSig dmsgKey.GetSigCallback,
+	enableUserPubsub bool,
+) error {
 	lightUserLog.Debugf("LightUserService->subscribeUser begin\npubkey: %s", pubkey)
 	if d.LightUser != nil {
 		lightUserLog.Errorf("LightUserService->subscribeUser: user isn't nil")
@@ -92,13 +93,14 @@ func (d *LightUserService) subscribeUser(
 		return err
 	}
 
-	if userTopicNameSuffix != "" {
-		err = target.InitPubsub(pubkey + "/" + userTopicNameSuffix)
+	if enableUserPubsub {
+		err = target.InitPubsub(pubkey)
 		if err != nil {
 			lightUserLog.Errorf("LightUserService->subscribeUser: InitPubsub error: %v", err)
 			return err
 		}
 	}
+
 	d.LightUser = &dmsgUser.LightUser{
 		Target: *target,
 	}

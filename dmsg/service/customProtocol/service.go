@@ -49,7 +49,7 @@ func (d *CustomProtocolService) Start(
 	pubkeyData []byte,
 	getSig dmsgCommonKey.GetSigCallback) error {
 	log.Debug("CustomProtocolService->Start begin")
-	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, "")
+	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, false)
 	if err != nil {
 		return err
 	}
