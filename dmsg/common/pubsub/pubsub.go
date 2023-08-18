@@ -52,7 +52,7 @@ func (d *PubsubMgr) Subscribe(topicName string) (*pubsub.Topic, *pubsub.Subscrip
 			return nil, nil, err
 		}
 
-		sub, err := topic.pt.Subscribe()
+		sub, err := pt.Subscribe()
 		if err != nil {
 			return nil, nil, err
 		}
