@@ -52,7 +52,7 @@ func NewTarget(pk string, getSig key.GetSigCallback) (*Target, error) {
 		targetList = make(map[string]*Target)
 	}
 	if targetList[pk] != nil {
-		dmsgLog.Logger.Errorf("User->NewTarget: target is already exist for pk :%s", pk)
+		dmsgLog.Logger.Debugf("User->NewTarget: target is already exist for pk :%s", pk)
 		targetList[pk].RefCount++
 		return targetList[pk], nil
 	}
