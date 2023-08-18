@@ -619,7 +619,7 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 		ServicePeerID: "",
 	}
 
-	err = d.handlePubsubProtocol(&d.lightMailboxUser.Target)
+	err = d.handlePubsubProtocol(&user.Target)
 	if err != nil {
 		log.Errorf("MailboxService->subscribeUser: handlePubsubProtocol error: %v", err)
 		err := user.Target.Close()
