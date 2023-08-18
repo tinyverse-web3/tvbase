@@ -32,7 +32,7 @@ func parseCmdParams() (string, string, string, string) {
 	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
 	srcSeed := flag.String("srcSeed", "", "src user pubkey")
 	destSeed := flag.String("destSeed", "", "desc user pubkey")
-	pubSeed := flag.String("pubSeed", "", "desc user pubkey")
+	channelSeed := flag.String("channelSeed", "", "channel pubkey")
 	rootPath := flag.String("rootPath", "", "config file path")
 
 	flag.Parse()
@@ -59,7 +59,7 @@ func parseCmdParams() (string, string, string, string) {
 		log.Fatal("Please provide seed for generate dest user public key")
 	}
 
-	return *srcSeed, *destSeed, *pubSeed, *rootPath
+	return *srcSeed, *destSeed, *channelSeed, *rootPath
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
@@ -107,7 +107,7 @@ func main() {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, destSeed, pubSeed, rootPath := parseCmdParams()
+	srcSeed, destSeed, channelSeed, rootPath := parseCmdParams()
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
@@ -142,17 +142,17 @@ func main() {
 
 	mainLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
-	// pub
-	pubPrikey, pubPubKey, err := getKeyBySeed(pubSeed)
+	// channel
+	channelPrikey, channelPubKey, err := getKeyBySeed(channelSeed)
 
 	if err != nil {
 		mainLog.Errorf("getKeyBySeed error: %v", err)
 		return
 	}
-	pubPrikeyHex := hex.EncodeToString(crypto.FromECDSA(pubPrikey))
-	pubPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(pubPubKey))
+	channelPrikeyHex := hex.EncodeToString(crypto.FromECDSA(channelPrikey))
+	channelPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(channelPubKey))
 
-	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", pubSeed, pubPrikeyHex, pubPubkeyHex)
+	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", channelSeed, channelPrikeyHex, channelPubkeyHex)
 
 	// init dmsg
 	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
@@ -206,19 +206,24 @@ func main() {
 		return
 	}
 
-	// publish public user
-	pubPubkeyBytes, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(pubPubKey)
+	// publish channel
+	channelPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(channelPubKey)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
-	pubPubKeyStr := tvUtilKey.TranslateKeyProtoBufToString(pubPubkeyBytes)
-	err = dmsg.GetChannelService().SubscribeChannel(pubPubKeyStr)
-	if err != nil {
-		tvbase.SetTracerStatus(err)
-		mainLog.Errorf("SubscribeChannel error: %v", err)
-		return
+	channelPubKeyHex := tvUtilKey.TranslateKeyProtoBufToString(channelPubkeyData)
+	channelService := dmsg.GetChannelService()
+	if channelService != nil {
+		mainLog.Debugf("channelPubKeyHex: %v", channelPubKeyHex)
+		// err = channelService.SubscribeChannel(channelPubKeyHex)
+		if err != nil {
+			tvbase.SetTracerStatus(err)
+			mainLog.Errorf("SubscribeChannel error: %v", err)
+			return
+		}
+		channelService.SetOnReceiveMsg(onReceiveMsg)
 	}
 
 	// send msg to dest user with read from stdin
@@ -243,7 +248,6 @@ func main() {
 			if err != nil {
 				mainLog.Errorf("send msg: error: %v", err)
 			}
-			// tvcLog.Infof("sendMsgReq:%v", sendMsgReq)
 			mainLog.Infof("send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
 				sendMsgReq.BasicData.Pubkey,
 				sendMsgReq.DestPubkey,
@@ -252,6 +256,7 @@ func main() {
 				sendMsgReq.BasicData.TS,
 				sendContent,
 			)
+
 		}
 	}()
 

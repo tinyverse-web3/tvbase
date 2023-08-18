@@ -511,29 +511,31 @@ func (d *MailboxService) cleanRestResource() {
 
 func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
-	protocolHandleChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
-
+	protocolDataChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
+	if err != nil {
+		return err
+	}
+	log.Debugf("MailboxService->handlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
-				return
-			case protocolHandle, ok := <-protocolHandleChan:
+			case protocolHandle, ok := <-protocolDataChan:
 				if !ok {
 					return
 				}
 				pid := protocolHandle.PID
-				handle := protocolHandle.Handle
-				data := protocolHandle.Data
+				log.Debugf("MailboxService->handlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
 
+				handle := d.ProtocolHandleList[pid]
+				if handle == nil {
+					log.Warnf("MailboxService->handlePubsubProtocol: no handle for pid: %d", pid)
+					continue
+				}
 				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
 				msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
 				seekRequestPID := d.seekMailboxProtocol.Adapter.GetRequestPID()
 				seekResponsePID := d.seekMailboxProtocol.Adapter.GetResponsePID()
-
-				topicName := target.Pubsub.Topic.String()
-				log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", pid, topicName)
-
+				data := protocolHandle.Data
 				switch pid {
 				case msgRequestPID:
 					err = handle.HandleRequestData(data)
@@ -556,6 +558,8 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 					}
 					continue
 				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
@@ -575,9 +579,11 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 		if d.TvBase.GetIsRendezvous() {
 			d.initMailbox(pubkey)
 		} else {
+			c := d.TvBase.RegistRendezvousChan()
 			select {
-			case <-d.TvBase.GetRendezvousChan():
+			case <-c:
 				d.initMailbox(pubkey)
+				d.TvBase.UnregistRendezvousChan(c)
 			case <-time.After(1 * time.Hour):
 				return nil
 			case <-d.TvBase.GetCtx().Done():

@@ -39,11 +39,11 @@ func (d *Dmsg) Init(tvbase tvbaseCommon.TvBaseService) error {
 	if err != nil {
 		return err
 	}
-	d.customProtocolService, err = customProtocolService.CreateService(tvbase)
+	d.channelService, err = channelService.CreateService(tvbase)
 	if err != nil {
 		return err
 	}
-	d.channelService, err = channelService.CreateService(tvbase)
+	d.customProtocolService, err = customProtocolService.CreateService(tvbase)
 	if err != nil {
 		return err
 	}

@@ -56,5 +56,6 @@ type TvBaseService interface {
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
 	GetIsRendezvous() bool
-	GetRendezvousChan() chan bool
+	RegistRendezvousChan() chan bool
+	UnregistRendezvousChan(rc chan bool)
 }

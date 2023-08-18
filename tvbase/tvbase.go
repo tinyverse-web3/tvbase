@@ -62,7 +62,7 @@ type TvBase struct {
 	pubRoutingDiscovery    *drouting.RoutingDiscovery
 	isRendezvous           bool
 	isDiscoverRendzvousing bool
-	isRendezvousChan       chan bool
+	rendezvousChanList     []chan bool
 	launch                 *fx.App
 }
 

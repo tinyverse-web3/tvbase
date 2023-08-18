@@ -17,11 +17,13 @@ func (m *TvBase) initRendezvous() error {
 	if m.pubRoutingDiscovery == nil {
 		handleNoNet := func(peerID peer.ID) error {
 			if !m.IsExistConnectedPeer() {
-				select {
-				case m.isRendezvousChan <- false:
-					tvbaseLog.Logger.Debugf("TvBase-initRendezvous: succ send isRendezvousChan")
-				default:
-					tvbaseLog.Logger.Debugf("TvBase-initRendezvous: no receiver for isRendezvousChan")
+				for _, c := range m.rendezvousChanList {
+					select {
+					case c <- false:
+						tvbaseLog.Logger.Debugf("TvBase-initRendezvous: succ send isRendezvousChan")
+					default:
+						tvbaseLog.Logger.Debugf("TvBase-initRendezvous: no receiver for isRendezvousChan")
+					}
 				}
 				m.isRendezvous = false
 			}
@@ -30,7 +32,7 @@ func (m *TvBase) initRendezvous() error {
 		m.RegistNotConnectedCallback(handleNoNet)
 
 		m.isRendezvous = false
-		m.isRendezvousChan = make(chan bool)
+		m.rendezvousChanList = make([]chan bool, 0)
 		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
 
 		bo := backoff.NewExponentialBackOff()
@@ -113,21 +115,35 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 
 		} else {
 			tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
-			m.isRendezvous = true
-			select {
-			case m.isRendezvousChan <- true:
-				tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: succ send isRendezvousChan")
-			default:
-				tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: no receiver for isRendezvousChan")
+			for _, c := range m.rendezvousChanList {
+				select {
+				case c <- true:
+					tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: succ send isRendezvousChan")
+				default:
+					tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: no receiver for isRendezvousChan")
+				}
 			}
+			m.isRendezvous = true
 		}
 		m.isDiscoverRendzvousing = false
 	}
 	tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers end")
 }
 
-func (m *TvBase) GetRendezvousChan() chan bool {
-	return m.isRendezvousChan
+func (m *TvBase) RegistRendezvousChan() chan bool {
+	c := make(chan bool)
+	m.rendezvousChanList = append(m.rendezvousChanList, c)
+	return c
+}
+
+func (m *TvBase) UnregistRendezvousChan(rc chan bool) {
+	for i, c := range m.rendezvousChanList {
+		if c == rc {
+			close(c)
+			m.rendezvousChanList = append(m.rendezvousChanList[:i], m.rendezvousChanList[i+1:]...)
+			return
+		}
+	}
 }
 
 func (m *TvBase) GetIsRendezvous() bool {

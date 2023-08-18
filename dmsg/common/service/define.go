@@ -39,6 +39,7 @@ type MsgService interface {
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
+	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error)
 }
 
@@ -47,6 +48,7 @@ type ChannelService interface {
 	SubscribeChannel(pubkey string) error
 	UnsubscribeChannel(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
+	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error)
 }
 

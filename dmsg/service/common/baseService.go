@@ -17,23 +17,22 @@ import (
 
 var baseLog = ipfsLog.Logger("dmsg.service.base")
 
-type ProtocolHandle struct {
-	PID    pb.PID
-	Data   []byte
-	Handle dmsgProtocol.ProtocolHandle
+type ProtocolData struct {
+	PID  pb.PID
+	Data []byte
 }
 
 type waitMessage struct {
 	target          *dmsgUser.Target
-	messageChanList []chan *ProtocolHandle
+	messageChanList []chan *ProtocolData
 }
 
 var waitMessageList map[string]*waitMessage
-var protocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 
 type BaseService struct {
-	TvBase        common.TvBaseService
-	EnableService bool
+	TvBase             common.TvBaseService
+	EnableService      bool
+	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 }
 
 func (d *BaseService) Start(enableService bool) {
@@ -48,7 +47,7 @@ func (d *BaseService) Init(baseService common.TvBaseService) error {
 		return err
 	}
 	waitMessageList = make(map[string]*waitMessage)
-	protocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
+	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
 	return nil
 }
 
@@ -57,37 +56,11 @@ func (d *BaseService) GetConfig() *config.DMsgConfig {
 }
 
 func (d *BaseService) RegistPubsubProtocol(pid pb.PID, handle dmsgProtocol.ProtocolHandle) {
-	protocolHandleList[pid] = handle
+	d.ProtocolHandleList[pid] = handle
 }
 
 func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
-	delete(protocolHandleList, pid)
-}
-
-func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
-	m, err := target.WaitMsg(d.TvBase.GetCtx())
-	if err != nil {
-		baseLog.Warnf("BaseService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
-		return -1, nil, nil, err
-	}
-
-	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
-
-	protocolID, protocolIDLen, err := checkProtocolData(m.Data)
-	if err != nil {
-		baseLog.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
-		return -1, nil, nil, nil
-	}
-
-	protocolData := m.Data[protocolIDLen:]
-	protocolHandle := protocolHandleList[protocolID]
-
-	if protocolHandle == nil {
-		baseLog.Warnf("BaseService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
-		return -1, nil, nil, nil
-	}
-
-	return protocolID, protocolData, protocolHandle, nil
+	delete(d.ProtocolHandleList, pid)
 }
 
 // DmsgServiceInterface
@@ -109,7 +82,7 @@ func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Targ
 	return nil
 }
 
-func WaitMessage(ctx context.Context, pk string) (chan *ProtocolHandle, error) {
+func WaitMessage(ctx context.Context, pk string) (chan *ProtocolData, error) {
 	target := dmsgUser.GetTarget(pk)
 	if target == nil {
 		baseLog.Errorf("CommonService->WaitMessage: target is nil")
@@ -134,31 +107,27 @@ func WaitMessage(ctx context.Context, pk string) (chan *ProtocolHandle, error) {
 
 				baseLog.Debugf("BaseService->WaitMessage:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
 
-				protocolID, protocolIDLen, err := checkProtocolData(m.Data)
+				pid, pidLen, err := checkProtocolData(m.Data)
 				if err != nil {
 					baseLog.Errorf("BaseService->WaitMessage: CheckPubsubData error: %v", err)
 					return
 				}
 
-				protocolData := m.Data[protocolIDLen:]
-				protocolHandle := protocolHandleList[protocolID]
-
-				if protocolHandle == nil {
-					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID)
-				} else {
-					for _, c := range waitMessageList[pk].messageChanList {
-						c <- &ProtocolHandle{
-							PID:    protocolID,
-							Data:   protocolData,
-							Handle: protocolHandle,
-						}
-					}
+				chanList := waitMessageList[pk].messageChanList
+				protocolData := &ProtocolData{
+					PID:  pid,
+					Data: m.Data[pidLen:],
+				}
+				for _, c := range chanList {
+					baseLog.Debugf("BaseService->WaitMessage: chan: %+v", c)
+					c <- protocolData
 				}
 			}
 		}()
 	}
 
-	handleChan := make(chan *ProtocolHandle)
+	handleChan := make(chan *ProtocolData)
+	baseLog.Debugf("CommonService->WaitMessage: handleChan: %+v", handleChan)
 	waitMessageList[pk].messageChanList = append(waitMessageList[pk].messageChanList, handleChan)
 	return handleChan, nil
 }

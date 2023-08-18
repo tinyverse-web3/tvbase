@@ -164,7 +164,13 @@ func (p *Protocol) HandleResponseData(
 		if err != nil {
 			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
-		p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg
+		select {
+		case p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg:
+			log.Logger.Debugf("Protocol->HandleResponseData: succ send DoneChan")
+		default:
+			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for DoneChan")
+		}
+
 		delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
 		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)

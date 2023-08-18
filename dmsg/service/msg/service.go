@@ -22,6 +22,7 @@ type MsgService struct {
 	dmsgServiceCommon.LightUserService
 	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol
 	onReceiveMsg      msg.OnReceiveMsg
+	onSendMsgResponse msg.OnReceiveMsg
 	destUserList      map[string]*dmsgUser.LightUser
 }
 
@@ -62,7 +63,11 @@ func (d *MsgService) Start(
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 
 	// user
-	d.handlePubsubProtocol(&d.LightUser.Target)
+	err = d.handlePubsubProtocol(&d.LightUser.Target)
+	if err != nil {
+		log.Errorf("MsgService->Start: handlePubsubProtocol error: %v", err)
+		return err
+	}
 
 	log.Debug("MsgService->Start end")
 	return nil
@@ -154,6 +159,10 @@ func (d *MsgService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
 	d.onReceiveMsg = onReceiveMsg
 }
 
+func (d *MsgService) SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg) {
+	d.onSendMsgResponse = onSendMsgResponse
+}
+
 // DmsgServiceInterface
 func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	var target *dmsgUser.Target = nil
@@ -178,12 +187,18 @@ func (d *MsgService) OnPubsubMsgRequest(
 	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
 		log.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+	}
+
+	destPubkey := request.DestPubkey
+	if d.destUserList[destPubkey] == nil || d.LightUser.Key.PubkeyHex != destPubkey {
+		log.Debugf("MsgService->OnPubsubMsgRequest: user/channel pubkey is not exist")
+		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: user/channel pubkey is not exist")
 	}
 
 	if request.DestPubkey != d.LightUser.Key.PubkeyHex {
 		log.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
-		return nil, nil, false, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
+		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 	}
 	if d.onReceiveMsg != nil {
 		srcPubkey := request.BasicData.Pubkey
@@ -197,7 +212,7 @@ func (d *MsgService) OnPubsubMsgRequest(
 			request.BasicData.ID,
 			msgDirection)
 	} else {
-		log.Errorf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
+		log.Warnf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
 
 	log.Debugf("MsgService->OnPubsubMsgRequest end")
@@ -210,51 +225,78 @@ func (d *MsgService) OnPubsubMsgResponse(
 	log.Debugf(
 		"MsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
+
+	request, ok := requestProtoData.(*pb.SendMsgReq)
+	if !ok {
+		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.SendMsgReq")
+		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.SendMsgReq")
+	}
+
 	response, ok := responseProtoData.(*pb.SendMsgRes)
 	if !ok {
-		log.Errorf("MsgService->OnPubsubMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
-		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: cannot convert %v to *pb.SendMsgRes", responseProtoData)
+		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.SendMsgRes")
+		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.SendMsgRes")
 	}
+
 	if response.RetCode.Code != 0 {
 		log.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
+	} else {
+		if d.onSendMsgResponse != nil {
+			srcPubkey := request.BasicData.Pubkey
+			destPubkey := request.DestPubkey
+			msgDirection := msg.MsgDirection.From
+			d.onSendMsgResponse(
+				srcPubkey,
+				destPubkey,
+				request.Content,
+				request.BasicData.TS,
+				request.BasicData.ID,
+				msgDirection)
+		} else {
+			log.Warnf("MsgService->OnPubsubMsgRequest: onSendMsgResponse is nil")
+		}
 	}
 	log.Debugf("MsgService->OnPubsubMsgResponse end")
 	return nil, nil
 }
 
 // common
-func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
+func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
-	protocolHandleChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
-
+	protocolDataChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
+	if err != nil {
+		return err
+	}
+	log.Debugf("MsgService->handlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case protocolHandle, ok := <-protocolHandleChan:
+			case protocolHandle, ok := <-protocolDataChan:
 				if !ok {
 					return
 				}
 				pid := protocolHandle.PID
-				handle := protocolHandle.Handle
+				log.Debugf("MsgService->handlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
+
+				handle := d.ProtocolHandleList[pid]
+				if handle == nil {
+					log.Warnf("MsgService->handlePubsubProtocol: no handle for pid: %d", pid)
+					continue
+				}
+				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+				msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
 				data := protocolHandle.Data
-
-				requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
-				responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
-
-				topicName := target.Pubsub.Topic.String()
-				log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", pid, topicName)
-
 				switch pid {
-				case requestPID:
+				case msgRequestPID:
 					err = handle.HandleRequestData(data)
 					if err != nil {
 						log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
 					}
 					continue
-				case responsePID:
+				case msgResponsePID:
 					err = handle.HandleResponseData(data)
 					if err != nil {
 						log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
@@ -264,4 +306,5 @@ func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
 			}
 		}
 	}()
+	return nil
 }
