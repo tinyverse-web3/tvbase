@@ -226,7 +226,7 @@ func (d *MsgService) OnPubsubMsgResponse(
 // common
 func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
 	ctx := d.TvBase.GetCtx()
-	protocolHandleChan, err := d.WaitMessage(ctx, target.Key.PubkeyHex)
+	protocolHandleChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
 
 	go func() {
 		for {

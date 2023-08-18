@@ -27,11 +27,13 @@ type waitMessage struct {
 	target          *dmsgUser.Target
 	messageChanList []chan *ProtocolHandle
 }
+
+var waitMessageList map[string]*waitMessage
+var protocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
+
 type BaseService struct {
-	TvBase             common.TvBaseService
-	waitMessageList    map[string]*waitMessage
-	EnableService      bool
-	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
+	TvBase        common.TvBaseService
+	EnableService bool
 }
 
 func (d *BaseService) Start(enableService bool) {
@@ -45,8 +47,8 @@ func (d *BaseService) Init(baseService common.TvBaseService) error {
 		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
-	d.waitMessageList = make(map[string]*waitMessage)
-	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
+	waitMessageList = make(map[string]*waitMessage)
+	protocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
 	return nil
 }
 
@@ -55,65 +57,11 @@ func (d *BaseService) GetConfig() *config.DMsgConfig {
 }
 
 func (d *BaseService) RegistPubsubProtocol(pid pb.PID, handle dmsgProtocol.ProtocolHandle) {
-	d.ProtocolHandleList[pid] = handle
+	protocolHandleList[pid] = handle
 }
 
 func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
-	delete(d.ProtocolHandleList, pid)
-}
-
-func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan *ProtocolHandle, error) {
-	target := dmsgUser.GetTarget(pk)
-	if target == nil {
-		baseLog.Errorf("CommonService->WaitMessage: target is nil")
-		return nil, fmt.Errorf("CommonService->WaitMessage: target is nil")
-	}
-
-	if d.waitMessageList[pk] == nil {
-		d.waitMessageList[pk] = &waitMessage{
-			target: target,
-		}
-		go func() {
-			for {
-				m, err := target.WaitMsg(ctx)
-				if err != nil {
-					for _, c := range d.waitMessageList[pk].messageChanList {
-						close(c)
-					}
-					delete(d.waitMessageList, pk)
-					baseLog.Warnf("BaseService->WaitMessage: target.WaitMsg error: %+v", err)
-					return
-				}
-
-				baseLog.Debugf("BaseService->WaitMessage:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
-
-				protocolID, protocolIDLen, err := d.checkProtocolData(m.Data)
-				if err != nil {
-					baseLog.Errorf("BaseService->WaitMessage: CheckPubsubData error: %v", err)
-					return
-				}
-
-				protocolData := m.Data[protocolIDLen:]
-				protocolHandle := d.ProtocolHandleList[protocolID]
-
-				if protocolHandle == nil {
-					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID)
-				} else {
-					for _, c := range d.waitMessageList[pk].messageChanList {
-						c <- &ProtocolHandle{
-							PID:    protocolID,
-							Data:   protocolData,
-							Handle: protocolHandle,
-						}
-					}
-				}
-			}
-		}()
-	}
-
-	handleChan := make(chan *ProtocolHandle)
-	d.waitMessageList[pk].messageChanList = append(d.waitMessageList[pk].messageChanList, handleChan)
-	return handleChan, nil
+	delete(protocolHandleList, pid)
 }
 
 func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
@@ -125,14 +73,14 @@ func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, [
 
 	baseLog.Debugf("BaseService->handlePubsubProtocol:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
 
-	protocolID, protocolIDLen, err := d.checkProtocolData(m.Data)
+	protocolID, protocolIDLen, err := checkProtocolData(m.Data)
 	if err != nil {
 		baseLog.Errorf("BaseService->handlePubsubProtocol: CheckPubsubData error: %v", err)
 		return -1, nil, nil, nil
 	}
 
 	protocolData := m.Data[protocolIDLen:]
-	protocolHandle := d.ProtocolHandleList[protocolID]
+	protocolHandle := protocolHandleList[protocolID]
 
 	if protocolHandle == nil {
 		baseLog.Warnf("BaseService->handlePubsubProtocol: no protocolHandle for protocolID: %d", protocolID)
@@ -161,7 +109,61 @@ func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Targ
 	return nil
 }
 
-func (d *BaseService) checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
+func WaitMessage(ctx context.Context, pk string) (chan *ProtocolHandle, error) {
+	target := dmsgUser.GetTarget(pk)
+	if target == nil {
+		baseLog.Errorf("CommonService->WaitMessage: target is nil")
+		return nil, fmt.Errorf("CommonService->WaitMessage: target is nil")
+	}
+
+	if waitMessageList[pk] == nil {
+		waitMessageList[pk] = &waitMessage{
+			target: target,
+		}
+		go func() {
+			for {
+				m, err := target.WaitMsg(ctx)
+				if err != nil {
+					for _, c := range waitMessageList[pk].messageChanList {
+						close(c)
+					}
+					delete(waitMessageList, pk)
+					baseLog.Warnf("BaseService->WaitMessage: target.WaitMsg error: %+v", err)
+					return
+				}
+
+				baseLog.Debugf("BaseService->WaitMessage:\ntopic: %s\nreceivedFrom: %+v", *m.Topic, m.ReceivedFrom)
+
+				protocolID, protocolIDLen, err := checkProtocolData(m.Data)
+				if err != nil {
+					baseLog.Errorf("BaseService->WaitMessage: CheckPubsubData error: %v", err)
+					return
+				}
+
+				protocolData := m.Data[protocolIDLen:]
+				protocolHandle := protocolHandleList[protocolID]
+
+				if protocolHandle == nil {
+					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID)
+				} else {
+					for _, c := range waitMessageList[pk].messageChanList {
+						c <- &ProtocolHandle{
+							PID:    protocolID,
+							Data:   protocolData,
+							Handle: protocolHandle,
+						}
+					}
+				}
+			}
+		}()
+	}
+
+	handleChan := make(chan *ProtocolHandle)
+	waitMessageList[pk].messageChanList = append(waitMessageList[pk].messageChanList, handleChan)
+	return handleChan, nil
+}
+
+func checkProtocolData(pubsubData []byte) (pb.PID, int, error) {
 	var protocolID pb.PID
 	protocolIDLen := int(unsafe.Sizeof(protocolID))
 	err := binary.Read(bytes.NewReader(pubsubData[0:protocolIDLen]), binary.LittleEndian, &protocolID)

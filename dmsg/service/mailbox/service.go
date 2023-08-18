@@ -511,7 +511,7 @@ func (d *MailboxService) cleanRestResource() {
 
 func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
-	protocolHandleChan, err := d.WaitMessage(ctx, target.Key.PubkeyHex)
+	protocolHandleChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
 
 	go func() {
 		for {
