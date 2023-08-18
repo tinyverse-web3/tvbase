@@ -189,13 +189,6 @@ func (d *MsgService) OnPubsubMsgRequest(
 		log.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
 	}
-
-	destPubkey := request.DestPubkey
-	if d.destUserList[destPubkey] == nil || d.LightUser.Key.PubkeyHex != destPubkey {
-		log.Debugf("MsgService->OnPubsubMsgRequest: user/channel pubkey is not exist")
-		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: user/channel pubkey is not exist")
-	}
-
 	if request.DestPubkey != d.LightUser.Key.PubkeyHex {
 		log.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
