@@ -24,7 +24,8 @@ type ProtocolHandle struct {
 }
 
 type waitMessage struct {
-	target *dmsgUser.Target
+	target          *dmsgUser.Target
+	messageChanList []chan *ProtocolHandle
 }
 type BaseService struct {
 	TvBase             common.TvBaseService
@@ -68,17 +69,17 @@ func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan *Protoco
 		return nil, fmt.Errorf("CommonService->WaitMessage: target is nil")
 	}
 
-	messageChan := make(chan *ProtocolHandle)
 	if d.waitMessageList[pk] == nil {
 		d.waitMessageList[pk] = &waitMessage{
 			target: target,
 		}
-
 		go func() {
 			for {
 				m, err := target.WaitMsg(ctx)
 				if err != nil {
-					close(messageChan)
+					for _, c := range d.waitMessageList[pk].messageChanList {
+						close(c)
+					}
 					delete(d.waitMessageList, pk)
 					baseLog.Warnf("BaseService->WaitMessage: target.WaitMsg error: %+v", err)
 					return
@@ -98,18 +99,21 @@ func (d *BaseService) WaitMessage(ctx context.Context, pk string) (chan *Protoco
 				if protocolHandle == nil {
 					baseLog.Warnf("BaseService->WaitMessage: no protocolHandle for protocolID: %d", protocolID)
 				} else {
-					messageChan <- &ProtocolHandle{
-						PID:    protocolID,
-						Data:   protocolData,
-						Handle: protocolHandle,
+					for _, c := range d.waitMessageList[pk].messageChanList {
+						c <- &ProtocolHandle{
+							PID:    protocolID,
+							Data:   protocolData,
+							Handle: protocolHandle,
+						}
 					}
 				}
 			}
 		}()
-
 	}
 
-	return messageChan, nil
+	handleChan := make(chan *ProtocolHandle)
+	d.waitMessageList[pk].messageChanList = append(d.waitMessageList[pk].messageChanList, handleChan)
+	return handleChan, nil
 }
 
 func (d *BaseService) WaitPubsubProtocolData(target *dmsgUser.Target) (pb.PID, []byte, dmsgProtocol.ProtocolHandle, error) {
