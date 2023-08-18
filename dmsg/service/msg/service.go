@@ -62,7 +62,7 @@ func (d *MsgService) Start(
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 
 	// user
-	go d.handlePubsubProtocol(&d.LightUser.Target)
+	d.handlePubsubProtocol(&d.LightUser.Target)
 
 	log.Debug("MsgService->Start end")
 	return nil
@@ -225,32 +225,43 @@ func (d *MsgService) OnPubsubMsgResponse(
 
 // common
 func (d *MsgService) handlePubsubProtocol(target *dmsgUser.Target) {
-	for {
-		protocolID, protocolData, protocolHandle, err := d.WaitPubsubProtocolData(target)
-		if err != nil {
-			log.Warnf("MsgService->handlePubsubProtocol: target.WaitMsg error: %+v", err)
-			return
-		}
+	ctx := d.TvBase.GetCtx()
+	protocolHandleChan, err := d.WaitMessage(ctx, target.Key.PubkeyHex)
 
-		if protocolHandle == nil {
-			continue
-		}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case protocolHandle, ok := <-protocolHandleChan:
+				if !ok {
+					return
+				}
+				pid := protocolHandle.PID
+				handle := protocolHandle.Handle
+				data := protocolHandle.Data
 
-		requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
-		responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
-		switch protocolID {
-		case requestPID:
-			err = protocolHandle.HandleRequestData(protocolData)
-			if err != nil {
-				log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+				requestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+				responsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+
+				topicName := target.Pubsub.Topic.String()
+				log.Debugf("MailboxService->handlePubsubProtocol: protocolID: %d, topicName: %s", pid, topicName)
+
+				switch pid {
+				case requestPID:
+					err = handle.HandleRequestData(data)
+					if err != nil {
+						log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+					}
+					continue
+				case responsePID:
+					err = handle.HandleResponseData(data)
+					if err != nil {
+						log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
+					}
+					continue
+				}
 			}
-			continue
-		case responsePID:
-			err = protocolHandle.HandleResponseData(protocolData)
-			if err != nil {
-				log.Warnf("MsgService->handlePubsubProtocol: HandleRequestData error: %v", err)
-			}
-			continue
 		}
-	}
+	}()
 }
