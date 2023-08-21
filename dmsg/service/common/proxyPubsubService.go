@@ -272,6 +272,48 @@ func (d *ProxyPubsubService) OnCreatePubsubResponse(
 	return nil, nil
 }
 
+func (d *ProxyPubsubService) OnPubsubMsgResponse(
+	requestProtoData protoreflect.ProtoMessage,
+	responseProtoData protoreflect.ProtoMessage) (any, error) {
+	log.Debugf(
+		"ProxyPubsubService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
+		requestProtoData, responseProtoData)
+
+	request, ok := requestProtoData.(*pb.MsgReq)
+	if !ok {
+		log.Errorf("ProxyPubsubService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, fmt.Errorf("ProxyPubsubService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+	}
+
+	response, ok := responseProtoData.(*pb.MsgRes)
+	if !ok {
+		log.Errorf("ProxyPubsubService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
+		return nil, fmt.Errorf("ProxyPubsubService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
+	}
+
+	if response.RetCode.Code != 0 {
+		log.Warnf("ProxyPubsubService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
+		return nil, fmt.Errorf("ProxyPubsubService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
+	} else {
+		if d.OnSendMsgResponse != nil {
+			srcPubkey := request.BasicData.Pubkey
+			destPubkey := request.DestPubkey
+			msgDirection := msg.MsgDirection.From
+			d.OnSendMsgResponse(
+				srcPubkey,
+				destPubkey,
+				request.Content,
+				request.BasicData.TS,
+				request.BasicData.ID,
+				msgDirection)
+		} else {
+			log.Debugf("ProxyPubsubService->OnPubsubMsgRequest: onSendMsgResponse is nil")
+		}
+	}
+	log.Debugf("ProxyPubsubService->OnPubsubMsgResponse end")
+	return nil, nil
+}
+
 func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
 	protocolDataChan, err := WaitMessage(ctx, target.Key.PubkeyHex)
