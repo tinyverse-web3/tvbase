@@ -404,5 +404,5 @@ func (d *ProxyPubsubService) isAvailablePubsub() bool {
 		log.Warnf("ProxyPubsubService->isAvailablePubsub: exceeded the maximum number of mailbox services, current destUserCount:%v", len)
 		return false
 	}
-	return false
+	return true
 }
