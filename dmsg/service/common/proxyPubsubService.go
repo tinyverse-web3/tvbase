@@ -63,9 +63,9 @@ func (d *ProxyPubsubService) Start(
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// user
-	err = d.handlePubsubProtocol(&d.LightUser.Target)
+	err = d.HandlePubsubProtocol(&d.LightUser.Target)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->Start: handlePubsubProtocol error: %v", err)
+		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
 		return err
 	}
 
@@ -131,9 +131,9 @@ func (d *ProxyPubsubService) SubscribePubsub(pubkey string, createPubsubProxy bo
 		}
 	}
 
-	d.handlePubsubProtocol(&proxyPubsub.Target)
+	d.HandlePubsubProtocol(&proxyPubsub.Target)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: handlePubsubProtocol error: %v", err)
+		log.Errorf("ProxyPubsubService->SubscribeChannel: HandlePubsubProtocol error: %v", err)
 		err := proxyPubsub.Target.Close()
 		if err != nil {
 			log.Warnf("ProxyPubsubService->SubscribeChannel: Target.Close error: %v", err)
@@ -287,13 +287,13 @@ func (d *ProxyPubsubService) GetKeepPubsubDay() int {
 	return 0
 }
 
-func (d *ProxyPubsubService) handlePubsubProtocol(target *dmsgUser.Target) error {
+func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
 	protocolDataChan, err := WaitMessage(ctx, target.Key.PubkeyHex)
 	if err != nil {
 		return err
 	}
-	log.Debugf("ProxyPubsubService->handlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
+	log.Debugf("ProxyPubsubService->HandlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
 
 	go func() {
 		for {
@@ -303,11 +303,11 @@ func (d *ProxyPubsubService) handlePubsubProtocol(target *dmsgUser.Target) error
 					return
 				}
 				pid := protocolHandle.PID
-				log.Debugf("ProxyPubsubService->handlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
+				log.Debugf("ProxyPubsubService->HandlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
 
 				handle := d.ProtocolHandleList[pid]
 				if handle == nil {
-					log.Warnf("ProxyPubsubService->handlePubsubProtocol: no handle for pid: %d", pid)
+					log.Warnf("ProxyPubsubService->HandlePubsubProtocol: no handle for pid: %d", pid)
 					continue
 				}
 				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
@@ -317,13 +317,13 @@ func (d *ProxyPubsubService) handlePubsubProtocol(target *dmsgUser.Target) error
 				case msgRequestPID:
 					err = handle.HandleRequestData(data)
 					if err != nil {
-						log.Warnf("ProxyPubsubService->handlePubsubProtocol: HandleRequestData error: %v", err)
+						log.Warnf("ProxyPubsubService->HandlePubsubProtocol: HandleRequestData error: %v", err)
 					}
 					continue
 				case msgResponsePID:
 					err = handle.HandleResponseData(data)
 					if err != nil {
-						log.Warnf("ProxyPubsubService->handlePubsubProtocol: HandleResponseData error: %v", err)
+						log.Warnf("ProxyPubsubService->HandlePubsubProtocol: HandleResponseData error: %v", err)
 					}
 					continue
 				}
