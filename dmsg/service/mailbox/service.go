@@ -577,7 +577,7 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 
 	if !d.EnableService {
 		if d.TvBase.GetIsRendezvous() {
-			d.initMailbox(pubkey)
+			return d.initMailbox(pubkey)
 		} else {
 			c := d.TvBase.RegistRendezvousChan()
 			select {
@@ -724,11 +724,11 @@ func (d *MailboxService) isAvailableMailbox(pubKey string) bool {
 	return destUserCount < d.GetConfig().MaxMailboxCount
 }
 
-func (d *MailboxService) initMailbox(pubkey string) {
+func (d *MailboxService) initMailbox(pubkey string) error {
 	log.Debug("MailboxService->initMailbox begin")
 	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.lightMailboxUser.Key.PubkeyHex, d.lightMailboxUser.Key.PubkeyHex)
 	if err != nil {
-		return
+		return err
 	}
 	select {
 	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
@@ -736,15 +736,17 @@ func (d *MailboxService) initMailbox(pubkey string) {
 		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
 		if !ok || response == nil {
 			log.Errorf("MailboxService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
+			return fmt.Errorf("MailboxService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
 			// skip seek when seek mailbox quest fail (server err), create a new mailbox
 		}
 		if response.RetCode.Code < 0 {
 			log.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
+			return fmt.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
 			// skip seek when seek mailbox quest fail, create a new mailbox
 		} else {
 			log.Debugf("MailboxService->initMailbox: seekMailboxProtoData success")
 			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey)
-			return
+			return nil
 		}
 	case <-time.After(3 * time.Second):
 		log.Debugf("MailboxService->initMailbox: time.After 3s, create new mailbox")
@@ -754,7 +756,7 @@ func (d *MailboxService) initMailbox(pubkey string) {
 		servicePeerList, err := d.TvBase.GetAvailableServicePeerList(hostId)
 		if err != nil {
 			log.Errorf("MailboxService->initMailbox: getAvailableServicePeerList error: %v", err)
-			return
+			return err
 		}
 
 		peerID := d.TvBase.GetHost().ID().String()
@@ -781,23 +783,23 @@ func (d *MailboxService) initMailbox(pubkey string) {
 				switch response.RetCode.Code {
 				case 0, 1:
 					log.Debugf("MailboxService->initMailbox: createMailboxProtocol success")
-					return
+					return nil
 				default:
 					continue
 				}
 			case <-time.After(time.Second * 3):
 				continue
 			case <-d.TvBase.GetCtx().Done():
-				return
+				return nil
 			}
 		}
 
 		log.Error("MailboxService->InitUser: no available service peers")
-		return
+		return nil
 		// end create mailbox
 	case <-d.TvBase.GetCtx().Done():
 		log.Debug("MailboxService->InitUser: BaseService.GetCtx().Done()")
-		return
+		return nil
 	}
 }
 
