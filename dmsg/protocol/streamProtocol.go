@@ -211,7 +211,9 @@ func NewCreateMsgPubsubSProtocol(
 	host host.Host,
 	callback CreatePubsubSpCallback,
 	service DmsgServiceInterface,
-	adapter SpAdapter) *CreatePubsubSProtocol {
+	adapter SpAdapter,
+	enableRequest bool,
+) *CreatePubsubSProtocol {
 	protocol := &CreatePubsubSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
@@ -220,7 +222,7 @@ func NewCreateMsgPubsubSProtocol(
 	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	if service.IsEnableService() {
+	if enableRequest {
 		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	}
 	go protocol.TickCleanRequest()
@@ -232,7 +234,9 @@ func NewCreateChannelSProtocol(
 	host host.Host,
 	callback CreatePubsubSpCallback,
 	service DmsgServiceInterface,
-	adapter SpAdapter) *CreatePubsubSProtocol {
+	adapter SpAdapter,
+	enableRequest bool,
+) *CreatePubsubSProtocol {
 	protocol := &CreatePubsubSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
@@ -241,7 +245,7 @@ func NewCreateChannelSProtocol(
 	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	if service.IsEnableService() {
+	if enableRequest {
 		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	}
 	go protocol.TickCleanRequest()
@@ -253,7 +257,9 @@ func NewMailboxSProtocol(
 	host host.Host,
 	callback MailboxSpCallback,
 	service DmsgServiceInterface,
-	adapter SpAdapter) *MailboxSProtocol {
+	adapter SpAdapter,
+	enableRequest bool,
+) *MailboxSProtocol {
 	protocol := &MailboxSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
@@ -262,7 +268,7 @@ func NewMailboxSProtocol(
 	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	if service.IsEnableService() {
+	if enableRequest {
 		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	}
 	go protocol.TickCleanRequest()
@@ -274,7 +280,9 @@ func NewCustomSProtocol(
 	host host.Host,
 	callback CustomSpCallback,
 	service DmsgServiceInterface,
-	adapter SpAdapter) *CustomSProtocol {
+	adapter SpAdapter,
+	enableRequest bool,
+) *CustomSProtocol {
 	protocol := &CustomSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
@@ -283,7 +291,7 @@ func NewCustomSProtocol(
 	protocol.Service = service
 	protocol.Adapter = adapter
 	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	if service.IsEnableService() {
+	if enableRequest {
 		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
 	}
 	go protocol.TickCleanRequest()

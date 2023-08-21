@@ -148,9 +148,10 @@ func NewReleaseMailboxProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.MailboxSpCallback,
-	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MailboxSProtocol {
+	service dmsgProtocol.DmsgServiceInterface,
+	enableRequest bool) *dmsgProtocol.MailboxSProtocol {
 	adapter := NewReleaseMailboxProtocolAdapter()
-	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter)
+	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest)
 	adapter.protocol = protocol
 	return protocol
 }

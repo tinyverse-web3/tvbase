@@ -36,7 +36,7 @@ func (d *MsgService) Start(enableService bool, pubkeyData []byte, getSig dmsgKey
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d)
+	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, enableService)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)

@@ -36,7 +36,7 @@ func (d *ChannelService) Start(enableService bool, pubkeyData []byte, getSig dms
 	log.Debug("ChannelService->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d)
+	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, enableService)
 	msgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(msgProtocol.Adapter.GetRequestPID(), msgProtocol)
 	d.RegistPubsubProtocol(msgProtocol.Adapter.GetResponsePID(), msgProtocol)
