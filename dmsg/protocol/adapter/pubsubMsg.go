@@ -65,7 +65,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	var content []byte
-	if len(dataList) > 0 {
+	if len(dataList) > 0 && dataList[0] != nil {
 		var ok bool
 		content, ok = dataList[0].([]byte)
 		if !ok {
@@ -73,7 +73,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 		}
 	}
 	retCode := dmsgProtocol.NewSuccRetCode()
-	if len(dataList) > 1 {
+	if len(dataList) > 1 && dataList[1] != nil {
 		var ok bool
 		retCode, ok = dataList[1].(*pb.RetCode)
 		if !ok {

@@ -58,7 +58,7 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	retCode := dmsgProtocol.NewSuccRetCode()
-	if len(dataList) > 1 {
+	if len(dataList) > 1 && dataList[1] != nil {
 		var ok bool
 		retCode, ok = dataList[1].(*pb.RetCode)
 		if !ok {
