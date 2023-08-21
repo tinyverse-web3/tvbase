@@ -73,11 +73,12 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 		}
 	}
 	retCode := dmsgProtocol.NewSuccRetCode()
-	if len(dataList) > 1 && dataList[1] != nil {
-		var ok bool
-		retCode, ok = dataList[1].(*pb.RetCode)
+	if len(dataList) > 1 {
+		data, ok := dataList[1].(*pb.RetCode)
 		if !ok {
 			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[1] to *pb.RetCode")
+		} else if data != nil {
+			retCode = data
 		}
 	}
 	response := &pb.MsgRes{
