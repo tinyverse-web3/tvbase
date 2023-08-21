@@ -1,0 +1,44 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "tvnodelight",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "console": "integratedTerminal",
+            "args": ["-srcSeed", "a", "-destSeed", "b"]
+        },
+        {
+            "name": "tvnodelight-a-b",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "console": "integratedTerminal",
+            "args": ["-srcSeed", "a", "-destSeed", "b", "-pubSeed", "c", "-rootPath", "./"]
+        },
+        {
+            "name": "tvnodelight-b-a",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "console": "integratedTerminal",
+            "args": ["-srcSeed", "b", "-destSeed", "a", "-pubSeed", "c", "-rootPath", "./"]
+        },
+        {
+            "name": "tvnode",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode/main.go",
+            "args": ["-rootPath", "./"]
+        }
+    ]
+}
