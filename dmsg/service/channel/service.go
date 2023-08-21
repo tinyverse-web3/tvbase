@@ -47,7 +47,7 @@ func (d *ChannelService) Start(enableService bool, pubkeyData []byte, getSig dms
 
 	err = d.HandlePubsubProtocol(&d.LightUser.Target)
 	if err != nil {
-		log.Errorf("ChannelService->Start: handlePubsubProtocol error: %v", err)
+		log.Errorf("ChannelService->Start: HandlePubsubProtocol error: %v", err)
 		return err
 	}
 
