@@ -147,6 +147,7 @@ type DHTConfig struct {
 	DatastorePath  string
 	ProtocolPrefix string
 	ProtocolID     string
+	MaxRecordAge   time.Duration
 }
 
 type DMsgConfig struct {
@@ -223,6 +224,7 @@ func NewDefaultNodeConfig() NodeConfig {
 			DatastorePath:  "dht_data",
 			ProtocolPrefix: "/tvnode",
 			ProtocolID:     "/kad/1.0.0",
+			MaxRecordAge:   time.Hour * 24 * 365 * 100,
 		},
 		DMsg: DMsgConfig{
 			MaxMailboxPubsubCount:    1000,

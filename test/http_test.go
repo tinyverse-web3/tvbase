@@ -9,20 +9,36 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
 func init() {
+	moduleLevels := map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvnodelight":    "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
+	}
+	err := tvUtil.SetLogModule(moduleLevels)
+	if err != nil {
+		return
+	}
 }
 
 func TestHttpServer(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
-	//_, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
+	//tvbase, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
+	_, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
 	if err != nil {
 		t.Fatal(err)
 	}
-	putSomeValue(tvbase)
+
+	//putSomeValue(tvbase)
 	//corehttp.InitHttpServer(tvbase) InitHttpServer已经集成到Tvbase中去了
 	select {}
 	//通过postman发送请求来测试http api

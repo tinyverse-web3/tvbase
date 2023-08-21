@@ -60,7 +60,7 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	}
 
 	// register a network event to handler unsynckey
-	tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
+	// tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
 
 	// Periodically process unsynchronized keys
 	_dkvs.periodicallyProcessUnsyncKey()
@@ -473,6 +473,24 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 		Logger.Errorf("dhtGetRecord--> found an invalid dkvs entry: v%", err)
 		return nil, err
 	}
+	go func() { //执行异步操作，如果本地没有这个key,在本地也保留一份
+		ctx2, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		rec, err := d.getLocal(ctx2, key)
+		if err != nil {
+			Logger.Errorf("dhtGetRecord--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
+			return
+		}
+		if rec == nil {
+			Logger.Errorf("dhtGetRecord---> key does not exist on the local, so save a copy to the local node {key: %s}", key)
+			err = d.putKeyToLocalNode(ctx, key, val)
+			if err != nil {
+				Logger.Errorf("dhtGetRecord--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
+			} else {
+				Logger.Debugf("dhtGetRecord--->the new key-value is successfully saved locally {key: %s}", key)
+			}
+		}
+	}()
 	return e, nil
 }
 

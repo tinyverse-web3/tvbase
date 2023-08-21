@@ -167,11 +167,12 @@ func (m *TvBase) Start() error {
 		return logAndUnwrapFxError(err)
 	}
 
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
-		coreHttp.InitHttpServer(m)
-	}
+	// switch m.nodeCfg.Mode {
+	// case tvConfig.LightMode:
+	// case tvConfig.ServiceMode:
+	// 	coreHttp.InitHttpServer(m)
+	// }
+	coreHttp.InitHttpServer(m)
 
 	return nil
 }
