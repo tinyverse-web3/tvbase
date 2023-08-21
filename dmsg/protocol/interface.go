@@ -52,10 +52,10 @@ type MailboxPpCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
-type ChannelSpCallback interface {
-	OnCreateChannelRequest(
+type CreatePubsubSpCallback interface {
+	OnCreatePubsubRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
-	OnCreateChannelResponse(
+	OnCreatePubsubResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }

@@ -437,10 +437,10 @@ func (d *MailboxService) OnSeekMailboxResponse(
 func (d *MailboxService) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
-	request, ok := requestProtoData.(*pb.SendMsgReq)
+	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
 	if d.EnableService {
@@ -884,13 +884,13 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 }
 
 func (d *MailboxService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
-	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
+	MsgReq, ok := protoMsg.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
+		log.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
+		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
 	}
 
-	pubkey := sendMsgReq.BasicData.Pubkey
+	pubkey := MsgReq.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
@@ -900,8 +900,8 @@ func (d *MailboxService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
 	user.MsgRWMutex.RLock()
 	defer user.MsgRWMutex.RUnlock()
 
-	key := d.getFullFromMsgPrefix(sendMsgReq)
-	err := d.datastore.Put(d.TvBase.GetCtx(), datastore.NewKey(key), sendMsgReq.Content)
+	key := d.getFullFromMsgPrefix(MsgReq)
+	err := d.datastore.Put(d.TvBase.GetCtx(), datastore.NewKey(key), MsgReq.Content)
 	if err != nil {
 		return err
 	}
@@ -917,11 +917,11 @@ func (d *MailboxService) getBasicFromMsgPrefix(srcUserPubkey string, destUserPub
 	return msg.MsgPrefix + destUserPubkey + msg.MsgKeyDelimiter + srcUserPubkey
 }
 
-func (d *MailboxService) getFullFromMsgPrefix(sendMsgReq *pb.SendMsgReq) string {
-	basicPrefix := d.getBasicFromMsgPrefix(sendMsgReq.BasicData.Pubkey, sendMsgReq.DestPubkey)
+func (d *MailboxService) getFullFromMsgPrefix(MsgReq *pb.MsgReq) string {
+	basicPrefix := d.getBasicFromMsgPrefix(MsgReq.BasicData.Pubkey, MsgReq.DestPubkey)
 	direction := msg.MsgDirection.From
 	return basicPrefix + msg.MsgKeyDelimiter +
 		direction + msg.MsgKeyDelimiter +
-		sendMsgReq.BasicData.ID + msg.MsgKeyDelimiter +
-		strconv.FormatInt(sendMsgReq.BasicData.TS, 10)
+		MsgReq.BasicData.ID + msg.MsgKeyDelimiter +
+		strconv.FormatInt(MsgReq.BasicData.TS, 10)
 }

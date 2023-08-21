@@ -3,10 +3,9 @@ package msg
 import (
 	"fmt"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -20,10 +19,11 @@ var log = ipfsLog.Logger("dmsg.service.msg")
 
 type MsgService struct {
 	dmsgServiceCommon.LightUserService
-	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol
-	onReceiveMsg      msg.OnReceiveMsg
-	onSendMsgResponse msg.OnReceiveMsg
-	destUserList      map[string]*dmsgUser.LightUser
+	createChannelProtocol *dmsgProtocol.CreatePubsubSProtocol
+	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
+	onReceiveMsg          msg.OnReceiveMsg
+	onSendMsgResponse     msg.OnReceiveMsg
+	destUserList          map[string]*dmsgUser.LightUser
 }
 
 func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*MsgService, error) {
@@ -139,17 +139,17 @@ func (d *MsgService) UnsubscribeDestUserList() error {
 }
 
 // sdk-msg
-func (d *MsgService) SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error) {
+func (d *MsgService) SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error) {
 	log.Debugf("MsgService->SendMsg begin:\ndestPubkey: %s", destPubkey)
 	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
 	if err != nil {
 		log.Errorf("MsgService->SendMsg: sendMsgProtocol.Request error: %v", err)
 		return nil, err
 	}
-	request, ok := requestProtoData.(*pb.SendMsgReq)
+	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MsgService->SendMsg: requestProtoData is not SendMsgReq")
-		return nil, fmt.Errorf("MsgService->SendMsg: requestProtoData is not SendMsgReq")
+		log.Errorf("MsgService->SendMsg: requestProtoData is not MsgReq")
+		return nil, fmt.Errorf("MsgService->SendMsg: requestProtoData is not MsgReq")
 	}
 	log.Debugf("MsgService->SendMsg end")
 	return request, nil
@@ -184,26 +184,35 @@ func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 func (d *MsgService) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MsgService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
-	request, ok := requestProtoData.(*pb.SendMsgReq)
+	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 	if request.DestPubkey != d.LightUser.Key.PubkeyHex {
 		log.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: request.DestPubkey != d.LightUser.Key.PubkeyHex")
 	}
+
 	if d.onReceiveMsg != nil {
 		srcPubkey := request.BasicData.Pubkey
 		destPubkey := request.DestPubkey
 		msgDirection := msg.MsgDirection.From
-		d.onReceiveMsg(
+		responseContent, err := d.onReceiveMsg(
 			srcPubkey,
 			destPubkey,
 			request.Content,
 			request.BasicData.TS,
 			request.BasicData.ID,
 			msgDirection)
+		var retCode *pb.RetCode
+		if err != nil {
+			retCode = &pb.RetCode{
+				Code:   dmsgProtocol.AlreadyExistCode,
+				Result: "MsgService->OnPubsubMsgRequest: " + err.Error(),
+			}
+		}
+		return responseContent, retCode, false, nil
 	} else {
 		log.Warnf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
@@ -219,16 +228,16 @@ func (d *MsgService) OnPubsubMsgResponse(
 		"MsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
-	request, ok := requestProtoData.(*pb.SendMsgReq)
+	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.SendMsgReq")
-		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.SendMsgReq")
+		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	response, ok := responseProtoData.(*pb.SendMsgRes)
+	response, ok := responseProtoData.(*pb.MsgRes)
 	if !ok {
-		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.SendMsgRes")
-		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.SendMsgRes")
+		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
+		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
 	}
 
 	if response.RetCode.Code != 0 {

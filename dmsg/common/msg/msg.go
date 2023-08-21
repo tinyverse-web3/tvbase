@@ -30,4 +30,10 @@ type Msg struct {
 	Direction  string
 }
 
-type OnReceiveMsg func(srcPubkey string, destPubkey string, content []byte, timeStamp int64, msgID string, direction string)
+type OnReceiveMsg func(
+	srcPubkey string,
+	destPubkey string,
+	content []byte,
+	timeStamp int64,
+	msgID string,
+	direction string) ([]byte, error)

@@ -167,7 +167,7 @@ func main() {
 		msgContent []byte,
 		timeStamp int64,
 		msgID string,
-		direction string) {
+		direction string) ([]byte, error) {
 		decrypedContent := []byte("")
 
 		switch direction {
@@ -186,6 +186,7 @@ func main() {
 		}
 		mainLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+		return nil, nil
 	}
 	// set  user msg receive callback
 	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)

@@ -58,12 +58,12 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var retCode *pb.RetCode
+	retCode := dmsgProtocol.NewSuccRetCode()
 	if len(dataList) > 1 {
 		var ok bool
 		retCode, ok = dataList[1].(*pb.RetCode)
 		if !ok {
-			retCode = dmsgProtocol.NewSuccRetCode()
+			return nil, fmt.Errorf("CreateMailboxProtocolAdapter->InitResponse: fail to cast dataList[1] to *pb.RetCode")
 		}
 	}
 	response := &pb.CreateMailboxRes{

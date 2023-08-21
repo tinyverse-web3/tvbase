@@ -16,46 +16,46 @@ type PubsubMsgProtocolAdapter struct {
 	Protocol *dmsgProtocol.PubsubMsgProtocol
 }
 
-func NewSendMsgProtocolAdapter() *PubsubMsgProtocolAdapter {
+func NewPubsubMsgProtocolAdapter() *PubsubMsgProtocolAdapter {
 	ret := &PubsubMsgProtocolAdapter{}
 	return ret
 }
 
 func (adapter *PubsubMsgProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_SEND_MSG_REQ
+	return pb.PID_MSG_REQ
 }
 
 func (adapter *PubsubMsgProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_SEND_MSG_RES
+	return pb.PID_MSG_RES
 }
 
 func (adapter *PubsubMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
-	return &pb.SendMsgReq{}
+	return &pb.MsgReq{}
 }
 func (adapter *PubsubMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
-	return &pb.SendMsgRes{}
+	return &pb.MsgRes{}
 }
 
 func (adapter *PubsubMsgProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	requestProtoMsg := &pb.SendMsgReq{
+	requestProtoMsg := &pb.MsgReq{
 		BasicData: basicData,
 	}
 	if len(dataList) == 2 {
 		destPubkey, ok := dataList[0].(string)
 		if !ok {
-			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+			return nil, errors.New("PubsubMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 
 		content, ok := dataList[1].([]byte)
 		if !ok {
-			return nil, errors.New("SendMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
+			return nil, errors.New("PubsubMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to []byte for content")
 		}
 		requestProtoMsg.Content = content
 		requestProtoMsg.DestPubkey = destPubkey
 	} else {
-		return requestProtoMsg, errors.New("SendMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
+		return requestProtoMsg, errors.New("PubsubMsgProtocolAdapter->InitRequest: parameter dataList need contain content")
 	}
 	return requestProtoMsg, nil
 }
@@ -64,16 +64,25 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var retCode *pb.RetCode
+	var content []byte
+	if len(dataList) > 0 {
+		var ok bool
+		content, ok = dataList[0].([]byte)
+		if !ok {
+			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
+		}
+	}
+	retCode := dmsgProtocol.NewSuccRetCode()
 	if len(dataList) > 1 {
 		var ok bool
 		retCode, ok = dataList[1].(*pb.RetCode)
 		if !ok {
-			retCode = dmsgProtocol.NewSuccRetCode()
+			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[1] to *pb.RetCode")
 		}
 	}
-	response := &pb.SendMsgRes{
+	response := &pb.MsgRes{
 		BasicData: basicData,
+		Content:   content,
 		RetCode:   retCode,
 	}
 	return response, nil
@@ -81,7 +90,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 
 func (adapter *PubsubMsgProtocolAdapter) GetRequestBasicData(
 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.SendMsgReq)
+	request, ok := requestProtoMsg.(*pb.MsgReq)
 	if !ok {
 		return nil
 	}
@@ -90,7 +99,7 @@ func (adapter *PubsubMsgProtocolAdapter) GetRequestBasicData(
 
 func (adapter *PubsubMsgProtocolAdapter) GetResponseBasicData(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.SendMsgRes)
+	response, ok := responseProtoMsg.(*pb.MsgRes)
 	if !ok {
 		return nil
 	}
@@ -99,7 +108,7 @@ func (adapter *PubsubMsgProtocolAdapter) GetResponseBasicData(
 
 func (adapter *PubsubMsgProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
-	response, ok := responseProtoMsg.(*pb.SendMsgRes)
+	response, ok := responseProtoMsg.(*pb.MsgRes)
 	if !ok {
 		return nil
 	}
@@ -110,7 +119,7 @@ func (adapter *PubsubMsgProtocolAdapter) SetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage,
 	code int32,
 	result string) {
-	request, ok := responseProtoMsg.(*pb.SendMsgRes)
+	request, ok := responseProtoMsg.(*pb.MsgRes)
 	if !ok {
 		return
 	}
@@ -120,9 +129,9 @@ func (adapter *PubsubMsgProtocolAdapter) SetResponseRetCode(
 func (adapter *PubsubMsgProtocolAdapter) SetRequestSig(
 	requestProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
-	request, ok := requestProtoMsg.(*pb.SendMsgReq)
+	request, ok := requestProtoMsg.(*pb.MsgReq)
 	if !ok {
-		return fmt.Errorf("SendMsgProtocolAdapter->SetRequestSig: failed to cast request to *pb.SendMsgReq")
+		return fmt.Errorf("PubsubMsgProtocolAdapter->SetRequestSig: failed to cast request to *pb.MsgReq")
 	}
 	request.BasicData.Sig = sig
 	return nil
@@ -131,9 +140,9 @@ func (adapter *PubsubMsgProtocolAdapter) SetRequestSig(
 func (adapter *PubsubMsgProtocolAdapter) SetResponseSig(
 	responseProtoMsg protoreflect.ProtoMessage,
 	sig []byte) error {
-	response, ok := responseProtoMsg.(*pb.SendMsgRes)
+	response, ok := responseProtoMsg.(*pb.MsgRes)
 	if !ok {
-		return errors.New("SendMsgProtocolAdapter->SetResponseSig: failed to cast request to *pb.SendMsgRes")
+		return errors.New("PubsubMsgProtocolAdapter->SetResponseSig: failed to cast request to *pb.MsgRes")
 	}
 	response.BasicData.Sig = sig
 	return nil
@@ -157,7 +166,7 @@ func NewPubsubMsgProtocol(
 	host host.Host,
 	callback dmsgProtocol.PubsubMsgCallback,
 	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.PubsubMsgProtocol {
-	adapter := NewSendMsgProtocolAdapter()
+	adapter := NewPubsubMsgProtocolAdapter()
 	protocol := dmsgProtocol.NewPubsubMsgProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol
 	return protocol

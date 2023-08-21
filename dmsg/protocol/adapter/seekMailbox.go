@@ -48,12 +48,12 @@ func (adapter *SeekMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	var retCode *pb.RetCode
+	retCode := dmsgProtocol.NewSuccRetCode()
 	if len(dataList) > 1 {
 		var ok bool
 		retCode, ok = dataList[1].(*pb.RetCode)
 		if !ok {
-			retCode = dmsgProtocol.NewSuccRetCode()
+			return nil, errors.New("SeekMailboxProtocolAdapter->InitResponse: failed to cast response to *pb.RetCode")
 		}
 	}
 	response := &pb.SeekMailboxRes{

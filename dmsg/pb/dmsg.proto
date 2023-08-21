@@ -13,16 +13,16 @@ enum PID {
     SEEK_MAILBOX_RES = 5;
     READ_MAILBOX_REQ = 6;
     READ_MAILBOX_RES = 7;
-    QUERY_PEER_REQ = 8;
-    QUERY_PEER_RES = 9;
-    SEND_MSG_REQ = 10;
-    SEND_MSG_RES = 11;
+    CREATE_MSG_PUBSUB_REQ = 8;
+    CREATE_MSG_PUBSUB_RES = 9;
+    MSG_REQ = 10;
+    MSG_RES = 11;
     CREATE_CHANNEL_REQ = 12;
     CREATE_CHANNEL_RES = 13;
-    CUSTOM_STREAM_REQ = 14;
-    CUSTOM_STREAM_RES = 15;
-    CUSTOM_PUBSUB_REQ = 16;
-    CUSTOM_PUBSUB_RES = 17;
+    QUERY_PEER_REQ = 14;
+    QUERY_PEER_RES = 15;
+    CUSTOM_STREAM_REQ = 16;
+    CUSTOM_STREAM_RES = 17;
 }
 
 message BasicData {
@@ -39,8 +39,6 @@ message RetCode {
     int32 code = 1;
     string result = 2;
 }
-
-
 
 message ReadMailboxReq {
     BasicData basicData = 1;
@@ -84,6 +82,28 @@ message SeekMailboxRes {
     RetCode retCode = 3;
 }
 
+message CreatePubsubReq {
+    BasicData basicData = 1;
+    string channelKey = 2;
+}
+
+message CreatePubsubRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
+}
+
+message MsgReq {
+    BasicData basicData = 1;
+    string destPubkey = 2;
+    bytes content = 3;
+}
+
+message MsgRes {
+    BasicData basicData = 1;
+    RetCode retCode = 2;
+    bytes content = 3;
+}
+
 message QueryPeerReq {
     BasicData basicData = 1;
 }
@@ -92,27 +112,6 @@ message QueryPeerRes {
     BasicData basicData = 1;
     string PeerID = 2;
     RetCode retCode = 3;
-}
-
-message SendMsgReq {
-    BasicData basicData = 1;
-    string destPubkey = 2;
-    bytes content = 3;
-}
-
-message SendMsgRes {
-    BasicData basicData = 1;
-    RetCode retCode = 2;
-}
-
-message CreateChannelReq {
-    BasicData basicData = 1;
-    string channelKey = 2;
-}
-
-message CreateChannelRes {
-    BasicData basicData = 1;
-    RetCode retCode = 2;
 }
 
 message CustomProtocolReq {

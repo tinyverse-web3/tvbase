@@ -148,7 +148,7 @@ type DestTarget struct {
 	LastReciveTimestamp int64
 }
 
-type Channel struct {
+type ProxyPubsub struct {
 	DestTarget
 }
 

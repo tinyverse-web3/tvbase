@@ -120,9 +120,10 @@ func TestPubsubMsg(t *testing.T) {
 		msgContent []byte,
 		timeStamp int64,
 		msgID string,
-		direction string) {
+		direction string) ([]byte, error) {
 		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+		return nil, nil
 	}
 	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
 	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)

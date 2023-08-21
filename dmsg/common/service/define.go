@@ -40,7 +40,7 @@ type MsgService interface {
 	UnsubscribeDestUser(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
 	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
-	SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error)
+	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 }
 
 type ChannelService interface {
@@ -49,7 +49,7 @@ type ChannelService interface {
 	UnsubscribeChannel(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
 	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
-	SendMsg(destPubkey string, content []byte) (*pb.SendMsgReq, error)
+	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 }
 
 type CustomProtocolService interface {
