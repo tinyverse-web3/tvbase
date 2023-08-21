@@ -35,7 +35,7 @@ type MailboxService interface {
 
 type MsgService interface {
 	LightService
-	GetDestUser(pubkey string) *dmsgUser.LightUser
+	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
