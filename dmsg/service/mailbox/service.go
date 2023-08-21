@@ -94,7 +94,10 @@ func (d *MailboxService) Start(
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	// user
-	d.initUser(pubkeyData, getSig)
+	err := d.initUser(pubkeyData, getSig)
+	if err != nil {
+		return err
+	}
 	log.Debug("MailboxService->Start end")
 	return nil
 }
@@ -584,7 +587,7 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 			case <-c:
 				d.initMailbox(pubkey)
 				d.TvBase.UnregistRendezvousChan(c)
-			case <-time.After(1 * time.Hour):
+			case <-time.After(3 * time.Second):
 				return nil
 			case <-d.TvBase.GetCtx().Done():
 				return d.TvBase.GetCtx().Err()
