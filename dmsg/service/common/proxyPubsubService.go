@@ -272,45 +272,6 @@ func (d *ProxyPubsubService) OnCreatePubsubResponse(
 	return nil, nil
 }
 
-// MsgPpCallback
-func (d *ProxyPubsubService) OnPubsubMsgRequest(
-	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("ProxyPubsubService->OnPubsubMsgRequest: need implement by inherit")
-	return nil, nil, false, nil
-}
-
-func (d *ProxyPubsubService) OnPubsubMsgResponse(
-	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debugf("ProxyPubsubService->OnPubsubMsgResponse: need implement by inherit")
-	return nil, nil
-}
-
-func (d *ProxyPubsubService) cleanRestResource() {
-	go func() {
-		ticker := time.NewTicker(3 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-d.stopCleanRestResource:
-				return
-			case <-ticker.C:
-				for pubkey, pubsub := range d.ProxyPubsubList {
-					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
-					if days >= d.keepPubsubDay {
-						d.UnsubscribePubsub(pubkey)
-						return
-					}
-				}
-
-				continue
-			case <-d.TvBase.GetCtx().Done():
-				return
-			}
-		}
-	}()
-}
-
 func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error {
 	ctx := d.TvBase.GetCtx()
 	protocolDataChan, err := WaitMessage(ctx, target.Key.PubkeyHex)
@@ -410,6 +371,31 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 	}
 	log.Debug("ProxyPubsubService->CreatePubsubService end")
 	return nil
+}
+
+func (d *ProxyPubsubService) cleanRestResource() {
+	go func() {
+		ticker := time.NewTicker(3 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-d.stopCleanRestResource:
+				return
+			case <-ticker.C:
+				for pubkey, pubsub := range d.ProxyPubsubList {
+					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+					if days >= d.keepPubsubDay {
+						d.UnsubscribePubsub(pubkey)
+						return
+					}
+				}
+
+				continue
+			case <-d.TvBase.GetCtx().Done():
+				return
+			}
+		}
+	}()
 }
 
 func (d *ProxyPubsubService) isAvailablePubsub() bool {
