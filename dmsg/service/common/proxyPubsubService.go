@@ -28,14 +28,19 @@ type ProxyPubsubService struct {
 	OnSendMsgResponse     msg.OnReceiveMsg
 	stopCleanRestResource chan bool
 	maxPubsubCount        int
+	keepPubsubDay         int
 }
 
-func (d *ProxyPubsubService) Init(tvbase tvbaseCommon.TvBaseService, maxPubsubCount int) error {
+func (d *ProxyPubsubService) Init(
+	tvbase tvbaseCommon.TvBaseService,
+	maxPubsubCount int,
+	keepPubsubDay int) error {
 	err := d.LightUserService.Init(tvbase)
 	if err != nil {
 		return err
 	}
 	d.maxPubsubCount = maxPubsubCount
+	d.keepPubsubDay = keepPubsubDay
 	d.ProxyPubsubList = make(map[string]*dmsgUser.ProxyPubsub)
 	return nil
 }
@@ -280,7 +285,7 @@ func (d *ProxyPubsubService) cleanRestResource() {
 			case <-ticker.C:
 				for pubkey, pubsub := range d.ProxyPubsubList {
 					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
-					if days >= d.GetKeepPubsubDay() {
+					if days >= d.keepPubsubDay {
 						d.UnsubscribePubsub(pubkey)
 						return
 					}
@@ -292,11 +297,6 @@ func (d *ProxyPubsubService) cleanRestResource() {
 			}
 		}
 	}()
-}
-
-func (d *ProxyPubsubService) GetKeepPubsubDay() int {
-	log.Debugf("ProxyPubsubService->GetKeepPubsubDay: need implement by inherit")
-	return 0
 }
 
 func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error {

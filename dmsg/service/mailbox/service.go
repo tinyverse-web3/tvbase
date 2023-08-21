@@ -482,7 +482,7 @@ func (d *MailboxService) cleanRestResource() {
 				for pubkey, pubsub := range d.serviceUserList {
 					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
 					// delete mailbox msg in datastore and unsubscribe mailbox when days is over, default days is 30
-					if days >= d.GetConfig().KeepMailboxMsgDay {
+					if days >= d.GetConfig().KeepMailboxDay {
 						var query = query.Query{
 							Prefix:   d.getMsgPrefix(pubkey),
 							KeysOnly: true,

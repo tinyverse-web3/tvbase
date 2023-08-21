@@ -142,11 +142,11 @@ type DHTConfig struct {
 }
 
 type DMsgConfig struct {
-	MaxMailboxCount   int
-	KeepMailboxMsgDay int
-	MaxChannelCount   int
-	KeepPubChannelDay int
-	DatastorePath     string
+	MaxMailboxCount int
+	KeepMailboxDay  int
+	MaxChannelCount int
+	KeepChannelDay  int
+	DatastorePath   string
 }
 
 type MetricsConfig struct {
@@ -220,11 +220,11 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			ProtocolID:     "/kad/1.0.0",
 		},
 		DMsg: DMsgConfig{
-			MaxMailboxCount:   1000,
-			MaxChannelCount:   1000,
-			KeepMailboxMsgDay: 30,
-			KeepPubChannelDay: 30,
-			DatastorePath:     "msg_data",
+			MaxMailboxCount: 1000,
+			KeepMailboxDay:  30,
+			MaxChannelCount: 1000,
+			KeepChannelDay:  30,
+			DatastorePath:   "msg_data",
 		},
 		Relay: RelayConfig{
 			Enabled: true,
