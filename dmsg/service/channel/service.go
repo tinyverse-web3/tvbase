@@ -141,7 +141,6 @@ func (d *ChannelService) SubscribeChannel(pubkey string) error {
 		}
 	}
 
-	// go d.BaseService.DiscoverRendezvousPeers()
 	d.handlePubsubProtocol(&channel.Target)
 	if err != nil {
 		log.Errorf("ChannelService->SubscribeChannel: handlePubsubProtocol error: %v", err)
@@ -184,9 +183,9 @@ func (d *ChannelService) UnsubscribeChannelList() error {
 }
 
 // sdk-msg
-func (d *ChannelService) SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error) {
-	log.Debugf("ChannelService->SendMsg begin:\ndestPubkey: %s", destPubkey)
-	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
+func (d *ChannelService) SendMsg(pubkey string, content []byte) (*pb.MsgReq, error) {
+	log.Debugf("ChannelService->SendMsg begin:\ndestPubkey: %s", pubkey)
+	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, pubkey, content)
 	if err != nil {
 		log.Errorf("ChannelService->SendMsg: sendMsgProtocol.Request error: %v", err)
 		return nil, err
@@ -309,8 +308,6 @@ func (d *ChannelService) OnPubsubMsgRequest(
 			log.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 		}
 		return nil, nil, false, nil
-	} else if d.LightUser.Key.PubkeyHex == destPubkey {
-		return nil, nil, false, nil
 	}
 	log.Debugf("ChannelService->OnPubsubMsgRequest end")
 	return nil, nil, false, nil
@@ -351,7 +348,7 @@ func (d *ChannelService) OnPubsubMsgResponse(
 				request.BasicData.ID,
 				msgDirection)
 		} else {
-			log.Warnf("ChannelService->OnPubsubMsgRequest: onSendMsgResponse is nil")
+			log.Debugf("ChannelService->OnPubsubMsgRequest: onSendMsgResponse is nil")
 		}
 	}
 	log.Debugf("ChannelService->OnPubsubMsgResponse end")
