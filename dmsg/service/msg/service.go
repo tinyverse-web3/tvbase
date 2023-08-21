@@ -21,10 +21,10 @@ type MsgService struct {
 	dmsgServiceCommon.ProxyPubsubService
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*MsgService, error) {
+func CreateService(tvbase tvbaseCommon.TvBaseService) (*MsgService, error) {
 	d := &MsgService{}
-	cfg := d.GetConfig()
-	err := d.Init(tvbaseService, cfg.MaxMsgCount, cfg.KeepMsgDay)
+	cfg := tvbase.GetConfig().DMsg
+	err := d.Init(tvbase, cfg.MaxMsgCount, cfg.KeepMsgDay)
 	if err != nil {
 		return nil, err
 	}

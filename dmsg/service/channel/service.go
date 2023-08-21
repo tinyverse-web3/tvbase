@@ -23,7 +23,7 @@ type ChannelService struct {
 
 func CreateService(tvbase tvbaseCommon.TvBaseService) (*ChannelService, error) {
 	d := &ChannelService{}
-	cfg := d.GetConfig()
+	cfg := tvbase.GetConfig().DMsg
 	err := d.Init(tvbase, cfg.MaxChannelCount, cfg.KeepChannelDay)
 	if err != nil {
 		return nil, err
