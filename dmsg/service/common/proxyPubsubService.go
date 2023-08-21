@@ -47,8 +47,7 @@ func (d *ProxyPubsubService) Start(
 	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
-	err := d.LightUserService.Start(
-		enableService, pubkeyData, getSig, true)
+	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
 	if err != nil {
 		return err
 	}
