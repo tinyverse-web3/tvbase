@@ -36,11 +36,11 @@ func (d *ChannelService) Start(enableService bool, pubkeyData []byte, getSig dms
 	log.Debug("ChannelService->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	createChannelProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d)
-	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
-	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createChannelProtocol, pubsubMsgProtocol)
+	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d)
+	msgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+	d.RegistPubsubProtocol(msgProtocol.Adapter.GetRequestPID(), msgProtocol)
+	d.RegistPubsubProtocol(msgProtocol.Adapter.GetResponsePID(), msgProtocol)
+	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, msgProtocol)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (d *ChannelService) GetChannel(pubkey string) *dmsgUser.ProxyPubsub {
 
 func (d *ChannelService) SubscribeChannel(pubkey string) error {
 	log.Debugf("ChannelService->SubscribeChannel begin:\npubkey: %s", pubkey)
-	err := d.SubscribePubsub(pubkey, d.EnableService)
+	err := d.SubscribePubsub(pubkey, true, true)
 	if err != nil {
 		return err
 	}

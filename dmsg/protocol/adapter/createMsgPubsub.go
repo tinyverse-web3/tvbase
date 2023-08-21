@@ -54,13 +54,13 @@ func (adapter *CreateMsgPubsubProtocolAdapter) InitRequest(
 	}
 
 	if len(dataList) == 1 {
-		channelKey, ok := dataList[0].(string)
+		key, ok := dataList[0].(string)
 		if !ok {
-			return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for channelKey")
+			return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for key")
 		}
-		request.ChannelKey = channelKey
+		request.Key = key
 	} else {
-		return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: parameter dataList need contain channelKey")
+		return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: parameter dataList need contain key")
 	}
 
 	return request, nil

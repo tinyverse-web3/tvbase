@@ -84,7 +84,7 @@ message SeekMailboxRes {
 
 message CreatePubsubReq {
     BasicData basicData = 1;
-    string channelKey = 2;
+    string key = 2;
 }
 
 message CreatePubsubRes {

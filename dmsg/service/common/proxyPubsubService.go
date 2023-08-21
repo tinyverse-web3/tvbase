@@ -103,12 +103,16 @@ func (d *ProxyPubsubService) GetProxyPubsub(pubkey string) *dmsgUser.ProxyPubsub
 	return d.ProxyPubsubList[pubkey]
 }
 
-func (d *ProxyPubsubService) SubscribePubsub(pubkey string, createPubsubProxy bool) error {
+func (d *ProxyPubsubService) SubscribePubsub(
+	pubkey string,
+	createPubsubProxy bool,
+	isHandlePubsubProtocol bool,
+) error {
 	log.Debugf("ProxyPubsubService->SubscribeChannel begin:\npubkey: %s", pubkey)
 
 	if d.ProxyPubsubList[pubkey] != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in channelList")
-		return fmt.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in channelList")
+		log.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
+		return fmt.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
 	}
 
 	target, err := dmsgUser.NewTarget(pubkey, nil)
@@ -138,15 +142,17 @@ func (d *ProxyPubsubService) SubscribePubsub(pubkey string, createPubsubProxy bo
 		}
 	}
 
-	d.HandlePubsubProtocol(&proxyPubsub.Target)
-	if err != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: HandlePubsubProtocol error: %v", err)
-		err := proxyPubsub.Target.Close()
+	if isHandlePubsubProtocol {
+		d.HandlePubsubProtocol(&proxyPubsub.Target)
 		if err != nil {
-			log.Warnf("ProxyPubsubService->SubscribeChannel: Target.Close error: %v", err)
+			log.Errorf("ProxyPubsubService->SubscribeChannel: HandlePubsubProtocol error: %v", err)
+			err := proxyPubsub.Target.Close()
+			if err != nil {
+				log.Warnf("ProxyPubsubService->SubscribeChannel: Target.Close error: %v", err)
+				return err
+			}
 			return err
 		}
-		return err
 	}
 
 	d.ProxyPubsubList[pubkey] = proxyPubsub
@@ -213,8 +219,8 @@ func (d *ProxyPubsubService) GetPublishTarget(pubkey string) (*dmsgUser.Target, 
 	}
 
 	if target == nil {
-		log.Errorf("ChannelService->GetPublishTarget: target is nil")
-		return nil, fmt.Errorf("ChannelService->GetPublishTarget: target is nil")
+		log.Errorf("ProxyPubsubService->GetPublishTarget: target is nil")
+		return nil, fmt.Errorf("ProxyPubsubService->GetPublishTarget: target is nil")
 	}
 	return target, nil
 }
@@ -222,34 +228,40 @@ func (d *ProxyPubsubService) GetPublishTarget(pubkey string) (*dmsgUser.Target, 
 // MsgSpCallback
 func (d *ProxyPubsubService) OnCreatePubsubRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("ChannelService->OnCreatePubusubRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("ProxyPubsubService->OnCreatePubusubRequest begin:\nrequestProtoData: %+v", requestProtoData)
 
 	request, ok := requestProtoData.(*pb.CreatePubsubReq)
 	if !ok {
-		log.Errorf("ChannelService->OnCreatePubusubRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, nil, false, fmt.Errorf("ChannelService->OnCreatePubusubRequest: cannot convert to *pb.CreateMailboxReq")
+		log.Errorf("ProxyPubsubService->OnCreatePubusubRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		return nil, nil, false, fmt.Errorf("ProxyPubsubService->OnCreatePubusubRequest: cannot convert to *pb.CreateMailboxReq")
 	}
-	channelKey := request.ChannelKey
-	isAvailable := d.isAvailablePubsub(channelKey)
+
+	if request.BasicData.PeerID == d.TvBase.GetDht().PeerID().String() {
+		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetDht().PeerID().String()")
+		return nil, nil, true, nil
+	}
+
+	pubsubKey := request.Key
+	isAvailable := d.isAvailablePubsub()
 	if !isAvailable {
-		return nil, nil, false, errors.New("ChannelService->OnCreatePubusubRequest: exceeded the maximum number of mailbox service")
+		return nil, nil, false, errors.New("ProxyPubsubService->OnCreatePubusubRequest: exceeded the maximum number of mailbox service")
 	}
-	proxyPubsub := d.ProxyPubsubList[channelKey]
+	proxyPubsub := d.ProxyPubsubList[pubsubKey]
 	if proxyPubsub != nil {
-		log.Debugf("ChannelService->OnCreatePubusubRequest: proxyPubsub already exist")
+		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: proxyPubsub already exist")
 		retCode := &pb.RetCode{
 			Code:   dmsgProtocol.AlreadyExistCode,
-			Result: "ChannelService->OnCreatePubusubRequest: proxyPubsub already exist",
+			Result: "ProxyPubsubService->OnCreatePubusubRequest: proxyPubsub already exist",
 		}
 		return nil, retCode, false, nil
 	}
 
-	err := d.SubscribePubsub(channelKey, false)
+	err := d.SubscribePubsub(pubsubKey, false, false)
 	if err != nil {
 		return nil, nil, false, err
 	}
 
-	log.Debugf("ChannelService->OnCreatePubusubRequest end")
+	log.Debugf("ProxyPubsubService->OnCreatePubusubRequest end")
 	return nil, nil, false, nil
 }
 
@@ -400,7 +412,7 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 	return nil
 }
 
-func (d *ProxyPubsubService) isAvailablePubsub(pubKey string) bool {
+func (d *ProxyPubsubService) isAvailablePubsub() bool {
 	len := len(d.ProxyPubsubList)
 	if len >= d.maxPubsubCount {
 		log.Warnf("ProxyPubsubService->isAvailablePubsub: exceeded the maximum number of mailbox services, current destUserCount:%v", len)
