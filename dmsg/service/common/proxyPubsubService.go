@@ -27,13 +27,15 @@ type ProxyPubsubService struct {
 	OnReceiveMsg          msg.OnReceiveMsg
 	OnSendMsgResponse     msg.OnReceiveMsg
 	stopCleanRestResource chan bool
+	maxPubsubCount        int
 }
 
-func (d *ProxyPubsubService) Init(tvbase tvbaseCommon.TvBaseService) error {
+func (d *ProxyPubsubService) Init(tvbase tvbaseCommon.TvBaseService, maxPubsubCount int) error {
 	err := d.LightUserService.Init(tvbase)
 	if err != nil {
 		return err
 	}
+	d.maxPubsubCount = 100
 	d.ProxyPubsubList = make(map[string]*dmsgUser.ProxyPubsub)
 	return nil
 }
@@ -124,7 +126,7 @@ func (d *ProxyPubsubService) SubscribePubsub(pubkey string, createPubsubProxy bo
 	}
 
 	if createPubsubProxy {
-		err = d.CreatePubsubService(proxyPubsub.Key.PubkeyHex)
+		err = d.createPubsubService(proxyPubsub.Key.PubkeyHex)
 		if err != nil {
 			target.Close()
 			return err
@@ -345,7 +347,7 @@ func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error
 	return nil
 }
 
-func (d *ProxyPubsubService) CreatePubsubService(pubkey string) error {
+func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 	log.Debugf("ProxyPubsubService->CreatePubsubService begin:\n channel key: %s", pubkey)
 	find := false
 
@@ -399,6 +401,10 @@ func (d *ProxyPubsubService) CreatePubsubService(pubkey string) error {
 }
 
 func (d *ProxyPubsubService) isAvailablePubsub(pubKey string) bool {
-	log.Debugf("ProxyPubsubService->GetPublishTarget: need implement by inherit")
+	len := len(d.ProxyPubsubList)
+	if len >= d.maxPubsubCount {
+		log.Warnf("ProxyPubsubService->isAvailablePubsub: exceeded the maximum number of mailbox services, current destUserCount:%v", len)
+		return false
+	}
 	return false
 }
