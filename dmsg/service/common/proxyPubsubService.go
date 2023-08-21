@@ -14,7 +14,6 @@ import (
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -45,6 +44,7 @@ func (d *ProxyPubsubService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
+	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
 	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
@@ -56,16 +56,11 @@ func (d *ProxyPubsubService) Start(
 		d.cleanRestResource()
 	}
 
-	ctx := d.TvBase.GetCtx()
-	host := d.TvBase.GetHost()
-
 	// stream protocol
 	d.createPubsubProtocol = createPubsubProtocol
 
 	// pubsub protocol
-	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
-	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
+	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// user
 	err = d.handlePubsubProtocol(&d.LightUser.Target)
@@ -262,7 +257,6 @@ func (d *ProxyPubsubService) OnPubsubMsgResponse(
 	return nil, nil
 }
 
-// common
 func (d *ProxyPubsubService) cleanRestResource() {
 	go func() {
 		ticker := time.NewTicker(3 * time.Hour)
