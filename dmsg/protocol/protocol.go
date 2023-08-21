@@ -165,7 +165,7 @@ func (p *Protocol) HandleResponseData(
 			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
 		select {
-		case p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg:
+		case requestInfo.DoneChan <- responseProtoMsg:
 			log.Logger.Debugf("Protocol->HandleResponseData: succ send DoneChan")
 		default:
 			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for DoneChan")
