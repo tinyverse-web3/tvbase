@@ -6,8 +6,8 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
+	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
@@ -53,6 +53,10 @@ func (d *ChannelService) Start(enableService bool, pubkeyData []byte, getSig dms
 
 	log.Debug("ChannelService->Start end")
 	return nil
+}
+
+func (d *ChannelService) GetChannel(pubkey string) *dmsgUser.ProxyPubsub {
+	return d.GetProxyPubsub(pubkey)
 }
 
 func (d *ChannelService) SubscribeChannel(pubkey string) error {
