@@ -35,7 +35,7 @@ func (d *ProxyPubsubService) Init(tvbase tvbaseCommon.TvBaseService, maxPubsubCo
 	if err != nil {
 		return err
 	}
-	d.maxPubsubCount = 100
+	d.maxPubsubCount = maxPubsubCount
 	d.ProxyPubsubList = make(map[string]*dmsgUser.ProxyPubsub)
 	return nil
 }
