@@ -112,7 +112,6 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			case <-m.ctx.Done():
 				return
 			}
-
 		} else {
 			tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
 			for _, c := range m.rendezvousChanList {
