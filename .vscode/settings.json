@@ -1,9 +1,0 @@
-{    "protoc": {
-        "compile_on_save": false,
-        "options": [
-            "--proto_path=${workspaceRoot}/dmsg/pb",
-            "--proto_path=${workspaceRoot}/common/pb",
-            "--go_out=."
-        ]
-    }
-}
