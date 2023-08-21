@@ -142,6 +142,8 @@ type DHTConfig struct {
 }
 
 type DMsgConfig struct {
+	MaxMsgCount     int
+	KeepMsgDay      int
 	MaxMailboxCount int
 	KeepMailboxDay  int
 	MaxChannelCount int
@@ -220,6 +222,8 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			ProtocolID:     "/kad/1.0.0",
 		},
 		DMsg: DMsgConfig{
+			MaxMsgCount:     1000,
+			KeepMsgDay:      30,
 			MaxMailboxCount: 1000,
 			KeepMailboxDay:  30,
 			MaxChannelCount: 1000,
