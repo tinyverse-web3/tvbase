@@ -209,7 +209,14 @@ func (d *ProxyPubsubService) SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiv
 }
 
 // DmsgServiceInterface
-func (d *ProxyPubsubService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
+func (d *ProxyPubsubService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
+	request, ok := requestProtoData.(*pb.MsgReq)
+	if !ok {
+		log.Errorf("ProxyPubsubService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, fmt.Errorf("ProxyPubsubService->GetPublishTarget: cannot convert to *pb.MsgReq")
+	}
+
+	pubkey := request.BasicData.Pubkey
 	var target *dmsgUser.Target
 	if d.ProxyPubsubList[pubkey] != nil {
 		target = &d.ProxyPubsubList[pubkey].Target
@@ -231,8 +238,8 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 
 	request, ok := requestProtoData.(*pb.CreatePubsubReq)
 	if !ok {
-		log.Errorf("ProxyPubsubService->OnCreatePubusubRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, nil, false, fmt.Errorf("ProxyPubsubService->OnCreatePubusubRequest: cannot convert to *pb.CreateMailboxReq")
+		log.Errorf("ProxyPubsubService->OnCreatePubusubRequest: fail to convert requestProtoData to *pb.CreatePubsubReq")
+		return nil, nil, false, fmt.Errorf("ProxyPubsubService->OnCreatePubusubRequest: cannot convert to *pb.CreatePubsubReq")
 	}
 
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {

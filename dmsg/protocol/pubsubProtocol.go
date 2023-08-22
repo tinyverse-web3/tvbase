@@ -56,9 +56,8 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	}
 
 	// send the response
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	responseBasicData := p.Adapter.GetResponseBasicData(response)
-	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
+	target, err := p.Service.GetPublishTarget(request)
 	if err != nil {
 		return err
 	}
@@ -79,13 +78,13 @@ func (p *PubsubProtocol) Request(
 		srcUserPubKey, destUserPubkey, dataList)
 
 	dataList = append([]any{destUserPubkey}, dataList...)
-	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
+	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	requestBasicData := p.Adapter.GetRequestBasicData(requestProtoMsg)
-	target, err := p.Service.GetPublishTarget(destUserPubkey)
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	target, err := p.Service.GetPublishTarget(request)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,7 +96,7 @@ func (p *PubsubProtocol) Request(
 	}
 
 	log.Logger.Debugf("PubsubProtocol->Request end")
-	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
+	return request, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
 }
 
 func NewPubsubMsgProtocol(

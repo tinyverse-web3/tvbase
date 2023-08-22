@@ -18,7 +18,7 @@ type DmsgServiceInterface interface {
 	IsEnableService() bool
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
+	GetPublishTarget(request protoreflect.ProtoMessage) (*dmsgUser.Target, error)
 	PublishProtocol(
 		ctx context.Context,
 		target *dmsgUser.Target,

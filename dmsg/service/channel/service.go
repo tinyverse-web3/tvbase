@@ -131,10 +131,11 @@ func (d *ChannelService) OnPubsubMsgRequest(
 		log.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
 
-	if d.LightUser.Key.PubkeyHex == destPubkey {
-		return responseContent, retCode, false, nil
-	}
-	return nil, nil, true, nil
+	// if d.LightUser.Key.PubkeyHex == destPubkey {
+	// 	return responseContent, retCode, false, nil
+	// }
+	// return nil, nil, true, nil
+	return responseContent, retCode, false, nil
 }
 
 func (d *ChannelService) OnPubsubMsgResponse(
