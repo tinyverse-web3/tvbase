@@ -87,12 +87,14 @@ func (d *MailboxService) Start(
 
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
-
 	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
+
+	if enableService {
+		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
+		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
+	}
 	// user
 	err := d.initUser(pubkeyData, getSig, timeout)
 	if err != nil {
