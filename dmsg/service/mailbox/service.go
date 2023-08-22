@@ -342,6 +342,9 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	mailboxMsgDataList := []*pb.MailboxItem{}
 	find := false
 	needDeleteKeyList := []string{}
+	const maxSize = 2 * 1024 * 1024
+	factSize := 0
+	requestParam := &adapter.ReadMailRequestParam{}
 	for result := range results.Next() {
 		mailboxMsgData := &pb.MailboxItem{
 			Key:     string(result.Key),
@@ -350,8 +353,16 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 		mailboxMsgDataList = append(mailboxMsgDataList, mailboxMsgData)
 		needDeleteKeyList = append(needDeleteKeyList, string(result.Key))
 		find = true
+		factSize += len(result.Value)
+		if factSize >= maxSize {
+			nextData := results.Next()
+			if nextData == nil {
+				requestParam.ExistData = true
+			}
+			break
+		}
 	}
-
+	requestParam.ItemList = mailboxMsgDataList
 	for _, needDeleteKey := range needDeleteKeyList {
 		err := d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(needDeleteKey))
 		if err != nil {
@@ -363,7 +374,7 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 		log.Debug("dmsgService->OnReadMailboxMsgRequest: user msgs is empty")
 	}
 	log.Debugf("dmsgService->OnReadMailboxMsgRequest end")
-	return mailboxMsgDataList, nil, false, nil
+	return requestParam, nil, false, nil
 }
 
 func (d *MailboxService) OnReadMailboxMsgResponse(
