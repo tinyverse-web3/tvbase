@@ -376,23 +376,25 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 
 func (d *ProxyPubsubService) cleanRestResource() {
 	go func() {
-		ticker := time.NewTicker(3 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-d.stopCleanRestResource:
-				return
-			case <-ticker.C:
-				for pubkey, pubsub := range d.ProxyPubsubList {
-					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
-					if days >= d.keepPubsubDay {
-						d.UnsubscribePubsub(pubkey)
-						return
+		if d.EnableService {
+			ticker := time.NewTicker(12 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-d.stopCleanRestResource:
+					return
+				case <-ticker.C:
+					for pubkey, pubsub := range d.ProxyPubsubList {
+						days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+						if days >= d.keepPubsubDay {
+							d.UnsubscribePubsub(pubkey)
+							continue
+						}
 					}
+					continue
+				case <-d.TvBase.GetCtx().Done():
+					return
 				}
-				continue
-			case <-d.TvBase.GetCtx().Done():
-				return
 			}
 		}
 	}()
