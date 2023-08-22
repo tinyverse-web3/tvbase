@@ -18,6 +18,7 @@ import (
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/routing"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
@@ -501,6 +502,9 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 		func() error {
 			var err error
 			val, err = d.idht.GetValue(ctx, key)
+			if err != nil && err == routing.ErrNotFound {
+				d.tryToConnectNetPeers() //主动连接之前连接过网络服务节点以提高网络的稳定性
+			}
 			return err
 		},
 		retryStrategy...,
