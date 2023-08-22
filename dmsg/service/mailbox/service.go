@@ -169,19 +169,15 @@ func (d *MailboxService) GetUserSig(protoData []byte) ([]byte, error) {
 
 func (d *MailboxService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
 	v := reflect.ValueOf(requestProtoData)
+	v = v.Elem()
 	t := v.Type()
 	a := t.Kind()
-	if a == reflect.Interface {
-		// 遍历接口的方法
-		for i := 0; i < t.NumMethod(); i++ {
-			method := t.Method(i)
-			fmt.Printf("Method: %s\n", method.Name)
-		}
+	if a == reflect.Struct {
+		// 遍历接的成员变量
 
-		// 遍历接口的成员变量
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
-			fmt.Printf("Field: %s, Value: %v\n", field.Name, v.Field(i).Interface())
+			fmt.Printf("Field: %s, Value: %v\n", field.Name, field)
 		}
 	}
 
