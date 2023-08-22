@@ -12,6 +12,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type ReadMailRequestParam struct {
+	ItemList  []*pb.MailboxItem
+	ExistData bool
+}
+
 type ReadMailboxMsgProtocolAdapter struct {
 	CommonProtocolAdapter
 	protocol *dmsgProtocol.MailboxSProtocol
@@ -70,12 +75,12 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
 	if len(dataList) < 1 {
 		return nil, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: dataList need contain MailboxItemList")
 	}
-	mailboxItemList, ok := dataList[0].([]*pb.MailboxItem)
+	requestParam, ok := dataList[0].(*ReadMailRequestParam)
 	if !ok {
 		return response, errors.New("ReadMailboxMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []*pb.MailboxMsgData")
 	}
 
-	response.ContentList = mailboxItemList
+	response.ContentList = requestParam.ItemList
 
 	return response, nil
 }
