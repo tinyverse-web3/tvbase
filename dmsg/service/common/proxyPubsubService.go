@@ -58,10 +58,8 @@ func (d *ProxyPubsubService) Start(
 	if err != nil {
 		return err
 	}
-	if d.EnableService {
-		d.stopCleanRestResource = make(chan bool)
-		d.cleanRestResource()
-	}
+
+	d.cleanRestResource()
 
 	// stream protocol
 	d.createPubsubProtocol = createPubsubProtocol
@@ -379,6 +377,7 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 func (d *ProxyPubsubService) cleanRestResource() {
 	go func() {
 		if d.EnableService {
+			d.stopCleanRestResource = make(chan bool)
 			ticker := time.NewTicker(12 * time.Hour)
 			defer ticker.Stop()
 			for {
