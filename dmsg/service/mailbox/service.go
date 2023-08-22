@@ -76,8 +76,6 @@ func (d *MailboxService) Start(
 			log.Errorf("MailboxService->Start: create datastore error %v", err)
 			return err
 		}
-		d.stopCleanRestResource = make(chan bool)
-		d.cleanRestResource()
 	}
 
 	ctx := d.TvBase.GetCtx()
@@ -100,6 +98,8 @@ func (d *MailboxService) Start(
 	if err != nil {
 		return err
 	}
+
+	d.cleanRestResource()
 	log.Debug("MailboxService->Start end")
 	return nil
 }
@@ -494,6 +494,7 @@ func (d *MailboxService) OnPubsubMsgResponse(
 // common
 func (d *MailboxService) cleanRestResource() {
 	go func() {
+		d.stopCleanRestResource = make(chan bool)
 		if d.EnableService {
 			serviceTicker := time.NewTicker(12 * time.Hour)
 			defer serviceTicker.Stop()
