@@ -35,7 +35,7 @@ type CommonService interface {
 type MailboxService interface {
 	CommonService
 	SetOnReceiveMsg(cb msg.OnReceiveMsg)
-	RequestReadMailbox(timeout time.Duration) ([]msg.Msg, error)
+	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
 }
 
 type MsgService interface {
