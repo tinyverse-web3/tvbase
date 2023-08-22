@@ -51,12 +51,6 @@ func (d *ChannelService) Start(
 		return err
 	}
 
-	err = d.HandlePubsubProtocol(&d.LightUser.Target)
-	if err != nil {
-		log.Errorf("ChannelService->Start: HandlePubsubProtocol error: %v", err)
-		return err
-	}
-
 	log.Debug("ChannelService->Start end")
 	return nil
 }

@@ -67,7 +67,7 @@ func (d *ProxyPubsubService) Start(
 	// pubsub protocol
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
-	// user
+	// light user
 	err = d.HandlePubsubProtocol(&d.LightUser.Target)
 	if err != nil {
 		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
@@ -301,6 +301,7 @@ func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error
 				data := protocolHandle.Data
 				switch pid {
 				case msgRequestPID:
+					log.Debugf("ProxyPubsubService->HandlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
 					err = handle.HandleRequestData(data)
 					if err != nil {
 						log.Warnf("ProxyPubsubService->HandlePubsubProtocol: HandleRequestData error: %v", err)
