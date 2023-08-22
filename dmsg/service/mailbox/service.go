@@ -3,7 +3,6 @@ package mailbox
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -168,25 +167,13 @@ func (d *MailboxService) GetUserSig(protoData []byte) ([]byte, error) {
 }
 
 func (d *MailboxService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
-	v := reflect.ValueOf(requestProtoData)
-	v = v.Elem()
-	t := v.Type()
-	a := t.Kind()
-	if a == reflect.Struct {
-		// 遍历接的成员变量
-
-		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			fmt.Printf("Field: %s, Value: %v\n", field.Name, field)
-		}
-	}
-
-	request, ok := requestProtoData.(*pb.MsgReq)
+	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("MailboxService->GetPublishTarget: cannot convert to *pb.MsgReq")
+		log.Errorf("MailboxService->GetPublishTarget: fail to convert requestProtoData to *pb.SeekMailboxReq")
+		return nil, fmt.Errorf("MailboxService->GetPublishTarget: cannot convert to *pb.SeekMailboxReq")
 	}
 	pubkey := request.BasicData.Pubkey
+
 	var target *dmsgUser.Target
 	user := d.serviceUserList[pubkey]
 	if user != nil {
