@@ -222,7 +222,7 @@ func (d *MailboxService) OnCreateMailboxResponse(
 		fallthrough
 	case 1: // exist mailbox
 		log.Debug("MailboxService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		err := d.releaseUnusedMailbox(response.BasicData.PeerID, request.BasicData.Pubkey)
+		err := d.releaseUnusedMailbox(response.BasicData.PeerID, request.BasicData.Pubkey, 30*time.Second)
 		if err != nil {
 			return nil, err
 		}
@@ -434,7 +434,7 @@ func (d *MailboxService) OnPubsubMsgRequest(
 			return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 		}
 		user.LastReciveTimestamp = time.Now().UnixNano()
-		d.saveUserMsg(requestProtoData)
+		d.saveMsg(requestProtoData)
 	}
 
 	log.Debugf("MailboxService->OnPubsubMsgRequest end")
@@ -732,7 +732,7 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 			// skip seek when seek mailbox quest fail, create a new mailbox
 		} else {
 			log.Debugf("MailboxService->initMailbox: seekMailboxProtoData success")
-			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey)
+			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey, 30*time.Second)
 			return nil
 		}
 	case <-time.After(3 * time.Second):
@@ -830,42 +830,36 @@ func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout ti
 	}
 }
 
-func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string) error {
+func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string, timeout time.Duration) error {
 	log.Debug("MailboxService->releaseUnusedMailbox begin")
 
-	peerID, err := peer.Decode(peerIdHex)
-	if err != nil {
-		log.Warnf("MailboxService->releaseUnusedMailbox: fail to decode peer id: %v", err)
-		return err
-	}
-	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey)
+	_, err := d.readMailbox(peerIdHex, pubkey, timeout)
 	if err != nil {
 		return err
 	}
 
-	select {
-	case <-readMailboxDoneChan:
-		if d.lightMailboxUser.ServicePeerID == "" {
-			d.lightMailboxUser.ServicePeerID = peerIdHex
-		} else if peerIdHex != d.lightMailboxUser.ServicePeerID {
-			_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
-			if err != nil {
-				return err
-			}
-			select {
-			case <-releaseMailboxDoneChan:
-				log.Debugf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan success")
-			case <-time.After(time.Second * 3):
-				return fmt.Errorf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan time out")
-			case <-d.TvBase.GetCtx().Done():
-				return fmt.Errorf("MailboxService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
-			}
+	if d.lightMailboxUser.ServicePeerID == "" {
+		d.lightMailboxUser.ServicePeerID = peerIdHex
+	} else if peerIdHex != d.lightMailboxUser.ServicePeerID {
+		peerID, err := peer.Decode(peerIdHex)
+		if err != nil {
+			log.Errorf("MailboxService->releaseUnusedMailbox: fail to decode peer id: %v", err)
+			return err
 		}
-	case <-time.After(time.Second * 3):
-		return fmt.Errorf("MailboxService->releaseUnusedMailbox: readMailboxDoneChan time out")
-	case <-d.TvBase.GetCtx().Done():
-		return fmt.Errorf("MailboxService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
+		_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
+		if err != nil {
+			return err
+		}
+		select {
+		case <-releaseMailboxDoneChan:
+			log.Debugf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan success")
+		case <-time.After(time.Second * 3):
+			return fmt.Errorf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan time out")
+		case <-d.TvBase.GetCtx().Done():
+			return fmt.Errorf("MailboxService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
+		}
 	}
+
 	log.Debugf("MailboxService->releaseUnusedMailbox end")
 	return nil
 }
@@ -912,7 +906,7 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 	return msgList, nil
 }
 
-func (d *MailboxService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
+func (d *MailboxService) saveMsg(protoMsg protoreflect.ProtoMessage) error {
 	MsgReq, ok := protoMsg.(*pb.MsgReq)
 	if !ok {
 		log.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
