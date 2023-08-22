@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
@@ -69,20 +71,22 @@ func (d *Dmsg) GetChannelService() service.ChannelService {
 func (d *Dmsg) Start(
 	enableService bool,
 	pubkeyData []byte,
-	getSig dmsgKey.GetSigCallback) error {
-	err := d.mailboxService.Start(enableService, pubkeyData, getSig)
+	getSig dmsgKey.GetSigCallback,
+	timeout time.Duration,
+) error {
+	err := d.mailboxService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
-	err = d.msgService.Start(enableService, pubkeyData, getSig)
+	err = d.msgService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
-	err = d.channelService.Start(enableService, pubkeyData, getSig)
+	err = d.channelService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
-	err = d.customProtocolService.Start(enableService, pubkeyData, getSig)
+	err = d.customProtocolService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}

@@ -64,7 +64,9 @@ func (d *MailboxService) Init(tvbaseService tvbaseCommon.TvBaseService) error {
 func (d *MailboxService) Start(
 	enableService bool,
 	pubkeyData []byte,
-	getSig dmsgKey.GetSigCallback) error {
+	getSig dmsgKey.GetSigCallback,
+	timeout time.Duration,
+) error {
 	log.Debugf("MailboxService->Start begin\nenableService: %v", enableService)
 	d.BaseService.Start(enableService)
 	if d.EnableService {
@@ -94,7 +96,7 @@ func (d *MailboxService) Start(
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	// user
-	err := d.initUser(pubkeyData, getSig)
+	err := d.initUser(pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
@@ -570,7 +572,11 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 }
 
 // user
-func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallback) error {
+func (d *MailboxService) initUser(
+	pubkeyData []byte,
+	getSig dmsgKey.GetSigCallback,
+	timeout time.Duration,
+) error {
 	log.Debug("MailboxService->initUser begin")
 	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
 	err := d.subscribeUser(pubkey, getSig)
@@ -585,10 +591,10 @@ func (d *MailboxService) initUser(pubkeyData []byte, getSig dmsgKey.GetSigCallba
 			c := d.TvBase.RegistRendezvousChan()
 			select {
 			case <-c:
-				d.initMailbox(pubkey)
 				d.TvBase.UnregistRendezvousChan(c)
-			case <-time.After(3 * time.Second):
-				return nil
+				return d.initMailbox(pubkey)
+			case <-time.After(timeout):
+				return fmt.Errorf("MailboxService->initUser: timeout")
 			case <-d.TvBase.GetCtx().Done():
 				return d.TvBase.GetCtx().Err()
 			}

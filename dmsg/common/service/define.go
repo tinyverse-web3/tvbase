@@ -18,23 +18,28 @@ type BaseService interface {
 	PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error
 }
 
-type LightService interface {
+type CommonService interface {
 	BaseService
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
-	Start(enableService bool, pubkeyData []byte, getSig dmsgKey.GetSigCallback) error
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+	) error
 	Stop() error
 }
 
 type MailboxService interface {
-	LightService
+	CommonService
 	SetOnReceiveMsg(cb msg.OnReceiveMsg)
 	RequestReadMailbox(timeout time.Duration) ([]msg.Msg, error)
 }
 
 type MsgService interface {
-	LightService
+	CommonService
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
@@ -44,7 +49,7 @@ type MsgService interface {
 }
 
 type ChannelService interface {
-	LightService
+	CommonService
 	SubscribeChannel(pubkey string) error
 	UnsubscribeChannel(pubkey string) error
 	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
@@ -53,7 +58,7 @@ type ChannelService interface {
 }
 
 type CustomProtocolService interface {
-	LightService
+	CommonService
 	RegistClient(client customProtocol.ClientHandle) error
 	UnregistClient(client customProtocol.ClientHandle) error
 	RegistServer(service customProtocol.ServerHandle) error

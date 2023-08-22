@@ -200,7 +200,7 @@ func initMsgClient(
 		return sig, nil
 	}
 
-	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback)
+	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
 	if err != nil {
 		return nil, nil, err
 	}

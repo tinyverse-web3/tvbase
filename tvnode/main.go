@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	filelock "github.com/MichaelS11/go-file-lock"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -224,7 +225,7 @@ func initDmsg(
 		return sig, nil
 	}
 
-	err = dmsgService.Start(true, userPubkeyData, getSig)
+	err = dmsgService.Start(true, userPubkeyData, getSig, 3*time.Second)
 	if err != nil {
 		return nil, nil, err
 	}

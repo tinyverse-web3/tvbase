@@ -2,6 +2,7 @@ package msg
 
 import (
 	"fmt"
+	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
@@ -32,7 +33,12 @@ func CreateService(tvbase tvbaseCommon.TvBaseService) (*MsgService, error) {
 }
 
 // sdk-common
-func (d *MsgService) Start(enableService bool, pubkeyData []byte, getSig dmsgKey.GetSigCallback) error {
+func (d *MsgService) Start(
+	enableService bool,
+	pubkeyData []byte,
+	getSig dmsgKey.GetSigCallback,
+	timeout time.Duration,
+) error {
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()

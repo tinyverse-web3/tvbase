@@ -2,6 +2,7 @@ package customProtocol
 
 import (
 	"fmt"
+	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -47,7 +48,9 @@ func (d *CustomProtocolService) Init(tvbaseService tvbaseCommon.TvBaseService) e
 func (d *CustomProtocolService) Start(
 	EnableService bool,
 	pubkeyData []byte,
-	getSig dmsgCommonKey.GetSigCallback) error {
+	getSig dmsgCommonKey.GetSigCallback,
+	timeout time.Duration,
+) error {
 	log.Debug("CustomProtocolService->Start begin")
 	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, false)
 	if err != nil {

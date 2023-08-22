@@ -95,7 +95,7 @@ func initDmsg(
 		return sig, nil
 	}
 
-	err = dmsg.Start(false, userPubkeyData, getSig)
+	err = dmsg.Start(false, userPubkeyData, getSig, 30*time.Second)
 	if err != nil {
 		return nil, nil, err
 	}
