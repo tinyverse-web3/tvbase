@@ -93,45 +93,48 @@ func (d *ChannelService) OnPubsubMsgRequest(
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("ChannelService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+	isSelf := request.BasicData.PeerID == d.TvBase.GetHost().ID().String()
+	if isSelf {
+		log.Debugf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
 	}
 
 	destPubkey := request.DestPubkey
 	proxyPubsub := d.ProxyPubsubList[destPubkey]
 	if proxyPubsub == nil && d.LightUser.Key.PubkeyHex != destPubkey {
-		log.Debugf("ChannelService->OnPubsubMsgRequest: user/channel pubkey is not exist")
-		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: user/channel pubkey is not exist")
+		log.Debugf("ChannelService->OnPubsubMsgRequest: lightUser/channel pubkey is not exist")
+		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: lightUser/channel pubkey is not exist")
 	}
 
-	if proxyPubsub != nil {
-		if d.OnReceiveMsg != nil {
-			srcPubkey := request.BasicData.Pubkey
-			destPubkey := request.DestPubkey
-			msgDirection := msg.MsgDirection.From
-			responseContent, err := d.OnReceiveMsg(
-				srcPubkey,
-				destPubkey,
-				request.Content,
-				request.BasicData.TS,
-				request.BasicData.ID,
-				msgDirection)
-			var retCode *pb.RetCode
-			if err != nil {
-				retCode = &pb.RetCode{
-					Code:   dmsgProtocol.AlreadyExistCode,
-					Result: "ChannelService->OnPubsubMsgRequest: " + err.Error(),
-				}
+	var retCode *pb.RetCode = nil
+	var responseContent []byte
+	if d.OnReceiveMsg != nil {
+		srcPubkey := request.BasicData.Pubkey
+		destPubkey := request.DestPubkey
+		msgDirection := msg.MsgDirection.From
+		var err error
+		responseContent, err = d.OnReceiveMsg(
+			srcPubkey,
+			destPubkey,
+			request.Content,
+			request.BasicData.TS,
+			request.BasicData.ID,
+			msgDirection)
+
+		if err != nil {
+			retCode = &pb.RetCode{
+				Code:   dmsgProtocol.AlreadyExistCode,
+				Result: "ChannelService->OnPubsubMsgRequest: " + err.Error(),
 			}
-			return responseContent, retCode, false, nil
-		} else {
-			log.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 		}
-		return nil, nil, false, nil
+	} else {
+		log.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
-	log.Debugf("ChannelService->OnPubsubMsgRequest end")
-	return nil, nil, false, nil
+
+	if d.LightUser.Key.PubkeyHex == destPubkey {
+		return responseContent, retCode, false, nil
+	}
+	return nil, nil, true, nil
 }
 
 func (d *ChannelService) OnPubsubMsgResponse(
