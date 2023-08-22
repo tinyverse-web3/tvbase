@@ -221,14 +221,14 @@ func main() {
 	dmsg.GetMailboxService().SetOnReceiveMsg(mailOnReceiveMsg)
 
 	// publish dest user
-	destPubkeyBytes, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
+	destPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
-	destPubKeyStr := tvUtilKey.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
+	destPubkeyStr := tvUtilKey.TranslateKeyProtoBufToString(destPubkeyData)
+	err = dmsg.GetMsgService().SubscribeDestUser(destPubkeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("SubscribeDestUser error: %v", err)
@@ -242,46 +242,45 @@ func main() {
 		mainLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
-	channelPubKeyHex := tvUtilKey.TranslateKeyProtoBufToString(channelPubkeyData)
+	channelPubkeyStr := tvUtilKey.TranslateKeyProtoBufToString(channelPubkeyData)
 	channelService := dmsg.GetChannelService()
-	if channelService != nil {
-		mainLog.Debugf("channelPubKeyHex: %v", channelPubKeyHex)
-		// err = channelService.SubscribeChannel(channelPubKeyHex)
-		if err != nil {
-			tvbase.SetTracerStatus(err)
-			mainLog.Errorf("SubscribeChannel error: %v", err)
-			return
-		}
-		channelOnReceiveMsg := func(
-			srcUserPubkey string,
-			destUserPubkey string,
-			msgContent []byte,
-			timeStamp int64,
-			msgID string,
-			direction string) ([]byte, error) {
-			decrypedContent := []byte("")
 
-			switch direction {
-			case msg.MsgDirection.To:
-				decrypedContent, err = tvutilCrypto.DecryptWithPrikey(destPrikey, msgContent)
-				if err != nil {
-					decrypedContent = []byte(err.Error())
-					mainLog.Errorf("decrypt error: %v", err)
-				}
-			case msg.MsgDirection.From:
-				decrypedContent, err = tvutilCrypto.DecryptWithPrikey(srcPrikey, msgContent)
-				if err != nil {
-					decrypedContent = []byte(err.Error())
-					mainLog.Errorf("decrypt error: %v", err)
-				}
-			}
-			mainLog.Infof("channelOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-				srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
-			return nil, nil
-		}
-		channelService.SetOnReceiveMsg(channelOnReceiveMsg)
-		// channelService.SetOnSendMsgResponse(channelOnReceiveMsg)
+	mainLog.Debugf("channelPubkeyStr: %v", channelPubkeyStr)
+	err = channelService.SubscribeChannel(channelPubkeyStr)
+	if err != nil {
+		tvbase.SetTracerStatus(err)
+		mainLog.Errorf("SubscribeChannel error: %v", err)
+		return
 	}
+	channelOnReceiveMsg := func(
+		srcUserPubkey string,
+		destUserPubkey string,
+		msgContent []byte,
+		timeStamp int64,
+		msgID string,
+		direction string) ([]byte, error) {
+		decrypedContent := []byte("")
+
+		switch direction {
+		case msg.MsgDirection.To:
+			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(destPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				mainLog.Errorf("decrypt error: %v", err)
+			}
+		case msg.MsgDirection.From:
+			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(srcPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				mainLog.Errorf("decrypt error: %v", err)
+			}
+		}
+		mainLog.Infof("channelOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+		return nil, nil
+	}
+	channelService.SetOnReceiveMsg(channelOnReceiveMsg)
+	// channelService.SetOnSendMsgResponse(channelOnReceiveMsg)
 
 	// send msg to dest user with read from stdin
 	go func() {
@@ -299,9 +298,9 @@ func main() {
 				continue
 			}
 
-			pubkeyStr := destPubKeyStr
-			// pubkeyStr := pubPubKeyStr
-			sendMsgReq, err := dmsg.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
+			// pubkeyStr := destPubkeyStr
+			pubkeyStr := channelPubkeyStr
+			sendMsgReq, err := dmsg.GetChannelService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				mainLog.Errorf("send msg: error: %v", err)
 			}
