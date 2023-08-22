@@ -59,8 +59,6 @@ func (d *ProxyPubsubService) Start(
 		return err
 	}
 
-	d.cleanRestResource()
-
 	// stream protocol
 	d.createPubsubProtocol = createPubsubProtocol
 
@@ -74,6 +72,7 @@ func (d *ProxyPubsubService) Start(
 		return err
 	}
 
+	d.cleanRestResource()
 	log.Debug("ProxyPubsubService->Start end")
 	return nil
 }
