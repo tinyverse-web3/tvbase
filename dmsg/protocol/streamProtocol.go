@@ -169,6 +169,7 @@ func (p *StreamProtocol) Request(
 
 	protoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
+		close(p.RequestInfoList[requestInfoId].DoneChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return nil, nil, err
@@ -181,12 +182,14 @@ func (p *StreamProtocol) Request(
 	}
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
+		close(p.RequestInfoList[requestInfoId].DoneChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
 		return nil, nil, err
 	}
 	writeLen, err := stream.Write(protoData)
 	if err != nil {
+		close(p.RequestInfoList[requestInfoId].DoneChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Write error: %v", err)
 		if err := stream.Reset(); err != nil {
