@@ -192,6 +192,12 @@ func (d *MailboxService) OnCreateMailboxRequest(
 		log.Errorf("MailboxService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
 		return nil, nil, false, fmt.Errorf("MailboxService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
 	}
+
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+		return nil, nil, true, nil
+	}
+
 	isAvailable := d.isAvailableMailbox(request.BasicData.Pubkey)
 	if !isAvailable {
 		log.Errorf("MailboxService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
@@ -258,6 +264,12 @@ func (d *MailboxService) OnReleaseMailboxRequest(
 		log.Errorf("MailboxService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
 		return nil, nil, false, fmt.Errorf("MailboxService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
 	}
+
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+		return nil, nil, true, nil
+	}
+
 	err := d.unsubscribeServiceUser(request.BasicData.Pubkey)
 	if err != nil {
 		return nil, nil, false, err
@@ -298,6 +310,11 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	if !ok {
 		log.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
 		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+	}
+
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+		return nil, nil, true, nil
 	}
 
 	pubkey := request.BasicData.Pubkey
@@ -441,6 +458,11 @@ func (d *MailboxService) OnPubsubMsgRequest(
 	if !ok {
 		log.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
+	}
+
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+		return nil, nil, true, nil
 	}
 
 	if d.EnableService {

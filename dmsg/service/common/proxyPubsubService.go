@@ -238,7 +238,7 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 		return nil, nil, false, fmt.Errorf("ProxyPubsubService->OnCreatePubusubRequest: cannot convert to *pb.CreateMailboxReq")
 	}
 
-	if request.BasicData.PeerID == d.TvBase.GetDht().PeerID().String() {
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
 		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetDht().PeerID().String()")
 		return nil, nil, true, nil
 	}
