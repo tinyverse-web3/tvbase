@@ -853,7 +853,7 @@ func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string, t
 		select {
 		case <-releaseMailboxDoneChan:
 			log.Debugf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan success")
-		case <-time.After(time.Second * 3):
+		case <-time.After(time.Second * timeout):
 			return fmt.Errorf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan time out")
 		case <-d.TvBase.GetCtx().Done():
 			return fmt.Errorf("MailboxService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
