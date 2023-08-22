@@ -493,21 +493,23 @@ func (d *MailboxService) cleanRestResource() {
 								log.Errorf("MailboxService->cleanRestResource: cannot find user for pubkey: %s", pubkey)
 								continue
 							}
-							user.MsgRWMutex.Lock()
-							results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
-							if err != nil {
-								user.MsgRWMutex.Unlock()
-								log.Errorf("MailboxService->cleanRestResource: query error: %v", err)
-							}
-
-							for result := range results.Next() {
-								err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
+							go func() {
+								user.MsgRWMutex.Lock()
+								defer user.MsgRWMutex.Unlock()
+								results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
 								if err != nil {
-									log.Errorf("MailboxService->cleanRestResource: datastore.Delete error: %+v", err)
+
+									log.Errorf("MailboxService->cleanRestResource: query error: %v", err)
 								}
-								log.Debugf("MailboxService->cleanRestResource: delete msg by key:%v", string(result.Key))
-							}
-							user.MsgRWMutex.Unlock()
+
+								for result := range results.Next() {
+									err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
+									if err != nil {
+										log.Errorf("MailboxService->cleanRestResource: datastore.Delete error: %+v", err)
+									}
+									log.Debugf("MailboxService->cleanRestResource: delete msg by key:%v", string(result.Key))
+								}
+							}()
 							d.unsubscribeServiceUser(pubkey)
 						}
 					}
