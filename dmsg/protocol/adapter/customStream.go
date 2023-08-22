@@ -74,14 +74,9 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode := dmsgProtocol.NewSuccRetCode()
-	if len(dataList) > 1 {
-		data, ok := dataList[1].(*pb.RetCode)
-		if !ok {
-			return nil, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[1] to *pb.RetCode")
-		} else if data != nil {
-			retCode = data
-		}
+	retCode, err := getRetCode(dataList)
+	if err != nil {
+		return nil, err
 	}
 	response := &pb.CustomProtocolRes{
 		BasicData: basicData,
@@ -104,7 +99,7 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	response.PID = customStreamProtocolResponseParam.PID
 
 	// get response.Content
-	err := customStreamProtocolResponseParam.Service.HandleResponse(request, response)
+	err = customStreamProtocolResponseParam.Service.HandleResponse(request, response)
 	if err != nil {
 		return response, err
 	}

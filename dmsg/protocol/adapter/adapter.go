@@ -5,6 +5,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -83,4 +84,21 @@ func (adapter *CommonProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	return nil, fmt.Errorf("CommonProtocolAdapter->CallResponseCallback: not implemented")
+}
+
+func getRetCode(dataList ...any) (*pb.RetCode, error) {
+	retCode := dmsgProtocol.NewSuccRetCode()
+	if len(dataList) > 1 && dataList[1] != nil {
+		data, ok := dataList[1].(*pb.RetCode)
+		if !ok {
+			return nil, fmt.Errorf("getRetCode: fail to cast dataList[1] to *pb.RetCode")
+		} else {
+			if data == nil {
+				fmt.Printf("getRetCode: data == nil")
+				return nil, fmt.Errorf("getRetCode: data == nil")
+			}
+			retCode = data
+		}
+	}
+	return retCode, nil
 }
