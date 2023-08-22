@@ -301,16 +301,10 @@ func (d *ProxyPubsubService) HandlePubsubProtocol(target *dmsgUser.Target) error
 				switch pid {
 				case msgRequestPID:
 					log.Debugf("ProxyPubsubService->HandlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
-					err = handle.HandleRequestData(data)
-					if err != nil {
-						log.Warnf("ProxyPubsubService->HandlePubsubProtocol: HandleRequestData error: %v", err)
-					}
+					handle.HandleRequestData(data)
 					continue
 				case msgResponsePID:
-					err = handle.HandleResponseData(data)
-					if err != nil {
-						log.Warnf("ProxyPubsubService->HandlePubsubProtocol: HandleResponseData error: %v", err)
-					}
+					handle.HandleResponseData(data)
 					continue
 				}
 			case <-ctx.Done():
