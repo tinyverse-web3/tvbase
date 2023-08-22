@@ -374,6 +374,7 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	if !find {
 		log.Debug("MailboxService->OnReadMailboxMsgRequest: user msgs is empty")
 	}
+	user.LastTimestamp = time.Now().UnixNano()
 	log.Debugf("MailboxService->OnReadMailboxMsgRequest end")
 	return requestParam, nil, false, nil
 }
