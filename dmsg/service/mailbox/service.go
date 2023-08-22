@@ -73,7 +73,7 @@ func (d *MailboxService) Start(
 		var err error
 		d.datastore, err = db.CreateBadgerDB(d.GetConfig().DatastorePath)
 		if err != nil {
-			log.Errorf("dmsgService->Start: create datastore error %v", err)
+			log.Errorf("MailboxService->Start: create datastore error %v", err)
 			return err
 		}
 		d.stopCleanRestResource = make(chan bool)
@@ -186,23 +186,23 @@ func (d *MailboxService) GetPublishTarget(pubkey string) (*dmsgUser.Target, erro
 // MailboxSpCallback
 func (d *MailboxService) OnCreateMailboxRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("dmsgService->OnCreateMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("MailboxService->OnCreateMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
-		log.Errorf("dmsgService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, nil, false, fmt.Errorf("dmsgService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		log.Errorf("MailboxService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		return nil, nil, false, fmt.Errorf("MailboxService->OnCreateMailboxRequest: fail to convert requestProtoData to *pb.CreateMailboxReq")
 	}
 	isAvailable := d.isAvailableMailbox(request.BasicData.Pubkey)
 	if !isAvailable {
-		log.Errorf("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
-		return nil, nil, false, errors.New("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
+		log.Errorf("MailboxService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
+		return nil, nil, false, errors.New("MailboxService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 	}
 	user := d.getServiceUser(request.BasicData.Pubkey)
 	if user != nil {
-		log.Errorf("dmsgService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
+		log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
 		retCode := &pb.RetCode{
 			Code:   dmsgProtocol.AlreadyExistCode,
-			Result: "dmsgService->OnCreateMailboxRequest: pubkey already exist in serviceUserList",
+			Result: "MailboxService->OnCreateMailboxRequest: pubkey already exist in serviceUserList",
 		}
 		return nil, retCode, false, nil
 	}
@@ -211,7 +211,7 @@ func (d *MailboxService) OnCreateMailboxRequest(
 	if err != nil {
 		return nil, nil, false, err
 	}
-	log.Debugf("dmsgService->OnCreateMailboxRequest end")
+	log.Debugf("MailboxService->OnCreateMailboxRequest end")
 	return nil, nil, false, nil
 }
 
@@ -252,17 +252,17 @@ func (d *MailboxService) OnCreateMailboxResponse(
 
 func (d *MailboxService) OnReleaseMailboxRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("dmsgService->OnReleaseMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("MailboxService->OnReleaseMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.ReleaseMailboxReq)
 	if !ok {
-		log.Errorf("dmsgService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-		return nil, nil, false, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
+		log.Errorf("MailboxService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
+		return nil, nil, false, fmt.Errorf("MailboxService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
 	}
 	err := d.unsubscribeServiceUser(request.BasicData.Pubkey)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	log.Debugf("dmsgService->OnReleaseMailboxRequest end")
+	log.Debugf("MailboxService->OnReleaseMailboxRequest end")
 	return nil, nil, false, nil
 }
 
@@ -293,18 +293,18 @@ func (d *MailboxService) OnReleaseMailboxResponse(
 }
 
 func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("dmsgService->OnReadMailboxMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("MailboxService->OnReadMailboxMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.ReadMailboxReq)
 	if !ok {
-		log.Errorf("dmsgService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
-		return nil, nil, false, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+		log.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
 	}
 
 	pubkey := request.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
-		log.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
-		return nil, nil, false, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
+		log.Errorf("MailboxService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
+		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
 	}
 
 	var query = query.Query{
@@ -348,14 +348,14 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	for _, needDeleteKey := range needDeleteKeyList {
 		err := d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(needDeleteKey))
 		if err != nil {
-			log.Errorf("dmsgService->OnReadMailboxMsgRequest: datastore.Delete error: %+v", err)
+			log.Errorf("MailboxService->OnReadMailboxMsgRequest: datastore.Delete error: %+v", err)
 		}
 	}
 
 	if !find {
-		log.Debug("dmsgService->OnReadMailboxMsgRequest: user msgs is empty")
+		log.Debug("MailboxService->OnReadMailboxMsgRequest: user msgs is empty")
 	}
-	log.Debugf("dmsgService->OnReadMailboxMsgRequest end")
+	log.Debugf("MailboxService->OnReadMailboxMsgRequest end")
 	return requestParam, nil, false, nil
 }
 
@@ -401,8 +401,8 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 
 	// no responding to self
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("dmsgService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
-		return nil, nil, true, fmt.Errorf("dmsgService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		log.Debugf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		return nil, nil, true, fmt.Errorf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
 	}
 
 	log.Debug("MailboxService->OnSeekMailboxRequest end")
@@ -462,10 +462,10 @@ func (d *MailboxService) OnPubsubMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	log.Debugf(
-		"dmsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
+		"MailboxService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	// never here
-	log.Debugf("dmsgService->OnPubsubMsgResponse end")
+	log.Debugf("MailboxService->OnPubsubMsgResponse end")
 	return nil, nil
 }
 
@@ -490,22 +490,22 @@ func (d *MailboxService) cleanRestResource() {
 							}
 							user := d.getServiceUser(pubkey)
 							if user == nil {
-								log.Errorf("dmsgService->cleanRestResource: cannot find user for pubkey: %s", pubkey)
+								log.Errorf("MailboxService->cleanRestResource: cannot find user for pubkey: %s", pubkey)
 								continue
 							}
 							user.MsgRWMutex.Lock()
 							results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
 							if err != nil {
 								user.MsgRWMutex.Unlock()
-								log.Errorf("dmsgService->cleanRestResource: query error: %v", err)
+								log.Errorf("MailboxService->cleanRestResource: query error: %v", err)
 							}
 
 							for result := range results.Next() {
 								err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
 								if err != nil {
-									log.Errorf("dmsgService->cleanRestResource: datastore.Delete error: %+v", err)
+									log.Errorf("MailboxService->cleanRestResource: datastore.Delete error: %+v", err)
 								}
-								log.Debugf("dmsgService->cleanRestResource: delete msg by key:%v", string(result.Key))
+								log.Debugf("MailboxService->cleanRestResource: delete msg by key:%v", string(result.Key))
 							}
 							user.MsgRWMutex.Unlock()
 							d.unsubscribeServiceUser(pubkey)
@@ -537,7 +537,7 @@ func (d *MailboxService) cleanRestResource() {
 					d.lightMailboxUser.Key.PubkeyHex,
 					30*time.Second, true)
 				if err != nil {
-					log.Errorf("dmsgService->cleanRestResource: readMailbox error: %v", err)
+					log.Errorf("MailboxService->cleanRestResource: readMailbox error: %v", err)
 					continue
 				}
 			case <-d.TvBase.GetCtx().Done():
@@ -970,15 +970,15 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 func (d *MailboxService) saveMsg(protoMsg protoreflect.ProtoMessage) error {
 	MsgReq, ok := protoMsg.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
-		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
+		log.Errorf("MailboxService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
+		return fmt.Errorf("MailboxService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
 	}
 
 	pubkey := MsgReq.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
-		log.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
-		return fmt.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
+		log.Errorf("MailboxService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
+		return fmt.Errorf("MailboxService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
 	}
 
 	user.MsgRWMutex.RLock()
