@@ -161,7 +161,7 @@ func main() {
 		return
 	}
 
-	onReceiveMsg := func(
+	msgOnReceiveMsg := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -184,13 +184,41 @@ func main() {
 				mainLog.Errorf("decrypt error: %v", err)
 			}
 		}
-		mainLog.Infof("OnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		mainLog.Infof("msgOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+		return nil, nil
+	}
+
+	mailOnReceiveMsg := func(
+		srcUserPubkey string,
+		destUserPubkey string,
+		msgContent []byte,
+		timeStamp int64,
+		msgID string,
+		direction string) ([]byte, error) {
+		decrypedContent := []byte("")
+
+		switch direction {
+		case msg.MsgDirection.To:
+			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(destPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				mainLog.Errorf("decrypt error: %v", err)
+			}
+		case msg.MsgDirection.From:
+			decrypedContent, err = tvutilCrypto.DecryptWithPrikey(srcPrikey, msgContent)
+			if err != nil {
+				decrypedContent = []byte(err.Error())
+				mainLog.Errorf("decrypt error: %v", err)
+			}
+		}
+		mainLog.Infof("mailOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 	// set  user msg receive callback
-	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
-	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMsgService().SetOnReceiveMsg(msgOnReceiveMsg)
+	dmsg.GetMailboxService().SetOnReceiveMsg(mailOnReceiveMsg)
 
 	// publish dest user
 	destPubkeyBytes, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
@@ -224,7 +252,7 @@ func main() {
 			mainLog.Errorf("SubscribeChannel error: %v", err)
 			return
 		}
-		channelService.SetOnReceiveMsg(onReceiveMsg)
+		channelService.SetOnReceiveMsg(msgOnReceiveMsg)
 	}
 
 	// send msg to dest user with read from stdin
