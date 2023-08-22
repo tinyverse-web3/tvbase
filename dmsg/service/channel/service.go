@@ -142,6 +142,11 @@ func (d *ChannelService) OnPubsubMsgResponse(
 		return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
+	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("ChannelService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+		return nil, nil
+	}
+
 	response, ok := responseProtoData.(*pb.MsgRes)
 	if !ok {
 		log.Errorf("ChannelService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
