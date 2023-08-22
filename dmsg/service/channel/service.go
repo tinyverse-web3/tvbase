@@ -67,7 +67,7 @@ func (d *ChannelService) GetChannel(pubkey string) *dmsgUser.ProxyPubsub {
 
 func (d *ChannelService) SubscribeChannel(pubkey string) error {
 	log.Debugf("ChannelService->SubscribeChannel begin:\npubkey: %s", pubkey)
-	err := d.SubscribePubsub(pubkey, true, true)
+	err := d.SubscribePubsub(pubkey, true, true, false)
 	if err != nil {
 		return err
 	}

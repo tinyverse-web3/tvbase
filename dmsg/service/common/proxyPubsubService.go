@@ -107,6 +107,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	pubkey string,
 	createPubsubProxy bool,
 	isHandlePubsubProtocol bool,
+	autoClean bool,
 ) error {
 	log.Debugf("ProxyPubsubService->SubscribeChannel begin:\npubkey: %s", pubkey)
 
@@ -132,6 +133,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 			Target:              *target,
 			LastReciveTimestamp: time.Now().UnixNano(),
 		},
+		AutoClean: autoClean,
 	}
 
 	if createPubsubProxy {
@@ -256,7 +258,7 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 		return nil, retCode, false, nil
 	}
 
-	err := d.SubscribePubsub(pubsubKey, false, false)
+	err := d.SubscribePubsub(pubsubKey, false, false, true)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -386,7 +388,7 @@ func (d *ProxyPubsubService) cleanRestResource() {
 				case <-ticker.C:
 					for pubkey, pubsub := range d.ProxyPubsubList {
 						days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
-						if days >= d.keepPubsubDay {
+						if pubsub.AutoClean && days >= d.keepPubsubDay {
 							d.UnsubscribePubsub(pubkey)
 							continue
 						}

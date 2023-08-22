@@ -150,6 +150,7 @@ type DestTarget struct {
 
 type ProxyPubsub struct {
 	DestTarget
+	AutoClean bool
 }
 
 type LightUser struct {

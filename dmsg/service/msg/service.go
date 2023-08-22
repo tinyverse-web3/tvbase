@@ -67,7 +67,7 @@ func (d *MsgService) GetDestUser(pubkey string) *dmsgUser.ProxyPubsub {
 
 func (d *MsgService) SubscribeDestUser(pubkey string) error {
 	log.Debug("MsgService->SubscribeDestUser begin\npubkey: %s", pubkey)
-	err := d.SubscribePubsub(pubkey, true, false)
+	err := d.SubscribePubsub(pubkey, true, false, false)
 	if err != nil {
 		return err
 	}
