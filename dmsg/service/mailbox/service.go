@@ -306,12 +306,12 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 		log.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
 		return nil, nil, false, fmt.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
 	}
-	user.MsgRWMutex.RLock()
-	defer user.MsgRWMutex.RUnlock()
 
 	var query = query.Query{
 		Prefix: d.getMsgPrefix(pubkey),
 	}
+	user.MsgRWMutex.Lock()
+	defer user.MsgRWMutex.Unlock()
 	results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
 	if err != nil {
 		return nil, nil, false, err
