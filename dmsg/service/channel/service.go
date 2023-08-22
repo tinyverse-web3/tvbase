@@ -94,7 +94,7 @@ func (d *ChannelService) OnPubsubMsgRequest(
 	}
 
 	destPubkey := request.DestPubkey
-	if d.ProxyPubsubList[destPubkey] == nil || d.LightUser.Key.PubkeyHex != destPubkey {
+	if d.ProxyPubsubList[destPubkey] == nil && d.LightUser.Key.PubkeyHex != destPubkey {
 		log.Debugf("ChannelService->OnPubsubMsgRequest: user/channel pubkey is not exist")
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: user/channel pubkey is not exist")
 	}
