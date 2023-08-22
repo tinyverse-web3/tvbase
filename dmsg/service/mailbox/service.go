@@ -594,7 +594,7 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 
 				handle := d.ProtocolHandleList[pid]
 				if handle == nil {
-					log.Warnf("MailboxService->handlePubsubProtocol: no handle for pid: %d", pid)
+					log.Debugf("MailboxService->handlePubsubProtocol: no handle for pid: %d", pid)
 					continue
 				}
 				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
