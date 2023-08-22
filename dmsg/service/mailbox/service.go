@@ -131,47 +131,7 @@ func (d *MailboxService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
 
 // sdk-msg
 func (d *MailboxService) ReadMailbox(timeout time.Duration) ([]msg.Msg, error) {
-	var msgList []msg.Msg
-	peerID, err := peer.Decode(d.lightMailboxUser.ServicePeerID)
-	if err != nil {
-		log.Errorf("MailboxService->ReadMailbox: peer.Decode error: %v", err)
-		return msgList, err
-	}
-
-	for {
-		_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, d.lightMailboxUser.Key.PubkeyHex)
-		if err != nil {
-			return msgList, err
-		}
-		select {
-		case responseProtoData := <-readMailboxDoneChan:
-			response, ok := responseProtoData.(*pb.ReadMailboxRes)
-			if !ok || response == nil {
-				log.Errorf("MailboxService->ReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
-				return msgList, fmt.Errorf("MailboxService->ReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
-			}
-			if response.RetCode.Code < 0 {
-				log.Errorf("MailboxService->ReadMailbox: readMailboxRes fail")
-				return msgList, fmt.Errorf("MailboxService->ReadMailbox: readMailboxRes fail")
-			}
-			receiveMsglist, err := d.parseReadMailboxResponse(response, msg.MsgDirection.From)
-			if err != nil {
-				return msgList, err
-			}
-			msgList = append(msgList, receiveMsglist...)
-			if !response.ExistData {
-				log.Debugf("MailboxService->ReadMailbox: readMailboxChanDoneChan success")
-				return msgList, nil
-			}
-			continue
-		case <-time.After(timeout):
-			log.Errorf("MailboxService->ReadMailbox: timeout")
-			return msgList, fmt.Errorf("MailboxService->ReadMailbox: timeout")
-		case <-d.TvBase.GetCtx().Done():
-			log.Errorf("MailboxService->ReadMailbox: TvBase.GetCtx().Done()")
-			return msgList, fmt.Errorf("MailboxService->ReadMailbox: TvBase.GetCtx().Done()")
-		}
-	}
+	return d.readMailbox(d.lightMailboxUser.ServicePeerID, d.lightMailboxUser.Key.PubkeyHex, timeout)
 }
 
 // DmsgServiceInterface
@@ -861,6 +821,7 @@ func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout ti
 				log.Debugf("MailboxService->readMailbox: readMailboxChanDoneChan success")
 				return msgList, nil
 			}
+			continue
 		case <-time.After(timeout):
 			return msgList, fmt.Errorf("MailboxService->readMailbox: readMailboxDoneChan time out")
 		case <-d.TvBase.GetCtx().Done():
