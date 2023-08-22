@@ -143,27 +143,29 @@ func (d *MailboxService) RequestReadMailbox(timeout time.Duration) ([]msg.Msg, e
 		return msgList, err
 	}
 
-	select {
-	case responseProtoData := <-readMailboxDoneChan:
-		log.Debugf("MailboxService->RequestReadMailbox: responseProtoData: %+v", responseProtoData)
-		response, ok := responseProtoData.(*pb.ReadMailboxRes)
-		if !ok || response == nil {
-			log.Errorf("MailboxService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
-			return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
-		}
-		log.Debugf("MailboxService->RequestReadMailbox: readMailboxChanDoneChan success")
-		msgList, err = d.parseReadMailboxResponse(response, msg.MsgDirection.From)
-		if err != nil {
-			return msgList, err
-		}
+	for {
+		select {
+		case responseProtoData := <-readMailboxDoneChan:
+			log.Debugf("MailboxService->RequestReadMailbox: responseProtoData: %+v", responseProtoData)
+			response, ok := responseProtoData.(*pb.ReadMailboxRes)
+			if !ok || response == nil {
+				log.Errorf("MailboxService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
+				return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
+			}
+			log.Debugf("MailboxService->RequestReadMailbox: readMailboxChanDoneChan success")
+			msgList, err = d.parseReadMailboxResponse(response, msg.MsgDirection.From)
+			if err != nil {
+				return msgList, err
+			}
 
-		return msgList, nil
-	case <-time.After(timeout):
-		log.Debugf("MailboxService->RequestReadMailbox: timeout")
-		return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: timeout")
-	case <-d.TvBase.GetCtx().Done():
-		log.Debugf("MailboxService->RequestReadMailbox: BaseService.GetCtx().Done()")
-		return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: BaseService.GetCtx().Done()")
+			return msgList, nil
+		case <-time.After(timeout):
+			log.Debugf("MailboxService->RequestReadMailbox: timeout")
+			return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: timeout")
+		case <-d.TvBase.GetCtx().Done():
+			log.Debugf("MailboxService->RequestReadMailbox: BaseService.GetCtx().Done()")
+			return msgList, fmt.Errorf("MailboxService->RequestReadMailbox: BaseService.GetCtx().Done()")
+		}
 	}
 }
 
@@ -809,6 +811,39 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 	case <-d.TvBase.GetCtx().Done():
 		log.Debug("MailboxService->InitUser: BaseService.GetCtx().Done()")
 		return nil
+	}
+}
+
+func (d *MailboxService) readMailbox(peerIdHex string, pubkey string) error {
+	var err error
+	peerID, err := peer.Decode(peerIdHex)
+	if err != nil {
+		log.Warnf("MailboxService->readMailbox: fail to decode peer id: %v", err)
+		return err
+	}
+
+	for {
+		_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey)
+		if err != nil {
+			return err
+		}
+		select {
+		case responseData := <-readMailboxDoneChan:
+			readMailboxRes, ok := responseData.(*pb.ReadMailboxRes)
+			if !ok || readMailboxRes == nil {
+				return fmt.Errorf("MailboxService->readMailbox: readMailboxRes is not ReadMailboxRes")
+			}
+			if readMailboxRes.RetCode.Code < 0 {
+				return fmt.Errorf("MailboxService->readMailbox: readMailboxRes fail")
+			}
+			if !readMailboxRes.ExistData {
+				return nil
+			}
+		case <-time.After(time.Second * 3):
+			return fmt.Errorf("MailboxService->readMailbox: readMailboxDoneChan time out")
+		case <-d.TvBase.GetCtx().Done():
+			return fmt.Errorf("MailboxService->readMailbox: BaseService.GetCtx().Done()")
+		}
 	}
 }
 
