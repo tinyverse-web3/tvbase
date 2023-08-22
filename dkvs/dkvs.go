@@ -12,9 +12,11 @@ import (
 
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
+	ds "github.com/ipfs/go-datastore"
 	badgerds "github.com/ipfs/go-ds-badger2"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
@@ -466,6 +468,7 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 	val, err := d.dhtGetRecordFromNet(ctx, key)
 	if err != nil {
 		Logger.Errorf("dhtGetRecord--> key does not exist on the network {key: %s, err: %v}", key, err)
+		go delBadRecFromLocal(d, key) //参考lbp2p-kad-dht handleGetValue, 删除掉本地过期的key
 		return nil, err
 	}
 	e := new(pb.DkvsRecord)
@@ -473,24 +476,7 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 		Logger.Errorf("dhtGetRecord--> found an invalid dkvs entry: v%", err)
 		return nil, err
 	}
-	go func() { //执行异步操作，如果本地没有这个key,在本地也保留一份
-		ctx2, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		rec, err := d.getLocal(ctx2, key)
-		if err != nil {
-			Logger.Errorf("dhtGetRecord--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
-			return
-		}
-		if rec == nil {
-			Logger.Errorf("dhtGetRecord---> key does not exist on the local, so save a copy to the local node {key: %s}", key)
-			err = d.putKeyToLocalNode(ctx, key, val)
-			if err != nil {
-				Logger.Errorf("dhtGetRecord--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
-			} else {
-				Logger.Debugf("dhtGetRecord--->the new key-value is successfully saved locally {key: %s}", key)
-			}
-		}
-	}()
+	go saveKeyToLocal(d, key, val) //执行异步操作, 如果本地没有这个key,在本地也保留一份
 	return e, nil
 }
 
@@ -510,8 +496,6 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 			}
 		}),
 	}
-
-	//d.baseService.GetAvailableServicePeerList(key) //增加Get的稳定性
 
 	err := retry.Do(
 		func() error {
@@ -603,4 +587,60 @@ func isApprovedService(sn string) bool {
 		return _dkvs.IsApprovedService(sn)
 	}
 	return false
+}
+
+func saveKeyToLocal(d *Dkvs, key string, val []byte) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	rec, err := d.getLocal(ctx, key)
+	if err != nil {
+		Logger.Errorf("saveKeyToLocal--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
+		return
+	}
+	if rec == nil {
+		Logger.Errorf("saveKeyToLocal---> key does not exist on the local, so save a copy to the local node {key: %s}", key)
+		err = d.putKeyToLocalNode(ctx, key, val)
+		if err != nil {
+			Logger.Errorf("saveKeyToLocal--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
+		} else {
+			Logger.Debugf("saveKeyToLocal--->the new key-value is successfully saved locally {key: %s}", key)
+		}
+	}
+}
+
+func delBadRecFromLocal(d *Dkvs, key string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dskey := d.mkDsKey(key)
+	dht := d.idht
+	buf, err := d.dhtDatastore.Get(ctx, dskey)
+	if err == ds.ErrNotFound {
+		Logger.Debugf("delBadRecFromLocal--->finding value in datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+	if err != nil {
+		Logger.Warningf("delBadRecFromLocal--->error retrieving record from datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+	rec := new(recpb.Record)
+	err = proto.Unmarshal(buf, rec)
+	if err != nil {
+		// Bad data in datastore, log it but don't return an error, we'll just overwrite it
+		Logger.Warningf("delBadRecFromLocal--->failed to unmarshal record from datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+
+	var recordIsBad bool
+	err = dht.Validator.Validate(string(rec.GetKey()), rec.GetValue())
+	if (err != nil) && (err == ErrExpiredRecord) { //过期的记录要删除掉
+		Logger.Debugf("delBadRecFromLocal---local record verify failed {key: %v,  err: %s}", key, err.Error())
+		recordIsBad = true
+	}
+	if recordIsBad {
+		err := d.dhtDatastore.Delete(ctx, dskey)
+		if err != nil {
+			Logger.Error("delBadRecFromLocal--->Failed to delete bad record from datastore: {key: %s, error: %s}", key, err.Error())
+		}
+		Logger.Infof("delBadRecFromLocal---Successfully delete bad record from datastore {key: %s}", key)
+	}
 }
