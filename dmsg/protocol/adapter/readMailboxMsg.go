@@ -53,10 +53,21 @@ func (adapter *ReadMailboxMsgProtocolAdapter) GetEmptyResponse() protoreflect.Pr
 func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	requestProtoMsg := &pb.ReadMailboxReq{
+	request := &pb.ReadMailboxReq{
 		BasicData: basicData,
 	}
-	return requestProtoMsg, nil
+
+	if len(dataList) == 1 {
+		clearMode, ok := dataList[0].(bool)
+		if !ok {
+			return request, errors.New("ReadMailboxMsgProtocolAdapter->InitRequest: failed to cast datalist[0] to bool for clearMode")
+		}
+		request.ClearMode = clearMode
+	} else {
+		return request, errors.New("ReadMailboxMsgProtocolAdapter->InitRequest: parameter dataList need contain clearMode")
+	}
+
+	return request, nil
 }
 
 func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(

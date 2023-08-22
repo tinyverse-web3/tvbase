@@ -131,12 +131,26 @@ func (d *MailboxService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
 
 // sdk-msg
 func (d *MailboxService) ReadMailbox(timeout time.Duration) ([]msg.Msg, error) {
-	return d.readMailbox(d.lightMailboxUser.ServicePeerID, d.lightMailboxUser.Key.PubkeyHex, timeout)
+	if d.lightMailboxUser == nil {
+		log.Errorf("MailboxService->ReadMailbox: user is nil")
+		return nil, fmt.Errorf("MailboxService->ReadMailbox: user is nil")
+	}
+	if d.lightMailboxUser.ServicePeerID == "" {
+		log.Errorf("MailboxService->ReadMailbox: servicePeerID is empty")
+		return nil, fmt.Errorf("MailboxService->ReadMailbox: servicePeerID is empty")
+	}
+	return d.readMailbox(
+		d.lightMailboxUser.ServicePeerID,
+		d.lightMailboxUser.Key.PubkeyHex,
+		timeout,
+		false,
+	)
 }
 
 // DmsgServiceInterface
 func (d *MailboxService) GetUserPubkeyHex() (string, error) {
 	if d.lightMailboxUser == nil {
+		log.Errorf("MailboxService->GetUserPubkeyHex: user is nil")
 		return "", fmt.Errorf("MailboxService->GetUserPubkeyHex: user is nil")
 	}
 	return d.lightMailboxUser.Key.PubkeyHex, nil
@@ -307,26 +321,29 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	mailboxMsgDataList := []*pb.MailboxItem{}
 	find := false
 	needDeleteKeyList := []string{}
-	const maxSize = 2 * 1024 * 1024
+	const MaxContentSize = 2 * 1024 * 1024
 	factSize := 0
 	requestParam := &adapter.ReadMailRequestParam{}
 	for result := range results.Next() {
-		mailboxMsgData := &pb.MailboxItem{
-			Key:     string(result.Key),
-			Content: result.Value,
+		if !request.ClearMode {
+			mailboxMsgData := &pb.MailboxItem{
+				Key:     string(result.Key),
+				Content: result.Value,
+			}
+			mailboxMsgDataList = append(mailboxMsgDataList, mailboxMsgData)
+			factSize += len(result.Value)
+			if factSize >= MaxContentSize {
+				for range results.Next() {
+					requestParam.ExistData = true
+					break
+				}
+				break
+			}
 		}
-		mailboxMsgDataList = append(mailboxMsgDataList, mailboxMsgData)
 		needDeleteKeyList = append(needDeleteKeyList, string(result.Key))
 		find = true
-		factSize += len(result.Value)
-		if factSize >= maxSize {
-			nextData := results.Next()
-			if nextData == nil {
-				requestParam.ExistData = true
-			}
-			break
-		}
 	}
+
 	requestParam.ItemList = mailboxMsgDataList
 	for _, needDeleteKey := range needDeleteKeyList {
 		err := d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(needDeleteKey))
@@ -455,40 +472,79 @@ func (d *MailboxService) OnPubsubMsgResponse(
 // common
 func (d *MailboxService) cleanRestResource() {
 	go func() {
-		ticker := time.NewTicker(3 * time.Hour)
-		defer ticker.Stop()
+		if d.EnableService {
+			serviceTicker := time.NewTicker(12 * time.Hour)
+			defer serviceTicker.Stop()
+			for {
+				select {
+				case <-d.stopCleanRestResource:
+					return
+				case <-serviceTicker.C:
+					for pubkey, pubsub := range d.serviceUserList {
+						days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+						// delete mailbox msg in datastore and unsubscribe mailbox when days is over, default days is 30
+						if days >= d.GetConfig().KeepMailboxDay {
+							var query = query.Query{
+								Prefix:   d.getMsgPrefix(pubkey),
+								KeysOnly: true,
+							}
+							user := d.getServiceUser(pubkey)
+							if user == nil {
+								log.Errorf("dmsgService->cleanRestResource: cannot find user for pubkey: %s", pubkey)
+								continue
+							}
+							user.MsgRWMutex.Lock()
+							results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
+							if err != nil {
+								user.MsgRWMutex.Unlock()
+								log.Errorf("dmsgService->cleanRestResource: query error: %v", err)
+							}
+
+							for result := range results.Next() {
+								err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
+								if err != nil {
+									log.Errorf("dmsgService->cleanRestResource: datastore.Delete error: %+v", err)
+								}
+								log.Debugf("dmsgService->cleanRestResource: delete msg by key:%v", string(result.Key))
+							}
+							user.MsgRWMutex.Unlock()
+							d.unsubscribeServiceUser(pubkey)
+						}
+					}
+					continue
+				case <-d.TvBase.GetCtx().Done():
+					return
+				}
+			}
+		}
+		lightTicker := time.NewTicker(3 * time.Minute)
+		defer lightTicker.Stop()
 		for {
 			select {
 			case <-d.stopCleanRestResource:
 				return
-			case <-ticker.C:
-				for pubkey, pubsub := range d.serviceUserList {
-					days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
-					// delete mailbox msg in datastore and unsubscribe mailbox when days is over, default days is 30
-					if days >= d.GetConfig().KeepMailboxDay {
-						var query = query.Query{
-							Prefix:   d.getMsgPrefix(pubkey),
-							KeysOnly: true,
-						}
-						results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
-						if err != nil {
-							log.Errorf("dmsgService->readDestUserPubsub: query error: %v", err)
-						}
-
-						for result := range results.Next() {
-							d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
-							log.Debugf("dmsgService->readDestUserPubsub: delete msg by key:%v", string(result.Key))
-						}
-
-						d.unsubscribeServiceUser(pubkey)
-						return
-					}
+			case <-lightTicker.C:
+				if d.lightMailboxUser == nil {
+					log.Errorf("MailboxService->ReadMailbox: user is nil")
+					continue
 				}
-				continue
+				if d.lightMailboxUser.ServicePeerID == "" {
+					log.Errorf("MailboxService->ReadMailbox: servicePeerID is empty")
+					continue
+				}
+				_, err := d.readMailbox(
+					d.lightMailboxUser.ServicePeerID,
+					d.lightMailboxUser.Key.PubkeyHex,
+					30*time.Second, true)
+				if err != nil {
+					log.Errorf("dmsgService->cleanRestResource: readMailbox error: %v", err)
+					continue
+				}
 			case <-d.TvBase.GetCtx().Done():
 				return
 			}
 		}
+
 	}()
 }
 
@@ -790,7 +846,12 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 	}
 }
 
-func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout time.Duration) ([]msg.Msg, error) {
+func (d *MailboxService) readMailbox(
+	peerIdHex string,
+	pubkey string,
+	timeout time.Duration,
+	clearMode bool,
+) ([]msg.Msg, error) {
 	var msgList []msg.Msg
 	peerID, err := peer.Decode(peerIdHex)
 	if err != nil {
@@ -799,7 +860,7 @@ func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout ti
 	}
 
 	for {
-		_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey)
+		_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey, clearMode)
 		if err != nil {
 			return msgList, err
 		}
@@ -833,7 +894,7 @@ func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout ti
 func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string, timeout time.Duration) error {
 	log.Debug("MailboxService->releaseUnusedMailbox begin")
 
-	_, err := d.readMailbox(peerIdHex, pubkey, timeout)
+	_, err := d.readMailbox(peerIdHex, pubkey, timeout, false)
 	if err != nil {
 		return err
 	}

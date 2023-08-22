@@ -42,6 +42,7 @@ message RetCode {
 
 message ReadMailboxReq {
     BasicData basicData = 1;
+    bool clearMode = 2;
 }
 
 message MailboxItem {
