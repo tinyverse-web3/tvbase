@@ -81,7 +81,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
 	}
 
 	response.ContentList = requestParam.ItemList
-
+	response.ExistData = requestParam.ExistData
 	return response, nil
 }
 
