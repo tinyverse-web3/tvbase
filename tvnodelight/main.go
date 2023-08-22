@@ -252,7 +252,35 @@ func main() {
 			mainLog.Errorf("SubscribeChannel error: %v", err)
 			return
 		}
-		channelService.SetOnReceiveMsg(msgOnReceiveMsg)
+		channelOnReceiveMsg := func(
+			srcUserPubkey string,
+			destUserPubkey string,
+			msgContent []byte,
+			timeStamp int64,
+			msgID string,
+			direction string) ([]byte, error) {
+			decrypedContent := []byte("")
+
+			switch direction {
+			case msg.MsgDirection.To:
+				decrypedContent, err = tvutilCrypto.DecryptWithPrikey(destPrikey, msgContent)
+				if err != nil {
+					decrypedContent = []byte(err.Error())
+					mainLog.Errorf("decrypt error: %v", err)
+				}
+			case msg.MsgDirection.From:
+				decrypedContent, err = tvutilCrypto.DecryptWithPrikey(srcPrikey, msgContent)
+				if err != nil {
+					decrypedContent = []byte(err.Error())
+					mainLog.Errorf("decrypt error: %v", err)
+				}
+			}
+			mainLog.Infof("channelOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+				srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+			return nil, nil
+		}
+		channelService.SetOnReceiveMsg(channelOnReceiveMsg)
+		// channelService.SetOnSendMsgResponse(channelOnReceiveMsg)
 	}
 
 	// send msg to dest user with read from stdin
