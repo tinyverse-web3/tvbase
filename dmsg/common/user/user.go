@@ -145,7 +145,7 @@ func (t *Target) Close() error {
 
 type DestTarget struct {
 	Target
-	LastReciveTimestamp int64
+	LastTimestamp int64
 }
 
 type ProxyPubsub struct {

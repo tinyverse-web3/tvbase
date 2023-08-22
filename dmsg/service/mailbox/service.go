@@ -474,7 +474,7 @@ func (d *MailboxService) OnPubsubMsgRequest(
 			log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 			return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 		}
-		user.LastReciveTimestamp = time.Now().UnixNano()
+		user.LastTimestamp = time.Now().UnixNano()
 		d.saveMsg(requestProtoData)
 	}
 
@@ -506,7 +506,7 @@ func (d *MailboxService) cleanRestResource() {
 					return
 				case <-serviceTicker.C:
 					for pubkey, pubsub := range d.serviceUserList {
-						days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+						days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
 						// delete mailbox msg in datastore and unsubscribe mailbox when days is over, default days is 30
 						if days >= d.GetConfig().KeepMailboxDay {
 							var query = query.Query{
@@ -746,8 +746,8 @@ func (d *MailboxService) subscribeServiceUser(pubkey string) error {
 	}
 	user := &dmsgUser.ServiceMailboxUser{
 		DestTarget: dmsgUser.DestTarget{
-			Target:              *target,
-			LastReciveTimestamp: time.Now().UnixNano(),
+			Target:        *target,
+			LastTimestamp: time.Now().UnixNano(),
 		},
 		MsgRWMutex: sync.RWMutex{},
 	}
@@ -895,7 +895,7 @@ func (d *MailboxService) readMailbox(
 		case responseProtoData := <-readMailboxDoneChan:
 			response, ok := responseProtoData.(*pb.ReadMailboxRes)
 			if !ok || response == nil {
-				return msgList, fmt.Errorf("MailboxService->readMailbox: readMailboxRes is not ReadMailboxRes")
+				return msgList, fmt.Errorf(response.RetCode.Result)
 			}
 			if response.RetCode.Code < 0 {
 				return msgList, fmt.Errorf("MailboxService->readMailbox: readMailboxRes fail")

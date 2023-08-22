@@ -128,8 +128,8 @@ func (d *ProxyPubsubService) SubscribePubsub(
 
 	proxyPubsub := &dmsgUser.ProxyPubsub{
 		DestTarget: dmsgUser.DestTarget{
-			Target:              *target,
-			LastReciveTimestamp: time.Now().UnixNano(),
+			Target:        *target,
+			LastTimestamp: time.Now().UnixNano(),
 		},
 		AutoClean: autoClean,
 	}
@@ -387,7 +387,7 @@ func (d *ProxyPubsubService) cleanRestResource() {
 					return
 				case <-ticker.C:
 					for pubkey, pubsub := range d.ProxyPubsubList {
-						days := dmsgCommonUtil.DaysBetween(pubsub.LastReciveTimestamp, time.Now().UnixNano())
+						days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
 						if pubsub.AutoClean && days >= d.keepPubsubDay {
 							d.UnsubscribePubsub(pubkey)
 							continue
