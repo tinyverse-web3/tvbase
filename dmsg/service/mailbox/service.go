@@ -398,14 +398,14 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 	log.Debugf("MailboxService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
-		return nil, nil, false, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.SeekMailboxReq")
+		log.Errorf("MailboxService->OnSeekMailboxRequest: fail to convert requestProtoData to *pb.SeekMailboxReq")
+		return nil, nil, false, fmt.Errorf("MailboxService->OnSeekMailboxRequest: fail to convert requestProtoData to *pb.SeekMailboxReq")
 	}
 
 	// no responding to self
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
-		return nil, nil, true, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		log.Debugf("dmsgService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		return nil, nil, true, fmt.Errorf("dmsgService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
 	}
 
 	log.Debug("MailboxService->OnSeekMailboxRequest end")
