@@ -52,7 +52,8 @@ message MailboxItem {
 message ReadMailboxRes {
     BasicData basicData = 1;
     repeated MailboxItem contentList = 2;
-    RetCode retCode = 3;
+    bool existData = 3;
+    RetCode retCode = 4;
 }
 
 message CreateMailboxReq {
