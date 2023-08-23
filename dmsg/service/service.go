@@ -210,7 +210,7 @@ func (d *DmsgService) cleanRestResource(done chan bool) {
 						}
 
 						d.unSubscribeDestUser(userPubkey)
-						return
+						continue
 					}
 				}
 				for pubChannelPubkey, pubsub := range d.pubChannelInfoList {
@@ -218,7 +218,7 @@ func (d *DmsgService) cleanRestResource(done chan bool) {
 					// delete mailbox msg in datastore and cancel mailbox subscribe when days is over, default days is 30
 					if days >= cfg.DMsg.KeepPubChannelDay {
 						d.unsubscribePubChannel(pubChannelPubkey)
-						return
+						continue
 					}
 				}
 
