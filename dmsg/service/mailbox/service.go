@@ -428,8 +428,8 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 
 	// no responding to self
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
-		return nil, nil, true, fmt.Errorf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		log.Debugf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID()")
+		return nil, nil, true, nil
 	}
 
 	log.Debug("MailboxService->OnSeekMailboxRequest end")

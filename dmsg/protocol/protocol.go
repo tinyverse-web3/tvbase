@@ -174,7 +174,7 @@ func (p *Protocol) HandleResponseData(
 		// close(requestInfo.DoneChan)
 		// delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
-		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
+		log.Logger.Debugf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
 
 	log.Logger.Debugf("Protocol->HandleResponseData end")
