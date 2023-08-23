@@ -270,7 +270,7 @@ func main() {
 		responseContent []byte,
 		timeStamp int64,
 		msgID string) ([]byte, error) {
-		mainLog.Infof("channelOnSendMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v, direction: %s",
+		mainLog.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v, direction: %s",
 			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0))
 		return nil, nil
 	}
