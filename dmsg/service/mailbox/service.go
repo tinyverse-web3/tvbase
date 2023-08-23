@@ -237,8 +237,8 @@ func (d *MailboxService) OnCreateMailboxResponse(
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		log.Debugf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		// return nil, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
 	}
 	response, ok := responseProtoData.(*pb.CreateMailboxRes)
 	if !ok {
@@ -293,12 +293,6 @@ func (d *MailboxService) OnReleaseMailboxResponse(
 	log.Debug(
 		"MailboxService->OnReleaseMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-	_, ok := requestProtoData.(*pb.ReleaseMailboxReq)
-	if !ok {
-		log.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-		return nil, fmt.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-	}
-
 	response, ok := responseProtoData.(*pb.ReleaseMailboxRes)
 	if !ok {
 		log.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert responseProtoData to *pb.ReleaseMailboxRes")
@@ -439,7 +433,7 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 func (d *MailboxService) OnSeekMailboxResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debug(
+	log.Debugf(
 		"MailboxService->OnSeekMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)

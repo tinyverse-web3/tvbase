@@ -159,7 +159,8 @@ func (p *Protocol) HandleResponseData(
 	}
 
 	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
-	if ok {
+	log.Logger.Debugf("Protocol->HandleResponseData:\nrequestInfo: %+v", requestInfo)
+	if ok && requestInfo != nil {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {
 			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
@@ -174,6 +175,10 @@ func (p *Protocol) HandleResponseData(
 		// close(requestInfo.DoneChan)
 		// delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
+		_, err := p.Adapter.CallResponseCallback(nil, responseProtoMsg)
+		if err != nil {
+			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
+		}
 		log.Logger.Debugf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
 

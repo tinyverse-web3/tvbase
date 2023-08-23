@@ -142,8 +142,8 @@ func (d *ChannelService) OnPubsubMsgResponse(
 
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("ChannelService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		log.Debugf("ChannelService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		// return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
 	response, ok := responseProtoData.(*pb.MsgRes)
@@ -162,9 +162,15 @@ func (d *ChannelService) OnPubsubMsgResponse(
 		return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
 		if d.OnMsgResponse != nil {
+			requestPubkey := ""
+			requestDestPubkey := ""
+			if request != nil {
+				requestPubkey = request.BasicData.Pubkey
+				requestDestPubkey = request.DestPubkey
+			}
 			d.OnMsgResponse(
-				request.BasicData.Pubkey,
-				request.DestPubkey,
+				requestPubkey,
+				requestDestPubkey,
 				response.BasicData.Pubkey,
 				response.Content,
 				response.BasicData.TS,

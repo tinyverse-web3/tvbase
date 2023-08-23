@@ -108,12 +108,12 @@ func (d *MsgService) OnPubsubMsgRequest(
 	}
 
 	if d.OnMsgRequest != nil {
-		srcPubkey := request.BasicData.Pubkey
-		destPubkey := request.DestPubkey
+		requestPubkey := request.BasicData.Pubkey
+		requestDestPubkey := request.DestPubkey
 		msgDirection := msg.MsgDirection.From
 		responseContent, err := d.OnMsgRequest(
-			srcPubkey,
-			destPubkey,
+			requestPubkey,
+			requestDestPubkey,
 			request.Content,
 			request.BasicData.TS,
 			request.BasicData.ID,
@@ -143,8 +143,8 @@ func (d *MsgService) OnPubsubMsgResponse(
 
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		log.Debugf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
+		// return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
 	response, ok := responseProtoData.(*pb.MsgRes)
@@ -158,9 +158,15 @@ func (d *MsgService) OnPubsubMsgResponse(
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
 		if d.OnMsgResponse != nil {
+			requestPubkey := ""
+			requestDestPubkey := ""
+			if request != nil {
+				requestPubkey = request.BasicData.Pubkey
+				requestDestPubkey = request.DestPubkey
+			}
 			d.OnMsgResponse(
-				request.BasicData.Pubkey,
-				request.DestPubkey,
+				requestPubkey,
+				requestDestPubkey,
 				response.BasicData.Pubkey,
 				response.Content,
 				response.BasicData.TS,
