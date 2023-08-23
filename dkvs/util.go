@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // TimeFormatIpfs is the format ipfs uses to represent time in string form.
@@ -56,4 +57,13 @@ func RandString(n int) string {
 // RemovePrefix returns the orginal key for a dksvs key.
 func RemovePrefix(dkvsKey string) string {
 	return strings.Replace(dkvsKey, DefaultKeyPrefix, "", -1)
+}
+
+// ParsePeersAddrInfo parses a AddrInfos list into a list of peer id.
+func ParsePeersAddrInfo(addrInfos []peer.AddrInfo) []peer.ID {
+	peerIds := make([]peer.ID, len(addrInfos))
+	for i, addrInfo := range addrInfos {
+		peerIds[i] = addrInfo.ID
+	}
+	return peerIds
 }

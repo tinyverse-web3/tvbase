@@ -22,6 +22,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-base32"
 	tvPb "github.com/tinyverse-web3/tvbase/common/pb"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -453,20 +454,25 @@ func (d *Dkvs) periodicallyProcessUnsyncKey() {
 
 // 主动连接之前连接过网络服务节点以提高网络的稳定性
 func (d *Dkvs) tryToConnectNetPeers() int { //主动连接网络节点
-	serviceNodeCount := 0
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	host := d.idht.Host()
 	peers := host.Network().Peers()
-	if len(peers) == 0 {
-		return serviceNodeCount
-	}
-
 	baseService := d.baseService
 	nodeInfoService := baseService.GetNodeInfoService()
+	if len(peers) == 0 {
+		bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(nodeInfoService.NodeConfig.Bootstrap.BootstrapPeers)
+		if err == nil {
+			peers = ParsePeersAddrInfo(bootstrapPeerAddrInfoList)
+		}
+	}
+	if len(peers) == 0 {
+		return 0
+	}
+
 	var mutex sync.Mutex
 	var wg sync.WaitGroup
-
+	serviceNodeCount := 0
 	for _, p := range peers {
 		pId := p
 		wg.Add(1) // 增加WaitGroup的计数
