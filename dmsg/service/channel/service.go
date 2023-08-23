@@ -93,11 +93,11 @@ func (d *ChannelService) OnPubsubMsgRequest(
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	isSelf := request.BasicData.PeerID == d.TvBase.GetHost().ID().String()
-	if isSelf {
-		log.Debugf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
-		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
-	}
+	// isSelf := request.BasicData.PeerID == d.TvBase.GetHost().ID().String()
+	// if isSelf {
+	// 	log.Debugf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+	// 	return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+	// }
 
 	destPubkey := request.DestPubkey
 	proxyPubsub := d.ProxyPubsubList[destPubkey]
@@ -108,12 +108,12 @@ func (d *ChannelService) OnPubsubMsgRequest(
 
 	var retCode *pb.RetCode = nil
 	var responseContent []byte = nil
-	if d.OnReceiveMsg != nil {
+	if d.OnMsgRequest != nil {
 		srcPubkey := request.BasicData.Pubkey
 		destPubkey := request.DestPubkey
 		msgDirection := msg.MsgDirection.From
 		var err error
-		responseContent, err = d.OnReceiveMsg(
+		responseContent, err = d.OnMsgRequest(
 			srcPubkey,
 			destPubkey,
 			request.Content,
@@ -130,11 +130,6 @@ func (d *ChannelService) OnPubsubMsgRequest(
 	} else {
 		log.Errorf("ChannelService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
-
-	// if d.LightUser.Key.PubkeyHex == destPubkey {
-	// 	return responseContent, retCode, false, nil
-	// }
-	// return nil, nil, true, nil
 	return responseContent, retCode, false, nil
 }
 
@@ -166,17 +161,15 @@ func (d *ChannelService) OnPubsubMsgResponse(
 		log.Warnf("ChannelService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
-		if d.OnSendMsgResponse != nil {
-			srcPubkey := request.BasicData.Pubkey
-			destPubkey := request.DestPubkey
-			msgDirection := msg.MsgDirection.From
-			d.OnSendMsgResponse(
-				srcPubkey,
-				destPubkey,
-				request.Content,
-				request.BasicData.TS,
-				request.BasicData.ID,
-				msgDirection)
+		if d.OnMsgResponse != nil {
+			d.OnMsgResponse(
+				request.BasicData.Pubkey,
+				request.DestPubkey,
+				response.BasicData.Pubkey,
+				response.Content,
+				response.BasicData.TS,
+				response.BasicData.ID,
+			)
 		} else {
 			log.Debugf("ChannelService->OnPubsubMsgRequest: onSendMsgResponse is nil")
 		}
@@ -192,22 +185,13 @@ func (d *ChannelService) GetPublishTarget(requestProtoData protoreflect.ProtoMes
 		return nil, fmt.Errorf("ChannelService->GetPublishTarget: cannot convert to *pb.MsgReq")
 	}
 
-	pubkey := request.BasicData.Pubkey
+	pubkey := request.DestPubkey
 	var target *dmsgUser.Target
 	if d.ProxyPubsubList[pubkey] != nil {
 		target = &d.ProxyPubsubList[pubkey].Target
 	} else if d.LightUser.Key.PubkeyHex == pubkey {
 		target = &d.LightUser.Target
 	}
-
-	// if target == nil {
-	// 	pubkey := request.DestPubkey
-	// 	if d.ProxyPubsubList[pubkey] != nil {
-	// 		target = &d.ProxyPubsubList[pubkey].Target
-	// 	} else if d.LightUser.Key.PubkeyHex == pubkey {
-	// 		target = &d.LightUser.Target
-	// 	}
-	// }
 
 	if target == nil {
 		log.Errorf("ChannelService->GetPublishTarget: target is nil")

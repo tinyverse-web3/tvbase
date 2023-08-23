@@ -125,8 +125,8 @@ func TestPubsubMsg(t *testing.T) {
 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
-	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
-	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMsgService().SetOnMsgRequest(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnMsgRequest(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {

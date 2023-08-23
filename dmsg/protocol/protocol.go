@@ -170,8 +170,9 @@ func (p *Protocol) HandleResponseData(
 		default:
 			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for DoneChan")
 		}
-		close(requestInfo.DoneChan)
-		delete(p.RequestInfoList, responseBasicData.ID)
+		// delete for mulit pubsub response
+		// close(requestInfo.DoneChan)
+		// delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
 		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
@@ -229,7 +230,7 @@ func (p *Protocol) TickCleanRequest() {
 		select {
 		case <-ticker.C:
 			for id, v := range p.RequestInfoList {
-				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 1*time.Minute {
+				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 10*time.Minute {
 					close(p.RequestInfoList[id].DoneChan)
 					delete(p.RequestInfoList, id)
 				}

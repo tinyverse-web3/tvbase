@@ -99,19 +99,19 @@ func (d *MsgService) OnPubsubMsgRequest(
 	destPubkey := request.DestPubkey
 	if d.LightUser.Key.PubkeyHex != destPubkey {
 		log.Debugf(
-			"ChannelService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
+			"MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
 			d.LightUser.Key.PubkeyHex)
 		return nil, nil, true,
 			fmt.Errorf(
-				"ChannelService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
+				"MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
 				d.LightUser.Key.PubkeyHex)
 	}
 
-	if d.OnReceiveMsg != nil {
+	if d.OnMsgRequest != nil {
 		srcPubkey := request.BasicData.Pubkey
 		destPubkey := request.DestPubkey
 		msgDirection := msg.MsgDirection.From
-		responseContent, err := d.OnReceiveMsg(
+		responseContent, err := d.OnMsgRequest(
 			srcPubkey,
 			destPubkey,
 			request.Content,
@@ -157,17 +157,15 @@ func (d *MsgService) OnPubsubMsgResponse(
 		log.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
-		if d.OnSendMsgResponse != nil {
-			srcPubkey := request.BasicData.Pubkey
-			destPubkey := request.DestPubkey
-			msgDirection := msg.MsgDirection.From
-			d.OnSendMsgResponse(
-				srcPubkey,
-				destPubkey,
-				request.Content,
-				request.BasicData.TS,
-				request.BasicData.ID,
-				msgDirection)
+		if d.OnMsgResponse != nil {
+			d.OnMsgResponse(
+				request.BasicData.Pubkey,
+				request.DestPubkey,
+				response.BasicData.Pubkey,
+				response.Content,
+				response.BasicData.TS,
+				response.BasicData.ID,
+			)
 		} else {
 			log.Debugf("MsgService->OnPubsubMsgResponse: onSendMsgResponse is nil")
 		}

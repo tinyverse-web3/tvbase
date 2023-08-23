@@ -36,7 +36,7 @@ type MailboxService struct {
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
-	onReceiveMsg          msg.OnReceiveMsg
+	onMsgRequest          msg.OnMsgRequest
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -127,8 +127,8 @@ func (d *MailboxService) Stop() error {
 	return nil
 }
 
-func (d *MailboxService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
-	d.onReceiveMsg = cb
+func (d *MailboxService) SetOnMsgRequest(onMsgRequest msg.OnMsgRequest) {
+	d.onMsgRequest = onMsgRequest
 }
 
 // sdk-msg
@@ -406,8 +406,8 @@ func (d *MailboxService) OnReadMailboxMsgResponse(
 	}
 	for _, msg := range msgList {
 		log.Debugf("MailboxService->OnReadMailboxMsgResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
-		if d.onReceiveMsg != nil {
-			d.onReceiveMsg(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
+		if d.onMsgRequest != nil {
+			d.onMsgRequest(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
 		} else {
 			log.Errorf("MailboxService->OnReadMailboxMsgResponse: OnReceiveMsg is nil")
 		}

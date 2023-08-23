@@ -24,8 +24,8 @@ type ProxyPubsubService struct {
 	createPubsubProtocol  *dmsgProtocol.CreatePubsubSProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	ProxyPubsubList       map[string]*dmsgUser.ProxyPubsub
-	OnReceiveMsg          msg.OnReceiveMsg
-	OnSendMsgResponse     msg.OnReceiveMsg
+	OnMsgRequest          msg.OnMsgRequest
+	OnMsgResponse         msg.OnMsgResponse
 	stopCleanRestResource chan bool
 	maxPubsubCount        int
 	keepPubsubDay         int
@@ -200,12 +200,12 @@ func (d *ProxyPubsubService) SendMsg(destPubkey string, content []byte) (*pb.Msg
 	return request, nil
 }
 
-func (d *ProxyPubsubService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
-	d.OnReceiveMsg = onReceiveMsg
+func (d *ProxyPubsubService) SetOnMsgRequest(onMsgRequest msg.OnMsgRequest) {
+	d.OnMsgRequest = onMsgRequest
 }
 
-func (d *ProxyPubsubService) SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg) {
-	d.OnSendMsgResponse = onSendMsgResponse
+func (d *ProxyPubsubService) SetOnMsgResponse(onMsgResponse msg.OnMsgResponse) {
+	d.OnMsgResponse = onMsgResponse
 }
 
 // DmsgServiceInterface
