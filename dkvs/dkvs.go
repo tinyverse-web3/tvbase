@@ -596,19 +596,11 @@ func isApprovedService(sn string) bool {
 func saveKeyToLocal(d *Dkvs, key string, val []byte) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	rec, err := d.getLocal(ctx, key)
+	err := d.putKeyToLocalNode(ctx, key, val)
 	if err != nil {
-		Logger.Errorf("saveKeyToLocal--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
-		return
-	}
-	if rec == nil {
-		Logger.Errorf("saveKeyToLocal---> key does not exist on the local, so save a copy to the local node {key: %s}", key)
-		err = d.putKeyToLocalNode(ctx, key, val)
-		if err != nil {
-			Logger.Errorf("saveKeyToLocal--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
-		} else {
-			Logger.Debugf("saveKeyToLocal--->the new key-value is successfully saved locally {key: %s}", key)
-		}
+		Logger.Errorf("saveKeyToLocal--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
+	} else {
+		Logger.Debugf("saveKeyToLocal--->the new key-value is successfully saved locally {key: %s}", key)
 	}
 }
 
