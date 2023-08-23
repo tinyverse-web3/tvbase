@@ -259,8 +259,8 @@ func main() {
 		timeStamp int64,
 		msgID string,
 		direction string) ([]byte, error) {
-		mainLog.Infof("channelOnMsgRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s",
-			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction)
+		mainLog.Infof("channelOnMsgRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
+			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
 		return nil, nil
 	}
 	channelOnMsgResponse := func(
@@ -270,8 +270,8 @@ func main() {
 		responseContent []byte,
 		timeStamp int64,
 		msgID string) ([]byte, error) {
-		mainLog.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v, direction: %s",
-			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0))
+		mainLog.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v\nmsgID: %s",
+			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
 		return nil, nil
 	}
 	channelService.SetOnMsgRequest(channelOnMsgRequest)
