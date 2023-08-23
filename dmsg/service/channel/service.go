@@ -93,11 +93,11 @@ func (d *ChannelService) OnPubsubMsgRequest(
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	isSelf := request.BasicData.PeerID == d.TvBase.GetHost().ID().String()
-	if isSelf {
-		log.Debugf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
-		return nil, nil, true, nil
-	}
+	// isSelf := request.BasicData.PeerID == d.TvBase.GetHost().ID().String()
+	// if isSelf {
+	// 	log.Debugf("ChannelService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+	// 	return nil, nil, true, nil
+	// }
 
 	destPubkey := request.DestPubkey
 	proxyPubsub := d.ProxyPubsubList[destPubkey]
