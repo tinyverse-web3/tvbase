@@ -252,14 +252,14 @@ func main() {
 		mainLog.Errorf("SubscribeChannel error: %v", err)
 		return
 	}
-	channelOnMsgReceive := func(
+	channelOnMsgRequest := func(
 		requestPubkey string,
 		requestDestPubkey string,
 		requestContent []byte,
 		timeStamp int64,
 		msgID string,
 		direction string) ([]byte, error) {
-		mainLog.Infof("channelOnReceiveMsg-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s",
+		mainLog.Infof("channelOnMsgRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s",
 			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
@@ -274,7 +274,7 @@ func main() {
 			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0))
 		return nil, nil
 	}
-	channelService.SetOnMsgRequest(channelOnMsgReceive)
+	channelService.SetOnMsgRequest(channelOnMsgRequest)
 	channelService.SetOnMsgResponse(channelOnMsgResponse)
 
 	// send msg to dest user with read from stdin
