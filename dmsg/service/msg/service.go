@@ -178,3 +178,26 @@ func (d *MsgService) OnPubsubMsgResponse(
 	log.Debugf("MsgService->OnPubsubMsgResponse end")
 	return nil, nil
 }
+
+// DmsgServiceInterface
+func (d *MsgService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
+	request, ok := requestProtoData.(*pb.MsgReq)
+	if !ok {
+		log.Errorf("MsgService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
+		return nil, fmt.Errorf("MsgService->GetPublishTarget: cannot convert to *pb.MsgReq")
+	}
+
+	pubkey := request.DestPubkey
+	var target *dmsgUser.Target
+	if d.ProxyPubsubList[pubkey] != nil {
+		target = &d.ProxyPubsubList[pubkey].Target
+	} else if d.LightUser.Key.PubkeyHex == pubkey {
+		target = &d.LightUser.Target
+	}
+
+	if target == nil {
+		log.Errorf("MsgService->GetPublishTarget: target is nil")
+		return nil, fmt.Errorf("MsgService->GetPublishTarget: target is nil")
+	}
+	return target, nil
+}
