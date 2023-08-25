@@ -106,22 +106,22 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	isHandlePubsubProtocol bool,
 	autoClean bool,
 ) error {
-	log.Debugf("ProxyPubsubService->SubscribeChannel begin:\npubkey: %s", pubkey)
+	log.Debugf("ProxyPubsubService->SubscribePubsub begin:\npubkey: %s", pubkey)
 
 	if d.ProxyPubsubList[pubkey] != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
-		return fmt.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
+		log.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
+		return fmt.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
 	}
 
 	target, err := dmsgUser.NewTarget(pubkey, nil)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: NewTarget error: %v", err)
+		log.Errorf("ProxyPubsubService->SubscribePubsub: NewTarget error: %v", err)
 		return err
 	}
 
 	err = target.InitPubsub(pubkey)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->subscribeUser: target.InitPubsub error: %v", err)
+		log.Errorf("ProxyPubsubService->SubscribePubsub: target.InitPubsub error: %v", err)
 		return err
 	}
 
@@ -144,10 +144,10 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	if isHandlePubsubProtocol {
 		d.HandlePubsubProtocol(&proxyPubsub.Target)
 		if err != nil {
-			log.Errorf("ProxyPubsubService->SubscribeChannel: HandlePubsubProtocol error: %v", err)
+			log.Errorf("ProxyPubsubService->SubscribePubsub: HandlePubsubProtocol error: %v", err)
 			err := proxyPubsub.Target.Close()
 			if err != nil {
-				log.Warnf("ProxyPubsubService->SubscribeChannel: Target.Close error: %v", err)
+				log.Warnf("ProxyPubsubService->SubscribePubsub: Target.Close error: %v", err)
 				return err
 			}
 			return err
@@ -155,7 +155,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	}
 
 	d.ProxyPubsubList[pubkey] = proxyPubsub
-	log.Debug("ProxyPubsubService->SubscribeChannel end")
+	log.Debug("ProxyPubsubService->SubscribePubsub end")
 	return nil
 }
 
