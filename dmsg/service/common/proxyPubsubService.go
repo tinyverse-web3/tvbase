@@ -67,10 +67,12 @@ func (d *ProxyPubsubService) Start(
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// light user
-	err = d.HandlePubsubProtocol(&d.LightUser.Target)
-	if err != nil {
-		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
-		return err
+	if enableLightUserPubsub {
+		err = d.HandlePubsubProtocol(&d.LightUser.Target)
+		if err != nil {
+			log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
+			return err
+		}
 	}
 
 	d.cleanRestResource()

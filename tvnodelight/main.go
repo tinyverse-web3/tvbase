@@ -218,6 +218,22 @@ func main() {
 	}
 	// set  user msg receive callback
 	dmsg.GetMsgService().SetOnMsgRequest(msgOnRequest)
+
+	msgOnResponse := func(
+		requestPubkey string,
+		requestDestPubkey string,
+		responseDestPubkey string,
+		responseContent []byte,
+		timeStamp int64,
+		msgID string,
+	) ([]byte, error) {
+		mainLog.Infof("OnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponseDestPubkey: %s, \nresponseContent: %s, time:%v, msgID: %s",
+			requestPubkey, requestDestPubkey, responseDestPubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
+
+		return nil, nil
+	}
+
+	dmsg.GetMsgService().SetOnMsgResponse(msgOnResponse)
 	dmsg.GetMailboxService().SetOnMsgRequest(mailOnRequest)
 
 	// publish dest user
