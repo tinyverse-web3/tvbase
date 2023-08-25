@@ -293,10 +293,10 @@ func main() {
 				continue
 			}
 
-			// pubkeyStr := destPubkeyStr
-			pubkeyStr := channelPubkeyStr
-			encrypedContent = []byte(sendContent)
-			sendMsgReq, err := dmsg.GetChannelService().SendMsg(pubkeyStr, encrypedContent)
+			pubkeyStr := destPubkeyStr
+			// pubkeyStr := channelPubkeyStr
+			// encrypedContent = []byte(sendContent)
+			sendMsgReq, err := dmsg.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				mainLog.Errorf("send msg: error: %v", err)
 			}
