@@ -161,7 +161,7 @@ func main() {
 		return
 	}
 
-	msgOnReceiveMsg := func(
+	msgOnRequest := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -184,12 +184,12 @@ func main() {
 				mainLog.Errorf("decrypt error: %v", err)
 			}
 		}
-		mainLog.Infof("msgOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		mainLog.Infof("msgOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 
-	mailOnReceiveMsg := func(
+	mailOnRequest := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -212,13 +212,13 @@ func main() {
 				mainLog.Errorf("decrypt error: %v", err)
 			}
 		}
-		mainLog.Infof("mailOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		mainLog.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 	// set  user msg receive callback
-	dmsg.GetMsgService().SetOnMsgRequest(msgOnReceiveMsg)
-	dmsg.GetMailboxService().SetOnMsgRequest(mailOnReceiveMsg)
+	dmsg.GetMsgService().SetOnMsgRequest(msgOnRequest)
+	dmsg.GetMailboxService().SetOnMsgRequest(mailOnRequest)
 
 	// publish dest user
 	destPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
@@ -252,18 +252,18 @@ func main() {
 		mainLog.Errorf("SubscribeChannel error: %v", err)
 		return
 	}
-	channelOnMsgRequest := func(
+	channelOnRequest := func(
 		requestPubkey string,
 		requestDestPubkey string,
 		requestContent []byte,
 		timeStamp int64,
 		msgID string,
 		direction string) ([]byte, error) {
-		mainLog.Infof("channelOnMsgRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
+		mainLog.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
 			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
 		return nil, nil
 	}
-	channelOnMsgResponse := func(
+	channelOnResponse := func(
 		requestPubkey string,
 		requestDestPubkey string,
 		responsePubkey string,
@@ -274,8 +274,8 @@ func main() {
 			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
 		return nil, nil
 	}
-	channelService.SetOnMsgRequest(channelOnMsgRequest)
-	channelService.SetOnMsgResponse(channelOnMsgResponse)
+	channelService.SetOnMsgRequest(channelOnRequest)
+	channelService.SetOnMsgResponse(channelOnResponse)
 
 	// send msg to dest user with read from stdin
 	go func() {

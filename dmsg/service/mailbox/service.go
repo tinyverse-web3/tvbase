@@ -403,7 +403,7 @@ func (d *MailboxService) OnReadMailboxMsgResponse(
 		if d.onMsgRequest != nil {
 			d.onMsgRequest(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
 		} else {
-			log.Errorf("MailboxService->OnReadMailboxMsgResponse: OnReceiveMsg is nil")
+			log.Errorf("MailboxService->OnReadMailboxMsgResponse: onMsgRequest is nil")
 		}
 	}
 
