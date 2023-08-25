@@ -38,6 +38,7 @@ func (d *ChannelService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
+	enableLightUserPubsub bool,
 ) error {
 	log.Debug("ChannelService->Start begin")
 	ctx := d.TvBase.GetCtx()
@@ -46,7 +47,7 @@ func (d *ChannelService) Start(
 	msgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(msgProtocol.Adapter.GetRequestPID(), msgProtocol)
 	d.RegistPubsubProtocol(msgProtocol.Adapter.GetResponsePID(), msgProtocol)
-	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, msgProtocol)
+	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, msgProtocol, enableLightUserPubsub)
 	if err != nil {
 		return err
 	}

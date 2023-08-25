@@ -38,6 +38,7 @@ func (d *MsgService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
+	enableLightUserPubsub bool,
 ) error {
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 	ctx := d.TvBase.GetCtx()
@@ -46,7 +47,7 @@ func (d *MsgService) Start(
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol)
+	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol, enableLightUserPubsub)
 	if err != nil {
 		return err
 	}

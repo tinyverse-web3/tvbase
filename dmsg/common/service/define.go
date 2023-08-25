@@ -24,12 +24,6 @@ type CommonService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(request protoreflect.ProtoMessage) (*dmsgUser.Target, error)
-	Start(
-		enableService bool,
-		pubkeyData []byte,
-		getSig dmsgKey.GetSigCallback,
-		timeout time.Duration,
-	) error
 	Stop() error
 }
 
@@ -37,6 +31,12 @@ type MailboxService interface {
 	CommonService
 	SetOnMsgRequest(cb msg.OnMsgRequest)
 	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+	) error
 }
 
 type MsgService interface {
@@ -47,6 +47,13 @@ type MsgService interface {
 	SetOnMsgRequest(onMsgReceive msg.OnMsgRequest)
 	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+		enableLightUserPubsub bool,
+	) error
 }
 
 type ChannelService interface {
@@ -56,6 +63,13 @@ type ChannelService interface {
 	SetOnMsgRequest(onMsgRequest msg.OnMsgRequest)
 	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+		enableLightUserPubsub bool,
+	) error
 }
 
 type CustomProtocolService interface {
@@ -65,4 +79,10 @@ type CustomProtocolService interface {
 	RegistServer(service customProtocol.ServerHandle) error
 	UnregistServer(callback customProtocol.ServerHandle) error
 	Request(peerID string, pid string, content []byte) error
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+	) error
 }
