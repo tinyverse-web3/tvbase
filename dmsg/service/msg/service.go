@@ -152,6 +152,10 @@ func (d *MsgService) OnPubsubMsgResponse(
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail to convert responseProtoData to *pb.MsgRes")
 	}
 
+	if response.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+		log.Debugf("MsgService->OnPubsubMsgResponse: request.BasicData.PeerID == d.TvBase.GetHost().ID()")
+	}
+
 	if response.RetCode.Code != 0 {
 		log.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
