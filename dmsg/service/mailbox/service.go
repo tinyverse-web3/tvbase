@@ -896,7 +896,7 @@ func (d *MailboxService) readMailbox(
 		select {
 		case responseProtoData := <-readMailboxDoneChan:
 			response, ok := responseProtoData.(*pb.ReadMailboxRes)
-			if !ok || response == nil {
+			if !ok || response == nil || response.RetCode == nil {
 				return msgList, fmt.Errorf(response.RetCode.Result)
 			}
 			if response.RetCode.Code < 0 {
