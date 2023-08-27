@@ -15,6 +15,11 @@ type MailboxPProtocol struct {
 	Callback MailboxPpCallback
 }
 
+type QueryPeerProtocol struct {
+	PubsubProtocol
+	Callback QueryPeerCallback
+}
+
 type PubsubMsgProtocol struct {
 	PubsubProtocol
 	Callback PubsubMsgCallback
@@ -70,15 +75,10 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 }
 
 func (p *PubsubProtocol) Request(
-	srcUserPubKey string,
-	destUserPubkey string,
+	pubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
-	log.Logger.Debugf(
-		"PubsubProtocol->Request begin:\nsrcUserPubKey: %s\ndestUserPubkey: %s\ndataList: %v",
-		srcUserPubKey, destUserPubkey, dataList)
-
-	dataList = append([]any{destUserPubkey}, dataList...)
-	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(srcUserPubKey, dataList...)
+	log.Logger.Debugf("PubsubProtocol->Request begin:\npubkey: %s\ndataList: %v", pubkey, dataList)
+	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(pubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,24 @@ func (p *PubsubProtocol) Request(
 	}
 
 	log.Logger.Debugf("PubsubProtocol->Request end")
-	return request, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
+	return request, p.RequestInfoList[requestBasicData.ID].ResponseChan, nil
+}
+
+func NewQueryPeerProtocol(
+	ctx context.Context,
+	host host.Host,
+	callback QueryPeerCallback,
+	dmsg DmsgServiceInterface,
+	adapter PpAdapter) *QueryPeerProtocol {
+	ret := &QueryPeerProtocol{}
+	ret.Ctx = ctx
+	ret.Host = host
+	ret.Callback = callback
+	ret.Service = dmsg
+	ret.RequestInfoList = make(map[string]*RequestInfo)
+	ret.Adapter = adapter
+	go ret.TickCleanRequest()
+	return ret
 }
 
 func NewPubsubMsgProtocol(

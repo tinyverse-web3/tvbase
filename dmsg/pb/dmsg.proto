@@ -108,12 +108,12 @@ message MsgRes {
 
 message QueryPeerReq {
     BasicData basicData = 1;
+    string pid = 2;
 }
 
 message QueryPeerRes {
     BasicData basicData = 1;
-    string PeerID = 2;
-    RetCode retCode = 3;
+    RetCode retCode = 2;
 }
 
 message CustomProtocolReq {

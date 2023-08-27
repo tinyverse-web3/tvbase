@@ -169,7 +169,7 @@ func (p *StreamProtocol) Request(
 
 	protoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].DoneChan)
+		close(p.RequestInfoList[requestInfoId].ResponseChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return nil, nil, err
@@ -182,14 +182,14 @@ func (p *StreamProtocol) Request(
 	}
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].DoneChan)
+		close(p.RequestInfoList[requestInfoId].ResponseChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
 		return nil, nil, err
 	}
 	writeLen, err := stream.Write(protoData)
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].DoneChan)
+		close(p.RequestInfoList[requestInfoId].ResponseChan)
 		delete(p.RequestInfoList, requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Write error: %v", err)
 		if err := stream.Reset(); err != nil {
@@ -206,7 +206,7 @@ func (p *StreamProtocol) Request(
 	}
 
 	log.Logger.Debugf("StreamProtocol->Request end")
-	return requestProtoMsg, p.RequestInfoList[requestInfoId].DoneChan, nil
+	return requestProtoMsg, p.RequestInfoList[requestInfoId].ResponseChan, nil
 }
 
 func NewCreateMsgPubsubSProtocol(

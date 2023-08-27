@@ -52,6 +52,11 @@ type MailboxPpCallback interface {
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 }
 
+type QueryPeerCallback interface {
+	OnQueryPeerRequest(
+		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
+}
+
 type CreatePubsubSpCallback interface {
 	OnCreatePubsubRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)

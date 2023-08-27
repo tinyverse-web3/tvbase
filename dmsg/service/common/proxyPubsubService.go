@@ -339,13 +339,13 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 		if peerID == servicePeerID.String() {
 			continue
 		}
-		_, createPubsubDoneChan, err := d.createPubsubProtocol.Request(servicePeerID, srcPubkey, pubkey)
+		_, createPubsubResponseChan, err := d.createPubsubProtocol.Request(servicePeerID, srcPubkey, pubkey)
 		if err != nil {
 			continue
 		}
 
 		select {
-		case responseProtoData := <-createPubsubDoneChan:
+		case responseProtoData := <-createPubsubResponseChan:
 			log.Debugf("ProxyPubsubService->CreatePubsubService:\ncreateChannelResponseProtoData: %+v",
 				responseProtoData)
 			response, ok := responseProtoData.(*pb.CreatePubsubRes)

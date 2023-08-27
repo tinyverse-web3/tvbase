@@ -140,7 +140,7 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 	}
 	p.commicateInfoList[request.CID] = requestInfo
 
-	err = p.CustomStreamClientProtocol.Request(peerId, request)
+	_, _, err = p.CustomStreamClientProtocol.Request(peerId, request)
 	if err != nil {
 		log.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err

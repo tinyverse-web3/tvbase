@@ -14,7 +14,7 @@ import (
 type RequestInfo struct {
 	ProtoMessage    protoreflect.ProtoMessage
 	CreateTimestamp int64
-	DoneChan        chan any
+	ResponseChan    chan any
 }
 
 type Protocol struct {
@@ -165,12 +165,12 @@ func (p *Protocol) HandleResponseData(
 			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
 		select {
-		case requestInfo.DoneChan <- responseProtoMsg:
-			log.Logger.Debugf("Protocol->HandleResponseData: succ send DoneChan")
+		case requestInfo.ResponseChan <- responseProtoMsg:
+			log.Logger.Debugf("Protocol->HandleResponseData: succ send ResponseChan")
 		default:
-			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for DoneChan")
+			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for ResponseChan")
 		}
-		close(requestInfo.DoneChan)
+		close(requestInfo.ResponseChan)
 		delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
 		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
@@ -216,7 +216,7 @@ func (p *Protocol) GenRequestInfo(
 	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
 		ProtoMessage:    requestProtoMsg,
 		CreateTimestamp: requestBasicData.TS,
-		DoneChan:        make(chan any),
+		ResponseChan:    make(chan any),
 	}
 
 	log.Logger.Debugf("Protocol->GenRequestInfo end")
@@ -230,7 +230,7 @@ func (p *Protocol) TickCleanRequest() {
 		case <-ticker.C:
 			for id, v := range p.RequestInfoList {
 				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 1*time.Minute {
-					close(p.RequestInfoList[id].DoneChan)
+					close(p.RequestInfoList[id].ResponseChan)
 					delete(p.RequestInfoList, id)
 				}
 			}

@@ -7,7 +7,7 @@ import (
 )
 
 type Service interface {
-	Request(customProtocolId string, peerId string, content []byte) error
+	Request(peerId string, pid string, content []byte) (*pb.CustomProtocolReq, chan any, error)
 }
 
 type ClientHandle interface {

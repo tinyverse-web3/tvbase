@@ -817,12 +817,13 @@ func (d *MailboxService) isAvailableMailbox(pubKey string) bool {
 
 func (d *MailboxService) initMailbox(pubkey string) error {
 	log.Debug("MailboxService->initMailbox begin")
-	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.lightMailboxUser.Key.PubkeyHex, d.lightMailboxUser.Key.PubkeyHex)
+	_, seekMailboxResponseChan, err := d.seekMailboxProtocol.Request(
+		d.lightMailboxUser.Key.PubkeyHex, d.lightMailboxUser.Key.PubkeyHex)
 	if err != nil {
 		return err
 	}
 	select {
-	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
+	case seekMailboxResponseProtoData := <-seekMailboxResponseChan:
 		log.Debugf("MailboxService->initMailbox: seekMailboxProtoData: %+v", seekMailboxResponseProtoData)
 		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
 		if !ok || response == nil {
@@ -856,18 +857,18 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 			if peerID == servicePeerID.String() {
 				continue
 			}
-			_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
+			_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
 			if err != nil {
 				log.Errorf("MailboxService->initMailbox: createMailboxProtocol.Request error: %v", err)
 				continue
 			}
 
 			select {
-			case createMailboxResponseProtoData := <-createMailboxDoneChan:
+			case createMailboxResponseProtoData := <-createMailboxResponseChan:
 				log.Debugf("MailboxService->initMailbox: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
 				response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
 				if !ok || response == nil {
-					log.Errorf("MailboxService->initMailbox: createMailboxDoneChan is not CreateMailboxRes")
+					log.Errorf("MailboxService->initMailbox: createMailboxResponseChan is not CreateMailboxRes")
 					continue
 				}
 
@@ -908,12 +909,12 @@ func (d *MailboxService) readMailbox(
 	}
 
 	for {
-		_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey, clearMode)
+		_, readMailboxResponseChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey, clearMode)
 		if err != nil {
 			return msgList, err
 		}
 		select {
-		case responseProtoData := <-readMailboxDoneChan:
+		case responseProtoData := <-readMailboxResponseChan:
 			response, ok := responseProtoData.(*pb.ReadMailboxRes)
 			if !ok || response == nil {
 				return msgList, fmt.Errorf(response.RetCode.Result)
@@ -927,12 +928,12 @@ func (d *MailboxService) readMailbox(
 			}
 			msgList = append(msgList, receiveMsglist...)
 			if !response.ExistData {
-				log.Debugf("MailboxService->readMailbox: readMailboxChanDoneChan success")
+				log.Debugf("MailboxService->readMailbox: readMailboxChanResponseChan success")
 				return msgList, nil
 			}
 			continue
 		case <-time.After(timeout):
-			return msgList, fmt.Errorf("MailboxService->readMailbox: readMailboxDoneChan time out")
+			return msgList, fmt.Errorf("MailboxService->readMailbox: readMailboxResponseChan time out")
 		case <-d.TvBase.GetCtx().Done():
 			return msgList, fmt.Errorf("MailboxService->readMailbox: BaseService.GetCtx().Done()")
 		}
@@ -955,15 +956,15 @@ func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string, t
 			log.Errorf("MailboxService->releaseUnusedMailbox: fail to decode peer id: %v", err)
 			return err
 		}
-		_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
+		_, releaseMailboxResponseChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
 		if err != nil {
 			return err
 		}
 		select {
-		case <-releaseMailboxDoneChan:
-			log.Debugf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan success")
+		case <-releaseMailboxResponseChan:
+			log.Debugf("MailboxService->releaseUnusedMailbox: releaseMailboxResponseChan success")
 		case <-time.After(time.Second * timeout):
-			return fmt.Errorf("MailboxService->releaseUnusedMailbox: releaseMailboxDoneChan time out")
+			return fmt.Errorf("MailboxService->releaseUnusedMailbox: releaseMailboxResponseChan time out")
 		case <-d.TvBase.GetCtx().Done():
 			return fmt.Errorf("MailboxService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
 		}

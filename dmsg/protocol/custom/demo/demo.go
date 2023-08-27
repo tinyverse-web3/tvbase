@@ -148,7 +148,7 @@ func (p *DemoClientProtocol) Request(peerID string, request *DemoRequest, option
 	}
 	p.commicateInfoList[request.ID] = requestInfo
 
-	err := p.CustomStreamClientProtocol.Request(peerID, request)
+	_, _, err := p.CustomStreamClientProtocol.Request(peerID, request)
 	if err != nil {
 		log.Errorf("DemoClientProtocol->Request: err: %v", err)
 		return nil, fmt.Errorf("DemoClientProtocol->Request err: %v", err)

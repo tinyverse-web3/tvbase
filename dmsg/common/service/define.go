@@ -64,5 +64,6 @@ type CustomProtocolService interface {
 	UnregistClient(client customProtocol.ClientHandle) error
 	RegistServer(service customProtocol.ServerHandle) error
 	UnregistServer(callback customProtocol.ServerHandle) error
-	Request(peerID string, pid string, content []byte) error
+	QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error)
+	Request(peerId string, pid string, content []byte) (*pb.CustomProtocolReq, chan any, error)
 }

@@ -9,6 +9,7 @@ import (
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
@@ -19,7 +20,7 @@ var log = ipfsLog.Logger("dmsg.service.customprotocol")
 
 type CustomProtocolService struct {
 	dmsgServiceCommon.LightUserService
-
+	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
 	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
 }
@@ -46,16 +47,27 @@ func (d *CustomProtocolService) Init(tvbaseService tvbaseCommon.TvBaseService) e
 
 // sdk-common
 func (d *CustomProtocolService) Start(
-	EnableService bool,
+	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgCommonKey.GetSigCallback,
 	timeout time.Duration,
 ) error {
 	log.Debug("CustomProtocolService->Start begin")
-	err := d.LightUserService.Start(EnableService, pubkeyData, getSig, false)
+	err := d.LightUserService.Start(enableService, pubkeyData, getSig, false)
 	if err != nil {
 		return err
 	}
+
+	ctx := d.TvBase.GetCtx()
+	host := d.TvBase.GetHost()
+
+	d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
+	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
+
+	if enableService {
+		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
+	}
+
 	log.Debug("CustomProtocolService->Start end")
 	return nil
 }
@@ -70,30 +82,38 @@ func (d *CustomProtocolService) Stop() error {
 	return nil
 }
 
-// sdk-custom-stream-protocol
-func (d *CustomProtocolService) Request(peerIdStr string, pid string, content []byte) error {
+func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
+	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, pid)
+	return request.(*pb.QueryPeerReq), responseChan, err
+}
+
+func (d *CustomProtocolService) Request(
+	peerIdStr string,
+	pid string,
+	content []byte,
+) (*pb.CustomProtocolReq, chan any, error) {
 	protocolInfo := d.clientStreamProtocolList[pid]
 	if protocolInfo == nil {
-		log.Errorf("CustomProtocolService->Request: protocol %s is not exist", pid)
-		return fmt.Errorf("CustomProtocolService->Request: protocol %s is not exist", pid)
+		log.Errorf("CustomProtocolService->RequestService: protocol %s is not exist", pid)
+		return nil, nil, fmt.Errorf("CustomProtocolService->RequestService: protocol %s is not exist", pid)
 	}
 
 	peerID, err := peer.Decode(peerIdStr)
 	if err != nil {
-		log.Errorf("CustomProtocolService->Request: err: %v", err)
-		return err
+		log.Errorf("CustomProtocolService->RequestService: err: %v", err)
+		return nil, nil, err
 	}
-	_, _, err = protocolInfo.Protocol.Request(
+	request, responseChan, err := protocolInfo.Protocol.Request(
 		peerID,
 		d.LightUser.Key.PubkeyHex,
 		pid,
 		content)
 	if err != nil {
-		log.Errorf("CustomProtocolService->Request: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
+		log.Errorf("CustomProtocolService->RequestService: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
 			err, peerID, d.LightUser.Key.PubkeyHex, content)
-		return err
+		return nil, nil, err
 	}
-	return nil
+	return request.(*pb.CustomProtocolReq), responseChan, nil
 }
 
 func (d *CustomProtocolService) RegistClient(client dmsgProtocolCustom.ClientHandle) error {
@@ -145,7 +165,6 @@ func (d *CustomProtocolService) UnregistServer(callback dmsgProtocolCustom.Serve
 	return nil
 }
 
-// MsgSpCallback
 func (d *CustomProtocolService) OnCustomRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("CustomProtocolService->OnCustomRequest begin:\nrequestProtoData: %+v", requestProtoData)
@@ -207,4 +226,21 @@ func (d *CustomProtocolService) OnCustomResponse(
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (d *CustomProtocolService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	log.Debugf("CustomProtocolService->OnQueryPeerRequest begin\nrequestProtoData: %+v", requestProtoData)
+	request, ok := requestProtoData.(*pb.QueryPeerReq)
+	if !ok {
+		log.Errorf("CustomProtocolService->OnQueryPeerRequest: fail to convert requestProtoData to *pb.QueryPeerReq")
+		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnQueryPeerRequest: fail to convert requestProtoData to *pb.QueryPeerReq")
+	}
+
+	if d.serverStreamProtocolList[request.Pid] == nil {
+		log.Errorf("CustomProtocolService->OnQueryPeerRequest: pid %s is not exist", request.Pid)
+		return nil, nil, true, fmt.Errorf("CustomProtocolService->OnQueryPeerRequest: pid %s is not exist", request.Pid)
+	}
+
+	log.Debug("CustomProtocolService->OnQueryPeerRequest end")
+	return d.TvBase.GetHost().ID().String(), nil, false, nil
 }
