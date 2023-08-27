@@ -159,7 +159,8 @@ func (p *Protocol) HandleResponseData(
 	}
 
 	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
-	if ok {
+	log.Logger.Debugf("Protocol->HandleResponseData:\nrequestInfo: %+v", requestInfo)
+	if ok && requestInfo != nil {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {
 			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
@@ -170,10 +171,15 @@ func (p *Protocol) HandleResponseData(
 		default:
 			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for ResponseChan")
 		}
-		close(requestInfo.ResponseChan)
-		delete(p.RequestInfoList, responseBasicData.ID)
+		// delete for mulit pubsub response
+		// close(requestInfo.DoneChan)
+		// delete(p.RequestInfoList, responseBasicData.ID)
 	} else {
-		log.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
+		_, err := p.Adapter.CallResponseCallback(nil, responseProtoMsg)
+		if err != nil {
+			log.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
+		}
+		log.Logger.Debugf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
 
 	log.Logger.Debugf("Protocol->HandleResponseData end")
@@ -229,7 +235,7 @@ func (p *Protocol) TickCleanRequest() {
 		select {
 		case <-ticker.C:
 			for id, v := range p.RequestInfoList {
-				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 1*time.Minute {
+				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 10*time.Minute {
 					close(p.RequestInfoList[id].ResponseChan)
 					delete(p.RequestInfoList, id)
 				}

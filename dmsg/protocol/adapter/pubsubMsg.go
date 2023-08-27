@@ -72,7 +72,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
 		}
 	}
-	retCode, err := getRetCode(dataList)
+	retCode, err := GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}

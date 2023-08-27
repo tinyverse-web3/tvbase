@@ -24,19 +24,19 @@ type CommonService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(request protoreflect.ProtoMessage) (*dmsgUser.Target, error)
+	Stop() error
+}
+
+type MailboxService interface {
+	CommonService
+	SetOnMsgRequest(cb msg.OnMsgRequest)
+	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
 	Start(
 		enableService bool,
 		pubkeyData []byte,
 		getSig dmsgKey.GetSigCallback,
 		timeout time.Duration,
 	) error
-	Stop() error
-}
-
-type MailboxService interface {
-	CommonService
-	SetOnReceiveMsg(cb msg.OnReceiveMsg)
-	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
 }
 
 type MsgService interface {
@@ -44,18 +44,32 @@ type MsgService interface {
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
-	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
-	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
+	SetOnMsgRequest(onMsgReceive msg.OnMsgRequest)
+	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+		enableLightUserPubsub bool,
+	) error
 }
 
 type ChannelService interface {
 	CommonService
 	SubscribeChannel(pubkey string) error
 	UnsubscribeChannel(pubkey string) error
-	SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg)
-	SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg)
+	SetOnMsgRequest(onMsgRequest msg.OnMsgRequest)
+	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+		enableLightUserPubsub bool,
+	) error
 }
 
 type CustomProtocolService interface {
@@ -66,4 +80,10 @@ type CustomProtocolService interface {
 	UnregistServer(callback customProtocol.ServerHandle) error
 	QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error)
 	Request(peerId string, pid string, content []byte) (*pb.CustomProtocolReq, chan any, error)
+	Start(
+		enableService bool,
+		pubkeyData []byte,
+		getSig dmsgKey.GetSigCallback,
+		timeout time.Duration,
+	) error
 }

@@ -24,8 +24,8 @@ type ProxyPubsubService struct {
 	createPubsubProtocol  *dmsgProtocol.CreatePubsubSProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	ProxyPubsubList       map[string]*dmsgUser.ProxyPubsub
-	OnReceiveMsg          msg.OnReceiveMsg
-	OnSendMsgResponse     msg.OnReceiveMsg
+	OnMsgRequest          msg.OnMsgRequest
+	OnMsgResponse         msg.OnMsgResponse
 	stopCleanRestResource chan bool
 	maxPubsubCount        int
 	keepPubsubDay         int
@@ -52,9 +52,10 @@ func (d *ProxyPubsubService) Start(
 	getSig dmsgKey.GetSigCallback,
 	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
 	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol,
+	enableLightUserPubsub bool,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, true)
+	err := d.LightUserService.Start(enableService, pubkeyData, getSig, enableLightUserPubsub)
 	if err != nil {
 		return err
 	}
@@ -66,10 +67,12 @@ func (d *ProxyPubsubService) Start(
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// light user
-	err = d.HandlePubsubProtocol(&d.LightUser.Target)
-	if err != nil {
-		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
-		return err
+	if enableLightUserPubsub {
+		err = d.HandlePubsubProtocol(&d.LightUser.Target)
+		if err != nil {
+			log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
+			return err
+		}
 	}
 
 	d.cleanRestResource()
@@ -106,22 +109,22 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	isHandlePubsubProtocol bool,
 	autoClean bool,
 ) error {
-	log.Debugf("ProxyPubsubService->SubscribeChannel begin:\npubkey: %s", pubkey)
+	log.Debugf("ProxyPubsubService->SubscribePubsub begin:\npubkey: %s", pubkey)
 
 	if d.ProxyPubsubList[pubkey] != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
-		return fmt.Errorf("ProxyPubsubService->SubscribeChannel: pubkey is already exist in ProxyPubsubList")
+		log.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
+		return fmt.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
 	}
 
 	target, err := dmsgUser.NewTarget(pubkey, nil)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->SubscribeChannel: NewTarget error: %v", err)
+		log.Errorf("ProxyPubsubService->SubscribePubsub: NewTarget error: %v", err)
 		return err
 	}
 
 	err = target.InitPubsub(pubkey)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->subscribeUser: target.InitPubsub error: %v", err)
+		log.Errorf("ProxyPubsubService->SubscribePubsub: target.InitPubsub error: %v", err)
 		return err
 	}
 
@@ -144,10 +147,10 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	if isHandlePubsubProtocol {
 		d.HandlePubsubProtocol(&proxyPubsub.Target)
 		if err != nil {
-			log.Errorf("ProxyPubsubService->SubscribeChannel: HandlePubsubProtocol error: %v", err)
+			log.Errorf("ProxyPubsubService->SubscribePubsub: HandlePubsubProtocol error: %v", err)
 			err := proxyPubsub.Target.Close()
 			if err != nil {
-				log.Warnf("ProxyPubsubService->SubscribeChannel: Target.Close error: %v", err)
+				log.Warnf("ProxyPubsubService->SubscribePubsub: Target.Close error: %v", err)
 				return err
 			}
 			return err
@@ -155,7 +158,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 	}
 
 	d.ProxyPubsubList[pubkey] = proxyPubsub
-	log.Debug("ProxyPubsubService->SubscribeChannel end")
+	log.Debug("ProxyPubsubService->SubscribePubsub end")
 	return nil
 }
 
@@ -200,35 +203,12 @@ func (d *ProxyPubsubService) SendMsg(destPubkey string, content []byte) (*pb.Msg
 	return request, nil
 }
 
-func (d *ProxyPubsubService) SetOnReceiveMsg(onReceiveMsg msg.OnReceiveMsg) {
-	d.OnReceiveMsg = onReceiveMsg
+func (d *ProxyPubsubService) SetOnMsgRequest(onMsgRequest msg.OnMsgRequest) {
+	d.OnMsgRequest = onMsgRequest
 }
 
-func (d *ProxyPubsubService) SetOnSendMsgResponse(onSendMsgResponse msg.OnReceiveMsg) {
-	d.OnSendMsgResponse = onSendMsgResponse
-}
-
-// DmsgServiceInterface
-func (d *ProxyPubsubService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
-	request, ok := requestProtoData.(*pb.MsgReq)
-	if !ok {
-		log.Errorf("ProxyPubsubService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("ProxyPubsubService->GetPublishTarget: cannot convert to *pb.MsgReq")
-	}
-
-	pubkey := request.BasicData.Pubkey
-	var target *dmsgUser.Target
-	if d.ProxyPubsubList[pubkey] != nil {
-		target = &d.ProxyPubsubList[pubkey].Target
-	} else if d.LightUser.Key.PubkeyHex == pubkey {
-		target = &d.LightUser.Target
-	}
-
-	if target == nil {
-		log.Errorf("ProxyPubsubService->GetPublishTarget: target is nil")
-		return nil, fmt.Errorf("ProxyPubsubService->GetPublishTarget: target is nil")
-	}
-	return target, nil
+func (d *ProxyPubsubService) SetOnMsgResponse(onMsgResponse msg.OnMsgResponse) {
+	d.OnMsgResponse = onMsgResponse
 }
 
 // MsgSpCallback

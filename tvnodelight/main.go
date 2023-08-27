@@ -161,7 +161,7 @@ func main() {
 		return
 	}
 
-	msgOnReceiveMsg := func(
+	msgOnRequest := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -184,12 +184,12 @@ func main() {
 				mainLog.Errorf("decrypt error: %v", err)
 			}
 		}
-		mainLog.Infof("msgOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		mainLog.Infof("msgOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 
-	mailOnReceiveMsg := func(
+	mailOnRequest := func(
 		srcUserPubkey string,
 		destUserPubkey string,
 		msgContent []byte,
@@ -212,13 +212,29 @@ func main() {
 				mainLog.Errorf("decrypt error: %v", err)
 			}
 		}
-		mainLog.Infof("mailOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		mainLog.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 	// set  user msg receive callback
-	dmsg.GetMsgService().SetOnReceiveMsg(msgOnReceiveMsg)
-	dmsg.GetMailboxService().SetOnReceiveMsg(mailOnReceiveMsg)
+	dmsg.GetMsgService().SetOnMsgRequest(msgOnRequest)
+
+	msgOnResponse := func(
+		requestPubkey string,
+		requestDestPubkey string,
+		responseDestPubkey string,
+		responseContent []byte,
+		timeStamp int64,
+		msgID string,
+	) ([]byte, error) {
+		mainLog.Infof("OnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponseDestPubkey: %s, \nresponseContent: %s, time:%v, msgID: %s",
+			requestPubkey, requestDestPubkey, responseDestPubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
+
+		return nil, nil
+	}
+
+	dmsg.GetMsgService().SetOnMsgResponse(msgOnResponse)
+	dmsg.GetMailboxService().SetOnMsgRequest(mailOnRequest)
 
 	// publish dest user
 	destPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
@@ -252,30 +268,30 @@ func main() {
 		mainLog.Errorf("SubscribeChannel error: %v", err)
 		return
 	}
-	channelOnReceiveMsg := func(
-		srcUserPubkey string,
-		destUserPubkey string,
-		msgContent []byte,
+	channelOnRequest := func(
+		requestPubkey string,
+		requestDestPubkey string,
+		requestContent []byte,
 		timeStamp int64,
 		msgID string,
 		direction string) ([]byte, error) {
-		mainLog.Infof("channelOnReceiveMsg-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+		mainLog.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
+			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
 		return nil, nil
 	}
-	channelOnSendMsgResponse := func(
-		srcUserPubkey string,
-		destUserPubkey string,
-		msgContent []byte,
+	channelOnResponse := func(
+		requestPubkey string,
+		requestDestPubkey string,
+		responsePubkey string,
+		responseContent []byte,
 		timeStamp int64,
-		msgID string,
-		direction string) ([]byte, error) {
-		mainLog.Infof("channelOnSendMsgResponse-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+		msgID string) ([]byte, error) {
+		mainLog.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v\nmsgID: %s",
+			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
 		return nil, nil
 	}
-	channelService.SetOnReceiveMsg(channelOnReceiveMsg)
-	channelService.SetOnSendMsgResponse(channelOnSendMsgResponse)
+	channelService.SetOnMsgRequest(channelOnRequest)
+	channelService.SetOnMsgResponse(channelOnResponse)
 
 	// send msg to dest user with read from stdin
 	go func() {
@@ -293,10 +309,10 @@ func main() {
 				continue
 			}
 
-			// pubkeyStr := destPubkeyStr
-			pubkeyStr := channelPubkeyStr
-			encrypedContent = []byte(sendContent)
-			sendMsgReq, err := dmsg.GetChannelService().SendMsg(pubkeyStr, encrypedContent)
+			pubkeyStr := destPubkeyStr
+			// pubkeyStr := channelPubkeyStr
+			// encrypedContent = []byte(sendContent)
+			sendMsgReq, err := dmsg.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				mainLog.Errorf("send msg: error: %v", err)
 			}

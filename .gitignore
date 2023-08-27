@@ -1,7 +1,7 @@
 # mac
 .DS_Store
 # debug
-__debug_bin
+__debug_bin*
 # config
 identity.bin
 config.json

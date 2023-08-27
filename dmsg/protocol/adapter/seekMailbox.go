@@ -48,7 +48,7 @@ func (adapter *SeekMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := getRetCode(dataList)
+	retCode, err := GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}

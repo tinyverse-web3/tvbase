@@ -3,7 +3,6 @@ package mailbox
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,7 +36,7 @@ type MailboxService struct {
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
-	onReceiveMsg          msg.OnReceiveMsg
+	onMsgRequest          msg.OnMsgRequest
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -128,8 +127,8 @@ func (d *MailboxService) Stop() error {
 	return nil
 }
 
-func (d *MailboxService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
-	d.onReceiveMsg = cb
+func (d *MailboxService) SetOnMsgRequest(onMsgRequest msg.OnMsgRequest) {
+	d.onMsgRequest = onMsgRequest
 }
 
 // sdk-msg
@@ -168,25 +167,13 @@ func (d *MailboxService) GetUserSig(protoData []byte) ([]byte, error) {
 }
 
 func (d *MailboxService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
-	v := reflect.ValueOf(requestProtoData)
-	v = v.Elem()
-	t := v.Type()
-	a := t.Kind()
-	if a == reflect.Struct {
-		// 遍历接的成员变量
-
-		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			fmt.Printf("Field: %s, Value: %v\n", field.Name, field)
-		}
-	}
-
-	request, ok := requestProtoData.(*pb.MsgReq)
+	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("MailboxService->GetPublishTarget: cannot convert to *pb.MsgReq")
+		log.Errorf("MailboxService->GetPublishTarget: fail to convert requestProtoData to *pb.SeekMailboxReq")
+		return nil, fmt.Errorf("MailboxService->GetPublishTarget: cannot convert to *pb.SeekMailboxReq")
 	}
 	pubkey := request.BasicData.Pubkey
+
 	var target *dmsgUser.Target
 	user := d.serviceUserList[pubkey]
 	if user != nil {
@@ -250,8 +237,8 @@ func (d *MailboxService) OnCreateMailboxResponse(
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
-		return nil, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		log.Debugf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
+		// return nil, fmt.Errorf("MailboxService->OnCreateMailboxResponse: fail to convert requestProtoData to *pb.CreateMailboxReq")
 	}
 	response, ok := responseProtoData.(*pb.CreateMailboxRes)
 	if !ok {
@@ -306,12 +293,6 @@ func (d *MailboxService) OnReleaseMailboxResponse(
 	log.Debug(
 		"MailboxService->OnReleaseMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-	_, ok := requestProtoData.(*pb.ReleaseMailboxReq)
-	if !ok {
-		log.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-		return nil, fmt.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
-	}
-
 	response, ok := responseProtoData.(*pb.ReleaseMailboxRes)
 	if !ok {
 		log.Errorf("MailboxService->OnReleaseMailboxResponse: fail to convert responseProtoData to *pb.ReleaseMailboxRes")
@@ -419,10 +400,10 @@ func (d *MailboxService) OnReadMailboxMsgResponse(
 	}
 	for _, msg := range msgList {
 		log.Debugf("MailboxService->OnReadMailboxMsgResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
-		if d.onReceiveMsg != nil {
-			d.onReceiveMsg(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
+		if d.onMsgRequest != nil {
+			d.onMsgRequest(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
 		} else {
-			log.Errorf("MailboxService->OnReadMailboxMsgResponse: OnReceiveMsg is nil")
+			log.Errorf("MailboxService->OnReadMailboxMsgResponse: onMsgRequest is nil")
 		}
 	}
 
@@ -441,8 +422,8 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 
 	// no responding to self
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
-		return nil, nil, true, fmt.Errorf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.BaseService.GetHost().ID")
+		log.Debugf("MailboxService->OnSeekMailboxRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID()")
+		return nil, nil, true, nil
 	}
 
 	log.Debug("MailboxService->OnSeekMailboxRequest end")
@@ -452,7 +433,7 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 func (d *MailboxService) OnSeekMailboxResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debug(
+	log.Debugf(
 		"MailboxService->OnSeekMailboxResponse begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
@@ -916,7 +897,7 @@ func (d *MailboxService) readMailbox(
 		select {
 		case responseProtoData := <-readMailboxResponseChan:
 			response, ok := responseProtoData.(*pb.ReadMailboxRes)
-			if !ok || response == nil {
+			if !ok || response == nil || response.RetCode == nil {
 				return msgList, fmt.Errorf(response.RetCode.Result)
 			}
 			if response.RetCode.Code < 0 {

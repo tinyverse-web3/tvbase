@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -86,7 +87,7 @@ func (adapter *CommonProtocolAdapter) CallResponseCallback(
 	return nil, fmt.Errorf("CommonProtocolAdapter->CallResponseCallback: not implemented")
 }
 
-func getRetCode(dataList ...any) (*pb.RetCode, error) {
+func GetRetCode(dataList ...any) (*pb.RetCode, error) {
 	retCode := dmsgProtocol.NewSuccRetCode()
 	if len(dataList) > 1 && dataList[1] != nil {
 		data, ok := dataList[1].(*pb.RetCode)
@@ -101,4 +102,24 @@ func getRetCode(dataList ...any) (*pb.RetCode, error) {
 		}
 	}
 	return retCode, nil
+}
+
+func GetBasicData(requestProtoData any) (*pb.BasicData, error) {
+	v := reflect.ValueOf(requestProtoData)
+	if v.Kind() != reflect.Ptr {
+		fmt.Print("GetBasicData: requestProtoData is not a pointer")
+		return nil, fmt.Errorf("GetBasicData: requestProtoData is not a pointer")
+	}
+	reflactValue := v.Elem().FieldByName("BasicData")
+	if !reflactValue.IsValid() {
+		fmt.Print("GetBasicData: requestProtoData.BasicData is invalid")
+		return nil, fmt.Errorf("GetBasicData: requestProtoData.BasicData is invalid")
+	}
+	basicDataInterface := reflactValue.Interface()
+	basicData, ok := basicDataInterface.(*pb.BasicData)
+	if !ok {
+		fmt.Print("GetBasicData: requestProtoData.BasicData is not a *pb.BasicData")
+		return nil, fmt.Errorf("GetBasicData: requestProtoData.BasicData is not a *pb.BasicData")
+	}
+	return basicData, nil
 }

@@ -201,8 +201,8 @@ func (d *CustomProtocolService) OnCustomResponse(
 
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
-		log.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
-		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
+		log.Debugf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
+		// return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
 	}
 	response, ok := responseProtoData.(*pb.CustomProtocolRes)
 	if !ok {
