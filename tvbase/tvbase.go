@@ -27,6 +27,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
@@ -663,4 +664,15 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	}
 
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
+}
+
+func (m *TvBase) GetDiagnosisInfo() (*define.DiagnosisInfo, error) {
+	ret := &define.DiagnosisInfo{
+		IsRendezvous:           m.isRendezvous,
+		IsDiscoverRendzvousing: m.isDiscoverRendzvousing,
+		ServicePeerList:        m.servicePeerList,
+		LightPeerList:          m.lightPeerList,
+		NetworkPeers:           m.host.Network().Peers(),
+	}
+	return ret, nil
 }
