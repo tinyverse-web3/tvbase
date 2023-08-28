@@ -678,15 +678,31 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	}
 	outPrint := ""
 	outPrint += "TvBase->PrintDiagnosisInfo begin\n"
-	outPrint += fmt.Sprintf("mode: %v\nhostID: %v\nisRendezvous: %v\nisDiscoverRendzvousing: %v\n",
-		m.nodeCfg.Mode,
-		m.host.ID(),
+	mode := ""
+	switch m.nodeCfg.Mode {
+	case tvConfig.LightMode:
+		mode = "LightMode"
+	case tvConfig.ServiceMode:
+		mode = "ServiceMode"
+	}
+	outPrint += fmt.Sprintf("mode: %s\nhostID: %s\nisRendezvous: %v\nisDiscoverRendzvousing: %v\n",
+		mode,
+		m.host.ID().String(),
 		m.isRendezvous,
 		m.isDiscoverRendzvousing,
 	)
-	outPrint += fmt.Sprintf("ServicePeerList: %+v\n", m.servicePeerList)
-	outPrint += fmt.Sprintf("LightPeerList: %+v\n", m.lightPeerList)
-	outPrint += fmt.Sprintf("NetworkPeers: %+v\n", m.host.Network().Peers())
+	outPrint += "ServicePeerList:"
+	for _, peer := range m.servicePeerList {
+		outPrint += fmt.Sprintf("	peerID: %s\n", peer.PeerID.String())
+	}
+	outPrint += "LightPeerList:"
+	for _, peer := range m.lightPeerList {
+		outPrint += fmt.Sprintf("	peerID: %s\n ", peer.PeerID.String())
+	}
+	outPrint += "NetworkPeers:"
+	for _, peer := range m.host.Network().Peers() {
+		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
+	}
 	outPrint += "TvBase->PrintDiagnosisInfo end\n"
 	tvLog.Logger.Info(outPrint)
 	return ret
