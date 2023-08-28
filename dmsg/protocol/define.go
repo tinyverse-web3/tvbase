@@ -19,8 +19,8 @@ const (
 	PidReadMailboxMsgRes   = "/tvbase/dmsg/readMailboxMsg/res/" + ProtocolVersion
 	PidCustomProtocolReq   = "/tvbase/dmsg/customProtocol/req/" + ProtocolVersion
 	PidCustomProtocolRes   = "/tvbase/dmsg/customProtocol/res/" + ProtocolVersion
-	PidCreatePubChannelReq = "/tvbase/dmsg/createPubChannel/req/" + ProtocolVersion
-	PidCreatePubChannelRes = "/tvbase/dmsg/createPubChannel/res/" + ProtocolVersion
+	PidCreatePubChannelReq = "/tvbase/dmsg/createChannel/req/" + ProtocolVersion
+	PidCreatePubChannelRes = "/tvbase/dmsg/createChannel/res/" + ProtocolVersion
 )
 
 type ReqSubscribe interface {
