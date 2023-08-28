@@ -676,17 +676,18 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 		LightPeerList:          m.lightPeerList,
 		NetworkPeers:           m.host.Network().Peers(),
 	}
-
-	fmt.Printf("TvBase->PrintDiagnosisInfo begin\n")
-	fmt.Printf("mode: %v\nhostID: %v\nisRendezvous: %v\nisDiscoverRendzvousing: %v\n",
+	outPrint := ""
+	outPrint += "TvBase->PrintDiagnosisInfo begin\n"
+	outPrint += fmt.Sprintf("mode: %v\nhostID: %v\nisRendezvous: %v\nisDiscoverRendzvousing: %v\n",
 		m.nodeCfg.Mode,
 		m.host.ID(),
 		m.isRendezvous,
 		m.isDiscoverRendzvousing,
 	)
-	fmt.Printf("ServicePeerList: %+v\n", m.servicePeerList)
-	fmt.Printf("LightPeerList: %+v\n", m.lightPeerList)
-	fmt.Printf("NetworkPeers: %+v\n", m.host.Network().Peers())
-	fmt.Printf("TvBase->PrintDiagnosisInfo end\n")
+	outPrint += fmt.Sprintf("ServicePeerList: %+v\n", m.servicePeerList)
+	outPrint += fmt.Sprintf("LightPeerList: %+v\n", m.lightPeerList)
+	outPrint += fmt.Sprintf("NetworkPeers: %+v\n", m.host.Network().Peers())
+	outPrint += "TvBase->PrintDiagnosisInfo end\n"
+	tvLog.Logger.Info(outPrint)
 	return ret
 }
