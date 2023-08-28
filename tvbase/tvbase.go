@@ -703,7 +703,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	for _, peer := range m.host.Network().Peers() {
 		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
 	}
-	outPrint += "TvBase->PrintDiagnosisInfo end\n"
+	outPrint += "TvBase->PrintDiagnosisInfo end"
 	tvLog.Logger.Info(outPrint)
 	return ret
 }
