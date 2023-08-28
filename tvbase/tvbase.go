@@ -43,6 +43,14 @@ import (
 	"go.uber.org/fx"
 )
 
+type DiagnosisInfo struct {
+	IsRendezvous           bool
+	IsDiscoverRendzvousing bool
+	ServicePeerList        tvPeer.PeerInfoList
+	LightPeerList          tvPeer.PeerInfoList
+	NetworkPeers           []peer.ID
+}
+
 type TvBase struct {
 	dmsg                   *service.Dmsg
 	DkvsService            tvCommon.DkvsService
@@ -658,4 +666,15 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	}
 
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
+}
+
+func (m *TvBase) GetDiagnosisInfo() (*DiagnosisInfo, error) {
+	ret := &DiagnosisInfo{
+		IsRendezvous:           m.isRendezvous,
+		IsDiscoverRendzvousing: m.isDiscoverRendzvousing,
+		ServicePeerList:        m.servicePeerList,
+		LightPeerList:          m.lightPeerList,
+		NetworkPeers:           m.host.Network().Peers(),
+	}
+	return ret, nil
 }
