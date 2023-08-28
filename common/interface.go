@@ -15,6 +15,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type DiagnosisInfo struct {
+	Host                   host.Host
+	Dht                    *kaddht.IpfsDHT
+	IsRendezvous           bool
+	IsDiscoverRendzvousing bool
+	ServicePeerList        tvPeer.PeerInfoList
+	LightPeerList          tvPeer.PeerInfoList
+	NetworkPeers           []peer.ID
+}
 type DmsgServiceInterface interface {
 	Init(tvbaseService TvBaseService) error
 	Stop() error

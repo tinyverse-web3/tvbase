@@ -24,7 +24,7 @@ import (
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
 	ma "github.com/multiformats/go-multiaddr"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
@@ -43,17 +43,9 @@ import (
 	"go.uber.org/fx"
 )
 
-type DiagnosisInfo struct {
-	IsRendezvous           bool
-	IsDiscoverRendzvousing bool
-	ServicePeerList        tvPeer.PeerInfoList
-	LightPeerList          tvPeer.PeerInfoList
-	NetworkPeers           []peer.ID
-}
-
 type TvBase struct {
 	dmsg                   *service.Dmsg
-	DkvsService            tvCommon.DkvsService
+	DkvsService            tvbaseCommon.DkvsService
 	TracerSpan             trace.Span
 	ctx                    context.Context
 	host                   host.Host
@@ -613,7 +605,7 @@ func (m *TvBase) GetDmsg() *service.Dmsg {
 	return m.dmsg
 }
 
-func (m *TvBase) GetDkvsService() tvCommon.DkvsService {
+func (m *TvBase) GetDkvsService() tvbaseCommon.DkvsService {
 	return m.DkvsService
 }
 
@@ -668,13 +660,44 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
 }
 
-func (m *TvBase) GetDiagnosisInfo() (*DiagnosisInfo, error) {
-	ret := &DiagnosisInfo{
+func (m *TvBase) PrintDiagnosisInfo() *tvbaseCommon.DiagnosisInfo {
+	ret := &tvbaseCommon.DiagnosisInfo{
+		Host:                   m.host,
+		Dht:                    m.dht,
 		IsRendezvous:           m.isRendezvous,
 		IsDiscoverRendzvousing: m.isDiscoverRendzvousing,
 		ServicePeerList:        m.servicePeerList,
 		LightPeerList:          m.lightPeerList,
 		NetworkPeers:           m.host.Network().Peers(),
 	}
-	return ret, nil
+	outPrint := ""
+	outPrint += "TvBase->PrintDiagnosisInfo\n"
+	mode := ""
+	switch m.nodeCfg.Mode {
+	case define.LightMode:
+		mode = "LightMode"
+	case define.ServiceMode:
+		mode = "ServiceMode"
+	}
+	outPrint += fmt.Sprintf("hostID: %s	mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",
+		m.host.ID().String(),
+		mode,
+		m.isDiscoverRendzvousing,
+		m.isRendezvous,
+	)
+	outPrint += "ServicePeerList:\n"
+	for _, peer := range m.servicePeerList {
+		outPrint += fmt.Sprintf("	ID: %s, status: %v\n", peer.PeerID.String(), peer.ConnectStatus)
+	}
+	outPrint += "LightPeerList:\n"
+	for _, peer := range m.lightPeerList {
+		outPrint += fmt.Sprintf("	ID: %s, status: %v\n", peer.PeerID.String(), peer.ConnectStatus)
+	}
+	outPrint += "host.Network.Peers:\n"
+	for _, peer := range m.host.Network().Peers() {
+		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
+	}
+	outPrint = strings.TrimSuffix(outPrint, "\n")
+	tvLog.Logger.Info(outPrint)
+	return ret
 }
