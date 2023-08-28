@@ -59,5 +59,5 @@ type TvBaseService interface {
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistRendezvousCallback(callback tvPeer.RendezvousCallback)
-	GetDiagnosisInfo() *define.DiagnosisInfo
+	PrintDiagnosisInfo() *define.DiagnosisInfo
 }

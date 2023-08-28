@@ -666,13 +666,27 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
 }
 
-func (m *TvBase) GetDiagnosisInfo() *define.DiagnosisInfo {
+func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	ret := &define.DiagnosisInfo{
+		Host:                   m.host,
+		Dht:                    m.dht,
 		IsRendezvous:           m.isRendezvous,
 		IsDiscoverRendzvousing: m.isDiscoverRendzvousing,
 		ServicePeerList:        m.servicePeerList,
 		LightPeerList:          m.lightPeerList,
 		NetworkPeers:           m.host.Network().Peers(),
 	}
+
+	fmt.Printf("TvBase->PrintDiagnosisInfo begin\n")
+	fmt.Printf("mode: %v\nhostID: %v\nisRendezvous: %v\nisDiscoverRendzvousing: %v\n",
+		m.nodeCfg.Mode,
+		m.host.ID(),
+		m.isRendezvous,
+		m.isDiscoverRendzvousing,
+	)
+	fmt.Printf("ServicePeerList: %+v\n", m.servicePeerList)
+	fmt.Printf("LightPeerList: %+v\n", m.lightPeerList)
+	fmt.Printf("NetworkPeers: %+v\n", m.host.Network().Peers())
+	fmt.Printf("TvBase->PrintDiagnosisInfo end\n")
 	return ret
 }
