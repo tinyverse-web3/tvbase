@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	dkvspb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -58,4 +59,5 @@ type TvBaseService interface {
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistRendezvousCallback(callback tvPeer.RendezvousCallback)
+	GetDiagnosisInfo() *define.DiagnosisInfo
 }

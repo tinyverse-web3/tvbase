@@ -666,7 +666,7 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
 }
 
-func (m *TvBase) GetDiagnosisInfo() (*define.DiagnosisInfo, error) {
+func (m *TvBase) GetDiagnosisInfo() *define.DiagnosisInfo {
 	ret := &define.DiagnosisInfo{
 		IsRendezvous:           m.isRendezvous,
 		IsDiscoverRendzvousing: m.isDiscoverRendzvousing,
@@ -674,5 +674,5 @@ func (m *TvBase) GetDiagnosisInfo() (*define.DiagnosisInfo, error) {
 		LightPeerList:          m.lightPeerList,
 		NetworkPeers:           m.host.Network().Peers(),
 	}
-	return ret, nil
+	return ret
 }
