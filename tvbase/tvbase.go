@@ -691,15 +691,15 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 		m.isDiscoverRendzvousing,
 		m.isRendezvous,
 	)
-	outPrint += "ServicePeerList:"
+	outPrint += "ServicePeerList:\n"
 	for _, peer := range m.servicePeerList {
 		outPrint += fmt.Sprintf("	peerID: %s\n", peer.PeerID.String())
 	}
-	outPrint += "LightPeerList:"
+	outPrint += "LightPeerList:\n"
 	for _, peer := range m.lightPeerList {
 		outPrint += fmt.Sprintf("	peerID: %s\n ", peer.PeerID.String())
 	}
-	outPrint += "NetworkPeers:"
+	outPrint += "host.Network.Peers:\n"
 	for _, peer := range m.host.Network().Peers() {
 		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
 	}
