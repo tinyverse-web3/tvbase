@@ -677,7 +677,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 		NetworkPeers:           m.host.Network().Peers(),
 	}
 	outPrint := ""
-	outPrint += "\nTvBase->PrintDiagnosisInfo begin\n"
+	outPrint += "TvBase->PrintDiagnosisInfo\n"
 	mode := ""
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
@@ -703,7 +703,6 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	for _, peer := range m.host.Network().Peers() {
 		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
 	}
-	outPrint += "TvBase->PrintDiagnosisInfo end"
 	tvLog.Logger.Info(outPrint)
 	return ret
 }
