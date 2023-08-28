@@ -677,7 +677,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 		NetworkPeers:           m.host.Network().Peers(),
 	}
 	outPrint := ""
-	outPrint += "TvBase->PrintDiagnosisInfo begin\n"
+	outPrint += "\nTvBase->PrintDiagnosisInfo begin\n"
 	mode := ""
 	switch m.nodeCfg.Mode {
 	case tvConfig.LightMode:
@@ -685,7 +685,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	case tvConfig.ServiceMode:
 		mode = "ServiceMode"
 	}
-	outPrint += fmt.Sprintf("hostID: %s\nmode: %s\nisDiscoverRendzvousing: %v\nisRendezvous: %v\n",
+	outPrint += fmt.Sprintf("hostID: %s		mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",
 		m.host.ID().String(),
 		mode,
 		m.isDiscoverRendzvousing,
