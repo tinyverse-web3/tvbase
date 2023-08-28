@@ -685,7 +685,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	case tvConfig.ServiceMode:
 		mode = "ServiceMode"
 	}
-	outPrint += fmt.Sprintf("hostID: %s		mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",
+	outPrint += fmt.Sprintf("hostID: %s	mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",
 		m.host.ID().String(),
 		mode,
 		m.isDiscoverRendzvousing,
@@ -697,7 +697,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	}
 	outPrint += "LightPeerList:\n"
 	for _, peer := range m.lightPeerList {
-		outPrint += fmt.Sprintf("	peerID: %s\n ", peer.PeerID.String())
+		outPrint += fmt.Sprintf("	peerID: %s\n", peer.PeerID.String())
 	}
 	outPrint += "host.Network.Peers:\n"
 	for _, peer := range m.host.Network().Peers() {
