@@ -113,14 +113,14 @@ func readConsoleToSendMsg(base *tvbase.TvBase) {
 		fmt.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
 	}()
 
-	// target, err := dmsg.GetMsgService().GetPublishTarget(pk)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// err = dmsg.GetMsgService().PublishProtocol(ctx, target, 3, []byte("hello"))
-	// if err != nil {
-	// 	panic(err)
-	// }
+	target, err := dmsg.GetMsgService().GetPublishTarget(pk)
+	if err != nil {
+		panic(err)
+	}
+	err = dmsg.GetMsgService().PublishProtocol(ctx, target, 3, []byte("hello"))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func streamConsoleTo(ctx context.Context, topic *pubsub.Topic) {
