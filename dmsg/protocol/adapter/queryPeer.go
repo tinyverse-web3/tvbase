@@ -44,10 +44,10 @@ func (adapter *QueryPeerProtocolAdapter) InitRequest(
 		BasicData: basicData,
 	}
 
-	if len(dataList) == 1 {
-		pid, ok := dataList[0].(string)
+	if len(dataList) == 2 {
+		pid, ok := dataList[1].(string)
 		if !ok {
-			return request, errors.New("QueryPeerProtocolAdapter->InitRequest: failed to cast datalist[0] to string for pid")
+			return request, errors.New("QueryPeerProtocolAdapter->InitRequest: failed to cast datalist[1] to string for pid")
 		}
 		request.Pid = pid
 	} else {

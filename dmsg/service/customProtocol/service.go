@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
+	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
@@ -83,7 +84,8 @@ func (d *CustomProtocolService) Stop() error {
 }
 
 func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
-	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, pid)
+	destPubkey := dmsgCommonService.GetQueryPeerTopicName()
+	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, pid)
 	return request.(*pb.QueryPeerReq), responseChan, err
 }
 

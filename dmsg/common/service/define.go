@@ -12,6 +12,16 @@ import (
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
 
+var QueryPeerTopicName = "QueryPeer"
+
+func SetQueryPeerTopicName(name string) {
+	QueryPeerTopicName = name
+}
+
+func GetQueryPeerTopicName() string {
+	return QueryPeerTopicName
+}
+
 type BaseService interface {
 	IsEnableService() bool
 	GetConfig() *config.DMsgConfig

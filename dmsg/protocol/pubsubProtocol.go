@@ -80,6 +80,8 @@ func (p *PubsubProtocol) Request(
 	destPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	log.Logger.Debugf("PubsubProtocol->Request begin:\nsigPubkey: %s\ndataList: %v", sigPubkey, dataList)
+
+	dataList = append([]any{destPubkey}, dataList...)
 	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(sigPubkey, dataList...)
 	if err != nil {
 		return nil, nil, err

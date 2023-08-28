@@ -187,11 +187,11 @@ func (p *Protocol) HandleResponseData(
 }
 
 func (p *Protocol) GenRequestInfo(
-	srcUserPubkey string,
+	sigPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
 	log.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\ndataList:%v\nrequestPID:%v",
-		srcUserPubkey, dataList, p.Adapter.GetRequestPID())
-	requestBasicData := NewBasicData(p.Host, srcUserPubkey, p.Adapter.GetRequestPID())
+		sigPubkey, dataList, p.Adapter.GetRequestPID())
+	requestBasicData := NewBasicData(p.Host, sigPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		log.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)
