@@ -213,6 +213,9 @@ func NewDefaultNodeConfig() NodeConfig {
 				"/ip4/156.251.179.141/tcp/9000/p2p/12D3KooWH743TTDbp2RLsLL2t2vVNdtKpm3AMyZffRVx5psBbbZ3",
 				// TODO add udp peer bootstrap
 				// "/ip4/156.251.179.141/udp/9000/quic/p2p/12D3KooWH743TTDbp2RLsLL2t2vVNdtKpm3AMyZffRVx5psBbbZ3",
+				"/ip4/39.108.104.19/tcp/9000/p2p/12D3KooWNfbV19fQ9d39K84fUeFRmc6i4koEVNio9L6fPFtyPC9V",
+				// TODO add udp peer bootstrap
+				// "/ip4/39.108.104.19/udp/9000/quic/p2p/12D3KooWH743TTDbp2RLsLL2t2vVNdtKpm3AMyZffRVx5psBbbZ3",
 			},
 		},
 		PartialLimit: rcmgr.PartialLimitConfig{},
