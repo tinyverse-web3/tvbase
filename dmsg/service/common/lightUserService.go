@@ -7,7 +7,6 @@ import (
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	tvutilKey "github.com/tinyverse-web3/tvutil/key"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var lightUserLog = ipfsLog.Logger("dmsg.service.lightuser")
@@ -52,7 +51,7 @@ func (d *LightUserService) GetUserSig(protoData []byte) ([]byte, error) {
 	return d.LightUser.GetSig(protoData)
 }
 
-func (d *LightUserService) GetPublishTarget(request protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
+func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	if d.LightUser == nil {
 		lightUserLog.Errorf("LightUserService->GetPublishTarget: user is nil")
 		return nil, fmt.Errorf("LightUserService->GetPublishTarget: user is nil")

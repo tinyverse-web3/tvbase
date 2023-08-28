@@ -10,7 +10,6 @@ import (
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type BaseService interface {
@@ -23,7 +22,7 @@ type CommonService interface {
 	BaseService
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
-	GetPublishTarget(request protoreflect.ProtoMessage) (*dmsgUser.Target, error)
+	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
 	Stop() error
 }
 

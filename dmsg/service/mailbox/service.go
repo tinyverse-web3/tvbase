@@ -166,14 +166,7 @@ func (d *MailboxService) GetUserSig(protoData []byte) ([]byte, error) {
 	return d.lightMailboxUser.GetSig(protoData)
 }
 
-func (d *MailboxService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
-	request, ok := requestProtoData.(*pb.SeekMailboxReq)
-	if !ok {
-		log.Errorf("MailboxService->GetPublishTarget: fail to convert requestProtoData to *pb.SeekMailboxReq")
-		return nil, fmt.Errorf("MailboxService->GetPublishTarget: cannot convert to *pb.SeekMailboxReq")
-	}
-	pubkey := request.BasicData.Pubkey
-
+func (d *MailboxService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	var target *dmsgUser.Target
 	user := d.serviceUserList[pubkey]
 	if user != nil {

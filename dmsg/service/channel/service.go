@@ -184,14 +184,7 @@ func (d *ChannelService) OnPubsubMsgResponse(
 	return nil, nil
 }
 
-func (d *ChannelService) GetPublishTarget(requestProtoData protoreflect.ProtoMessage) (*dmsgUser.Target, error) {
-	request, ok := requestProtoData.(*pb.MsgReq)
-	if !ok {
-		log.Errorf("ChannelService->GetPublishTarget: fail to convert requestProtoData to *pb.MsgReq")
-		return nil, fmt.Errorf("ChannelService->GetPublishTarget: cannot convert to *pb.MsgReq")
-	}
-
-	pubkey := request.DestPubkey
+func (d *ChannelService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	var target *dmsgUser.Target
 	if d.ProxyPubsubList[pubkey] != nil {
 		target = &d.ProxyPubsubList[pubkey].Target

@@ -62,7 +62,8 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 
 	// send the response
 	responseBasicData := p.Adapter.GetResponseBasicData(response)
-	target, err := p.Service.GetPublishTarget(request)
+	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
 	if err != nil {
 		return err
 	}
@@ -75,16 +76,17 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 }
 
 func (p *PubsubProtocol) Request(
-	pubkey string,
+	sigPubkey string,
+	destPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
-	log.Logger.Debugf("PubsubProtocol->Request begin:\npubkey: %s\ndataList: %v", pubkey, dataList)
-	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(pubkey, dataList...)
+	log.Logger.Debugf("PubsubProtocol->Request begin:\nsigPubkey: %s\ndataList: %v", sigPubkey, dataList)
+	requestInfoId, request, requestProtoData, err := p.GenRequestInfo(sigPubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
-	target, err := p.Service.GetPublishTarget(request)
+	target, err := p.Service.GetPublishTarget(destPubkey)
 	if err != nil {
 		return nil, nil, err
 	}
