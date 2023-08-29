@@ -27,9 +27,9 @@ if [ -f "$pid_file" ]; then
         echo "PID is empty"
     else
         echo "$pid_file is exist, killing process with PID: $pid"
-        kill -9 "$pid"
+        kill_output=$(kill -9 "$pid")
         kill_result=$?
-        echo "Kill result: $kill_result"
+        echo "kill result: $kill_result, kill output: $kill_output"
         if [ $kill_result -eq 0 ]; then
             echo "Process killed successfully"
             isKillOldPid=1
