@@ -560,7 +560,6 @@ func (m *TvBase) bootstrap() error {
 		}(peerAddrInfo)
 	}
 	wg.Wait()
-	time.Sleep(1 * time.Second)
 	m.PrintDiagnosisInfo()
 	tvLog.Logger.Debug("tvBase->bootstrap end")
 	return nil
@@ -693,8 +692,6 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 		m.isDiscoverRendzvousing,
 		m.isRendezvous,
 	)
-	peerstore := m.host.Peerstore()
-
 	outPrint += "ServicePeerList:\n"
 	for _, peer := range m.servicePeerList {
 		outPrint += fmt.Sprintf("	ID: %s, status: %v\n", peer.PeerID.String(), peer.ConnectStatus)
@@ -703,7 +700,7 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	for _, peer := range m.lightPeerList {
 		outPrint += fmt.Sprintf("	ID: %s, status: %v\n", peer.PeerID.String(), peer.ConnectStatus)
 	}
-
+	peerstore := m.host.Peerstore()
 	outPrint += "host.Network.Peers:\n"
 	for _, peer := range m.host.Network().Peers() {
 		peerInfo := peerstore.PeerInfo(peer)
