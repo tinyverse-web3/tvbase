@@ -97,7 +97,7 @@ func (d *CustomProtocolService) Start(
 	if err != nil {
 		return err
 	}
-	err = d.queryPeerTarget.InitPubsub(topicName)
+	err = d.queryPeerTarget.InitPubsub(topicNamePubkeyHex)
 	if err != nil {
 		return err
 	}
