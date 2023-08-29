@@ -9,21 +9,25 @@ import (
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
+	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
+	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
+	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var log = ipfsLog.Logger("dmsg.service.customprotocol")
 
 type CustomProtocolService struct {
-	dmsgServiceCommon.LightUserService
+	dmsgServiceCommon.ProxyPubsubService
 	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
 	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
+	queryPeerTarget          *dmsgUser.Target
 }
 
 func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*CustomProtocolService, error) {
@@ -69,8 +73,58 @@ func (d *CustomProtocolService) Start(
 		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
 	}
 
+	topicName := dmsgCommonService.GetQueryPeerTopicName()
+	topicNamePrikey, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
+	if err != nil {
+		return err
+	}
+	topicNamePubkeyData, err := tvutilKey.ECDSAPublicKeyToProtoBuf(topicNamePubkey)
+	if err != nil {
+		log.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
+		return err
+	}
+	topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
+
+	topicNameGetSig := func(protoData []byte) ([]byte, error) {
+		sig, err := tvutilCrypto.SignDataByEcdsa(topicNamePrikey, protoData)
+		if err != nil {
+			log.Errorf("initDmsg: sig error: %v", err)
+		}
+		return sig, nil
+	}
+
+	d.queryPeerTarget, err = dmsgUser.NewTarget(topicNamePubkeyHex, topicNameGetSig)
+	if err != nil {
+		return err
+	}
+	err = d.queryPeerTarget.InitPubsub(topicName)
+	if err != nil {
+		return err
+	}
+
+	err = d.HandlePubsubProtocol(d.queryPeerTarget)
+	if err != nil {
+		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
+		return err
+	}
+
 	log.Debug("CustomProtocolService->Start end")
 	return nil
+}
+
+func (d *CustomProtocolService) GetQueryPeerPubkey() string {
+	topicName := dmsgCommonService.GetQueryPeerTopicName()
+	_, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
+	if err != nil {
+		return ""
+	}
+	topicNamePubkeyData, err := tvutilKey.ECDSAPublicKeyToProtoBuf(topicNamePubkey)
+	if err != nil {
+		log.Errorf("CustomProtocolService->GetQueryPeerPubkey: ECDSAPublicKeyToProtoBuf error: %v", err)
+		return ""
+	}
+	topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
+	return topicNamePubkeyHex
 }
 
 func (d *CustomProtocolService) Stop() error {
@@ -84,7 +138,7 @@ func (d *CustomProtocolService) Stop() error {
 }
 
 func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
-	destPubkey := dmsgCommonService.GetQueryPeerTopicName()
+	destPubkey := d.GetQueryPeerPubkey()
 	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, pid)
 	return request.(*pb.QueryPeerReq), responseChan, err
 }

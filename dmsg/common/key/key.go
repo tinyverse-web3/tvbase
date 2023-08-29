@@ -29,14 +29,14 @@ func (k *Key) InitKeyWithPrikey(prikey *ecdsa.PrivateKey) error {
 	}
 	pubkeyHex := key.TranslateKeyProtoBufToString(pubkeyData)
 
-	getSigCallback := func(data []byte) (sig []byte, err error) {
+	getSig := func(data []byte) (sig []byte, err error) {
 		return crypto.SignDataByEcdsa(prikey, data)
 	}
 	k.PubkeyHex = pubkeyHex
 	k.Pubkey = pubkey
 	k.PrikeyHex = prikeyHex
 	k.Prikey = prikey
-	k.GetSig = getSigCallback
+	k.GetSig = getSig
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (k *Key) InitKeyWithPubkeyData(pubkeyData []byte, getSig GetSigCallback) er
 	k.Pubkey = pubkey
 	k.PrikeyHex = ""
 	k.Prikey = nil
-	k.GetSig = nil
+	k.GetSig = getSig
 	return nil
 }
 
