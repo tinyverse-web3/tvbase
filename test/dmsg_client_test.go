@@ -283,6 +283,20 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
+	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
+	if err != nil {
+		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+		return
+	}
+
+	err = tvbase.GetDmsg().GetCustomProtocolService().RegistClient(pullCidProtocol)
+	if err != nil {
+		testLog.Errorf("RegistClient error: %v", err)
+		t.Errorf("RegistClient error: %v", err)
+		return
+	}
+
 	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsg().GetCustomProtocolService().QueryPeer("pullcid")
 	if err != nil {
 		testLog.Errorf("QueryPeer error: %v", err)
@@ -298,21 +312,8 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
-
-	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
-	if err != nil {
-		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-		return
-	}
-
-	err = tvbase.GetDmsg().GetCustomProtocolService().RegistClient(pullCidProtocol)
-	if err != nil {
-		testLog.Errorf("RegistClient error: %v", err)
-		t.Errorf("RegistClient error: %v", err)
-		return
-	}
-	bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
+	peerId := queryPeerResponse.BasicData.PeerID
+	// bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
 	// localPeerID := "12D3KooWDHUopoYJemJxzMSrTFPpshbKFaEJv3xX1SogvZpcMEic"
 	/*
 		## shell for generate random cid file
@@ -326,7 +327,7 @@ func TestPullCID(t *testing.T) {
 	CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
 	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
-	pullCidResponse, err := pullCidProtocol.Request(bootPeerID, &pullcid.PullCidRequest{
+	pullCidResponse, err := pullCidProtocol.Request(peerId, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
 		MaxCheckTime: 5 * time.Minute,
 	})
