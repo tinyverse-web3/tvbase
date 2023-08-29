@@ -18,9 +18,10 @@ const KEY_NS_GUN = "contract"
 
 // name:publickey (eg: 0xabc)
 var dkvsServiceNameMap = map[string][]string{
-	PUBSERVICE_GUN: {"0x80112205e1ef2628b9d27e450add495945e04eca51ef79a75925b77d2d31597680a4a8f"},
+	PUBSERVICE_GUN: {"0x080112205e1ef2628b9d27e450add495945e04eca51ef79a75925b77d2d31597680a4a8f"},
 	PUBSERVICE_MINER: {
 		"0x080112203da94688b4a1bf2635df6abf097cc6c5b8d9e61fe1ddf823ffd31cbcfe9e5f15",
+		"0x080112205e1ef2628b9d27e450add495945e04eca51ef79a75925b77d2d31597680a4a8f", // Miner for create Default Score
 		//"0x08011220ca2573a27462d653594faf292eb8ee21ac3bc6353be5234852ddb180e2e45db9", // RWQVifzRadMFMpyZ
 		//"0x08011220d11339fbad7d0a9201ff993d4d2dc3081c69f8be92377003d4c2baa64381b31e", // GeFTuvVKGRhlEgrq
 	},
