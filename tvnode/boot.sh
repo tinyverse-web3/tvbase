@@ -33,7 +33,7 @@ if [ -f "$pid_file" ]; then
             echo "process killed successfully"
             isKillOldPid=1
         elif [ $kill_result -eq 1 ]; then
-            echo "process for tvnode isn't exist(pid:$pid)"
+            echo "process for tvnode isn't exist"
         else 
             echo "failed to kill process for tvnode (errorCode: $kill_result, output: $kill_output)"
         fi
@@ -51,17 +51,17 @@ fi
 #     fi
 # fi
 
-# echo "start tvnode..."
+echo "start tvnode..."
 
-# log_dir="$user_dir/.tvnode"
-# log_prefix="tvnode"
-# log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S")_$log_prefix.log"
-# nohup tvnode > "$log_filename" 2>&1 &
-# pid=$!
-# if [ $? -eq 0 ]; then
-#     echo "tvnode is started, write to $pid_file, pid: $pid."
-#     echo "$pid" > $pid_file
-# else
-#     cat $log_filename
-#     echo "tvnode execution failed. check $log_filename for details."
-# fi
+log_dir="$user_dir/.tvnode"
+log_prefix="tvnode"
+log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S")_$log_prefix.log"
+nohup tvnode > "$log_filename" 2>&1 &
+pid=$!
+if [ $? -eq 0 ]; then
+    echo "tvnode is started, write to $pid_file, pid: $pid."
+    echo "$pid" > $pid_file
+else
+    cat $log_filename
+    echo "tvnode execution failed. check $log_filename for details."
+fi
