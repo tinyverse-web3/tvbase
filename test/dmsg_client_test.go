@@ -308,7 +308,7 @@ func TestPullCID(t *testing.T) {
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	cancel()
+	defer cancel()
 	content, _, err := tvIpfs.IpfsBlockGet(CID_RANDOM_1K, timeoutCtx)
 	if err != nil {
 		return
