@@ -23,7 +23,7 @@ import (
 var log = ipfsLog.Logger("dmsg.service.customprotocol")
 
 type CustomProtocolService struct {
-	dmsgServiceCommon.ProxyPubsubService
+	dmsgServiceCommon.LightUserService
 	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
 	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
@@ -104,11 +104,21 @@ func (d *CustomProtocolService) Start(
 
 	err = d.HandlePubsubProtocol(d.queryPeerTarget)
 	if err != nil {
-		log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
+		log.Errorf("CustomProtocolService->Start: HandlePubsubProtocol error: %v", err)
 		return err
 	}
 
 	log.Debug("CustomProtocolService->Start end")
+	return nil
+}
+
+func (d *CustomProtocolService) Stop() error {
+	log.Debug("CustomProtocolService->Stop begin")
+	err := d.LightUserService.Stop()
+	if err != nil {
+		return err
+	}
+	log.Debug("CustomProtocolService->Stop end")
 	return nil
 }
 
@@ -125,16 +135,6 @@ func (d *CustomProtocolService) GetQueryPeerPubkey() string {
 	}
 	topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
 	return topicNamePubkeyHex
-}
-
-func (d *CustomProtocolService) Stop() error {
-	log.Debug("CustomProtocolService->Stop begin")
-	err := d.LightUserService.Stop()
-	if err != nil {
-		return err
-	}
-	log.Debug("CustomProtocolService->Stop end")
-	return nil
 }
 
 func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
@@ -307,4 +307,47 @@ func (d *CustomProtocolService) GetPublishTarget(pubkey string) (*dmsgUser.Targe
 		return nil, fmt.Errorf("CustomProtocolService->GetPublishTarget: queryPeerTarget is nil")
 	}
 	return d.queryPeerTarget, nil
+}
+
+func (d *CustomProtocolService) HandlePubsubProtocol(target *dmsgUser.Target) error {
+	ctx := d.TvBase.GetCtx()
+	protocolDataChan, err := dmsgServiceCommon.WaitMessage(ctx, target.Key.PubkeyHex)
+	if err != nil {
+		return err
+	}
+	log.Debugf("CustomProtocolService->HandlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
+
+	go func() {
+		for {
+			select {
+			case protocolHandle, ok := <-protocolDataChan:
+				if !ok {
+					return
+				}
+				pid := protocolHandle.PID
+				log.Debugf("CustomProtocolService->HandlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
+
+				handle := d.ProtocolHandleList[pid]
+				if handle == nil {
+					log.Warnf("CustomProtocolService->HandlePubsubProtocol: no handle for pid: %d", pid)
+					continue
+				}
+				msgRequestPID := d.queryPeerProtocol.Adapter.GetRequestPID()
+				msgResponsePID := d.queryPeerProtocol.Adapter.GetResponsePID()
+				data := protocolHandle.Data
+				switch pid {
+				case msgRequestPID:
+					log.Debugf("CustomProtocolService->HandlePubsubProtocol: protocolDataChan: %+v", protocolDataChan)
+					handle.HandleRequestData(data)
+					continue
+				case msgResponsePID:
+					handle.HandleResponseData(data)
+					continue
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
 }
