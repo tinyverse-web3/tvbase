@@ -247,28 +247,22 @@ func TestPullCID(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// init srcSeed, destSeed, rootPath from cmd params
-	// srcSeed, _, rootPath := parseClientCmdParams()
-
 	rootPath := "."
 	srcSeed := "a"
 	nodeConfig, err := tvUtil.LoadNodeConfig()
 	if err != nil {
 		testLog.Errorf("TestPullCID error: %v", err)
-		t.Errorf("InitLog error: %v", err)
 		return
 	}
 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
 	if err != nil {
 		testLog.Errorf("TestPullCID error: %v", err)
-		t.Errorf("InitLog error: %v", err)
 		return
 	}
 
 	srcPrkey, srcPubkey, err := getKeyBySeed(srcSeed)
 	if err != nil {
 		testLog.Errorf("getKeyBySeed error: %v", err)
-		t.Errorf("getKeyBySeed error: %v", err)
 		return
 	}
 	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
@@ -279,28 +273,24 @@ func TestPullCID(t *testing.T) {
 	tvbase, _, err := initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
 	if err != nil {
 		testLog.Errorf("init acceptable error: %v", err)
-		t.Errorf("init acceptable error: %v", err)
 		return
 	}
 
 	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
 	if err != nil {
 		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
 		return
 	}
 
 	err = tvbase.GetDmsg().GetCustomProtocolService().RegistClient(pullCidProtocol)
 	if err != nil {
 		testLog.Errorf("RegistClient error: %v", err)
-		t.Errorf("RegistClient error: %v", err)
 		return
 	}
 
 	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsg().GetCustomProtocolService().QueryPeer("pullcid")
 	if err != nil {
 		testLog.Errorf("QueryPeer error: %v", err)
-		t.Errorf("QueryPeer error: %v", err)
 		return
 	}
 	testLog.Debugf("queryPeerRequest: %v", queryPeerRequest)
@@ -308,7 +298,6 @@ func TestPullCID(t *testing.T) {
 	queryPeerResponse, ok := queryPeerResponseData.(*pb.QueryPeerRes)
 	if !ok {
 		testLog.Errorf("QueryPeerRes error: %v", err)
-		t.Errorf("QueryPeerRes error: %v", err)
 		return
 	}
 	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
@@ -322,25 +311,37 @@ func TestPullCID(t *testing.T) {
 		ipfs add ./random-file
 		## check cid
 		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
-
 	*/
+
 	CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
 	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	cancel()
+	content, _, err := tvIpfs.IpfsBlockGet(CID_RANDOM_1K, timeoutCtx)
+	if err != nil {
+		return
+	}
+	contentSize := len(content)
+	if contentSize >= 100*1024*1024 {
+		// TODO over 100MB need to be split using CAR,, implement it
+		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
+		return
+	}
+
 	pullCidResponse, err := pullCidProtocol.Request(peerId, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
 		MaxCheckTime: 5 * time.Minute,
 	})
 	if err != nil {
 		testLog.Errorf("pullCidProtocol.Request error: %v", err)
-		t.Errorf("pullCidProtocol.Request error: %v", err)
 		return
 	}
 	testLog.Infof("pullCidResponse: %v", pullCidResponse)
 
 	if pullCidResponse == nil {
 		testLog.Errorf("pullCidResponse is nil")
-		t.Errorf("pullCidResponse is nil")
 		return
 	}
 	switch pullCidResponse.Status {
