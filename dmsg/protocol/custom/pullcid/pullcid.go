@@ -101,19 +101,6 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		return nil, err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
-	defer cancel()
-	content, _, err := tvIpfs.IpfsBlockGet(request.CID, timeoutCtx)
-	if err != nil {
-		return nil, err
-	}
-	contentSize := len(content)
-	if contentSize >= 100*1024*1024 {
-		// TODO over 100MB need to be split using CAR,, implement it
-		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
-		return nil, fmt.Errorf("PullCidClientProtocol->Request: file too large(<100MB), bufSize:%v", contentSize)
-	}
-
 	var timeout time.Duration = 5 * time.Second
 	if len(options) > 0 {
 		var ok bool
