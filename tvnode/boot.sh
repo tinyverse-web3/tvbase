@@ -45,9 +45,9 @@ fi
 #     killall tvnode
 #     kill_result=$?
 #     if [ $kill_result -eq 0 ]; then
-#         echo "Process killall successfully"
+#         echo "process killall successfully"
 #     else
-#         echo "Failed to killall for tvnode (error code: $kill_result)"
+#         echo "failed to killall for tvnode (error code: $kill_result)"
 #     fi
 # fi
 
