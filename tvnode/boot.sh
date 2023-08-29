@@ -32,7 +32,7 @@ if [ -f "$pid_file" ]; then
         if [ $kill_result -eq 0 ]; then
             echo "process killed successfully"
             isKillOldPid=1
-        else if [ $kill_result -eq 1 ]; then
+        elif [ $kill_result -eq 1 ]; then
             echo "process for tvnode isn't exist(pid:$pid)"
         else 
             echo "failed to kill process for tvnode (errorCode: $kill_result, output: $kill_output)"
