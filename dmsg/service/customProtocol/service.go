@@ -300,3 +300,11 @@ func (d *CustomProtocolService) OnQueryPeerRequest(requestProtoData protoreflect
 	log.Debug("CustomProtocolService->OnQueryPeerRequest end")
 	return d.TvBase.GetHost().ID().String(), nil, false, nil
 }
+
+func (d *CustomProtocolService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
+	if d.queryPeerTarget == nil {
+		log.Errorf("CustomProtocolService->GetPublishTarget: queryPeerTarget is nil")
+		return nil, fmt.Errorf("CustomProtocolService->GetPublishTarget: queryPeerTarget is nil")
+	}
+	return d.queryPeerTarget, nil
+}
