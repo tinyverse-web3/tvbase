@@ -29,12 +29,11 @@ if [ -f "$pid_file" ]; then
         echo "$pid_file is exist, killing process with PID: $pid"
         kill_output=$(kill -9 "$pid" 2>&1)
         kill_result=$?
-        echo "Kill result: $kill_result, kill output: $kill_output"
         if [ $kill_result -eq 0 ]; then
             echo "Process killed successfully"
             isKillOldPid=1
         else
-            echo "Failed to kill process for tvnode (pid:$pid, error code: $kill_result)"
+            echo "Failed to kill process for tvnode (pid:$pid, error code: $kill_result, output: $kill_output)"
         fi
     fi
 fi
