@@ -16,6 +16,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -282,6 +283,22 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
+	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsg().GetCustomProtocolService().QueryPeer("pullcid")
+	if err != nil {
+		testLog.Errorf("QueryPeer error: %v", err)
+		t.Errorf("QueryPeer error: %v", err)
+		return
+	}
+	testLog.Debugf("queryPeerRequest: %v", queryPeerRequest)
+	queryPeerResponseData := <-queryPeerResponseChan
+	queryPeerResponse, ok := queryPeerResponseData.(*pb.QueryPeerRes)
+	if !ok {
+		testLog.Errorf("QueryPeerRes error: %v", err)
+		t.Errorf("QueryPeerRes error: %v", err)
+		return
+	}
+	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
+
 	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
 	if err != nil {
 		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
@@ -296,7 +313,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 	bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
-	// localPeerID := "12D3KooWT3DqHnCgt2za47Acpf5eVxRBYgDfDZoHp7bwXTttFg7m"
+	// localPeerID := "12D3KooWDHUopoYJemJxzMSrTFPpshbKFaEJv3xX1SogvZpcMEic"
 	/*
 		## shell for generate random cid file
 		dd if=/dev/urandom of=random-file bs=1k  count=1
