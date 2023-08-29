@@ -693,9 +693,14 @@ func (m *TvBase) PrintDiagnosisInfo() *tvbaseCommon.DiagnosisInfo {
 	for _, peer := range m.lightPeerList {
 		outPrint += fmt.Sprintf("	ID: %s, status: %v\n", peer.PeerID.String(), peer.ConnectStatus)
 	}
+	peerstore := m.host.Peerstore()
 	outPrint += "host.Network.Peers:\n"
 	for _, peer := range m.host.Network().Peers() {
-		outPrint += fmt.Sprintf("	peerID: %s\n", peer.String())
+		peerInfo := peerstore.PeerInfo(peer)
+		outPrint += fmt.Sprintf("	peerID: %s\n", peerInfo.ID.String())
+		for _, addr := range peerInfo.Addrs {
+			outPrint += fmt.Sprintf("		addr: %s\n", addr.String())
+		}
 	}
 	outPrint = strings.TrimSuffix(outPrint, "\n")
 	tvLog.Logger.Info(outPrint)
