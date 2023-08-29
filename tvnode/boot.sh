@@ -24,16 +24,18 @@ if [ -f "$pid_file" ]; then
     pid=$(cat "$pid_file")
     echo "killing tvnode, pid: $pid"
     if [ -z "$pid" ]; then
-        echo "PID is empty"
+        echo "pid is empty"
     else
         echo "$pid_file is exist, killing process with PID: $pid"
         kill_output=$(kill -9 "$pid" 2>&1)
         kill_result=$?
         if [ $kill_result -eq 0 ]; then
-            echo "Process killed successfully"
+            echo "process killed successfully"
             isKillOldPid=1
-        else
-            echo "Failed to kill process for tvnode (pid:$pid, error code: $kill_result, output: $kill_output)"
+        else if [ $kill_result -eq 1 ]; then
+            echo "process for tvnode isn't exist(pid:$pid)"
+        else 
+            echo "failed to kill process for tvnode (errorCode: $kill_result, output: $kill_output)"
         fi
     fi
 fi
