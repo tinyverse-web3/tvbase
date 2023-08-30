@@ -188,18 +188,15 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 		testLog.Debugf("sign = %v", sig)
 		return sig, nil
 	}
-	done := make(chan any)
-	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback, done)
+
+	done, err := dmsgService.InitUser(srcPubkeyBytes, getSigCallback)
 	if err != nil {
 		return nil, nil, err
 	}
 	data := <-done
 	if data != nil {
-		err = data.(error)
-		if err != nil {
-			testLog.Errorf("initMsgClient: InitUser error: %v", data)
-			return nil, nil, err
-		}
+		testLog.Errorf("initMsgClient: InitUser error: %v", data)
+		return nil, nil, err
 	}
 
 	return tvbase, dmsgService, nil
