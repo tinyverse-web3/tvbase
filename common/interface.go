@@ -67,4 +67,5 @@ type TvBaseService interface {
 	GetIsRendezvous() bool
 	RegistRendezvousChan() chan bool
 	UnregistRendezvousChan(rc chan bool)
+	PrintDiagnosisInfo() *DiagnosisInfo
 }
