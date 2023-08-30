@@ -148,7 +148,7 @@ func (d *DmsgService) Stop() error {
 func (d *DmsgService) InitUser(
 	userPubkeyData []byte,
 	getSigCallback dmsgClientCommon.GetSigCallback,
-) (chan bool, error) {
+) (chan error, error) {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
 	err := d.SubscribeSrcUser(userPubkey, getSigCallback)
@@ -242,18 +242,16 @@ func (d *DmsgService) InitUser(
 		}
 		return nil
 	}
-	done := make(chan bool)
+	done := make(chan error)
 	go func() {
 		if d.BaseService.GetIsRendezvous() {
-			initMailbox()
-			done <- true
+			done <- initMailbox()
 		} else {
 			c := d.BaseService.RegistRendezvousChan()
 			select {
 			case <-c:
 				d.BaseService.UnregistRendezvousChan(c)
-				initMailbox()
-				done <- true
+				done <- initMailbox()
 				return
 			case <-d.BaseService.GetCtx().Done():
 				dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
