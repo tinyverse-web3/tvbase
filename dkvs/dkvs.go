@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go"
@@ -22,6 +23,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	cm "github.com/tinyverse-web3/tvbase/dkvs/common"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
@@ -36,6 +38,11 @@ type Dkvs struct {
 }
 
 var _dkvs *Dkvs = nil
+
+var (
+	currentReadRecMode = cm.NetworkFirst //默认读取数据模式：网络优先
+	modeMutex          sync.RWMutex      // 用于保护全局模式配置项的互斥锁
+)
 
 func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	rootPath := tvbase.GetConfig().RootPath
@@ -463,21 +470,87 @@ func (d *Dkvs) dhtPut(key string, value []byte) error {
 }
 
 func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
+	priority := d.GetReadRecMode()
+
+	if priority == cm.LocalFirst {
+		return d.readRecordFromLocal(key)
+	}
+
+	//net first
+	netCh := make(chan struct {
+		Record *pb.DkvsRecord
+		Error  error
+	})
+	localCh := make(chan struct {
+		Record *pb.DkvsRecord
+		Error  error
+	})
+	// 启动goroutine执行readRecordFromDhtNet函数
+	go func() {
+		result, err := d.readRecordFromDhtNet(key) //从网络中读取
+		netCh <- struct {
+			Record *pb.DkvsRecord
+			Error  error
+		}{Record: result, Error: err}
+	}()
+
+	// 启动goroutine执行readRecordFromLocal函数
+	go func() {
+		result, err := d.readRecordFromLocal(key) //从网络中读取
+		localCh <- struct {
+			Record *pb.DkvsRecord
+			Error  error
+		}{Record: result, Error: err}
+	}()
+
+	select {
+	case res := <-netCh:
+		return res.Record, res.Error
+	case <-time.After(5 * time.Second):
+		Logger.Debugf("Due to the timeout (>5 seconds) of reading from dht, the local data is directly returned): {key: %s}", key)
+		res := <-localCh
+		return res.Record, res.Error
+	}
+}
+
+func (d *Dkvs) readRecordFromDhtNet(key string) (*pb.DkvsRecord, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var val []byte
 	val, err := d.dhtGetRecordFromNet(ctx, key)
 	if err != nil {
-		Logger.Errorf("dhtGetRecord--> key does not exist on the network {key: %s, err: %v}", key, err)
-		go delBadRecFromLocal(d, key) //参考lbp2p-kad-dht handleGetValue, 删除掉本地过期的key
+		Logger.Errorf("readRecordFromDhtNet--> key does not exist on the network {key: %s, err: %v}", key, err)
+		//go delBadRecFromLocal(d, key) //参考lbp2p-kad-dht handleGetValue, 删除掉本地过期的key TODO 暂时注释以保留过期数据
 		return nil, err
 	}
 	e := new(pb.DkvsRecord)
 	if err := proto.Unmarshal(val, e); err != nil {
-		Logger.Errorf("dhtGetRecord--> found an invalid dkvs entry: v%", err)
+		Logger.Errorf("readRecordFromDhtNet--> found an invalid dkvs entry: v%", err)
 		return nil, err
 	}
 	go saveKeyToLocal(d, key, val) //执行异步操作, 如果本地没有这个key,在本地也保留一份
+	return e, nil
+}
+
+func (d *Dkvs) readRecordFromLocal(key string) (*pb.DkvsRecord, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var val []byte
+	libp2pRec, err := d.getLocal(ctx, key)
+	if err != nil {
+		Logger.Errorf("readRecordFromLocal--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
+		return nil, err
+	}
+	if libp2pRec == nil {
+		Logger.Errorf("readRecordFromLocal--->Failed to read key from local node {key: %s}", key)
+		return nil, err
+	}
+	val = libp2pRec.GetValue()
+	e := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(val, e); err != nil {
+		Logger.Errorf("readRecordFromLocal--> found an invalid dkvs entry: v%", err)
+		return nil, err
+	}
 	return e, nil
 }
 
@@ -576,6 +649,20 @@ func (d *Dkvs) IsApprovedPubkey(sn string, pk []byte) bool {
 
 	cert := FindPublicServiceCertByServiceName(rv.CertVect, sn)
 	return VerifyCertApprove(cert, pk)
+}
+
+// 获取dkvs当前的读取记录优先级,返回为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
+func (d *Dkvs) GetReadRecMode() cm.ReadPriority {
+	modeMutex.Lock()
+	defer modeMutex.Unlock()
+	return currentReadRecMode
+}
+
+// 设置dkvs读取记录的优先级，入参为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
+func (d *Dkvs) SetReadRecMode(readPriority cm.ReadPriority) {
+	modeMutex.Lock()
+	defer modeMutex.Unlock()
+	currentReadRecMode = readPriority
 }
 
 func isApprovedPubkey(sn string, pk []byte) bool {

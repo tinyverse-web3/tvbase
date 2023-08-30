@@ -12,6 +12,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
+	dkvscm "github.com/tinyverse-web3/tvbase/dkvs/common"
 	dkvspb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -26,6 +27,8 @@ type DkvsService interface {
 	// return: value, pubkey, issuetime, ttl, signature, err
 	Get(key string) ([]byte, []byte, uint64, uint64, []byte, error)
 	GetRecord(key string) (*dkvspb.DkvsRecord, error)
+	GetReadRecMode() dkvscm.ReadPriority
+	SetReadRecMode(readPriority dkvscm.ReadPriority)
 	FastGetRecord(key string) (*dkvspb.DkvsRecord, error)
 	Has(key string) bool
 	CheckTransferPara(key string, value1 []byte, pubkey1 []byte, sig1 []byte, value2 []byte, pubkey2 []byte, issuetime uint64, ttl uint64, sig2 []byte, txcert *dkvspb.Cert) error

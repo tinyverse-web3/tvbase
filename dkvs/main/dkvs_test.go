@@ -54,7 +54,7 @@ func TestDkvs(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa18")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa28")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -839,7 +839,7 @@ func TestDkvsTTL(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa20")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa21")
 	tValue1 := []byte("world1")
 	ttl := dkvs.GetTtlFromDuration(time.Hour)
 	issuetime := dkvs.TimeNow()
@@ -902,4 +902,45 @@ func TestDkvsTTL(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		fmt.Println("Timeout occurred")
 	}
+}
+
+func TestDkvsDbMaxRecordAge(t *testing.T) {
+
+	tvbase, err := tvbase.NewTvbase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kv := tvbase.GetDkvsService()
+
+	seed := "oIBBgepoPyhdJTYC"
+	priv, err := dkvs.GetPriKeyBySeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := priv.GetPublic()
+	pkBytes, err := ic.MarshalPublicKey(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("seed: ", seed)
+	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
+
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa25")
+	tValue1 := []byte("world1")
+	ttl := dkvs.GetTtlFromDuration(time.Minute)
+	issuetime := dkvs.TimeNow()
+	fmt.Printf("tKey: %v", tKey)
+	data := dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
+	sigData1, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pkBytes, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {}
+	//等待时手工从网络获取这个key
 }
