@@ -32,6 +32,7 @@ func (m *TvBase) initRendezvous() error {
 		m.RegistNotConnectedCallback(handleNoNet)
 
 		m.isRendezvous = false
+		m.isDiscoverRendzvousing = false
 		m.rendezvousChanList = make([]chan bool, 0)
 		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
 
