@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -114,26 +115,19 @@ func LoadNodeConfig(options ...any) (*tvbaseConfig.NodeConfig, error) {
 }
 
 func SetLogModule(moduleLevels map[string]string) error {
-	// ipfsLog.SetAllLoggers(config.Log.AllLogLevel)
-	for module, level := range moduleLevels {
-		ipfsLog.SetLogLevel(module, level)
+	var sortedModuleList []string
+	for module := range moduleLevels {
+		sortedModuleList = append(sortedModuleList, module)
+	}
+	sort.Strings(sortedModuleList)
+	for _, module := range sortedModuleList {
+		level := moduleLevels[module]
+		err := ipfsLog.SetLogLevelRegex(module, level)
+		if err != nil {
+			fmt.Printf("SetLogModule->SetLogLevelRegex: %v\n", err)
+		}
 	}
 	return nil
-}
-
-func SetLogLevel(lv string, moreModuleList ...string) {
-	interalModuleList := []string{
-		"tvbase",
-		"dkvs",
-		"dmsg",
-		"customProtocol",
-	}
-	for _, module := range interalModuleList {
-		ipfsLog.SetLogLevel(module, lv)
-	}
-	for _, module := range moreModuleList {
-		ipfsLog.SetLogLevel(module, lv)
-	}
 }
 
 // ParseBootstrapPeer parses a bootstrap list into a list of AddrInfos.
