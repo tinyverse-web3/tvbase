@@ -127,22 +127,6 @@ func SetLogModule(moduleLevels map[string]string) error {
 	return nil
 }
 
-// TOOD : need delete
-func SetLogLevel(lv string, moreModuleList ...string) {
-	interalModuleList := []string{
-		"tvbase",
-		"dkvs",
-		"dmsg",
-		"customProtocol",
-	}
-	for _, module := range interalModuleList {
-		ipfsLog.SetLogLevel(module, lv)
-	}
-	for _, module := range moreModuleList {
-		ipfsLog.SetLogLevel(module, lv)
-	}
-}
-
 // ParseBootstrapPeer parses a bootstrap list into a list of AddrInfos.
 func ParseBootstrapPeers(addrs []string) ([]peer.AddrInfo, error) {
 	maddrs := make([]ma.Multiaddr, len(addrs))

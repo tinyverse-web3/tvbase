@@ -7,12 +7,11 @@ import (
 	"net/http"
 	"testing"
 
-	ipfsLog "github.com/ipfs/go-log/v2"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 )
 
 func TestNftStorageUpload(t *testing.T) {
-	ipfsLog.SetLogLevel("tvbase_test", "debug")
+
 	cid := "bafkreiawq4i3dlkubc7bwml5cchhnme7f4zft2rtv4b4ptrxhul2ehzmne"
 	content, _, err := tvIpfs.IpfsBlockGet(cid, context.Background())
 	if err != nil {
@@ -50,7 +49,7 @@ func TestNftStorageUpload(t *testing.T) {
 }
 
 func TestWeb3StorageUpload(t *testing.T) {
-	ipfsLog.SetLogLevel("tvbase_test", "debug")
+
 	cid := "bafkreiawq4i3dlkubc7bwml5cchhnme7f4zft2rtv4b4ptrxhul2ehzmne"
 	content, _, err := tvIpfs.IpfsBlockGet(cid, context.Background())
 	if err != nil {
