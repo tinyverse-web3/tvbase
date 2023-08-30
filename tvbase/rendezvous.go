@@ -4,46 +4,80 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
-	tvLog "github.com/tinyverse-web3/tvbase/common/log"
-	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	tvbaseLog "github.com/tinyverse-web3/tvbase/common/log"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 )
 
 const TvbaseRendezvous = "tvbase/discover-rendzvous/common"
 
 func (m *TvBase) initRendezvous() error {
 	if m.pubRoutingDiscovery == nil {
-		m.rendezvousCbList = make([]tvPeer.RendezvousCallback, 0)
-		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
-		tvUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TvbaseRendezvous)
-
 		handleNoNet := func(peerID peer.ID) error {
 			if !m.IsExistConnectedPeer() {
+				for _, c := range m.rendezvousChanList {
+					select {
+					case c <- false:
+						tvbaseLog.Logger.Debugf("TvBase-initRendezvous: succ send isRendezvousChan")
+					default:
+						tvbaseLog.Logger.Debugf("TvBase-initRendezvous: no receiver for isRendezvousChan")
+					}
+				}
 				m.isRendezvous = false
 			}
 			return nil
 		}
-
 		m.RegistNotConnectedCallback(handleNoNet)
+
+		m.isRendezvous = false
+		m.isDiscoverRendzvousing = false
+		m.rendezvousChanList = make([]chan bool, 0)
+		m.pubRoutingDiscovery = drouting.NewRoutingDiscovery(m.dht)
+
+		bo := backoff.NewExponentialBackOff()
+		bo.InitialInterval = 2 * time.Second
+		bo.Multiplier = 2
+		bo.MaxInterval = 10 * time.Second
+		bo.MaxElapsedTime = 0 // never stop
+
+		go func() {
+			t := backoff.NewTicker(bo)
+			defer t.Stop()
+			for {
+				select {
+				case <-t.C:
+					if m.IsExistConnectedPeer() {
+						tvbaseUtil.PubsubAdvertise(m.ctx, m.pubRoutingDiscovery, TvbaseRendezvous)
+						return
+					}
+				case <-m.ctx.Done():
+					return
+				}
+			}
+		}()
 	}
 	return nil
 }
 
-func (m *TvBase) RegistRendezvousCallback(callback tvPeer.RendezvousCallback) {
-	m.rendezvousCbList = append(m.rendezvousCbList, callback)
-}
-
 func (m *TvBase) DiscoverRendezvousPeers() {
-	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers begin")
+	tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers begin")
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.Multiplier = 2
+	bo.MaxInterval = 10 * time.Second
+	bo.MaxElapsedTime = 0 // never stop
+	t := backoff.NewTicker(bo)
+	defer t.Stop()
+
 	for !m.isRendezvous {
 		m.isDiscoverRendzvousing = true
 		rendezvousPeerCount := 0
 		start := time.Now()
 		peerAddrInfoChan, err := m.pubRoutingDiscovery.FindPeers(m.ctx, TvbaseRendezvous)
 		if err != nil {
-			tvLog.Logger.Errorf("tvBase->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
+			tvbaseLog.Logger.Errorf("tvBase->DiscoverRendezvousPeers: Searching rendezvous peer error: %v", err)
 			continue
 		}
 
@@ -55,33 +89,63 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 			if len(peerAddrInfo.Addrs) == 0 {
 				continue
 			}
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\npeerAddrInfo.Addrs: %+v", peerAddrInfo.Addrs)
+			tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\npeerAddrInfo.Addrs: %+v", peerAddrInfo.Addrs)
 			wg.Add(1)
 			go func(addrInfo peer.AddrInfo) {
 				defer wg.Done()
 				err := m.host.Connect(m.ctx, addrInfo)
 				if err != nil {
-					tvLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers:\nFail connect to the rendezvous addrInfo: %+v, error: %+v", addrInfo, err)
+					tvbaseLog.Logger.Warnf("tvBase->DiscoverRendezvousPeers:\nFail connect to the rendezvous addrInfo: %+v, error: %+v", addrInfo, err)
 					return
 				}
 				rendezvousPeerCount++
-				tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nIt took %+v seconds succcess connect to the rendezvous peerID: %+v",
+				tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nIt took %+v seconds succcess connect to the rendezvous peerID: %+v",
 					time.Since(start).Seconds(), addrInfo.ID)
 				m.registPeerInfo(addrInfo.ID)
 			}(peerAddrInfo)
 		}
 		wg.Wait()
 		if rendezvousPeerCount == 0 {
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of peers is equal to 0, wait 10 second to search again")
-			time.Sleep(10 * time.Second)
-		} else {
-			tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
-			m.isRendezvous = true
-			for _, cb := range m.rendezvousCbList {
-				cb()
+			tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of peers is equal to 0")
+			select {
+			case <-t.C:
+				tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers: wait...")
+			case <-m.ctx.Done():
+				return
 			}
+		} else {
+			tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers:\nThe number of rendezvous peer is %+v", rendezvousPeerCount)
+			for _, c := range m.rendezvousChanList {
+				select {
+				case c <- true:
+					tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: succ send isRendezvousChan")
+				default:
+					tvbaseLog.Logger.Debugf("TvBase-DiscoverRendezvousPeers: no receiver for isRendezvousChan")
+				}
+			}
+			m.isRendezvous = true
 		}
 		m.isDiscoverRendzvousing = false
 	}
-	tvLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers end")
+	tvbaseLog.Logger.Debugf("tvBase->DiscoverRendezvousPeers end")
+}
+
+func (m *TvBase) RegistRendezvousChan() chan bool {
+	c := make(chan bool)
+	m.rendezvousChanList = append(m.rendezvousChanList, c)
+	return c
+}
+
+func (m *TvBase) UnregistRendezvousChan(rc chan bool) {
+	for i, c := range m.rendezvousChanList {
+		if c == rc {
+			close(c)
+			m.rendezvousChanList = append(m.rendezvousChanList[:i], m.rendezvousChanList[i+1:]...)
+			return
+		}
+	}
+}
+
+func (m *TvBase) GetIsRendezvous() bool {
+	return m.isRendezvous
 }

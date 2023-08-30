@@ -63,7 +63,7 @@ type TvBase struct {
 	pubRoutingDiscovery    *drouting.RoutingDiscovery
 	isDiscoverRendzvousing bool
 	isRendezvous           bool
-	rendezvousCbList       []tvPeer.RendezvousCallback
+	rendezvousChanList     []chan bool
 	launch                 *fx.App
 }
 

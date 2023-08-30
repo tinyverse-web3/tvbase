@@ -148,7 +148,7 @@ func (d *DmsgService) Stop() error {
 func (d *DmsgService) InitUser(
 	userPubkeyData []byte,
 	getSigCallback dmsgClientCommon.GetSigCallback,
-	done chan any,
+	timeout time.Duration,
 ) error {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
@@ -157,27 +157,23 @@ func (d *DmsgService) InitUser(
 		return err
 	}
 
-	initMailbox := func() {
+	initMailbox := func() error {
 		dmsgLog.Logger.Debug("DmsgService->InitUser->initMailbox begin")
 		if d == nil {
 			dmsgLog.Logger.Errorf("DmsgService->InitUser: DmsgService is nil")
-			done <- fmt.Errorf("DmsgService is nil")
-			return
+			return fmt.Errorf("DmsgService->InitUser: DmsgService is nil")
 		}
 		if d.SrcUserInfo == nil {
 			dmsgLog.Logger.Errorf("DmsgService->InitUser: SrcUserInfo is nil")
-			done <- fmt.Errorf("SrcUserInfo is nil")
-			return
+			return fmt.Errorf("DmsgService->InitUser: SrcUserInfo is nil")
 		}
 		if d.SrcUserInfo.UserKey == nil {
 			dmsgLog.Logger.Errorf("DmsgService->InitUser: SrcUserInfo.UserKey is nil")
-			done <- fmt.Errorf("SrcUserInfo.UserKey is nil")
-			return
+			return fmt.Errorf("DmsgService->InitUser: SrcUserInfo.UserKey is nil")
 		}
 		_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, d.SrcUserInfo.UserKey.PubkeyHex)
 		if err != nil {
-			done <- err
-			return
+			return err
 		}
 		select {
 		case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
@@ -192,10 +188,8 @@ func (d *DmsgService) InitUser(
 				// skip seek when seek mailbox quest fail, create a new mailbox
 			} else {
 				dmsgLog.Logger.Debugf("DmsgService->InitUser: seekMailboxProtoData success")
-				done <- nil
-
 				go d.releaseUnusedMailbox(response.BasicData.PeerID, userPubkey)
-				return
+				return nil
 			}
 		case <-time.After(3 * time.Second):
 			dmsgLog.Logger.Debugf("DmsgService->InitUser: time.After 3s, create new mailbox")
@@ -205,8 +199,7 @@ func (d *DmsgService) InitUser(
 			servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
 			if err != nil {
 				dmsgLog.Logger.Errorf("DmsgService->InitUser: getAvailableServicePeerList error: %v", err)
-				done <- err
-				return
+				return err
 			}
 
 			for _, servicePeerID := range servicePeerList {
@@ -229,8 +222,7 @@ func (d *DmsgService) InitUser(
 					switch response.RetCode.Code {
 					case 0, 1:
 						dmsgLog.Logger.Debugf("DmsgService->InitUser: createMailboxProtocol success")
-						done <- nil
-						return
+						return nil
 					default:
 						continue
 					}
@@ -238,24 +230,34 @@ func (d *DmsgService) InitUser(
 					continue
 				case <-d.BaseService.GetCtx().Done():
 					dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
-					done <- fmt.Errorf("DmsgService->InitUser: BaseService.GetCtx().Done()")
-					return
+					return d.BaseService.GetCtx().Err()
 				}
 			}
 
 			dmsgLog.Logger.Error("DmsgService->InitUser: no available service peers")
-			done <- fmt.Errorf("DmsgService->InitUser: no available service peers")
-			return
+			return fmt.Errorf("DmsgService->InitUser: no available service peers")
 			// end create mailbox
 		case <-d.BaseService.GetCtx().Done():
 			dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
-			done <- fmt.Errorf("DmsgService->InitUser: BaseService.GetCtx().Done()")
-			return
+			return fmt.Errorf("DmsgService->InitUser: BaseService.GetCtx().Done()")
+		}
+		return nil
+	}
+
+	if d.BaseService.GetIsRendezvous() {
+		return initMailbox()
+	} else {
+		c := d.BaseService.RegistRendezvousChan()
+		select {
+		case <-c:
+			d.BaseService.UnregistRendezvousChan(c)
+			return initMailbox()
+		case <-time.After(timeout):
+			return fmt.Errorf("MailboxService->InitUser: timeout")
+		case <-d.BaseService.GetCtx().Done():
+			return d.BaseService.GetCtx().Err()
 		}
 	}
-	d.BaseService.RegistRendezvousCallback(initMailbox)
-	dmsgLog.Logger.Debug("DmsgService->InitUser end")
-	return nil
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
