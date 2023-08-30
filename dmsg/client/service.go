@@ -148,13 +148,12 @@ func (d *DmsgService) Stop() error {
 func (d *DmsgService) InitUser(
 	userPubkeyData []byte,
 	getSigCallback dmsgClientCommon.GetSigCallback,
-	timeout time.Duration,
-) error {
+) (chan bool, error) {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
 	err := d.SubscribeSrcUser(userPubkey, getSigCallback)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	initMailbox := func() error {
@@ -243,21 +242,27 @@ func (d *DmsgService) InitUser(
 		}
 		return nil
 	}
-
-	if d.BaseService.GetIsRendezvous() {
-		return initMailbox()
-	} else {
-		c := d.BaseService.RegistRendezvousChan()
-		select {
-		case <-c:
-			d.BaseService.UnregistRendezvousChan(c)
-			return initMailbox()
-		case <-time.After(timeout):
-			return fmt.Errorf("MailboxService->InitUser: timeout")
-		case <-d.BaseService.GetCtx().Done():
-			return d.BaseService.GetCtx().Err()
+	done := make(chan bool)
+	go func() {
+		if d.BaseService.GetIsRendezvous() {
+			initMailbox()
+			done <- true
+		} else {
+			c := d.BaseService.RegistRendezvousChan()
+			select {
+			case <-c:
+				d.BaseService.UnregistRendezvousChan(c)
+				initMailbox()
+				done <- true
+				return
+			case <-d.BaseService.GetCtx().Done():
+				dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
+				return
+			}
 		}
-	}
+	}()
+	return done, nil
+
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
