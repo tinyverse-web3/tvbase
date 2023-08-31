@@ -109,7 +109,7 @@ func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl 
 func (d *Dkvs) Get(key string) ([]byte, []byte, uint64, uint64, []byte, error) {
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
-		Logger.Error(err)
+		Logger.Errorf("{key: %v, err: %s}", key, err.Error())
 		return nil, nil, 0, 0, nil, err
 	}
 
