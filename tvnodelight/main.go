@@ -96,18 +96,14 @@ func initMsgClient(
 		return sig, nil
 	}
 
-	done := make(chan any)
-	err = dmsgService.InitUser(srcPubkeyBytes, getSigCallback, done)
+	done, err := dmsgService.InitUser(srcPubkeyBytes, getSigCallback)
 	if err != nil {
 		return nil, nil, err
 	}
 	data := <-done
 	if data != nil {
-		err, ok := data.(error)
-		if ok || err != nil {
-			tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
-			return nil, nil, err
-		}
+		tvcLog.Errorf("initMsgClient: InitUser error: %v", err)
+		return nil, nil, err
 	}
 
 	return tvInfra, dmsgService, nil

@@ -88,7 +88,6 @@ func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, re
 	}
 
 	requestInfo.responseSignal <- pullCidResponse
-	delete(p.commicateInfoList, pullCidResponse.CID)
 	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: end")
 	return nil
 }
@@ -111,8 +110,9 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		}
 	}
 
-	if len(p.commicateInfoList) > 0 {
-		go p.cleanCommicateInfoList(30 * time.Second)
+	if timeout <= 0 {
+		customProtocol.Logger.Warnf("PullCidClientProtocol->Request: timeout <= 0")
+		return nil, nil
 	}
 
 	requestInfo := &clientCommicateInfo{
@@ -128,13 +128,9 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		return nil, err
 	}
 
-	if timeout <= 0 {
-		customProtocol.Logger.Warnf("PullCidClientProtocol->Request: timeout <= 0")
-		return nil, nil
-	}
-
 	select {
 	case responseObject := <-requestInfo.responseSignal:
+		delete(p.commicateInfoList, request.CID)
 		pullCidResponse, ok := responseObject.(*PullCidResponse)
 		if !ok {
 			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
@@ -151,15 +147,6 @@ func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, 
 		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
 		return nil, p.Ctx.Err()
 	}
-}
-
-func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration) {
-	for id, v := range p.commicateInfoList {
-		if time.Since(time.Unix(v.createTimestamp, 0)) > expiration {
-			delete(p.commicateInfoList, id)
-		}
-	}
-	customProtocol.Logger.Debug("PullCidClientProtocol->cleanCommicateInfoList: clean commicateInfoList")
 }
 
 // service
