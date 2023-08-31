@@ -68,7 +68,7 @@ func (p *PullCidClientProtocol) Init() error {
 	return nil
 }
 
-func (p *PullCidClientProtocol) Request(peerId string, pullcidRequest *PullCidRequest) (chan *PullCidResponse, error) {
+func (p *PullCidClientProtocol) Request(ctx context.Context, peerId string, pullcidRequest *PullCidRequest) (chan *PullCidResponse, error) {
 	log.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v", peerId, pullcidRequest)
 	_, err := cid.Decode(pullcidRequest.CID)
 	if err != nil {
@@ -100,6 +100,9 @@ func (p *PullCidClientProtocol) Request(peerId string, pullcidRequest *PullCidRe
 				return
 			}
 			ret <- response
+			return
+		case <-ctx.Done():
+			ret <- nil
 			return
 		case <-p.Ctx.Done():
 			ret <- nil

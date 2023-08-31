@@ -330,7 +330,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	pullCidResponseChan, err := pullCidProtocol.Request(peerId, &pullcid.PullCidRequest{
+	pullCidResponseChan, err := pullCidProtocol.Request(ctx, peerId, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
 		MaxCheckTime: 5 * time.Minute,
 	})
