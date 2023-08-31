@@ -14,7 +14,6 @@ type ClientHandle interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
 	SetService(service Service)
-	HandleResponse(request *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
 type ServerHandle interface {

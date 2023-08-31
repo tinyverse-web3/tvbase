@@ -39,14 +39,14 @@ func (adapter *CommonProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessa
 func (adapter *CommonProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	return nil, fmt.Errorf("CommonProtocolAdapter->InitRequest: not implemented")
+	return nil, nil
 }
 
 func (adapter *CommonProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	return nil, fmt.Errorf("CommonProtocolAdapter->InitRequest: not implemented")
+	return nil, nil
 }
 
 func (adapter *CommonProtocolAdapter) GetRequestBasicData(
@@ -78,13 +78,13 @@ func (adapter *CommonProtocolAdapter) SetResponseSig(
 
 func (adapter *CommonProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	return nil, nil, fmt.Errorf("CommonProtocolAdapter->CallRequestCallback: not implemented")
+	return nil, nil, nil
 }
 
 func (adapter *CommonProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	return nil, fmt.Errorf("CommonProtocolAdapter->CallResponseCallback: not implemented")
+	return nil, nil
 }
 
 func GetRetCode(dataList ...any) (*pb.RetCode, error) {

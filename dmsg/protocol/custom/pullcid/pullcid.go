@@ -27,12 +27,6 @@ var log = ipfsLog.Logger(LoggerName)
 const pullCidPID = "pullcid"
 const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
 
-type clientCommicateInfo struct {
-	data            any
-	responseSignal  chan any
-	createTimestamp int64
-}
-
 type serviceCommicateInfo struct {
 	data any
 }
@@ -53,7 +47,6 @@ type PullCidResponse struct {
 // client
 type PullCidClientProtocol struct {
 	customProtocol.CustomStreamClientProtocol
-	commicateInfoList map[string]*clientCommicateInfo
 }
 
 var pullCidClientProtocol *PullCidClientProtocol
@@ -72,99 +65,48 @@ func GetPullCidClientProtocol() (*PullCidClientProtocol, error) {
 
 func (p *PullCidClientProtocol) Init() error {
 	p.CustomStreamClientProtocol.Init(pullCidPID)
-	p.commicateInfoList = make(map[string]*clientCommicateInfo)
 	return nil
 }
 
-func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	log.Debugf("PullCidClientProtocol->HandleResponse: begin\nrequest: %v\nresponse: %v", request, response)
-	pullCidResponse := &PullCidResponse{
-		Status: tvIpfs.PinStatus_UNKNOW,
-	}
-	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
+func (p *PullCidClientProtocol) Request(peerId string, pullcidRequest *PullCidRequest) (chan *PullCidResponse, error) {
+	log.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v", peerId, pullcidRequest)
+	_, err := cid.Decode(pullcidRequest.CID)
 	if err != nil {
-		log.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
-		return err
-	}
-	requestInfo := p.commicateInfoList[pullCidResponse.CID]
-	if requestInfo == nil {
-		log.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
-	}
-
-	requestInfo.responseSignal <- pullCidResponse
-	delete(p.commicateInfoList, pullCidResponse.CID)
-	log.Debugf("PullCidClientProtocol->HandleResponse: end")
-	return nil
-}
-
-func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, options ...any) (*PullCidResponse, error) {
-	log.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v\noptions:%v", peerId, request, options)
-	_, err := cid.Decode(request.CID)
-	if err != nil {
-		log.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
+		log.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, pullcidRequest.CID)
 		return nil, err
 	}
 
-	var timeout time.Duration = 5 * time.Second
-	if len(options) > 0 {
-		var ok bool
-		timeout, ok = options[0].(time.Duration)
-		if !ok {
-			log.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
-			return nil, fmt.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
-		}
-	}
-
-	if len(p.commicateInfoList) > 0 {
-		go p.cleanCommicateInfoList(30 * time.Second)
-	}
-
-	requestInfo := &clientCommicateInfo{
-		data:            request,
-		createTimestamp: time.Now().UnixNano(),
-		responseSignal:  make(chan any),
-	}
-	p.commicateInfoList[request.CID] = requestInfo
-
-	_, _, err = p.CustomStreamClientProtocol.Request(peerId, request)
+	_, customProtocolRespChan, err := p.CustomStreamClientProtocol.Request(peerId, pullcidRequest)
 	if err != nil {
 		log.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err
 	}
 
-	if timeout <= 0 {
-		log.Warnf("PullCidClientProtocol->Request: timeout <= 0")
-		return nil, nil
-	}
-
-	select {
-	case responseObject := <-requestInfo.responseSignal:
-		pullCidResponse, ok := responseObject.(*PullCidResponse)
-		if !ok {
-			log.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
-			return nil, fmt.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
+	ret := make(chan *PullCidResponse)
+	go func() {
+		select {
+		case data := <-customProtocolRespChan:
+			customProtocolResponse, ok := data.(*pb.CustomProtocolRes)
+			if !ok {
+				log.Errorf("PullCidClientProtocol->Request: responseChan is not CustomProtocolRes")
+				ret <- nil
+				return
+			}
+			response := &PullCidResponse{}
+			err := p.CustomStreamClientProtocol.HandleResponse(customProtocolResponse, response)
+			if err != nil {
+				log.Errorf("PullCidClientProtocol->Request: CustomStreamClientProtocol.HandleResponse error: %v", err)
+				ret <- nil
+				return
+			}
+			ret <- response
+			return
+		case <-p.Ctx.Done():
+			ret <- nil
+			return
 		}
-		log.Debugf("PullCidClientProtocol->Request end")
-		return pullCidResponse, nil
-	case <-time.After(timeout):
-		delete(p.commicateInfoList, request.CID)
-		log.Debugf("PullCidClientProtocol->Request end: time.After(timeout)")
-		return nil, nil
-	case <-p.Ctx.Done():
-		delete(p.commicateInfoList, request.CID)
-		log.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
-		return nil, p.Ctx.Err()
-	}
-}
-
-func (p *PullCidClientProtocol) cleanCommicateInfoList(expiration time.Duration) {
-	for id, v := range p.commicateInfoList {
-		if time.Since(time.Unix(v.createTimestamp, 0)) > expiration {
-			delete(p.commicateInfoList, id)
-		}
-	}
-	log.Debug("PullCidClientProtocol->cleanCommicateInfoList: clean commicateInfoList")
+	}()
+	return ret, nil
 }
 
 // service

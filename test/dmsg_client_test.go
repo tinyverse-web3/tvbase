@@ -318,7 +318,7 @@ func TestPullCID(t *testing.T) {
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	cancel()
+	defer cancel()
 	content, _, err := tvIpfs.IpfsBlockGet(CID_RANDOM_1K, timeoutCtx)
 	if err != nil {
 		return
@@ -330,7 +330,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	pullCidResponse, err := pullCidProtocol.Request(peerId, &pullcid.PullCidRequest{
+	pullCidResponseChan, err := pullCidProtocol.Request(peerId, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
 		MaxCheckTime: 5 * time.Minute,
 	})
@@ -338,26 +338,37 @@ func TestPullCID(t *testing.T) {
 		testLog.Errorf("pullCidProtocol.Request error: %v", err)
 		return
 	}
-	testLog.Infof("pullCidResponse: %v", pullCidResponse)
 
-	if pullCidResponse == nil {
-		testLog.Errorf("pullCidResponse is nil")
-		return
-	}
-	switch pullCidResponse.Status {
-	case tvIpfs.PinStatus_ERR:
-		// TODO: handle error, retry pullcid
-		testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponse)
-	case tvIpfs.PinStatus_TIMEOUT:
-		// TODO: handle timeout, retry pullcid
-		testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponse)
-	case tvIpfs.PinStatus_PINNED:
-		// TODO: handle pinned, record pinned
-		testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponse)
-	default:
-		// TODO: handle error, retry pullcid
-		testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponse)
-	}
+	go func() {
+		timeout := 30 * time.Second
+		select {
+		case pullCidResponse := <-pullCidResponseChan:
+			if pullCidResponse == nil {
+				testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
+				return
+			}
+			switch pullCidResponse.Status {
+			case tvIpfs.PinStatus_ERR:
+				testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
+			case tvIpfs.PinStatus_TIMEOUT:
+				testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
+			case tvIpfs.PinStatus_PINNED:
+				testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
+			default:
+				testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
+			}
+			testLog.Debugf("PullCidClientProtocol->Request end")
+			return
+		case <-time.After(timeout):
+			testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
+			return
+		case <-ctx.Done():
+			testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
+			return
+		}
+	}()
+
+	<-ctx.Done()
 }
 
 func TesTinverseInfrasture(t *testing.T) {

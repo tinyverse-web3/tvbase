@@ -255,32 +255,6 @@ func (d *CustomProtocolService) OnCustomResponse(
 		"CustomProtocolService->OnCustomResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
-	request, ok := requestProtoData.(*pb.CustomProtocolReq)
-	if !ok {
-		log.Debugf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
-		// return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentReq")
-	}
-	response, ok := responseProtoData.(*pb.CustomProtocolRes)
-	if !ok {
-		log.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentRes")
-		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: fail to convert requestProtoData to *pb.CustomContentRes")
-	}
-
-	customProtocolInfo := d.clientStreamProtocolList[response.PID]
-	if customProtocolInfo == nil {
-		log.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo is nil, response: %+v", response)
-		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo is nil, response: %+v", response)
-	}
-	if customProtocolInfo.Handle == nil {
-		log.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo.Client is nil")
-		return nil, fmt.Errorf("CustomProtocolService->OnCustomResponse: customProtocolInfo.Client is nil")
-	}
-
-	err := customProtocolInfo.Handle.HandleResponse(request, response)
-	if err != nil {
-		log.Errorf("CustomProtocolService->OnCustomResponse: Client.HandleResponse error: %v", err)
-		return nil, err
-	}
 	return nil, nil
 }
 
