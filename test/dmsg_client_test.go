@@ -317,7 +317,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	pullCidResponseChan, err := pullCidProtocol.Request(bootPeerID, &pullcid.PullCidRequest{
+	pullCidResponseChan, err := pullCidProtocol.Request(ctx, bootPeerID, &pullcid.PullCidRequest{
 		CID:          CID_RANDOM_1K,
 		MaxCheckTime: 5 * time.Minute,
 	})
