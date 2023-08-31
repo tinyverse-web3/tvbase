@@ -7,14 +7,13 @@ import (
 )
 
 type ClientService interface {
-	RequestCustomStreamProtocol(customProtocolId string, peerId string, content []byte) error
+	RequestCustomStreamProtocol(customProtocolId string, peerId string, content []byte) (*pb.CustomProtocolReq, chan any, error)
 }
 
 type CustomStreamProtocolClient interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
 	SetService(service ClientService)
-	HandleResponse(request *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
 }
 
 type CustomPubsubProtocolClient interface {

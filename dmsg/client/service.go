@@ -934,32 +934,6 @@ func (d *DmsgService) OnCustomStreamProtocolRequest(requestProtoData protoreflec
 }
 
 func (d *DmsgService) OnCustomStreamProtocolResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
-	request, ok := requestProtoData.(*pb.CustomProtocolReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", requestProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", requestProtoData)
-	}
-	response, ok := responseProtoData.(*pb.CustomProtocolRes)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: cannot convert %v to *pb.CustomContentRes", responseProtoData)
-	}
-
-	customProtocolInfo := d.customStreamProtocolInfoList[response.PID]
-	if customProtocolInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", response.PID)
-		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: customProtocolInfo(%v) is nil", customProtocolInfo)
-	}
-	if customProtocolInfo.Client == nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: Client is nil")
-		return nil, fmt.Errorf("DmsgService->OnCustomStreamProtocolResponse: Client is nil")
-	}
-
-	err := customProtocolInfo.Client.HandleResponse(request, response)
-	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->OnCustomStreamProtocolResponse: HandleResponse error: %v", err)
-		return nil, err
-	}
 	return nil, nil
 }
 
@@ -1036,19 +1010,23 @@ func (d *DmsgService) PublishProtocol(ctx context.Context, pubkey string, pid pb
 }
 
 // cmd protocol
-func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid string, content []byte) error {
+func (d *DmsgService) RequestCustomStreamProtocol(
+	peerIdEncode string,
+	pid string,
+	content []byte,
+) (*pb.CustomProtocolReq, chan any, error) {
 	protocolInfo := d.customStreamProtocolInfoList[pid]
 	if protocolInfo == nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", pid)
-		return fmt.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", pid)
+		return nil, nil, fmt.Errorf("DmsgService->RequestCustomStreamProtocol: protocol %s is not exist", pid)
 	}
 
 	peerId, err := peer.Decode(peerIdEncode)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v", err)
-		return err
+		return nil, nil, err
 	}
-	_, _, err = protocolInfo.Protocol.Request(
+	request, responseChan, err := protocolInfo.Protocol.Request(
 		peerId,
 		d.SrcUserInfo.UserKey.PubkeyHex,
 		pid,
@@ -1056,9 +1034,9 @@ func (d *DmsgService) RequestCustomStreamProtocol(peerIdEncode string, pid strin
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
 			err, peerId, d.SrcUserInfo.UserKey.PubkeyHex, content)
-		return err
+		return nil, nil, err
 	}
-	return nil
+	return request.(*pb.CustomProtocolReq), responseChan, nil
 }
 
 func (d *DmsgService) RegistCustomStreamProtocol(client customProtocol.CustomStreamProtocolClient) error {

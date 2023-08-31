@@ -22,12 +22,6 @@ import (
 const pullCidPID = "pullcid"
 const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
 
-type clientCommicateInfo struct {
-	data            any
-	responseSignal  chan any
-	createTimestamp int64
-}
-
 type serviceCommicateInfo struct {
 	data any
 }
@@ -48,7 +42,6 @@ type PullCidResponse struct {
 // client
 type PullCidClientProtocol struct {
 	customProtocol.CustomStreamClientProtocol
-	commicateInfoList map[string]*clientCommicateInfo
 }
 
 var pullCidClientProtocol *PullCidClientProtocol
@@ -67,86 +60,48 @@ func GetPullCidClientProtocol() (*PullCidClientProtocol, error) {
 
 func (p *PullCidClientProtocol) Init() error {
 	p.CustomStreamClientProtocol.Init(pullCidPID)
-	p.commicateInfoList = make(map[string]*clientCommicateInfo)
 	return nil
 }
 
-func (p *PullCidClientProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: begin\nrequest: %v\nresponse: %v", request, response)
-	pullCidResponse := &PullCidResponse{
-		Status: tvIpfs.PinStatus_UNKNOW,
-	}
-	err := p.CustomStreamClientProtocol.HandleResponse(response, pullCidResponse)
+func (p *PullCidClientProtocol) Request(peerId string, pullcidRequest *PullCidRequest) (chan *PullCidResponse, error) {
+	customProtocol.Logger.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v", peerId, pullcidRequest)
+	_, err := cid.Decode(pullcidRequest.CID)
 	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: err: %v", err)
-		return err
-	}
-	requestInfo := p.commicateInfoList[pullCidResponse.CID]
-	if requestInfo == nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidClientProtocol->HandleResponse: requestInfo is nil, cid: %s", pullCidResponse.CID)
-	}
-
-	requestInfo.responseSignal <- pullCidResponse
-	customProtocol.Logger.Debugf("PullCidClientProtocol->HandleResponse: end")
-	return nil
-}
-
-func (p *PullCidClientProtocol) Request(peerId string, request *PullCidRequest, options ...any) (*PullCidResponse, error) {
-	customProtocol.Logger.Debugf("PullCidClientProtocol->Request begin:\npeerId: %s \nrequest: %v\noptions:%v", peerId, request, options)
-	_, err := cid.Decode(request.CID)
-	if err != nil {
-		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, request.CID)
+		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: cid.Decode: err: %v, cid: %s", err, pullcidRequest.CID)
 		return nil, err
 	}
 
-	var timeout time.Duration = 5 * time.Second
-	if len(options) > 0 {
-		var ok bool
-		timeout, ok = options[0].(time.Duration)
-		if !ok {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
-			return nil, fmt.Errorf("PullCidClientProtocol->Request: timeout is not time.Duration")
-		}
-	}
-
-	if timeout <= 0 {
-		customProtocol.Logger.Warnf("PullCidClientProtocol->Request: timeout <= 0")
-		return nil, nil
-	}
-
-	requestInfo := &clientCommicateInfo{
-		data:            request,
-		createTimestamp: time.Now().Unix(),
-		responseSignal:  make(chan any),
-	}
-	p.commicateInfoList[request.CID] = requestInfo
-
-	err = p.CustomStreamClientProtocol.Request(peerId, request)
+	_, customProtocolRespChan, err := p.CustomStreamClientProtocol.Request(peerId, pullcidRequest)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidClientProtocol->Request: err: %v", err)
 		return nil, err
 	}
 
-	select {
-	case responseObject := <-requestInfo.responseSignal:
-		delete(p.commicateInfoList, request.CID)
-		pullCidResponse, ok := responseObject.(*PullCidResponse)
-		if !ok {
-			customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
-			return nil, fmt.Errorf("PullCidClientProtocol->Request: responseData is not PullCidResponse")
+	ret := make(chan *PullCidResponse)
+	go func() {
+		select {
+		case data := <-customProtocolRespChan:
+			customProtocolResponse, ok := data.(*pb.CustomProtocolRes)
+			if !ok {
+				customProtocol.Logger.Errorf("PullCidClientProtocol->Request: responseChan is not CustomProtocolRes")
+				ret <- nil
+				return
+			}
+			response := &PullCidResponse{}
+			err := p.CustomStreamClientProtocol.HandleResponse(customProtocolResponse, response)
+			if err != nil {
+				customProtocol.Logger.Errorf("PullCidClientProtocol->Request: CustomStreamClientProtocol.HandleResponse error: %v", err)
+				ret <- nil
+				return
+			}
+			ret <- response
+			return
+		case <-p.Ctx.Done():
+			ret <- nil
+			return
 		}
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end")
-		return pullCidResponse, nil
-	case <-time.After(timeout):
-		delete(p.commicateInfoList, request.CID)
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: time.After(timeout)")
-		return nil, nil
-	case <-p.Ctx.Done():
-		delete(p.commicateInfoList, request.CID)
-		customProtocol.Logger.Debugf("PullCidClientProtocol->Request end: p.Ctx.Done()")
-		return nil, p.Ctx.Err()
-	}
+	}()
+	return ret, nil
 }
 
 // service

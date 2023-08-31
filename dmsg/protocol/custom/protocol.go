@@ -88,34 +88,34 @@ func (p *CustomStreamClientProtocol) HandleResponse(protocolResponse *pb.CustomP
 	return nil
 }
 
-func (p *CustomStreamClientProtocol) Request(peerId string, data any) error {
+func (p *CustomStreamClientProtocol) Request(peerId string, data any) (*pb.CustomProtocolReq, chan any, error) {
 	if p.Ctx == nil {
 		Logger.Errorf("CustomStreamClientProtocol->Request: context is nil")
-		return fmt.Errorf("CustomStreamClientProtocol->Request: context is nil")
+		return nil, nil, fmt.Errorf("CustomStreamClientProtocol->Request: context is nil")
 	}
 
 	if p.PID == "" {
 		Logger.Errorf("CustomStreamClientProtocol->Request: customProtocolID is empty")
-		return fmt.Errorf("CustomStreamClientProtocol->Request: customProtocolID is empty")
+		return nil, nil, fmt.Errorf("CustomStreamClientProtocol->Request: customProtocolID is empty")
 	}
 	if p.Service == nil {
 		Logger.Errorf("CustomStreamClientProtocol->Request: client service is nil")
-		return fmt.Errorf("CustomStreamClientProtocol->Request: client service is nil")
+		return nil, nil, fmt.Errorf("CustomStreamClientProtocol->Request: client service is nil")
 	}
 
 	content, err := p.Marshal(data)
 	if err != nil {
 		Logger.Errorf("CustomStreamProtocol->Request: marshal error: %v", err)
-		return fmt.Errorf("CustomStreamProtocol->Request: marshal error: %v", err)
+		return nil, nil, fmt.Errorf("CustomStreamProtocol->Request: marshal error: %v", err)
 	}
 
-	err = p.Service.RequestCustomStreamProtocol(peerId, p.PID, content)
+	request, responseChan, err := p.Service.RequestCustomStreamProtocol(peerId, p.PID, content)
 	if err != nil {
 		Logger.Errorf("CustomStreamProtocol->Request: %v", err)
-		return err
+		return nil, nil, err
 	}
 
-	return nil
+	return request, responseChan, nil
 }
 
 // service
