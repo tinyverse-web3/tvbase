@@ -496,7 +496,7 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 
 	// 启动goroutine执行readRecordFromLocal函数
 	go func() {
-		result, err := d.readRecordFromLocal(key) //从网络中读取
+		result, err := d.readRecordFromLocal(key) //从本地读取
 		localCh <- struct {
 			Record *pb.DkvsRecord
 			Error  error
@@ -506,8 +506,8 @@ func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
 	select {
 	case res := <-netCh:
 		return res.Record, res.Error
-	case <-time.After(5 * time.Second):
-		Logger.Debugf("Due to the timeout (>5 seconds) of reading from dht, the local data is directly returned): {key: %s}", key)
+	case <-time.After(25 * time.Second):
+		Logger.Debugf("Due to the timeout (>25 seconds) of reading from dht, the local data is directly returned): {key: %s}", key)
 		res := <-localCh
 		return res.Record, res.Error
 	}
