@@ -300,17 +300,17 @@ func TestPullCID(t *testing.T) {
 		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
 
 	*/
-	CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
-	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
+	// CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
+	CID_RANDOM_10M := "QmS6DqJuC3EL5TTrChAfEJvjddYVrM2X3vA3BXVNhXo4st"
 	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	content, _, err := tvIpfs.IpfsBlockGet(CID_RANDOM_1K, timeoutCtx)
+	info, _, err := tvIpfs.IpfsObjectStat(CID_RANDOM_10M, timeoutCtx)
 	if err != nil {
 		return
 	}
-	contentSize := len(content)
+	contentSize := (*info)[tvIpfs.ObjectStatusField_CumulativeSize]
 	if contentSize >= 100*1024*1024 {
 		// TODO over 100MB need to be split using CAR,, implement it
 		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
@@ -318,7 +318,7 @@ func TestPullCID(t *testing.T) {
 	}
 
 	pullCidResponseChan, err := pullCidProtocol.Request(ctx, bootPeerID, &pullcid.PullCidRequest{
-		CID:          CID_RANDOM_1K,
+		CID:          CID_RANDOM_10M,
 		MaxCheckTime: 5 * time.Minute,
 	})
 	if err != nil {
