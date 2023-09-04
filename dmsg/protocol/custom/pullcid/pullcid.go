@@ -27,21 +27,27 @@ var log = ipfsLog.Logger(LoggerName)
 const pullCidPID = "pullcid"
 const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
 
-type serviceCommicateInfo struct {
-	data any
-}
-
 type PullCidRequest struct {
 	CID                 string
 	MaxCheckTime        time.Duration
 	StorageProviderList []string
 }
 
+type ReqStatus int
+
+const (
+	ReqStatus_WORK ReqStatus = iota
+	ReqStatus_ERR
+	ReqStatus_FINISH
+)
+
 type PullCidResponse struct {
-	CID            string
-	CidContentSize int64
-	ElapsedTime    time.Duration
-	Status         tvIpfs.PidStatus
+	CID         string
+	ContentSize int64
+	ElapsedTime time.Duration
+	PinStatus   tvIpfs.PidStatus
+	Status      ReqStatus
+	Result      string
 }
 
 // client
@@ -101,10 +107,10 @@ func (p *PullCidClientProtocol) Request(ctx context.Context, peerId string, pull
 			}
 			ret <- response
 			return
-		case <-ctx.Done():
+		case <-p.Ctx.Done():
 			ret <- nil
 			return
-		case <-p.Ctx.Done():
+		case <-ctx.Done():
 			ret <- nil
 			return
 		}
@@ -116,11 +122,11 @@ func (p *PullCidClientProtocol) Request(ctx context.Context, peerId string, pull
 type PullCidServiceProtocol struct {
 	PriKey crypto.PrivKey
 	customProtocol.CustomStreamServiceProtocol
-	commicateInfoList      map[string]*serviceCommicateInfo
-	commicateInfoListMutex sync.Mutex
-	tvBaseService          tvbaseCommon.TvBaseService
-	ipfsProviderList       map[string]*ipfsProviderList
-	storageInfoList        *map[string]any
+	responseList      map[string]*PullCidResponse
+	responseListMutex sync.Mutex
+	tvBaseService     tvbaseCommon.TvBaseService
+	ipfsProviderList  map[string]*ipfsProviderList
+	storageInfoList   *map[string]any
 }
 
 type ipfsUpload func(providerName string, cid string) error
@@ -167,6 +173,10 @@ func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*PullC
 }
 
 func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+	err := tvIpfs.CheckIpfsCmd()
+	if err != nil {
+		return err
+	}
 	if p.PriKey == nil {
 		prikey, err := dkvs.GetPriKeyBySeed(pullCidPID)
 		if err != nil {
@@ -178,7 +188,7 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 	}
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
 	p.tvBaseService = tvBaseService
-	p.commicateInfoList = make(map[string]*serviceCommicateInfo)
+	p.responseList = make(map[string]*PullCidResponse)
 	p.storageInfoList = &map[string]any{}
 	p.ipfsProviderList = make(map[string]*ipfsProviderList)
 	p.initIpfsProviderTask(NftProvider, NftApiKey, NftPostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
@@ -193,13 +203,26 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	if err != nil {
 		return err
 	}
-	err = tvIpfs.CheckIpfsCmd()
-	if err != nil {
-		return err
-	}
-	if p.commicateInfoList[pullCidRequest.CID] != nil {
+	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidRequest: %v", pullCidRequest)
+
+	p.responseListMutex.Lock()
+	resp := p.responseList[pullCidRequest.CID]
+	p.responseListMutex.Unlock()
+	if resp != nil {
 		return nil
 	}
+
+	resp = &PullCidResponse{
+		CID:         pullCidRequest.CID,
+		ContentSize: 0,
+		ElapsedTime: 0,
+		PinStatus:   tvIpfs.PinStatus_UNKNOW,
+		Status:      ReqStatus_WORK,
+		Result:      "",
+	}
+	p.responseListMutex.Lock()
+	p.responseList[pullCidRequest.CID] = resp
+	p.responseListMutex.Unlock()
 
 	maxCheckTime := pullCidRequest.MaxCheckTime
 	if maxCheckTime <= 0 {
@@ -213,30 +236,20 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		maxCheckTime = 3 * time.Hour
 	}
 
-	timer := time.NewTimer(500 * time.Millisecond)
-	go func() {
-		cidContentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
-		if err != nil {
-			log.Errorf("PullCidServiceProtocol->HandleRequest: err: %v", err)
-			return
-		}
+	contentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
+	if err != nil {
+		log.Errorf("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject error: %v", err)
+		resp.Status = ReqStatus_ERR
+		resp.Result = err.Error()
+	} else {
+		resp.Status = ReqStatus_FINISH
+		resp.Result = "success"
+	}
+	resp.ContentSize = contentSize
+	resp.ElapsedTime = elapsedTime
+	resp.PinStatus = pinStatus
 
-		pullCidResponse := &PullCidResponse{
-			CID:            pullCidRequest.CID,
-			CidContentSize: cidContentSize,
-			ElapsedTime:    elapsedTime,
-			Status:         pinStatus,
-		}
-		p.commicateInfoListMutex.Lock()
-		defer p.commicateInfoListMutex.Unlock()
-		p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
-			data: pullCidResponse,
-		}
-		log.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v",
-			pullCidRequest.CID, pullCidResponse)
-	}()
-
-	<-timer.C
+	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", resp)
 	log.Debugf("PullCidServiceProtocol->HandleRequest end")
 	return nil
 }
@@ -246,37 +259,33 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	pullCidRequest := &PullCidRequest{}
 	err := p.CustomStreamServiceProtocol.HandleRequest(request, pullCidRequest)
 	if err != nil {
-		log.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
+	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidRequest: %v", pullCidRequest)
 
-	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
-	if commicateInfo == nil {
-		log.Debugf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
-		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
-	}
-
-	pullCidResponse, ok := commicateInfo.data.(*PullCidResponse)
-	if !ok {
-		log.Infof("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidResponse.CID)
-		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil, cid: %s", pullCidRequest.CID)
+	pullCidResponse := p.responseList[pullCidRequest.CID]
+	if pullCidResponse == nil {
+		log.Debugf("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil")
+		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: pullCidResponse is nil")
 	}
 
 	err = p.CustomStreamServiceProtocol.HandleResponse(response, pullCidResponse)
 	if err != nil {
-		log.Errorf("PullCidServiceProtocol->HandleResponse: err: %v", err)
 		return err
 	}
+	log.Debugf("PullCidServiceProtocol->HandleResponse: pullCidResponse: %v", pullCidResponse)
 
-	switch pullCidResponse.Status {
-	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_TIMEOUT:
-		delete(p.commicateInfoList, pullCidRequest.CID)
+	switch pullCidResponse.PinStatus {
+	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED, tvIpfs.PinStatus_TIMEOUT:
+		p.responseListMutex.Lock()
+		delete(p.responseList, pullCidRequest.CID)
+		p.responseListMutex.Unlock()
 	default:
-		log.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
-			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
+		log.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v",
+			pullCidRequest.CID, pullCidResponse)
 	}
 
-	if pullCidResponse.Status == tvIpfs.PinStatus_PINNED {
+	if pullCidResponse.PinStatus == tvIpfs.PinStatus_PINNED || pullCidResponse.PinStatus == tvIpfs.PinStatus_ALREADY_PINNED {
 		err = p.uploadContentToProvider(pullCidResponse.CID, pullCidRequest.StorageProviderList)
 		if err != nil {
 			return err

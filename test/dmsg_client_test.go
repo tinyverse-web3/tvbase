@@ -347,7 +347,7 @@ func TestPullCID(t *testing.T) {
 				testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
 				return
 			}
-			switch pullCidResponse.Status {
+			switch pullCidResponse.PinStatus {
 			case tvIpfs.PinStatus_ERR:
 				testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
 			case tvIpfs.PinStatus_TIMEOUT:
