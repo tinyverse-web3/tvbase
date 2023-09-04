@@ -319,11 +319,11 @@ func TestPullCID(t *testing.T) {
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	content, _, err := tvIpfs.IpfsBlockGet(CID_RANDOM_1K, timeoutCtx)
+	info, _, err := tvIpfs.IpfsObjectStat(CID_RANDOM_1K, timeoutCtx)
 	if err != nil {
 		return
 	}
-	contentSize := len(content)
+	contentSize := (*info)[tvIpfs.ObjectStatusField_CumulativeSize]
 	if contentSize >= 100*1024*1024 {
 		// TODO over 100MB need to be split using CAR,, implement it
 		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
