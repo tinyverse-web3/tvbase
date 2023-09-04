@@ -313,13 +313,17 @@ func TestPullCID(t *testing.T) {
 		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
 	*/
 
-	CID_RANDOM_1K := "QmdGryWJdj2pDYKNJh59cQJjaQ3Eddn8sfCVoCXS4Y639Y"
-	// CID_RANDOM_10M := "QmZPNxPj7t4pJifCRXgbZnBjJmYfcVTjHH2rSx9RXkdqak"
-	// CID_REMOTE_107_1k := "QmZ8wT2uKuQ7gv83TRwLHsqi2zDJTvB6SqKuDxkgLtYWDo"
+	CID_RANDOM_1K := "QmfTpubWPxpiWy8LDi3XKKgirpJQqkobhxvHR1UVabkezz"
+	CID_RANDOM_1M := "QmadujPGectw6pm7Sx9McePenrUohpLfzE4FxhnzHCM6vS"
+	CID_RANDOM_10M := "QmVa9N59PRDeqTSV6L3wRTMDfU5vycviBky41q6aGyJZmX"
+	cid := CID_RANDOM_1K
+	cid = CID_RANDOM_1M
+	cid = CID_RANDOM_10M
+	cid = CID_RANDOM_10M
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	info, _, err := tvIpfs.IpfsObjectStat(CID_RANDOM_1K, timeoutCtx)
+	info, _, err := tvIpfs.IpfsObjectStat(cid, timeoutCtx)
 	if err != nil {
 		return
 	}
@@ -331,8 +335,8 @@ func TestPullCID(t *testing.T) {
 	}
 
 	pullCidResponseChan, err := pullCidProtocol.Request(ctx, peerId, &pullcid.PullCidRequest{
-		CID:          CID_RANDOM_1K,
-		MaxCheckTime: 5 * time.Minute,
+		CID:          cid,
+		MaxCheckTime: 30 * time.Minute,
 	})
 	if err != nil {
 		testLog.Errorf("pullCidProtocol.Request error: %v", err)
@@ -340,9 +344,12 @@ func TestPullCID(t *testing.T) {
 	}
 
 	go func() {
-		timeout := 30 * time.Second
+		timeout := 300 * time.Second
+		startTime := time.Now()
 		select {
 		case pullCidResponse := <-pullCidResponseChan:
+			elapsed := time.Since(startTime)
+			testLog.Debugf("PullCidClientProtocol->Request: elapsed time: %v", elapsed.Seconds())
 			if pullCidResponse == nil {
 				testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
 				return
