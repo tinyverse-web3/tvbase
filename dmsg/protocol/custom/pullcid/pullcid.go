@@ -30,6 +30,7 @@ const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs01234567890
 type PullCidRequest struct {
 	CID                 string
 	MaxCheckTime        time.Duration
+	IsSync              bool
 	StorageProviderList []string
 }
 
@@ -48,6 +49,7 @@ type PullCidResponse struct {
 	PinStatus   tvIpfs.PidStatus
 	Status      ReqStatus
 	Result      string
+	done        chan bool
 }
 
 // client
