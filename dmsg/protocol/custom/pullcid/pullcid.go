@@ -31,12 +31,12 @@ type serviceCommicateInfo struct {
 	resp               *PullCidResponse
 	done               chan any
 	concurrentReqCount int
+	concurrentReqMutex *sync.Mutex
 }
 
 type PullCidRequest struct {
 	CID                 string
 	MaxCheckTime        time.Duration
-	IsSync              bool
 	StorageProviderList []string
 }
 
@@ -45,6 +45,7 @@ type ReqStatus int
 const (
 	ReqStatus_WORK ReqStatus = iota
 	ReqStatus_ERR
+	ReqStatus_TIMEOUT
 	ReqStatus_FINISH
 )
 
@@ -130,7 +131,7 @@ type PullCidServiceProtocol struct {
 	PriKey crypto.PrivKey
 	customProtocol.CustomStreamServiceProtocol
 	commicateInfoList      map[string]*serviceCommicateInfo
-	commicateInfoListMutex sync.Mutex
+	commicateInfoListMutex sync.RWMutex
 	tvBaseService          tvbaseCommon.TvBaseService
 	ipfsProviderList       map[string]*ipfsProviderList
 	storageInfoList        *map[string]any
@@ -212,34 +213,29 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	}
 	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidRequest: %v", pullCidRequest)
 
-	p.commicateInfoListMutex.Lock()
-	info := p.commicateInfoList[pullCidRequest.CID]
-	if info != nil {
-		info.concurrentReqCount++
-		p.commicateInfoListMutex.Unlock()
-		if pullCidRequest.IsSync {
-			<-info.done
+	const maxReqCount = 1000
+	checkReqCount := func() bool {
+		p.commicateInfoListMutex.Lock()
+		defer p.commicateInfoListMutex.Unlock()
+		if len(p.commicateInfoList) > maxReqCount {
+			info := &serviceCommicateInfo{
+				resp: &PullCidResponse{
+					CID:         pullCidRequest.CID,
+					ContentSize: 0,
+					ElapsedTime: 0,
+					PinStatus:   tvIpfs.PinStatus_UNKNOW,
+					Status:      ReqStatus_ERR,
+					Result:      "too many request",
+				},
+			}
+			p.commicateInfoList[pullCidRequest.CID] = info
+			return false
 		}
+		return true
+	}
+	if checkReqCount() {
 		return nil
 	}
-	p.commicateInfoListMutex.Unlock()
-
-	info = &serviceCommicateInfo{
-		resp: &PullCidResponse{
-			CID:         pullCidRequest.CID,
-			ContentSize: 0,
-			ElapsedTime: 0,
-			PinStatus:   tvIpfs.PinStatus_UNKNOW,
-			Status:      ReqStatus_WORK,
-			Result:      "",
-		},
-		done:               make(chan any),
-		concurrentReqCount: 1,
-	}
-
-	p.commicateInfoListMutex.Lock()
-	p.commicateInfoList[pullCidRequest.CID] = info
-	p.commicateInfoListMutex.Unlock()
 
 	maxCheckTime := pullCidRequest.MaxCheckTime
 	if maxCheckTime <= 0 {
@@ -253,26 +249,87 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 		maxCheckTime = 3 * time.Hour
 	}
 
+	p.commicateInfoListMutex.RLock()
+	info := p.commicateInfoList[pullCidRequest.CID]
+	p.commicateInfoListMutex.RUnlock()
+
+	if info != nil {
+		info.concurrentReqMutex.Lock()
+		info.concurrentReqCount++
+		info.concurrentReqMutex.Unlock()
+		select {
+		case <-info.done:
+		case <-time.After(maxCheckTime):
+			info.concurrentReqMutex.Lock()
+			info.concurrentReqCount--
+			info.concurrentReqMutex.Unlock()
+		}
+		return nil
+	}
+
+	info = &serviceCommicateInfo{
+		resp: &PullCidResponse{
+			CID:         pullCidRequest.CID,
+			ContentSize: 0,
+			ElapsedTime: 0,
+			PinStatus:   tvIpfs.PinStatus_UNKNOW,
+			Status:      ReqStatus_WORK,
+			Result:      "",
+		},
+		done:               make(chan any),
+		concurrentReqCount: 1,
+		concurrentReqMutex: &sync.Mutex{},
+	}
+
+	p.commicateInfoListMutex.Lock()
+	p.commicateInfoList[pullCidRequest.CID] = info
+	p.commicateInfoListMutex.Unlock()
+
 	execTask := func() {
 		contentSize, elapsedTime, pinStatus, err := tvIpfs.IpfsGetObject(pullCidRequest.CID, p.Ctx, maxCheckTime)
-		if err != nil {
-			log.Errorf("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject error: %v", err)
-			info.resp.Status = ReqStatus_ERR
-			info.resp.Result = err.Error()
-		} else {
-			info.resp.Status = ReqStatus_FINISH
-			info.resp.Result = "success"
-		}
 		info.resp.ContentSize = contentSize
 		info.resp.ElapsedTime = elapsedTime
 		info.resp.PinStatus = pinStatus
+
+		switch info.resp.PinStatus {
+		case tvIpfs.PinStatus_ERR:
+			log.Errorf("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject error: %v", err)
+			info.resp.Status = ReqStatus_ERR
+			if err != nil {
+				info.resp.Result = err.Error()
+			} else {
+				info.resp.Result = "unknow ipfs error"
+			}
+		case tvIpfs.PinStatus_TIMEOUT:
+			info.resp.Status = ReqStatus_TIMEOUT
+			info.resp.Result = "error ipfs pin status: timeout"
+		case tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED:
+			info.resp.Status = ReqStatus_FINISH
+			info.resp.Result = "success"
+		case tvIpfs.PinStatus_UNKNOW:
+			// never happen
+			log.Error("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject Unknow")
+			info.resp.Status = ReqStatus_ERR
+			info.resp.Result = "error ipfs pin status: unknown"
+		case tvIpfs.PinStatus_INIT:
+			// never happen
+			log.Debug("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject Init")
+			info.resp.Status = ReqStatus_ERR
+			info.resp.Result = "error ipfs pin status: init"
+		case tvIpfs.PinStatus_WORK:
+			// never happen
+			log.Debug("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject Work")
+			info.resp.Status = ReqStatus_ERR
+			info.resp.Result = "error ipfs pin status: work"
+		default:
+			// never happen
+			log.Error("PullCidServiceProtocol->HandleRequest: tvIpfs.IpfsGetObject default")
+			info.resp.Status = ReqStatus_ERR
+			info.resp.Result = fmt.Errorf("error ipfs pin status: %v", pinStatus).Error()
+		}
 	}
 
-	if pullCidRequest.IsSync {
-		execTask()
-	} else {
-		go execTask()
-	}
+	execTask()
 
 	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidResponse: %v", info)
 	log.Debugf("PullCidServiceProtocol->HandleRequest end")
@@ -288,7 +345,9 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 	log.Debugf("PullCidServiceProtocol->HandleRequest: pullCidRequest: %v", pullCidRequest)
 
+	p.commicateInfoListMutex.RLock()
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
+	p.commicateInfoListMutex.RUnlock()
 	if commicateInfo == nil {
 		log.Debugf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil")
 		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: commicateInfo is nil")
@@ -300,32 +359,31 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 	log.Debugf("PullCidServiceProtocol->HandleResponse: pullCidResponse: %v", commicateInfo.resp)
 
-	if commicateInfo.resp.Status == ReqStatus_FINISH || commicateInfo.resp.Status == ReqStatus_ERR {
-		switch commicateInfo.resp.PinStatus {
-		case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED, tvIpfs.PinStatus_TIMEOUT:
-			if commicateInfo.resp.PinStatus == tvIpfs.PinStatus_PINNED || commicateInfo.resp.PinStatus == tvIpfs.PinStatus_ALREADY_PINNED {
-				err = p.uploadContentToProvider(commicateInfo.resp.CID, pullCidRequest.StorageProviderList)
-				if err != nil {
-					return err
-				}
-				err = p.saveCidInfoToDkvs(commicateInfo.resp.CID)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		p.commicateInfoListMutex.Lock()
-		commicateInfo.concurrentReqCount--
-		if commicateInfo.concurrentReqCount == 0 {
-			delete(p.commicateInfoList, pullCidRequest.CID)
-		}
-		p.commicateInfoListMutex.Unlock()
+	// exec ipfs pin operation is finished
+	if commicateInfo.resp.Status == ReqStatus_FINISH || commicateInfo.resp.Status == ReqStatus_ERR || commicateInfo.resp.Status == ReqStatus_TIMEOUT {
+		commicateInfo.concurrentReqMutex.Lock()
 		for i := 0; i < commicateInfo.concurrentReqCount; i++ {
 			select {
 			case commicateInfo.done <- commicateInfo.resp:
 			default:
 				log.Debugf("PullCidServiceProtocol->HandleResponse: commicateInfo.done is full")
+			}
+		}
+		commicateInfo.concurrentReqMutex.Unlock()
+
+		p.commicateInfoListMutex.Lock()
+		delete(p.commicateInfoList, pullCidRequest.CID)
+		p.commicateInfoListMutex.Unlock()
+
+		switch commicateInfo.resp.PinStatus {
+		case tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED:
+			err = p.uploadContentToProvider(commicateInfo.resp.CID, pullCidRequest.StorageProviderList)
+			if err != nil {
+				return err
+			}
+			err = p.saveCidInfoToDkvs(commicateInfo.resp.CID)
+			if err != nil {
+				return err
 			}
 		}
 	}
