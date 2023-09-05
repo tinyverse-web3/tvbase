@@ -300,24 +300,21 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 	}
 	log.Debugf("PullCidServiceProtocol->HandleResponse: pullCidResponse: %v", commicateInfo.resp)
 
-	switch commicateInfo.resp.PinStatus {
-	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED, tvIpfs.PinStatus_TIMEOUT:
-		if commicateInfo.resp.PinStatus == tvIpfs.PinStatus_PINNED || commicateInfo.resp.PinStatus == tvIpfs.PinStatus_ALREADY_PINNED {
-			err = p.uploadContentToProvider(commicateInfo.resp.CID, pullCidRequest.StorageProviderList)
-			if err != nil {
-				return err
-			}
-			err = p.saveCidInfoToDkvs(commicateInfo.resp.CID)
-			if err != nil {
-				return err
+	if commicateInfo.resp.Status == ReqStatus_FINISH || commicateInfo.resp.Status == ReqStatus_ERR {
+		switch commicateInfo.resp.PinStatus {
+		case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_ALREADY_PINNED, tvIpfs.PinStatus_TIMEOUT:
+			if commicateInfo.resp.PinStatus == tvIpfs.PinStatus_PINNED || commicateInfo.resp.PinStatus == tvIpfs.PinStatus_ALREADY_PINNED {
+				err = p.uploadContentToProvider(commicateInfo.resp.CID, pullCidRequest.StorageProviderList)
+				if err != nil {
+					return err
+				}
+				err = p.saveCidInfoToDkvs(commicateInfo.resp.CID)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	default:
-		log.Debugf("PullCidServiceProtocol->HandleResponse: pull is fail, cid: %v, pullCidResponse: %v",
-			pullCidRequest.CID, commicateInfo.resp)
-	}
 
-	if commicateInfo.resp.Status == ReqStatus_FINISH || commicateInfo.resp.Status == ReqStatus_ERR {
 		p.commicateInfoListMutex.Lock()
 		commicateInfo.concurrentReqCount--
 		if commicateInfo.concurrentReqCount == 0 {
