@@ -13,6 +13,7 @@ import (
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	cmap "github.com/orcaman/concurrent-map"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dkvs"
@@ -130,7 +131,7 @@ func (p *PullCidClientProtocol) Request(ctx context.Context, peerId string, pull
 type PullCidServiceProtocol struct {
 	PriKey crypto.PrivKey
 	customProtocol.CustomStreamServiceProtocol
-	commicateInfoList      map[string]*serviceCommicateInfo
+	commicateInfoList      cmap.ConcurrentMap
 	commicateInfoListMutex sync.RWMutex
 	tvBaseService          tvbaseCommon.TvBaseService
 	ipfsProviderList       map[string]*ipfsProviderList
@@ -181,6 +182,8 @@ func GetPullCidServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*PullC
 }
 
 func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+	
+	m := cmap.New()
 	err := tvIpfs.CheckIpfsCmd()
 	if err != nil {
 		return err
@@ -196,7 +199,6 @@ func (p *PullCidServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) 
 	}
 	p.CustomStreamServiceProtocol.Init(pullCidPID)
 	p.tvBaseService = tvBaseService
-	p.commicateInfoList = make(map[string]*serviceCommicateInfo)
 	p.storageInfoList = &map[string]any{}
 	p.ipfsProviderList = make(map[string]*ipfsProviderList)
 	p.initIpfsProviderTask(NftProvider, NftApiKey, NftPostURL, UploadInterval, UploadTimeout, p.httpUploadCidContent)
@@ -217,6 +219,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	checkReqCount := func() bool {
 		p.commicateInfoListMutex.Lock()
 		defer p.commicateInfoListMutex.Unlock()
+		p.commicateInfoList.
 		if len(p.commicateInfoList) > maxReqCount {
 			info := &serviceCommicateInfo{
 				resp: &PullCidResponse{
