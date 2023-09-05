@@ -545,7 +545,7 @@ func (d *Dkvs) readRecordFromLocal(key string) (*pb.DkvsRecord, error) {
 	}
 	if libp2pRec == nil {
 		Logger.Errorf("readRecordFromLocal--->Failed to read key from local node {key: %s}", key)
-		return nil, errors.New("key is invalid or key does not exist")
+		return nil, ErrNotFound
 	}
 	val = libp2pRec.GetValue()
 	e := new(pb.DkvsRecord)
