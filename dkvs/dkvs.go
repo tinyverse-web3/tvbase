@@ -142,12 +142,14 @@ func (d *Dkvs) FastGetRecord(key string) (*pb.DkvsRecord, error) {
 }
 
 func (d *Dkvs) Has(key string) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
 		Logger.Error(err)
 		return false
 	}
-	_, err := d.idht.GetValue(context.Background(), RecordKey(key))
+	_, err := d.idht.GetValue(ctx, RecordKey(key))
 	return err == nil
 }
 

@@ -282,7 +282,8 @@ func (d *Dkvs) closeUnsyncedDB(cxt context.Context) error {
 }
 
 func (d *Dkvs) printUnsyncedDb() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	results, err := d.dkvsdb.Query(ctx, q)
 	if err != nil {
@@ -296,7 +297,8 @@ func (d *Dkvs) printUnsyncedDb() {
 }
 
 func (d *Dkvs) getUnsyncedDbSize() uint64 {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	var size uint64 = 0
 	results, err := d.dkvsdb.Query(ctx, q)
@@ -313,7 +315,8 @@ func (d *Dkvs) getUnsyncedDbSize() uint64 {
 
 func (d *Dkvs) putAllKeysToPeers() error {
 	// Query the DataStore for all keys and values
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	results, err := d.dkvsdb.Query(ctx, q)
 	if err != nil {

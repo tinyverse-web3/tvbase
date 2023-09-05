@@ -79,7 +79,8 @@ type CpuInfo struct {
 func QueryAllKeyOption() ServeOption {
 	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		db := t.GetDhtDatabase()
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		mux.HandleFunc("/tvbase/queryAllKeys", func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -142,9 +143,10 @@ func QueryAllKeyOption() ServeOption {
 
 func QueryKeyOption() ServeOption {
 	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		dkvsService := t.GetDkvsService()
 		db := t.GetDhtDatabase()
-		ctx := context.Background()
 		mux.HandleFunc("/tvbase/queryKey", func(w http.ResponseWriter, r *http.Request) {
 			kvi := new(KvInfo)
 			queryParams := r.URL.Query()
@@ -221,7 +223,8 @@ func QueryKeyOption() ServeOption {
 
 func QueryProviders() ServeOption {
 	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		kvSevice := t.GetDkvsService()
 		mux.HandleFunc("/tvbase/queryProviders", func(w http.ResponseWriter, r *http.Request) {
 			queryParams := r.URL.Query()
