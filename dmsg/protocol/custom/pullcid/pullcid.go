@@ -112,9 +112,11 @@ type PullCidServiceProtocol struct {
 	PriKey crypto.PrivKey
 	customProtocol.CustomStreamServiceProtocol
 	commicateInfoList      map[string]*serviceCommicateInfo
-	commicateInfoListMutex sync.Mutex
+	commicateInfoListMutex sync.RWMutex
 	tvBaseService          tvbaseCommon.TvBaseService
+	ipfsProviderListMutex  sync.RWMutex
 	ipfsProviderList       map[string]*ipfsProviderList
+	storageInfoListMutex   sync.RWMutex
 	storageInfoList        *map[string]any
 }
 
@@ -192,9 +194,12 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 	if err != nil {
 		return err
 	}
+	p.commicateInfoListMutex.RLock()
 	if p.commicateInfoList[pullCidRequest.CID] != nil {
+		p.commicateInfoListMutex.RUnlock()
 		return nil
 	}
+	p.commicateInfoListMutex.RUnlock()
 
 	maxCheckTime := pullCidRequest.MaxCheckTime
 	if maxCheckTime <= 0 {
@@ -223,10 +228,10 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) er
 			Status:         pinStatus,
 		}
 		p.commicateInfoListMutex.Lock()
-		defer p.commicateInfoListMutex.Unlock()
 		p.commicateInfoList[pullCidRequest.CID] = &serviceCommicateInfo{
 			data: pullCidResponse,
 		}
+		p.commicateInfoListMutex.Unlock()
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleRequest: cid: %v, pullCidResponse: %v",
 			pullCidRequest.CID, pullCidResponse)
 	}()
@@ -245,7 +250,9 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 		return err
 	}
 
+	p.commicateInfoListMutex.RLock()
 	commicateInfo := p.commicateInfoList[pullCidRequest.CID]
+	p.commicateInfoListMutex.RUnlock()
 	if commicateInfo == nil {
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
 		return fmt.Errorf("PullCidServiceProtocol->HandleResponse: need wait requestHandle handle cid: %s", pullCidRequest.CID)
@@ -265,7 +272,9 @@ func (p *PullCidServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, r
 
 	switch pullCidResponse.Status {
 	case tvIpfs.PinStatus_ERR, tvIpfs.PinStatus_PINNED, tvIpfs.PinStatus_TIMEOUT:
+		p.commicateInfoListMutex.Lock()
 		delete(p.commicateInfoList, pullCidRequest.CID)
+		p.commicateInfoListMutex.Unlock()
 	default:
 		customProtocol.Logger.Debugf("PullCidServiceProtocol->HandleResponse: cid: %v, pullCidResponse: %v, status: %v, pullcid working....",
 			pullCidRequest.CID, pullCidResponse, pullCidResponse.Status)
@@ -289,7 +298,9 @@ func (p *PullCidServiceProtocol) uploadContentToProvider(cid string, storageProv
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
 		cid, storageProviderList)
 	for _, storageProvider := range storageProviderList {
+		p.storageInfoListMutex.Lock()
 		(*p.storageInfoList)[storageProvider] = storageProvider
+		p.storageInfoListMutex.Unlock()
 		p.asyncUploadCidContent(storageProvider, cid)
 	}
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->uploadContentToProvider end")
@@ -312,7 +323,9 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 			customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
 			return err
 		}
+		p.storageInfoListMutex.Lock()
 		err = json.Unmarshal(value, p.storageInfoList)
+		p.storageInfoListMutex.Unlock()
 		if err != nil {
 			customProtocol.Logger.Warnf("PullCidServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
 			return nil
@@ -323,7 +336,9 @@ func (p *PullCidServiceProtocol) saveCidInfoToDkvs(cid string) error {
 		}
 	}
 
+	p.storageInfoListMutex.Lock()
 	(*p.storageInfoList)[peerID] = peerID
+	p.storageInfoListMutex.Unlock()
 	value, err := json.Marshal(p.storageInfoList)
 	if err != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
@@ -350,7 +365,9 @@ func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid s
 	// the same API key exceeds 30 request within 10 seconds, the rate limit will be triggered
 	// https://nft.storage/api-docs/  https://web3.storage/docs/reference/http-api/
 	customProtocol.Logger.Debugf("PullCidServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
+	p.ipfsProviderListMutex.RLock()
 	provider := p.ipfsProviderList[providerName]
+	p.ipfsProviderListMutex.RUnlock()
 	if provider == nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
 		return fmt.Errorf("PullCidServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
@@ -401,10 +418,13 @@ func (p *PullCidServiceProtocol) httpUploadCidContent(providerName string, cid s
 }
 
 func (p *PullCidServiceProtocol) initIpfsProviderTask(providerName string, apiKey string, uploadUrl string, interval time.Duration, timeout time.Duration, uploadFunc ipfsUpload) error {
+	p.ipfsProviderListMutex.Lock()
+	defer p.ipfsProviderListMutex.Unlock()
 	if p.ipfsProviderList[providerName] != nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 		return fmt.Errorf("PullCidServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 	}
+
 	p.ipfsProviderList[providerName] = &ipfsProviderList{
 		uploadTaskList: make(map[string]*uploadTask),
 		interval:       interval,
@@ -428,7 +448,9 @@ func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid 
 			customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
 			return err
 		}
+		p.storageInfoListMutex.Lock()
 		err = json.Unmarshal(value, p.storageInfoList)
+		p.storageInfoListMutex.Unlock()
 		if err != nil {
 			customProtocol.Logger.Warnf("PullCidServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
 			return err
@@ -439,7 +461,9 @@ func (p *PullCidServiceProtocol) asyncUploadCidContent(providerName string, cid 
 		}
 	}
 
+	p.ipfsProviderListMutex.RLock()
 	ipfsProviderTask := p.ipfsProviderList[providerName]
+	p.ipfsProviderListMutex.RUnlock()
 	if ipfsProviderTask == nil {
 		customProtocol.Logger.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
 		return fmt.Errorf("PullCidServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
