@@ -9,9 +9,17 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/log"
 )
 
+type DataType int32
+
+const (
+	DataType_JSON DataType = iota
+	DataType_PROTO3
+)
+
 type CustomProtocol struct {
-	Ctx context.Context
-	PID string
+	Ctx      context.Context
+	PID      string
+	dataType DataType
 }
 
 func (p *CustomProtocol) GetProtocolID() string {
@@ -22,7 +30,8 @@ func (p *CustomProtocol) SetCtx(ctx context.Context) {
 	p.Ctx = ctx
 }
 
-func (p *CustomProtocol) Init(protocolID string) {
+func (p *CustomProtocol) Init(protocolID string, datatype DataType) {
+	p.dataType = datatype
 	p.PID = protocolID
 }
 
@@ -58,8 +67,8 @@ type CustomStreamServiceProtocol struct {
 }
 
 // client
-func (p *CustomStreamClientProtocol) Init(customProtocolID string) {
-	p.CustomStreamProtocol.Init(customProtocolID)
+func (p *CustomStreamClientProtocol) Init(customProtocolID string, dataType DataType) {
+	p.CustomStreamProtocol.Init(customProtocolID, dataType)
 }
 
 func (p *CustomStreamClientProtocol) SetService(service Service) {
@@ -120,8 +129,8 @@ func (p *CustomStreamClientProtocol) Request(peerId string, data any) (*pb.Custo
 }
 
 // service
-func (p *CustomStreamServiceProtocol) Init(customProtocolID string) {
-	p.CustomStreamProtocol.Init(customProtocolID)
+func (p *CustomStreamServiceProtocol) Init(customProtocolID string, dataType DataType) {
+	p.CustomStreamProtocol.Init(customProtocolID, dataType)
 }
 
 func (p *CustomStreamServiceProtocol) HandleRequest(protocolRequest *pb.CustomProtocolReq, requestObject any) error {

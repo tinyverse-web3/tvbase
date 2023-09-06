@@ -79,7 +79,7 @@ func GetPullCidClientProtocol() (*PullCidClientProtocol, error) {
 }
 
 func (p *PullCidClientProtocol) Init() error {
-	p.CustomStreamClientProtocol.Init(pullCidPID, customProtocol.DataType_JSON)
+	p.CustomStreamClientProtocol.Init(pullCidPID, customProtocol.DataType_PROTO3)
 	return nil
 }
 
