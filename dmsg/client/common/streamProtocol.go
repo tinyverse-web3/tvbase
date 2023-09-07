@@ -118,7 +118,7 @@ func (p *StreamProtocol) Request(
 
 	protoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
-		delete(p.RequestInfoList, requestInfoId)
+		p.RequestInfoList.Delete(requestInfoId)
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return nil, nil, err
 	}
@@ -130,13 +130,13 @@ func (p *StreamProtocol) Request(
 	}
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
-		delete(p.RequestInfoList, requestInfoId)
+		p.RequestInfoList.Delete(requestInfoId)
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
 		return nil, nil, err
 	}
 	writeLen, err := stream.Write(protoData)
 	if err != nil {
-		delete(p.RequestInfoList, requestInfoId)
+		p.RequestInfoList.Delete(requestInfoId)
 		dmsgLog.Logger.Errorf("StreamProtocol->Request: Write error: %v", err)
 		if err := stream.Reset(); err != nil {
 			dmsgLog.Logger.Errorf("StreamProtocol->Request: Reset error: %v", err)
@@ -152,7 +152,8 @@ func (p *StreamProtocol) Request(
 	}
 
 	dmsgLog.Logger.Debugf("StreamProtocol->Request end")
-	return requestProtoMsg, p.RequestInfoList[requestInfoId].DoneChan, nil
+	requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
+	return requestProtoMsg, requestInfoData.(*RequestInfo).DoneChan, nil
 }
 
 func NewStreamProtocol(
@@ -164,7 +165,6 @@ func NewStreamProtocol(
 	protocol := &StreamProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
-	protocol.RequestInfoList = make(map[string]*RequestInfo)
 	protocol.Callback = callback
 	protocol.Service = service
 	protocol.Adapter = adapter

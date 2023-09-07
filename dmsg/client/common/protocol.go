@@ -139,14 +139,18 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 	}
 
-	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
+	var requestInfo *RequestInfo = nil
+	requestInfoData, ok := p.RequestInfoList.Load(responseBasicData.ID)
 	if ok {
+		requestInfo = requestInfoData.(*RequestInfo)
+	}
+	if requestInfo != nil {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {
 			dmsgLog.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
-		p.RequestInfoList[responseBasicData.ID].DoneChan <- responseProtoMsg
-		delete(p.RequestInfoList, responseBasicData.ID)
+		requestInfo.DoneChan <- responseProtoMsg
+		p.RequestInfoList.Delete(responseBasicData.ID)
 	} else {
 		dmsgLog.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
@@ -188,11 +192,11 @@ func (p *Protocol) GenRequestInfo(
 		return "", nil, nil, err
 	}
 
-	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
+	p.RequestInfoList.Store(requestBasicData.ID, &RequestInfo{
 		ProtoMessage:    requestProtoMsg,
 		CreateTimestamp: requestBasicData.TS,
 		DoneChan:        make(chan any),
-	}
+	})
 
 	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo end")
 	return requestBasicData.ID, requestProtoMsg, requestProtoData, nil
@@ -203,10 +207,16 @@ func (p *Protocol) TickCleanRequest() {
 	for {
 		select {
 		case <-ticker.C:
-			for id, v := range p.RequestInfoList {
-				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 1*time.Minute {
-					delete(p.RequestInfoList, id)
+			keysToDelete := []string{}
+			p.RequestInfoList.Range(func(k, v interface{}) bool {
+				var requestInfo *RequestInfo = v.(*RequestInfo)
+				if time.Since(time.Unix(requestInfo.CreateTimestamp, 0)) > 1*time.Minute {
+					keysToDelete = append(keysToDelete, k.(string))
 				}
+				return true
+			})
+			for id := range keysToDelete {
+				p.RequestInfoList.Delete(id)
 			}
 			dmsgLog.Logger.Debug("Protocol->TickCleanRequest: clean request data")
 		case <-p.Ctx.Done():

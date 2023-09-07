@@ -73,7 +73,7 @@ type StreamProtocolAdapter interface {
 type Protocol struct {
 	Ctx             context.Context
 	Host            host.Host
-	RequestInfoList map[string]*RequestInfo
+	RequestInfoList sync.Map
 	Service         ProtocolService
 	Adapter         ProtocolAdapter
 }

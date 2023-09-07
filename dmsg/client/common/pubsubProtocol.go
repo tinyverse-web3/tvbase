@@ -64,12 +64,13 @@ func (p *PubsubProtocol) Request(
 	err = p.Service.PublishProtocol(p.Ctx, destUserPubkey, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
-		delete(p.RequestInfoList, requestInfoId)
+		p.RequestInfoList.Delete(requestInfoId)
 		return nil, nil, err
 	}
 
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request end")
-	return requestProtoMsg, p.RequestInfoList[requestBasicData.ID].DoneChan, nil
+	requestInfoData, _ := p.RequestInfoList.Load(requestBasicData.ID)
+	return requestProtoMsg, requestInfoData.(*RequestInfo).DoneChan, nil
 }
 
 func NewPubsubProtocol(
@@ -83,7 +84,6 @@ func NewPubsubProtocol(
 	ret.Host = host
 	ret.Callback = protocolCallback
 	ret.Service = protocolService
-	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
 	return ret
