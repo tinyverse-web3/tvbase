@@ -6,6 +6,11 @@
 Compile program need install golang
 
 ```shell
+### prepare init/run ipfs if need
+## ipfs init
+## ipfs daemon --enable-gc
+## ipfs shutdown
+
 ## start tvnode
 git clone git@github.com:tinyverse-web3/tvbase.git
 cd tvbase/tvnode
