@@ -12,7 +12,6 @@ require (
 	github.com/libp2p/go-libp2p v0.27.7
 	github.com/libp2p/go-libp2p-kad-dht v0.24.2
 	github.com/multiformats/go-multiaddr v0.9.0
-	github.com/orcaman/concurrent-map v1.0.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tinyverse-web3/tvutil v0.0.0-20230719073602-eff568f409f6

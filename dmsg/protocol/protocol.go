@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -20,7 +21,7 @@ type RequestInfo struct {
 type Protocol struct {
 	Ctx             context.Context
 	Host            host.Host
-	RequestInfoList map[string]*RequestInfo
+	RequestInfoList sync.Map
 	Service         DmsgServiceInterface
 	Adapter         Adapter
 }
@@ -158,7 +159,11 @@ func (p *Protocol) HandleResponseData(
 		return fmt.Errorf("Protocol->HandleResponseData: failed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)
 	}
 
-	requestInfo, ok := p.RequestInfoList[responseBasicData.ID]
+	var requestInfo *RequestInfo = nil
+	requestInfoData, ok := p.RequestInfoList.Load(responseBasicData.ID)
+	if ok {
+		requestInfo = requestInfoData.(*RequestInfo)
+	}
 	log.Logger.Debugf("Protocol->HandleResponseData:\nrequestInfo: %+v", requestInfo)
 	if ok && requestInfo != nil {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
@@ -172,8 +177,8 @@ func (p *Protocol) HandleResponseData(
 			log.Logger.Debugf("Protocol->HandleResponseData: no receiver for ResponseChan")
 		}
 		// delete for mulit pubsub response
-		// close(requestInfo.DoneChan)
-		// delete(p.RequestInfoList, responseBasicData.ID)
+		// close(requestInfo.ResponseChan)
+		// p.RequestInfoList.Delete(responseBasicData.ID)
 	} else {
 		_, err := p.Adapter.CallResponseCallback(nil, responseProtoMsg)
 		if err != nil {
@@ -219,11 +224,11 @@ func (p *Protocol) GenRequestInfo(
 		return "", nil, nil, err
 	}
 
-	p.RequestInfoList[requestBasicData.ID] = &RequestInfo{
+	p.RequestInfoList.Store(requestBasicData.ID, &RequestInfo{
 		ProtoMessage:    requestProtoMsg,
 		CreateTimestamp: requestBasicData.TS,
 		ResponseChan:    make(chan any),
-	}
+	})
 
 	log.Logger.Debugf("Protocol->GenRequestInfo end")
 	return requestBasicData.ID, requestProtoMsg, requestProtoData, nil
@@ -234,11 +239,16 @@ func (p *Protocol) TickCleanRequest() {
 	for {
 		select {
 		case <-ticker.C:
-			for id, v := range p.RequestInfoList {
-				if time.Since(time.Unix(v.CreateTimestamp, 0)) > 10*time.Minute {
-					close(p.RequestInfoList[id].ResponseChan)
-					delete(p.RequestInfoList, id)
+			keysToDelete := []string{}
+			p.RequestInfoList.Range(func(k, v interface{}) bool {
+				var requestInfo *RequestInfo = v.(*RequestInfo)
+				if time.Since(time.Unix(requestInfo.CreateTimestamp, 0)) > 1*time.Minute {
+					keysToDelete = append(keysToDelete, k.(string))
 				}
+				return true
+			})
+			for id := range keysToDelete {
+				p.RequestInfoList.Delete(id)
 			}
 			log.Logger.Debug("Protocol->TickCleanRequest: clean request data")
 		case <-p.Ctx.Done():

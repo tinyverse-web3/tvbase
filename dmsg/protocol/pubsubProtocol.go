@@ -95,12 +95,13 @@ func (p *PubsubProtocol) Request(
 	err = p.Service.PublishProtocol(p.Ctx, target, requestBasicData.PID, requestProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: PublishProtocol error: %v", err)
-		delete(p.RequestInfoList, requestInfoId)
+		p.RequestInfoList.Delete(requestInfoId)
 		return nil, nil, err
 	}
 
 	log.Logger.Debugf("PubsubProtocol->Request end")
-	return request, p.RequestInfoList[requestBasicData.ID].ResponseChan, nil
+	requestInfoData, _ := p.RequestInfoList.Load(requestBasicData.ID)
+	return request, requestInfoData.(*RequestInfo).ResponseChan, nil
 }
 
 func NewQueryPeerProtocol(
@@ -114,7 +115,6 @@ func NewQueryPeerProtocol(
 	ret.Host = host
 	ret.Callback = callback
 	ret.Service = dmsg
-	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
 	return ret
@@ -131,7 +131,6 @@ func NewPubsubMsgProtocol(
 	ret.Host = host
 	ret.Callback = callback
 	ret.Service = dmsg
-	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
 	return ret
@@ -148,7 +147,6 @@ func NewMailboxPProtocol(
 	ret.Host = host
 	ret.Callback = callback
 	ret.Service = dmsg
-	ret.RequestInfoList = make(map[string]*RequestInfo)
 	ret.Adapter = adapter
 	go ret.TickCleanRequest()
 	return ret

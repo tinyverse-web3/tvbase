@@ -169,8 +169,10 @@ func (p *StreamProtocol) Request(
 
 	protoData, err := proto.Marshal(requestProtoMsg)
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].ResponseChan)
-		delete(p.RequestInfoList, requestInfoId)
+		requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
+		requestInfo := requestInfoData.(*RequestInfo)
+		close(requestInfo.ResponseChan)
+		p.RequestInfoList.Delete(requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Marshal error: %v", err)
 		return nil, nil, err
 	}
@@ -182,15 +184,19 @@ func (p *StreamProtocol) Request(
 	}
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].ResponseChan)
-		delete(p.RequestInfoList, requestInfoId)
+		requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
+		requestInfo := requestInfoData.(*RequestInfo)
+		close(requestInfo.ResponseChan)
+		p.RequestInfoList.Delete(requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: NewStream error: %v", err)
 		return nil, nil, err
 	}
 	writeLen, err := stream.Write(protoData)
 	if err != nil {
-		close(p.RequestInfoList[requestInfoId].ResponseChan)
-		delete(p.RequestInfoList, requestInfoId)
+		requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
+		requestInfo := requestInfoData.(*RequestInfo)
+		close(requestInfo.ResponseChan)
+		p.RequestInfoList.Delete(requestInfoId)
 		log.Logger.Errorf("StreamProtocol->Request: Write error: %v", err)
 		if err := stream.Reset(); err != nil {
 			log.Logger.Errorf("StreamProtocol->Request: Reset error: %v", err)
@@ -206,7 +212,9 @@ func (p *StreamProtocol) Request(
 	}
 
 	log.Logger.Debugf("StreamProtocol->Request end")
-	return requestProtoMsg, p.RequestInfoList[requestInfoId].ResponseChan, nil
+	requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
+	requestInfo := requestInfoData.(*RequestInfo)
+	return requestProtoMsg, requestInfo.ResponseChan, nil
 }
 
 func NewCreateMsgPubsubSProtocol(
@@ -220,7 +228,6 @@ func NewCreateMsgPubsubSProtocol(
 	protocol := &CreatePubsubSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
-	protocol.RequestInfoList = make(map[string]*RequestInfo)
 	protocol.Callback = callback
 	protocol.Service = service
 	protocol.Adapter = adapter
@@ -243,7 +250,6 @@ func NewCreateChannelSProtocol(
 	protocol := &CreatePubsubSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
-	protocol.RequestInfoList = make(map[string]*RequestInfo)
 	protocol.Callback = callback
 	protocol.Service = service
 	protocol.Adapter = adapter
@@ -266,7 +272,6 @@ func NewMailboxSProtocol(
 	protocol := &MailboxSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
-	protocol.RequestInfoList = make(map[string]*RequestInfo)
 	protocol.Callback = callback
 	protocol.Service = service
 	protocol.Adapter = adapter
@@ -289,7 +294,6 @@ func NewCustomSProtocol(
 	protocol := &CustomSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
-	protocol.RequestInfoList = make(map[string]*RequestInfo)
 	protocol.Callback = callback
 	protocol.Service = service
 	protocol.Adapter = adapter
