@@ -31,6 +31,7 @@ const (
 	PinStatus_ERR
 	PinStatus_WORK
 	PinStatus_PINNED
+	PinStatus_ALREADY_PINNED
 	PinStatus_TIMEOUT
 )
 
@@ -200,7 +201,7 @@ func IpfsGetObject(cid string, ctx context.Context, checkTimeout time.Duration) 
 			return 0, allElapsedTime, pinStatus, lastErr
 		}
 		cumulativeSize = (*cidStat)[ObjectStatusField_CumulativeSize]
-		pinStatus = PinStatus_PINNED
+		pinStatus = PinStatus_ALREADY_PINNED
 		Logger.Debugf("IpfsGetObject: cid: %s, allElapsedTime: %v, pinStatus: %v, lastErr: %v", cid, allElapsedTime, pinStatus, lastErr)
 		return cumulativeSize, allElapsedTime, pinStatus, lastErr
 	}
