@@ -13,7 +13,6 @@ import (
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -41,11 +40,11 @@ func TestMsgService(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	p, err := pullcid.GetPullCidServiceProtocol(tvbase)
-	if err != nil {
-		panic(err)
-	}
-	tvbase.RegistCSSProtocol(p)
+	// p, err := pullcid.GetPullCidServiceProtocol(tvbase)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// tvbase.RegistCSSProtocol(p)
 
 	defer func() {
 		tvbase.Stop()

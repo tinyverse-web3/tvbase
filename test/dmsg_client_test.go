@@ -17,7 +17,6 @@ import (
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
 	keyutil "github.com/tinyverse-web3/tvutil/key"
@@ -269,27 +268,27 @@ func TestPullCID(t *testing.T) {
 	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
 	// init dmsg client
-	tvbase, _, err := initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
+	_, _, err = initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
 	if err != nil {
 		testLog.Errorf("init acceptable error: %v", err)
 		t.Errorf("init acceptable error: %v", err)
 		return
 	}
 
-	pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
-	if err != nil {
-		testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-		t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-		return
-	}
-	err = tvbase.RegistCSCProtocol(pullCidProtocol)
-	if err != nil {
-		testLog.Errorf("node.RegistCSCProtocol error: %v", err)
-		t.Errorf("node.RegistCSCProtocol error: %v", err)
-		return
-	}
+	// pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
+	// if err != nil {
+	// 	testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+	// 	t.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+	// 	return
+	// }
+	// err = tvbase.RegistCSCProtocol(pullCidProtocol)
+	// if err != nil {
+	// 	testLog.Errorf("node.RegistCSCProtocol error: %v", err)
+	// 	t.Errorf("node.RegistCSCProtocol error: %v", err)
+	// 	return
+	// }
 
-	bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
+	// bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
 	// localPeerID := "12D3KooWT3DqHnCgt2za47Acpf5eVxRBYgDfDZoHp7bwXTttFg7m"
 	/*
 		## shell for generate random cid file
@@ -317,43 +316,43 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	pullCidResponseChan, err := pullCidProtocol.Request(ctx, bootPeerID, &pullcid.PullCidRequest{
-		CID:          CID_RANDOM_10M,
-		MaxCheckTime: 5 * time.Minute,
-	})
-	if err != nil {
-		testLog.Errorf("pullCidProtocol.Request error: %v", err)
-		return
-	}
+	// pullCidResponseChan, err := pullCidProtocol.Request(ctx, bootPeerID, &pullcid.PullCidRequest{
+	// 	CID:          CID_RANDOM_10M,
+	// 	MaxCheckTime: 5 * time.Minute,
+	// })
+	// if err != nil {
+	// 	testLog.Errorf("pullCidProtocol.Request error: %v", err)
+	// 	return
+	// }
 
-	go func() {
-		timeout := 30 * time.Second
-		select {
-		case pullCidResponse := <-pullCidResponseChan:
-			if pullCidResponse == nil {
-				testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
-				return
-			}
-			switch pullCidResponse.Status {
-			case tvIpfs.PinStatus_ERR:
-				testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
-			case tvIpfs.PinStatus_TIMEOUT:
-				testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
-			case tvIpfs.PinStatus_PINNED:
-				testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
-			default:
-				testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
-			}
-			testLog.Debugf("PullCidClientProtocol->Request end")
-			return
-		case <-time.After(timeout):
-			testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
-			return
-		case <-ctx.Done():
-			testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
-			return
-		}
-	}()
+	// go func() {
+	// 	timeout := 30 * time.Second
+	// 	select {
+	// 	case pullCidResponse := <-pullCidResponseChan:
+	// 		if pullCidResponse == nil {
+	// 			testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
+	// 			return
+	// 		}
+	// 		switch pullCidResponse.Status {
+	// 		case tvIpfs.PinStatus_ERR:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
+	// 		case tvIpfs.PinStatus_TIMEOUT:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
+	// 		case tvIpfs.PinStatus_PINNED:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
+	// 		default:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
+	// 		}
+	// 		testLog.Debugf("PullCidClientProtocol->Request end")
+	// 		return
+	// 	case <-time.After(timeout):
+	// 		testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
+	// 		return
+	// 	case <-ctx.Done():
+	// 		testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
+	// 		return
+	// 	}
+	// }()
 	<-ctx.Done()
 }
 

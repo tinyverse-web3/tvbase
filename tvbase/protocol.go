@@ -59,18 +59,3 @@ func (m *TvBase) RegistCPCProtocol(protocol customProtocol.CustomPubsubProtocolC
 	service.RegistCustomPubsubProtocol(protocol)
 	return nil
 }
-
-// regist custom pubsub service protocol
-func (m *TvBase) RegistCPSProtocol(protocol customProtocol.CustomPubsubProtocolService, destPubkey string) error {
-	if m.DmsgService == nil {
-		tvLog.Logger.Errorf("tvBase->RegistCPSProtocol: service is nil")
-		return fmt.Errorf("tvBase->RegistCPSProtocol: service is nil")
-	}
-	service, ok := m.DmsgService.(*dmsgService.DmsgService)
-	if !ok {
-		tvLog.Logger.Errorf("tvBase->RegistCPSProtocol: service is not ServiceDmsgService")
-		return fmt.Errorf("tvBase->RegistCPSProtocol: service is not ServiceDmsgService")
-	}
-	service.RegistCustomPubsubProtocol(protocol, destPubkey)
-	return nil
-}

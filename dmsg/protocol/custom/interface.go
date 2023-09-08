@@ -26,8 +26,7 @@ type CustomPubsubProtocolClient interface {
 type CustomStreamProtocolService interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
-	HandleRequest(req *pb.CustomProtocolReq) error
-	HandleResponse(req *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
+	HandleRequest(req *pb.CustomProtocolReq) ([]byte, *pb.RetCode, error)
 }
 
 type CustomPubsubProtocolService interface {

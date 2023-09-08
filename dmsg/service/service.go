@@ -606,18 +606,13 @@ func (d *DmsgService) OnCustomStreamProtocolRequest(requestProtoData protoreflec
 		return nil, nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
 	}
 
-	err := customProtocolInfo.Service.HandleRequest(request)
+	responseContent, retCode, err := customProtocolInfo.Service.HandleRequest(request)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	customStreamProtocolResponseParam := &serviceProtocol.CustomStreamProtocolResponseParam{
-		PID:     request.PID,
-		Service: customProtocolInfo.Service,
-	}
-
 	dmsgLog.Logger.Debugf("dmsgService->OnCustomStreamProtocolRequest end")
-	return customStreamProtocolResponseParam, nil, nil
+	return responseContent, retCode, nil
 }
 
 func (d *DmsgService) OnCustomStreamProtocolResponse(reqProtoData protoreflect.ProtoMessage, resProtoData protoreflect.ProtoMessage) (any, error) {
@@ -806,39 +801,6 @@ func (d *DmsgService) unsubscribeCustomProtocolList() error {
 
 func (d *DmsgService) readCustomProtocolPubsub(pubsub *dmsgServiceCommon.UserPubsub) {
 	d.readProtocolPubsub(pubsub)
-}
-
-func (d *DmsgService) RegistCustomPubsubProtocol(service customProtocol.CustomStreamProtocolService, pubkey string) error {
-	customProtocolID := service.GetProtocolID()
-	if d.customPubsubProtocolInfoList[customProtocolID] != nil {
-		dmsgLog.Logger.Errorf("dmsgService->RegistCustomPubsubProtocol: customProtocolID %s is already exist", customProtocolID)
-		return fmt.Errorf("dmsgService->RegistCustomPubsubProtocol: customProtocolID %s is already exist", customProtocolID)
-	}
-	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomPubsubProtocolInfo{
-		Protocol: serviceProtocol.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
-		Service:  service,
-	}
-	service.SetCtx(d.BaseService.GetCtx())
-	// TODO
-	// err := d.PublishCustomPubsubProtocol(pubkey)
-	// if err != nil {
-	// 	dmsgLog.Logger.Errorf("dmsgService->RegistCustomPubsubProtocol: publish dest user err: %v", err)
-	// 	return err
-	// }
-	return nil
-}
-
-func (d *DmsgService) UnregistCustomPubsubProtocol(callback customProtocol.CustomStreamProtocolService) error {
-	customProtocolID := callback.GetProtocolID()
-	if d.customPubsubProtocolInfoList[customProtocolID] == nil {
-		dmsgLog.Logger.Warnf("dmsgService->UnregistCustomStreamProtocol: protocol %s is not exist", customProtocolID)
-		return nil
-	}
-	d.customPubsubProtocolInfoList[customProtocolID] = &dmsgServiceCommon.CustomPubsubProtocolInfo{
-		Protocol: serviceProtocol.NewCustomPubsubProtocol(d.BaseService.GetCtx(), d.BaseService.GetHost(), customProtocolID, d, d),
-		Service:  callback,
-	}
-	return nil
 }
 
 func daysBetween(start, end int64) int {

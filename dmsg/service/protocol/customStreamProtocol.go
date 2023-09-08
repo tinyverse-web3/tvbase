@@ -10,15 +10,9 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-type CustomStreamProtocolResponseParam struct {
-	PID     string
-	Service customProtocol.CustomStreamProtocolService
-}
 
 type CustomStreamProtocolAdapter struct {
 	common.CommonProtocolAdapter
@@ -87,23 +81,22 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 		return nil, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast requestProtoData to *pb.CustomContentReq")
 	}
 
-	customStreamProtocolResponseParam, ok := dataList[0].(*CustomStreamProtocolResponseParam)
+	content, ok := dataList[0].([]byte)
 	if !ok {
-		tvLog.Logger.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
-		return nil, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
+		tvLog.Logger.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
+		return nil, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
+	}
+
+	retCode, ok := dataList[1].(*pb.RetCode)
+	if !ok {
+		retCode = dmsgProtocol.NewSuccRetCode()
 	}
 
 	response := &pb.CustomProtocolRes{
 		BasicData: basicData,
-		PID:       customStreamProtocolResponseParam.PID,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
-	}
-
-	// get response.Content
-	err := customStreamProtocolResponseParam.Service.HandleResponse(request, response)
-	if err != nil {
-		tvLog.Logger.Errorf("dmsgService->CustomStreamProtocolAdapter: Service.HandleResponse error: %v", err)
-		return nil, err
+		PID:       request.PID,
+		Content:   content,
+		RetCode:   retCode,
 	}
 
 	return response, nil
