@@ -19,11 +19,5 @@ type ClientHandle interface {
 type ServerHandle interface {
 	GetProtocolID() string
 	SetCtx(ctx context.Context)
-	HandleRequest(req *pb.CustomProtocolReq) error
-	HandleResponse(req *pb.CustomProtocolReq, res *pb.CustomProtocolRes) error
-}
-
-type ResponseParam struct {
-	PID     string
-	Service ServerHandle
+	HandleRequest(req *pb.CustomProtocolReq) ([]byte, *pb.RetCode, error)
 }

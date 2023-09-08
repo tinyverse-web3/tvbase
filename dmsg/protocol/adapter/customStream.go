@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
-	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -87,23 +86,16 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	if !ok {
 		return response, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast requestProtoData to *pb.CustomContentReq")
 	}
+	response.PID = request.PID
 
 	if len(dataList) < 1 {
 		return nil, errors.New("CustomStreamProtocolAdapter:InitResponse: dataList need contain customStreamProtocolResponseParam")
 	}
-	customStreamProtocolResponseParam, ok := dataList[0].(*customProtocol.ResponseParam)
+	content, ok := dataList[0].([]byte)
 	if !ok {
-		return response, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0] to CustomStreamProtocolResponseParam")
+		return response, fmt.Errorf("CustomStreamProtocolAdapter->InitResponse: fail to cast dataList[0](response) to content([]byte)")
 	}
-
-	response.PID = customStreamProtocolResponseParam.PID
-
-	// get response.Content
-	err = customStreamProtocolResponseParam.Service.HandleResponse(request, response)
-	if err != nil {
-		return response, err
-	}
-
+	response.Content = content
 	return response, nil
 }
 

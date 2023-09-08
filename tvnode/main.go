@@ -19,8 +19,10 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	"github.com/tinyverse-web3/tvbase/common/define"
+	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
+
+	// "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
@@ -185,17 +187,24 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	mainLog.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
 
-	tvbase, _, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	_, _, err = initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: initDmsg: %v", err)
 		return
 	}
 
-	p, err := pullcid.GetPullCidServiceProtocol(tvbase)
+	err = tvbaseIpfs.CheckIpfsCmd()
 	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+		mainLog.Errorf("tvnode->main: CheckIpfsCmd: %v", err)
+		return
 	}
-	tvbase.GetDmsg().GetCustomProtocolService().RegistServer(p)
+	tvbaseIpfs.CreateIpfsShell("/ip4/127.0.0.1/tcp/5001")
+
+	// p, err := pullcid.GetPullCidServiceProtocol(tvbase)
+	// if err != nil {
+	// 	mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+	// }
+	// tvbase.GetDmsg().GetCustomProtocolService().RegistServer(p)
 
 	<-ctx.Done()
 }

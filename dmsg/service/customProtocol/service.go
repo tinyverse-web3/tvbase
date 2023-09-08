@@ -235,17 +235,13 @@ func (d *CustomProtocolService) OnCustomRequest(
 		log.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 	}
-	err := customProtocolInfo.Handle.HandleRequest(request)
+	responseContent, retCode, err := customProtocolInfo.Handle.HandleRequest(request)
 	if err != nil {
-		return nil, nil, false, err
-	}
-	param := &dmsgProtocolCustom.ResponseParam{
-		PID:     request.PID,
-		Service: customProtocolInfo.Handle,
+		return nil, nil, true, err
 	}
 
 	log.Debugf("CustomProtocolService->OnRequest end")
-	return param, nil, false, nil
+	return responseContent, retCode, false, nil
 }
 
 func (d *CustomProtocolService) OnCustomResponse(

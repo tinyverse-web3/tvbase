@@ -5,28 +5,11 @@ package pb;
 option go_package = "ipfs/pb";
 
 
-message IpfsReqSummary {
-    int64 fileSize = 1;
-    int64 blockCount = 2;
-    repeated string StorageProviderList = 3;
+message SyncFileReq {
+    string CID = 1;
+    bytes data = 2;
 }
 
-message IpfsReqBlock {
-    int64 index = 1;
-    bytes content = 2;
-    int64 blockSize = 3;
-    int64 checkSum = 4;
-}
-
-message IpfsReq {
-    string CID = 2;
-    oneof options {
-        IpfsReqSummary summary = 3;
-        IpfsReqBlock block = 4;
-    }
-}
-
-message IpfsRes {
-    int32 code = 1;
-    string result = 2;
+message SyncFileRes {
+    string CID = 1;
 }

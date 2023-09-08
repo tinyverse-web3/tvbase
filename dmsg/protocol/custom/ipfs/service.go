@@ -1,4 +1,4 @@
-package pullcid
+package syncfile
 
 import (
 	"bytes"
@@ -10,14 +10,12 @@ import (
 	"sync"
 	"time"
 
-	// "github.com/orcaman/concurrent-map"
-	"github.com/libp2p/go-libp2p/core/crypto"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
-	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
-	"github.com/tinyverse-web3/tvbase/dkvs"
+	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	ipfspb "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 // service
@@ -56,25 +54,18 @@ type ipfsProviderList struct {
 	isRun          bool
 }
 
-type serviceCommicateInfo struct {
-	resp *ipfspb.IpfsRes
-}
-
-type IpfsServiceProtocol struct {
-	PriKey crypto.PrivKey
+type FileSyncServiceProtocol struct {
 	customProtocol.CustomStreamServiceProtocol
-	commicateInfoList      map[string]*serviceCommicateInfo
-	commicateInfoListMutex sync.RWMutex
-	tvBaseService          tvbaseCommon.TvBaseService
-	ipfsProviderList       map[string]*ipfsProviderList
-	storageInfoList        *map[string]any
+	tvBaseService    tvbaseCommon.TvBaseService
+	ipfsProviderList map[string]*ipfsProviderList
+	storageInfoList  *map[string]any
 }
 
-var pullCidServiceProtocol *IpfsServiceProtocol
+var pullCidServiceProtocol *FileSyncServiceProtocol
 
-func GetServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*IpfsServiceProtocol, error) {
+func GetServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*FileSyncServiceProtocol, error) {
 	if pullCidServiceProtocol == nil {
-		pullCidServiceProtocol = &IpfsServiceProtocol{}
+		pullCidServiceProtocol = &FileSyncServiceProtocol{}
 		err := pullCidServiceProtocol.Init(tvBaseService)
 		if err != nil {
 			return nil, err
@@ -83,21 +74,8 @@ func GetServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*IpfsServiceP
 	return pullCidServiceProtocol, nil
 }
 
-func (p *IpfsServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
-	err := tvIpfs.CheckIpfsCmd()
-	if err != nil {
-		return err
-	}
-	if p.PriKey == nil {
-		prikey, err := dkvs.GetPriKeyBySeed(pid)
-		if err != nil {
-			log.Errorf("IpfsServiceProtocol->Init: GetPriKeyBySeed err: %v", err)
-			return err
-		}
-		p.PriKey = prikey
-
-	}
-	p.CustomStreamServiceProtocol.Init(pid, customProtocol.DataType_PROTO3)
+func (p *FileSyncServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+	p.CustomStreamServiceProtocol.Init(SYNCIPFSFILEPID)
 	p.tvBaseService = tvBaseService
 	p.storageInfoList = &map[string]any{}
 	p.ipfsProviderList = make(map[string]*ipfsProviderList)
@@ -106,123 +84,94 @@ func (p *IpfsServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) err
 	return nil
 }
 
-func (p *IpfsServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) error {
-	log.Debugf("IpfsServiceProtocol->HandleRequest begin:\nrequest: %v", request)
-	ipfsReq := &ipfspb.IpfsReq{}
-	err := p.CustomStreamServiceProtocol.HandleRequest(request, ipfsReq)
-	if err != nil {
-		return err
-	}
-	log.Debugf("IpfsServiceProtocol->HandleRequest: ipfsReq: %v", ipfsReq)
+func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (responseContent []byte, retCode *pb.RetCode, err error) {
+	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest: %v", request)
 
-	// log.Debugf("IpfsServiceProtocol->HandleRequest: pullCidResponse: %v", info)
-	log.Debugf("IpfsServiceProtocol->HandleRequest end")
-	return nil
+	syncFileReq := &ipfspb.SyncFileReq{}
+	syncFileRes := &ipfspb.SyncFileRes{
+		CID: syncFileReq.CID,
+	}
+	responseContent, _ = proto.Marshal(syncFileRes)
+
+	err = proto.Unmarshal(request.Content, syncFileReq)
+	if err != nil {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_PROTOCOL,
+			Result: "FileSyncServiceProtocol->HandleRequest: proto.Unmarshal error: " + err.Error(),
+		}
+		logger.Debugf(retCode.Result)
+		return responseContent, retCode, nil
+	}
+	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq: %v", syncFileReq)
+
+	sh := tvbaseIpfs.GetIpfsShell()
+	isPin := sh.IsPin(syncFileReq.CID)
+	if !isPin {
+		cid, err := sh.BlockPutVo(syncFileReq.Data)
+		if err != nil {
+			retCode = &pb.RetCode{
+				Code:   CODE_ERROR_IPFS,
+				Result: "FileSyncServiceProtocol->HandleRequest: sh.BlockPutVo error: " + err.Error(),
+			}
+			logger.Errorf(retCode.Result)
+		}
+		if cid != syncFileReq.CID {
+			retCode = &pb.RetCode{
+				Code:   CODE_ERROR_PROTOCOL,
+				Result: "FileSyncServiceProtocol->HandleRequest: calculated CID is different from the input parameter CID, calculated cid :" + cid,
+			}
+			logger.Errorf(retCode.Result)
+		} else {
+			err = sh.Pin(cid)
+			if err != nil {
+				logger.Errorf("FileSyncServiceProtocol->HandleRequest: sh.Unpin error: %v, cid: %s", err, cid)
+			}
+			if err != nil {
+				retCode = &pb.RetCode{
+					Code:   CODE_ERROR_IPFS,
+					Result: "FileSyncServiceProtocol->HandleRequest: sh.Pin error: " + err.Error(),
+				}
+			} else {
+				retCode = &pb.RetCode{
+					Code:   CODE_PIN,
+					Result: "success",
+				}
+			}
+		}
+	} else {
+		retCode = &pb.RetCode{
+			Code:   CODE_ALREADY_PIN,
+			Result: "already pin",
+		}
+	}
+	logger.Debugf("FileSyncServiceProtocol->HandleRequest end")
+	return responseContent, retCode, nil
 }
 
-func (p *IpfsServiceProtocol) HandleResponse(request *pb.CustomProtocolReq, response *pb.CustomProtocolRes) error {
-	log.Debugf("IpfsServiceProtocol->HandleResponse begin:\nrequest: %v \nresponse: %v", request, response)
-	ipfsReq := &ipfspb.IpfsReq{}
-	err := p.CustomStreamServiceProtocol.HandleRequest(request, ipfsReq)
-	if err != nil {
-		return err
-	}
-	log.Debugf("IpfsServiceProtocol->HandleRequest: ipfsReq: %v", ipfsReq)
-
-	p.commicateInfoListMutex.RLock()
-	commicateInfo := p.commicateInfoList[ipfsReq.CID]
-	p.commicateInfoListMutex.RUnlock()
-	if commicateInfo == nil {
-		log.Debugf("IpfsServiceProtocol->HandleResponse: commicateInfo is nil")
-		return fmt.Errorf("IpfsServiceProtocol->HandleResponse: commicateInfo is nil")
-	}
-
-	err = p.CustomStreamServiceProtocol.HandleResponse(response, commicateInfo.resp)
-	if err != nil {
-		return err
-	}
-	log.Debugf("IpfsServiceProtocol->HandleResponse: pullCidResponse: %v", commicateInfo.resp)
-
-	// exec ipfs pin operation is finished
-
-	log.Debugf("IpfsServiceProtocol->HandleResponse end")
-	return nil
-}
-
-func (p *IpfsServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string) error {
-	log.Debugf("IpfsServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
+func (p *FileSyncServiceProtocol) uploadContentToProvider(cid string, storageProviderList []string) error {
+	logger.Debugf("IpfsServiceProtocol->uploadContentToProvider begin: \ncid:%s\nstorageProviderList:%v",
 		cid, storageProviderList)
 	for _, storageProvider := range storageProviderList {
 		(*p.storageInfoList)[storageProvider] = storageProvider
 		p.asyncUploadCidContent(storageProvider, cid)
 	}
-	log.Debugf("IpfsServiceProtocol->uploadContentToProvider end")
+	logger.Debugf("IpfsServiceProtocol->uploadContentToProvider end")
 	return nil
 }
 
-func (p *IpfsServiceProtocol) saveCidInfoToDkvs(cid string) error {
-	log.Debugf("IpfsServiceProtocol->saveCidInfoToDkvs begin: cid:%s", cid)
-	dkvsKey := StorageKeyPrefix + cid
-	pubkeyData, err := crypto.MarshalPublicKey(p.PriKey.GetPublic())
-	if err != nil {
-		log.Errorf("IpfsServiceProtocol->saveCidInfoToDkvs: crypto.MarshalPublicKey error: %v", err)
-		return err
-	}
-	peerID := p.tvBaseService.GetHost().ID().String()
-	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
-	if isExistKey {
-		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
-		if err != nil {
-			log.Errorf("IpfsServiceProtocol->saveCidInfoToDkvs: GetDkvsService->Get error: %v", err)
-			return err
-		}
-		err = json.Unmarshal(value, p.storageInfoList)
-		if err != nil {
-			log.Warnf("IpfsServiceProtocol->saveCidInfoToDkvs: json.Unmarshal old dkvs value error: %v", err)
-			return nil
-		}
-		if (*p.storageInfoList)[peerID] != nil {
-			log.Debugf("IpfsServiceProtocol->saveCidInfoToDkvs: peerID is already exist in dkvs, peerID: %s", peerID)
-			return nil
-		}
-	}
-
-	(*p.storageInfoList)[peerID] = peerID
-	value, err := json.Marshal(p.storageInfoList)
-	if err != nil {
-		log.Errorf("IpfsServiceProtocol->saveCidInfoToDkvs: json marshal new dkvs value error: %v", err)
-		return err
-	}
-	issuetime := dkvs.TimeNow()
-	ttl := dkvs.GetTtlFromDuration(time.Hour * 24 * 30 * 12 * 100) // about 100 year
-	sig, err := p.PriKey.Sign(dkvs.GetRecordSignData(dkvsKey, value, pubkeyData, issuetime, ttl))
-	if err != nil {
-		log.Errorf("IpfsServiceProtocol->saveCidInfoToDkvs: SignDataByEcdsa: %v", err)
-		return err
-	}
-
-	err = p.tvBaseService.GetDkvsService().Put(dkvsKey, value, pubkeyData, issuetime, ttl, sig)
-	if err != nil {
-		log.Errorf("IpfsServiceProtocol->saveCidInfoToDkvs: Put error: %v", err)
-		return err
-	}
-	log.Debugf("IpfsServiceProtocol->saveCidInfoToDkvs end")
-	return nil
-}
-
-func (p *IpfsServiceProtocol) httpUploadCidContent(providerName string, cid string) error {
+func (p *FileSyncServiceProtocol) httpUploadCidContent(providerName string, cid string) error {
 	// the same API key exceeds 30 request within 10 seconds, the rate limit will be triggered
 	// https://nft.storage/api-docs/  https://web3.storage/docs/reference/http-api/
-	log.Debugf("IpfsServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
+	logger.Debugf("IpfsServiceProtocol->httpUploadCidContent begin: providerName:%s, cid: %s", providerName, cid)
 	provider := p.ipfsProviderList[providerName]
 	if provider == nil {
-		log.Errorf("IpfsServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
+		logger.Errorf("IpfsServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
 		return fmt.Errorf("IpfsServiceProtocol->httpUploadCidContent: provider is nil, providerName: %s", providerName)
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
 	defer cancel()
-	content, _, err := tvIpfs.IpfsBlockGet(cid, timeoutCtx)
+	content, _, err := tvbaseIpfs.IpfsBlockGet(cid, timeoutCtx)
 	if err != nil {
 		return err
 	}
@@ -231,7 +180,7 @@ func (p *IpfsServiceProtocol) httpUploadCidContent(providerName string, cid stri
 	bufSize := len(buf.Bytes())
 	if bufSize >= 100*1024*1024 {
 		// TODO over 100MB need to be split using CAR,, implement it
-		log.Errorf("IpfsServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
+		logger.Errorf("IpfsServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
 		return fmt.Errorf("IpfsServiceProtocol->httpUploadCidContent: file too large(<100MB), bufSize:%v", bufSize)
 	}
 
@@ -240,7 +189,7 @@ func (p *IpfsServiceProtocol) httpUploadCidContent(providerName string, cid stri
 	}
 	req, err := http.NewRequest("POST", provider.uploadUrl, buf)
 	if err != nil {
-		log.Errorf("IpfsServiceProtocol->httpUploadCidContent: http.NewRequest error: %v", err)
+		logger.Errorf("IpfsServiceProtocol->httpUploadCidContent: http.NewRequest error: %v", err)
 		return nil
 	}
 
@@ -248,25 +197,25 @@ func (p *IpfsServiceProtocol) httpUploadCidContent(providerName string, cid stri
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf("IpfsServiceProtocol->httpUploadCidContent: client.Do error: %v", err)
+		logger.Errorf("IpfsServiceProtocol->httpUploadCidContent: client.Do error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("IpfsServiceProtocol->httpUploadCidContent: ioutil.ReadAll error: %v", err)
+		logger.Errorf("IpfsServiceProtocol->httpUploadCidContent: ioutil.ReadAll error: %v", err)
 		return err
 	}
 
-	log.Debugf("IpfsServiceProtocol->httpUploadCidContent: body: %s", string(responseBody))
-	log.Debugf("IpfsServiceProtocol->httpUploadCidContent end")
+	logger.Debugf("IpfsServiceProtocol->httpUploadCidContent: body: %s", string(responseBody))
+	logger.Debugf("IpfsServiceProtocol->httpUploadCidContent end")
 	return nil
 }
 
-func (p *IpfsServiceProtocol) initIpfsProviderTask(providerName string, apiKey string, uploadUrl string, interval time.Duration, timeout time.Duration, uploadFunc ipfsUpload) error {
+func (p *FileSyncServiceProtocol) initIpfsProviderTask(providerName string, apiKey string, uploadUrl string, interval time.Duration, timeout time.Duration, uploadFunc ipfsUpload) error {
 	if p.ipfsProviderList[providerName] != nil {
-		log.Errorf("IpfsServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
+		logger.Errorf("IpfsServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 		return fmt.Errorf("IpfsServiceProtocol->initIpfsProviderTask: ipfsProviderTaskList[providerName] is not nil")
 	}
 	p.ipfsProviderList[providerName] = &ipfsProviderList{
@@ -281,31 +230,31 @@ func (p *IpfsServiceProtocol) initIpfsProviderTask(providerName string, apiKey s
 	return nil
 }
 
-func (p *IpfsServiceProtocol) asyncUploadCidContent(providerName string, cid string) error {
-	log.Debugf("IpfsServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
+func (p *FileSyncServiceProtocol) asyncUploadCidContent(providerName string, cid string) error {
+	logger.Debugf("IpfsServiceProtocol->asyncUploadCidContent begin:\nproviderName:%s\n cid: %v",
 		providerName, cid)
 	dkvsKey := StorageKeyPrefix + cid
 	isExistKey := p.tvBaseService.GetDkvsService().Has(dkvsKey)
 	if isExistKey {
 		value, _, _, _, _, err := p.tvBaseService.GetDkvsService().Get(dkvsKey)
 		if err != nil {
-			log.Errorf("IpfsServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
+			logger.Errorf("IpfsServiceProtocol->asyncUploadCidContent: GetDkvsService->Get error: %v", err)
 			return err
 		}
 		err = json.Unmarshal(value, p.storageInfoList)
 		if err != nil {
-			log.Warnf("IpfsServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
+			logger.Warnf("IpfsServiceProtocol->asyncUploadCidContent: json.Unmarshal old dkvs value error: %v", err)
 			return err
 		}
 		if (*p.storageInfoList)[providerName] != nil {
-			log.Debugf("IpfsServiceProtocol->asyncUploadCidContent: provider is already exist in dkvs, providerName: %s", providerName)
+			logger.Debugf("IpfsServiceProtocol->asyncUploadCidContent: provider is already exist in dkvs, providerName: %s", providerName)
 			return nil
 		}
 	}
 
 	ipfsProviderTask := p.ipfsProviderList[providerName]
 	if ipfsProviderTask == nil {
-		log.Errorf("IpfsServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
+		logger.Errorf("IpfsServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
 		return fmt.Errorf("IpfsServiceProtocol->asyncUploadCidContent: ipfsProviderList[providerName] is nil")
 	}
 	ipfsProviderTask.mutex.Lock()
@@ -353,16 +302,16 @@ func (p *IpfsServiceProtocol) asyncUploadCidContent(providerName string, cid str
 		select {
 		case <-ipfsProviderTask.timer.C:
 			ipfsProviderTask.taskQueue <- true
-			log.Debugf("IpfsServiceProtocol->asyncUploadCidContent: ipfsProviderTask.timer.C")
+			logger.Debugf("IpfsServiceProtocol->asyncUploadCidContent: ipfsProviderTask.timer.C")
 		case <-done:
 			ipfsProviderTask.timer.Stop()
 			ipfsProviderTask.isRun = false
-			log.Debugf("IpfsServiceProtocol->asyncUploadCidContent end: done")
+			logger.Debugf("IpfsServiceProtocol->asyncUploadCidContent end: done")
 			return nil
 		case <-p.Ctx.Done():
 			ipfsProviderTask.timer.Stop()
 			ipfsProviderTask.isRun = false
-			log.Debugf("IpfsServiceProtocol->asyncUploadCidContent end: p.Ctx.Done()")
+			logger.Debugf("IpfsServiceProtocol->asyncUploadCidContent end: p.Ctx.Done()")
 			return p.Ctx.Err()
 		}
 	}
