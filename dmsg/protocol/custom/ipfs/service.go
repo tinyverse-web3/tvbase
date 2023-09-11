@@ -103,7 +103,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 		logger.Debugf(retCode.Result)
 		return responseContent, retCode, nil
 	}
-	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq: %v", syncFileReq)
+	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq.CID: %v", syncFileReq.CID)
 
 	sh := tvbaseIpfs.GetIpfsShellProxy()
 	isPin := sh.IsPin(syncFileReq.CID)
