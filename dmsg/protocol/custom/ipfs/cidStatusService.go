@@ -12,17 +12,17 @@ type CidStatusServiceProtocol struct {
 	customProtocol.CustomStreamServiceProtocol
 }
 
-var checkIpfsPinServiceProtocol *CidStatusServiceProtocol
+var cidStatusServiceProtocol *CidStatusServiceProtocol
 
 func GetCidStatusServiceProtocol() (*CidStatusServiceProtocol, error) {
-	if fileSyncServiceProtocol == nil {
-		checkIpfsPinServiceProtocol = &CidStatusServiceProtocol{}
-		err := checkIpfsPinServiceProtocol.Init()
+	if cidStatusServiceProtocol == nil {
+		cidStatusServiceProtocol = &CidStatusServiceProtocol{}
+		err := cidStatusServiceProtocol.Init()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return checkIpfsPinServiceProtocol, nil
+	return cidStatusServiceProtocol, nil
 }
 
 func (p *CidStatusServiceProtocol) Init() error {
