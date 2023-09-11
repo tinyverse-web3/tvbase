@@ -35,9 +35,7 @@ type StreamProtocol struct {
 func (p *StreamProtocol) HandleRequestData(
 	requestProtocolData []byte,
 	dataList ...any) error {
-	log.Logger.Debugf(
-		"StreamProtocol->HandleRequestData begin\nrequestProtocolData: %v,\ndataList: %v",
-		requestProtocolData, dataList)
+	log.Logger.Debugf("StreamProtocol->HandleRequestData begin")
 
 	request, response, abort, err := p.Protocol.HandleRequestData(requestProtocolData)
 	if abort {
