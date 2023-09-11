@@ -1,6 +1,8 @@
 package ipfs
 
 import (
+	"context"
+
 	shell "github.com/ipfs/go-ipfs-api"
 )
 
@@ -64,8 +66,22 @@ func (s *IpfsShell) IsPin(cid string) (isPin bool) {
 	return info.Type != ""
 }
 
-func (s *IpfsShell) Pin(cid string) error {
-	return s.sh.Pin(cid)
+func (s *IpfsShell) RecursivePin(cid string, ctx context.Context) error {
+	return s.sh.Request("pin/add", cid).
+		Option("recursive", true).
+		Exec(ctx, nil)
+}
+
+func (s *IpfsShell) DirectPin(cid string, ctx context.Context) error {
+	return s.sh.Request("pin/add", cid).
+		Option("direct", true).
+		Exec(ctx, nil)
+}
+
+func (s *IpfsShell) IndirectPin(cid string, ctx context.Context) error {
+	return s.sh.Request("pin/add", cid).
+		Option("indirect", true).
+		Exec(ctx, nil)
 }
 
 func (s *IpfsShell) Unpin(cid string) error {
