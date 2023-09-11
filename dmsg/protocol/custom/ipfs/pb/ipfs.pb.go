@@ -25,9 +25,8 @@ type SyncFileReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CID        string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
-	Data       []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	Accelerate bool   `protobuf:"varint,3,opt,name=accelerate,proto3" json:"accelerate,omitempty"`
+	CID  string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SyncFileReq) Reset() {
@@ -74,13 +73,6 @@ func (x *SyncFileReq) GetData() []byte {
 		return x.Data
 	}
 	return nil
-}
-
-func (x *SyncFileReq) GetAccelerate() bool {
-	if x != nil {
-		return x.Accelerate
-	}
-	return false
 }
 
 type SyncFileRes struct {
@@ -130,20 +122,232 @@ func (x *SyncFileRes) GetCID() string {
 	return ""
 }
 
+type CidStatusReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CID string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+}
+
+func (x *CidStatusReq) Reset() {
+	*x = CidStatusReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ipfs_pb_ipfs_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CidStatusReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CidStatusReq) ProtoMessage() {}
+
+func (x *CidStatusReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ipfs_pb_ipfs_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CidStatusReq.ProtoReflect.Descriptor instead.
+func (*CidStatusReq) Descriptor() ([]byte, []int) {
+	return file_ipfs_pb_ipfs_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CidStatusReq) GetCID() string {
+	if x != nil {
+		return x.CID
+	}
+	return ""
+}
+
+type CidStatusRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CID   string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+	IsPin bool   `protobuf:"varint,2,opt,name=isPin,proto3" json:"isPin,omitempty"`
+}
+
+func (x *CidStatusRes) Reset() {
+	*x = CidStatusRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ipfs_pb_ipfs_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CidStatusRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CidStatusRes) ProtoMessage() {}
+
+func (x *CidStatusRes) ProtoReflect() protoreflect.Message {
+	mi := &file_ipfs_pb_ipfs_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CidStatusRes.ProtoReflect.Descriptor instead.
+func (*CidStatusRes) Descriptor() ([]byte, []int) {
+	return file_ipfs_pb_ipfs_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CidStatusRes) GetCID() string {
+	if x != nil {
+		return x.CID
+	}
+	return ""
+}
+
+func (x *CidStatusRes) GetIsPin() bool {
+	if x != nil {
+		return x.IsPin
+	}
+	return false
+}
+
+type PinReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CID     string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+	Timeout int64  `protobuf:"varint,2,opt,name=timeout,proto3" json:"timeout,omitempty"`
+}
+
+func (x *PinReq) Reset() {
+	*x = PinReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ipfs_pb_ipfs_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PinReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinReq) ProtoMessage() {}
+
+func (x *PinReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ipfs_pb_ipfs_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinReq.ProtoReflect.Descriptor instead.
+func (*PinReq) Descriptor() ([]byte, []int) {
+	return file_ipfs_pb_ipfs_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PinReq) GetCID() string {
+	if x != nil {
+		return x.CID
+	}
+	return ""
+}
+
+func (x *PinReq) GetTimeout() int64 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+type PinRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CID string `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+}
+
+func (x *PinRes) Reset() {
+	*x = PinRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ipfs_pb_ipfs_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PinRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinRes) ProtoMessage() {}
+
+func (x *PinRes) ProtoReflect() protoreflect.Message {
+	mi := &file_ipfs_pb_ipfs_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinRes.ProtoReflect.Descriptor instead.
+func (*PinRes) Descriptor() ([]byte, []int) {
+	return file_ipfs_pb_ipfs_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PinRes) GetCID() string {
+	if x != nil {
+		return x.CID
+	}
+	return ""
+}
+
 var File_ipfs_pb_ipfs_proto protoreflect.FileDescriptor
 
 var file_ipfs_pb_ipfs_proto_rawDesc = []byte{
 	0x0a, 0x12, 0x69, 0x70, 0x66, 0x73, 0x2f, 0x70, 0x62, 0x2f, 0x69, 0x70, 0x66, 0x73, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x12, 0x02, 0x70, 0x62, 0x22, 0x53, 0x0a, 0x0b, 0x53, 0x79, 0x6e, 0x63,
+	0x72, 0x6f, 0x74, 0x6f, 0x12, 0x02, 0x70, 0x62, 0x22, 0x33, 0x0a, 0x0b, 0x53, 0x79, 0x6e, 0x63,
 	0x46, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x43, 0x49, 0x44, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43, 0x49, 0x44, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74,
-	0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x1e, 0x0a,
-	0x0a, 0x61, 0x63, 0x63, 0x65, 0x6c, 0x65, 0x72, 0x61, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x0a, 0x61, 0x63, 0x63, 0x65, 0x6c, 0x65, 0x72, 0x61, 0x74, 0x65, 0x22, 0x1f, 0x0a,
+	0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x1f, 0x0a,
 	0x0b, 0x53, 0x79, 0x6e, 0x63, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x12, 0x10, 0x0a, 0x03,
-	0x43, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43, 0x49, 0x44, 0x42, 0x09,
-	0x5a, 0x07, 0x69, 0x70, 0x66, 0x73, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x43, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43, 0x49, 0x44, 0x22, 0x20,
+	0x0a, 0x0c, 0x43, 0x69, 0x64, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10,
+	0x0a, 0x03, 0x43, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43, 0x49, 0x44,
+	0x22, 0x36, 0x0a, 0x0c, 0x43, 0x69, 0x64, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73,
+	0x12, 0x10, 0x0a, 0x03, 0x43, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43,
+	0x49, 0x44, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x73, 0x50, 0x69, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x08, 0x52, 0x05, 0x69, 0x73, 0x50, 0x69, 0x6e, 0x22, 0x34, 0x0a, 0x06, 0x50, 0x69, 0x6e, 0x52,
+	0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x43, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x43, 0x49, 0x44, 0x12, 0x18, 0x0a, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x22, 0x1a,
+	0x0a, 0x06, 0x50, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x12, 0x10, 0x0a, 0x03, 0x43, 0x49, 0x44, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x43, 0x49, 0x44, 0x42, 0x09, 0x5a, 0x07, 0x69, 0x70,
+	0x66, 0x73, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -158,10 +362,14 @@ func file_ipfs_pb_ipfs_proto_rawDescGZIP() []byte {
 	return file_ipfs_pb_ipfs_proto_rawDescData
 }
 
-var file_ipfs_pb_ipfs_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_ipfs_pb_ipfs_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_ipfs_pb_ipfs_proto_goTypes = []interface{}{
-	(*SyncFileReq)(nil), // 0: pb.SyncFileReq
-	(*SyncFileRes)(nil), // 1: pb.SyncFileRes
+	(*SyncFileReq)(nil),  // 0: pb.SyncFileReq
+	(*SyncFileRes)(nil),  // 1: pb.SyncFileRes
+	(*CidStatusReq)(nil), // 2: pb.CidStatusReq
+	(*CidStatusRes)(nil), // 3: pb.CidStatusRes
+	(*PinReq)(nil),       // 4: pb.PinReq
+	(*PinRes)(nil),       // 5: pb.PinRes
 }
 var file_ipfs_pb_ipfs_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -201,6 +409,54 @@ func file_ipfs_pb_ipfs_proto_init() {
 				return nil
 			}
 		}
+		file_ipfs_pb_ipfs_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CidStatusReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ipfs_pb_ipfs_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CidStatusRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ipfs_pb_ipfs_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PinReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ipfs_pb_ipfs_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PinRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -208,7 +464,7 @@ func file_ipfs_pb_ipfs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ipfs_pb_ipfs_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -18,8 +18,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// service
-
 const StorageKeyPrefix = "/storage012345678901234567890123456789/ipfs012345678901234567890123456789/"
 
 var (
@@ -61,17 +59,17 @@ type FileSyncServiceProtocol struct {
 	storageInfoList  *map[string]any
 }
 
-var pullCidServiceProtocol *FileSyncServiceProtocol
+var fileSyncServiceProtocol *FileSyncServiceProtocol
 
-func GetServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*FileSyncServiceProtocol, error) {
-	if pullCidServiceProtocol == nil {
-		pullCidServiceProtocol = &FileSyncServiceProtocol{}
-		err := pullCidServiceProtocol.Init(tvBaseService)
+func GetFileSyncServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*FileSyncServiceProtocol, error) {
+	if fileSyncServiceProtocol == nil {
+		fileSyncServiceProtocol = &FileSyncServiceProtocol{}
+		err := fileSyncServiceProtocol.Init(tvBaseService)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return pullCidServiceProtocol, nil
+	return fileSyncServiceProtocol, nil
 }
 
 func (p *FileSyncServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
@@ -89,12 +87,8 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
 
 	syncFileReq := &ipfspb.SyncFileReq{}
-	syncFileRes := &ipfspb.SyncFileRes{
-		CID: syncFileReq.CID,
-	}
-	responseContent, _ = proto.Marshal(syncFileRes)
-
 	err = proto.Unmarshal(request.Content, syncFileReq)
+
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROTOCOL,
@@ -105,80 +99,64 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	}
 	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq.CID: %v", syncFileReq.CID)
 
+	syncFileRes := &ipfspb.SyncFileRes{
+		CID: syncFileReq.CID,
+	}
+	responseContent, _ = proto.Marshal(syncFileRes)
+
 	sh := tvbaseIpfs.GetIpfsShellProxy()
 	isPin := sh.IsPin(syncFileReq.CID)
-	if !isPin {
-		cid, err := sh.BlockPutVo(syncFileReq.Data)
-		if err != nil {
-			retCode = &pb.RetCode{
-				Code:   CODE_ERROR_IPFS,
-				Result: "FileSyncServiceProtocol->HandleRequest: sh.BlockPutVo error: " + err.Error(),
-			}
-			logger.Errorf(retCode.Result)
-		}
-		if cid != syncFileReq.CID {
-			retCode = &pb.RetCode{
-				Code:   CODE_ERROR_PROTOCOL,
-				Result: "FileSyncServiceProtocol->HandleRequest: calculated CID is different from the input parameter CID, calculated cid :" + cid,
-			}
-			logger.Errorf(retCode.Result)
-		} else {
-			err = sh.DirectPin(cid, p.Ctx)
-			if err != nil {
-				logger.Errorf("FileSyncServiceProtocol->HandleRequest: sh.Unpin error: %v, cid: %s", err, cid)
-			}
-			if err != nil {
-				retCode = &pb.RetCode{
-					Code:   CODE_ERROR_IPFS,
-					Result: "FileSyncServiceProtocol->HandleRequest: sh.DirectPin error: " + err.Error(),
-				}
-			} else {
-				retCode = &pb.RetCode{
-					Code:   CODE_PIN,
-					Result: "success",
-				}
-			}
-			if syncFileReq.Accelerate {
-				stat, err := sh.ObjectStat(cid)
-				if err != nil {
-					logger.Errorf("FileSyncServiceProtocol->HandleRequest: sh.ObjectStat error: %v", err)
-					retCode = &pb.RetCode{
-						Code:   CODE_PIN,
-						Result: "success, but accelerate fail",
-					}
-				} else {
-					// TODO : experiment, need to optimization
-					size := stat.CumulativeSize + stat.BlockSize
-					const MinSize = 1024 * 10
-					const CommonSize = 1024 * 1024
-					const MinTimeout = 30 * time.Second
-					const CommonTimeout = 60 * time.Second
-					const MaxTimeout = 5 * 60 * time.Second
-					timeout := MinTimeout
-					if size < MinSize {
-						timeout = MinTimeout
-					} else if size < CommonSize {
-						timeout = CommonTimeout
-					} else {
-						timeout = MaxTimeout
-					}
-					timeoutCtx, cancel := context.WithTimeout(p.Ctx, timeout)
-					go func() {
-						err = sh.RecursivePin(cid, timeoutCtx)
-						if err != nil {
-							logger.Errorf("FileSyncServiceProtocol->HandleRequest: sh.RecursivePin error: %v, cid: %s", err, cid)
-						}
-						cancel()
-					}()
-				}
-			}
-		}
-	} else {
+	if isPin {
 		retCode = &pb.RetCode{
 			Code:   CODE_ALREADY_PIN,
 			Result: "already pin",
 		}
+		return responseContent, retCode, nil
 	}
+
+	if syncFileReq.Data == nil || len(syncFileReq.Data) == 0 {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_IPFS,
+			Result: "FileSyncServiceProtocol->HandleRequest: syncFileReq.Data is empty",
+		}
+		logger.Errorf(retCode.Result)
+		return responseContent, retCode, nil
+	}
+
+	cid, err := sh.BlockPutVo(syncFileReq.Data)
+	if err != nil {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_IPFS,
+			Result: "FileSyncServiceProtocol->HandleRequest: sh.BlockPutVo error: " + err.Error(),
+		}
+		logger.Errorf(retCode.Result)
+		return responseContent, retCode, nil
+	}
+
+	if cid != syncFileReq.CID {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_PROTOCOL,
+			Result: "FileSyncServiceProtocol->HandleRequest: calculated CID is different from the input parameter CID, calculated cid :" + cid,
+		}
+		logger.Errorf(retCode.Result)
+		return responseContent, retCode, nil
+	}
+
+	err = sh.DirectPin(cid, p.Ctx)
+	if err != nil {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_IPFS,
+			Result: "FileSyncServiceProtocol->HandleRequest: sh.DirectPin error: " + err.Error(),
+		}
+		logger.Errorf(retCode.Result)
+		return responseContent, retCode, nil
+	}
+
+	retCode = &pb.RetCode{
+		Code:   CODE_PIN,
+		Result: "success",
+	}
+
 	logger.Debugf("FileSyncServiceProtocol->HandleRequest end")
 	return responseContent, retCode, nil
 }

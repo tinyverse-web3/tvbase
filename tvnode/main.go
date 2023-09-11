@@ -198,11 +198,23 @@ func main() {
 		return
 	}
 
-	p, err := ipfsCustomProtocol.GetServiceProtocol(tb)
+	fp, err := ipfsCustomProtocol.GetFileSyncServiceProtocol(tb)
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
-	tb.GetDmsg().GetCustomProtocolService().RegistServer(p)
+	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
+
+	cp, err := ipfsCustomProtocol.GetCidStatusServiceProtocol()
+	if err != nil {
+		mainLog.Fatalf("tvnode->main: GetCidStatusServiceProtocol :%v", err)
+	}
+	tb.GetDmsg().GetCustomProtocolService().RegistServer(cp)
+
+	pp, err := ipfsCustomProtocol.GetPinServiceProtocol()
+	if err != nil {
+		mainLog.Fatalf("tvnode->main: GetPinServiceProtocol :%v", err)
+	}
+	tb.GetDmsg().GetCustomProtocolService().RegistServer(pp)
 
 	<-ctx.Done()
 }
