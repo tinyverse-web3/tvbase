@@ -24,22 +24,23 @@ var (
 // NodeConfig stores the full configuration of the relays, ACLs and other settings
 // that influence behaviour of a relay daemon.
 type NodeConfig struct {
-	RootPath     string
-	Mode         define.NodeMode
-	Network      NetworkConfig
-	Swarm        config.SwarmConfig
-	AutoNAT      AutoNATConfig
-	ConnMgr      ConnMgrConfig
-	Relay        RelayConfig
-	ACL          ACLConfig
-	Bootstrap    BootstrapConfig
-	PartialLimit rcmgr.PartialLimitConfig
-	DHT          DHTConfig
-	DMsg         DMsgConfig
-	Metrics      MetricsConfig
-	CoreHttp     CoreHttpConfig
-	Log          LogConfig
-	Disc         DiscConfig
+	RootPath       string
+	Mode           define.NodeMode
+	Network        NetworkConfig
+	Swarm          config.SwarmConfig
+	AutoNAT        AutoNATConfig
+	ConnMgr        ConnMgrConfig
+	Relay          RelayConfig
+	ACL            ACLConfig
+	Bootstrap      BootstrapConfig
+	PartialLimit   rcmgr.PartialLimitConfig
+	DHT            DHTConfig
+	DMsg           DMsgConfig
+	CustomProtocol CustomProtocolConfig
+	Metrics        MetricsConfig
+	CoreHttp       CoreHttpConfig
+	Log            LogConfig
+	Disc           DiscConfig
 }
 
 type DiscConfig struct {
@@ -151,6 +152,14 @@ type DMsgConfig struct {
 	DatastorePath   string
 }
 
+type CustomProtocolConfig struct {
+	IpfsSyncFile IpfsSyncFileConfig
+}
+
+type IpfsSyncFileConfig struct {
+	IpfsURL string
+}
+
 type MetricsConfig struct {
 	ApiPort int
 }
@@ -232,6 +241,11 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			MaxChannelCount: 1000,
 			KeepChannelDay:  30,
 			DatastorePath:   "msg_data",
+		},
+		CustomProtocol: CustomProtocolConfig{
+			IpfsSyncFile: IpfsSyncFileConfig{
+				IpfsURL: "http://127.0.0.1:5001",
+			},
 		},
 		Relay: RelayConfig{
 			Enabled: true,

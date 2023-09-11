@@ -192,12 +192,11 @@ func main() {
 		return
 	}
 
-	err = tvbaseIpfs.CheckIpfsCmd()
+	_, err = tvbaseIpfs.CreateIpfsShellProxy(nodeConfig.CustomProtocol.IpfsSyncFile.IpfsURL)
 	if err != nil {
-		mainLog.Errorf("tvnode->main: CheckIpfsCmd: %v", err)
+		mainLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
 		return
 	}
-	tvbaseIpfs.CreateIpfsShell("/ip4/127.0.0.1/tcp/5001")
 
 	p, err := ipfsCustomProtocol.GetServiceProtocol(tb)
 	if err != nil {
