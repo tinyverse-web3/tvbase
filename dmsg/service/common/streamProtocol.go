@@ -66,6 +66,7 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 		dmsgLog.Logger.Errorf("StreamProtocol->HandleRequestData: unmarshal data error: %v", err)
 		return err
 	}
+
 	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:\np.Request: %v", request)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)

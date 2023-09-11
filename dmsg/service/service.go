@@ -593,13 +593,13 @@ func (d *DmsgService) OnCreatePubChannelResponse(protoData protoreflect.ProtoMes
 }
 
 func (d *DmsgService) OnCustomStreamProtocolRequest(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
-	dmsgLog.Logger.Debugf("dmsgService->OnCustomStreamProtocolRequest begin:\nrequestProtoData: %v", requestProtoData)
+	dmsgLog.Logger.Debugf("dmsgService->OnCustomStreamProtocolRequest begin")
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert to *pb.CustomContentReq")
 		return nil, nil, fmt.Errorf("dmsgService->OnCustomStreamProtocolRequest: cannot convert to *pb.CustomContentReq")
 	}
-
+	dmsgLog.Logger.Debugf("dmsgService->OnCustomStreamProtocolRequest:\nrequest.BasicData: %v\nrequest.PID: ", request.BasicData, request.PID)
 	customProtocolInfo := d.customStreamProtocolInfoList[request.PID]
 	if customProtocolInfo == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCustomStreamProtocolRequest: customProtocolInfo is nil, request: %v", request)
