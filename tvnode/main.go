@@ -21,8 +21,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-
-	// "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
+	ipfsCustomProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
@@ -187,7 +186,7 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	mainLog.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
 
-	_, _, err = initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	tb, _, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: initDmsg: %v", err)
 		return
@@ -200,11 +199,11 @@ func main() {
 	}
 	tvbaseIpfs.CreateIpfsShell("/ip4/127.0.0.1/tcp/5001")
 
-	// p, err := pullcid.GetPullCidServiceProtocol(tvbase)
-	// if err != nil {
-	// 	mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
-	// }
-	// tvbase.GetDmsg().GetCustomProtocolService().RegistServer(p)
+	p, err := ipfsCustomProtocol.GetServiceProtocol(tb)
+	if err != nil {
+		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+	}
+	tb.GetDmsg().GetCustomProtocolService().RegistServer(p)
 
 	<-ctx.Done()
 }
@@ -214,12 +213,12 @@ func initDmsg(
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
 	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
-	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tb, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tvbase.GetDmsg()
+	dmsgService := tb.GetDmsg()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -238,7 +237,7 @@ func initDmsg(
 	if err != nil {
 		return nil, nil, err
 	}
-	return tvbase, dmsgService, nil
+	return tb, dmsgService, nil
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
