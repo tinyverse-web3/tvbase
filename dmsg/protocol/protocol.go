@@ -194,8 +194,8 @@ func (p *Protocol) HandleResponseData(
 func (p *Protocol) GenRequestInfo(
 	sigPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
-	log.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\ndataList:%v\nrequestPID:%v",
-		sigPubkey, dataList, p.Adapter.GetRequestPID())
+	log.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v",
+		sigPubkey, p.Adapter.GetRequestPID())
 	requestBasicData := NewBasicData(p.Host, sigPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {

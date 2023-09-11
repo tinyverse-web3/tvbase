@@ -160,8 +160,7 @@ func (p *StreamProtocol) Request(
 	pubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	log.Logger.Debugf(
-		"StreamProtocol->Request begin\npeerID: %s\npubkey: %s\ndataList: %v",
-		peerID, pubkey, dataList)
+		"StreamProtocol->Request begin\npeerID: %s\npubkey: %s", peerID, pubkey)
 	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(pubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
