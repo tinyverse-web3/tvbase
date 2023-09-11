@@ -8,6 +8,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.1.3
+	github.com/ipfs/go-ipfs-api v0.6.0
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/libp2p/go-libp2p v0.27.7
 	github.com/libp2p/go-libp2p-kad-dht v0.24.2
@@ -27,7 +28,6 @@ require (
 	github.com/crackcomm/go-gitignore v0.0.0-20170627025303-887ab5e44cc3 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/ipfs/go-ipfs-api v0.6.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
