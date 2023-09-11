@@ -244,7 +244,7 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 		},
 		CustomProtocol: CustomProtocolConfig{
 			IpfsSyncFile: IpfsSyncFileConfig{
-				IpfsURL: "/ip4/0.0.0.0/tcp/5001",
+				IpfsURL: "/ip4/127.0.0.1/tcp/5001",
 			},
 		},
 		Relay: RelayConfig{
