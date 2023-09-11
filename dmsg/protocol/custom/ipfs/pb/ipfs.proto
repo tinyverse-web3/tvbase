@@ -8,7 +8,7 @@ option go_package = "ipfs/pb";
 message SyncFileReq {
     string CID = 1;
     bytes data = 2;
-    bool accelerate = 3;
+    bool accelerate = 3; // experiment
 }
 
 message SyncFileRes {
