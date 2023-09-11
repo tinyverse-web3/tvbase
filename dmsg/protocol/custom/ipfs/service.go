@@ -84,8 +84,9 @@ func (p *FileSyncServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService)
 	return nil
 }
 
-func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (responseContent []byte, retCode *pb.RetCode, err error) {
-	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest: %v", request)
+func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
+	responseContent []byte, retCode *pb.RetCode, err error) {
+	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
 
 	syncFileReq := &ipfspb.SyncFileReq{}
 	syncFileRes := &ipfspb.SyncFileRes{
