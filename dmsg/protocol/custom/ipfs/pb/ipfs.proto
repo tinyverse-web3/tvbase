@@ -8,9 +8,26 @@ option go_package = "ipfs/pb";
 message SyncFileReq {
     string CID = 1;
     bytes data = 2;
-    bool accelerate = 3;
 }
 
 message SyncFileRes {
+    string CID = 1;
+}
+
+message CidStatusReq {
+    string CID = 1;
+}
+
+message CidStatusRes {
+    string CID = 1;
+    bool isPin = 2;
+}
+
+message PinReq {
+    string CID = 1;
+    int64 timeout = 2;
+}
+
+message PinRes {
     string CID = 1;
 }

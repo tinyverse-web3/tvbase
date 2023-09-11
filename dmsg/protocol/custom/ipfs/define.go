@@ -9,6 +9,8 @@ const loggerName = "dmsg.protocol.custom.ipfs"
 var logger = ipfsLog.Logger(loggerName)
 
 const SYNCIPFSFILEPID = "tv_syncipfsfile"
+const CID_STATUS_SERVICE = "cidStatusService"
+const PIN_SERVICE = "pinService"
 
 const (
 	CODE_PIN            = 0
