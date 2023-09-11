@@ -67,8 +67,6 @@ func (p *StreamProtocol) HandleRequestData(requestProtoData []byte, remotePeerID
 		return err
 	}
 
-	dmsgLog.Logger.Debugf("StreamProtocol->HandleRequestData:\np.Request: %v", request)
-
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	var retCode *pb.RetCode = nil
 	var requestCallbackData any
