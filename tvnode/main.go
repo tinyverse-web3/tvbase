@@ -15,6 +15,7 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	ipfsCustomProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -170,10 +171,18 @@ func main() {
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
 	}
+
+	_, err = tvbaseIpfs.CreateIpfsShellProxy(nodeConfig.CustomProtocol.IpfsSyncFile.IpfsURL)
+	if err != nil {
+		tvsLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
+		return
+	}
+
 	p, err := ipfsCustomProtocol.GetServiceProtocol(tb)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
+
 	tb.RegistCSSProtocol(p)
 
 	<-ctx.Done()

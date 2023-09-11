@@ -104,7 +104,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	}
 	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq: %v", syncFileReq)
 
-	sh := tvbaseIpfs.GetIpfsShell()
+	sh := tvbaseIpfs.GetIpfsShellProxy()
 	isPin := sh.IsPin(syncFileReq.CID)
 	if !isPin {
 		cid, err := sh.BlockPutVo(syncFileReq.Data)
