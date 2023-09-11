@@ -75,10 +75,7 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	return nil
 }
 
-func (p *PubsubProtocol) Request(
-	sigPubkey string,
-	destPubkey string,
-	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
+func (p *PubsubProtocol) Request(sigPubkey string, destPubkey string, dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	log.Logger.Debugf("PubsubProtocol->Request begin:\nsigPubkey: %s", sigPubkey)
 
 	dataList = append([]any{destPubkey}, dataList...)
