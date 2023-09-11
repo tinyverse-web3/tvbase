@@ -29,7 +29,7 @@ type Protocol struct {
 func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 	protoreflect.ProtoMessage,
 	protoreflect.ProtoMessage, bool, error) {
-	log.Logger.Debugf("Protocol->HandleRequestData begin\ndataList: %v", dataList)
+	log.Logger.Debugf("Protocol->HandleRequestData begin")
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -43,8 +43,6 @@ func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 		log.Logger.Errorf("Protocol->HandleRequestData: unmarshal request error: %v", err)
 		return nil, nil, false, err
 	}
-
-	log.Logger.Debugf("Protocol->HandleRequestData:\nrequest: %v", request)
 
 	requestBasicData := p.Adapter.GetRequestBasicData(request)
 	valid := AuthProtoMsg(request, requestBasicData)

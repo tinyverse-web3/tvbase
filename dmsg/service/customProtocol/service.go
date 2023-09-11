@@ -223,12 +223,14 @@ func (d *CustomProtocolService) UnregistServer(callback dmsgProtocolCustom.Serve
 
 func (d *CustomProtocolService) OnCustomRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("CustomProtocolService->OnCustomRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	log.Debugf("CustomProtocolService->OnCustomRequest begin")
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
 		log.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
 	}
+
+	log.Debugf("dmsgService->OnCustomRequest:\nrequest.BasicData: %v\nrequest.PID: ", request.BasicData, request.PID)
 
 	customProtocolInfo := d.serverStreamProtocolList[request.PID]
 	if customProtocolInfo == nil {
