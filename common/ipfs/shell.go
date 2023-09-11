@@ -19,7 +19,7 @@ func CreateIpfsShellProxy(url string) (*IpfsShellProxy, error) {
 	ret := &IpfsShellProxy{}
 	err := ret.Init(url)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	ipfsShellProxy = ret
 	return ret, nil
