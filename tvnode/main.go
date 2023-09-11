@@ -16,6 +16,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	ipfsCustomProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -165,15 +166,15 @@ func main() {
 	}()
 
 	ctx := context.Background()
-	_, err = tvbase.NewTvbase(rootPath, ctx, true)
+	tb, err := tvbase.NewTvbase(rootPath, ctx, true)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
 	}
-	// p, err := pullcid.GetPullCidServiceProtocol(tvbase)
-	// if err != nil {
-	// 	tvsLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
-	// }
-	// tvbase.RegistCSSProtocol(p)
+	p, err := ipfsCustomProtocol.GetServiceProtocol(tb)
+	if err != nil {
+		tvsLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+	}
+	tb.RegistCSSProtocol(p)
 
 	<-ctx.Done()
 	// tvInfrasture.Stop()
