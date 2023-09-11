@@ -15,7 +15,7 @@ type CidStatusServiceProtocol struct {
 var checkIpfsPinServiceProtocol *CidStatusServiceProtocol
 
 func GetCidStatusServiceProtocol() (*CidStatusServiceProtocol, error) {
-	if fileSyncServiceProtocol == nil {
+	if checkIpfsPinServiceProtocol == nil {
 		checkIpfsPinServiceProtocol = &CidStatusServiceProtocol{}
 		err := checkIpfsPinServiceProtocol.Init()
 		if err != nil {
