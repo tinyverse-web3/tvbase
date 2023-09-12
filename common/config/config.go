@@ -180,10 +180,14 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 		Network: NetworkConfig{
 			IsLocalNet: false,
 			ListenAddrs: []string{
-				"/ip4/0.0.0.0/udp/" + listenPort + "/quic",
-				"/ip6/::/udp/" + listenPort + "/quic",
 				"/ip4/0.0.0.0/tcp/" + listenPort,
+				"/ip4/0.0.0.0/udp/" + listenPort + "/quic",
+				"/ip4/0.0.0.0/udp/" + listenPort + "/quic-v1",
+				"/ip4/0.0.0.0/udp/" + listenPort + "/quic-v1/webtransport",
 				"/ip6/::/tcp/" + listenPort,
+				"/ip6/::/udp/" + listenPort + "/quic",
+				"/ip6/::/udp/" + listenPort + "/quic-v1",
+				"/ip6/::/udp/" + listenPort + "/quic-v1/webtransport",
 			},
 			Libp2pForceReachability: "",
 			Peers:                   []peer.AddrInfo{},
