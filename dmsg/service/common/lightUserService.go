@@ -23,11 +23,11 @@ func (d *LightUserService) Start(
 	enableUserPubsub bool,
 ) error {
 	d.BaseService.Start(enableService)
-	return d.InitUser(pubkeyData, getSig, enableUserPubsub)
+	return d.initUser(pubkeyData, getSig, enableUserPubsub)
 }
 
 func (d *LightUserService) Stop() error {
-	err := d.UnsubscribeUser()
+	err := d.unsubscribeUser()
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, er
 }
 
 // user
-func (d *LightUserService) InitUser(
+func (d *LightUserService) initUser(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	enableUserPubsub bool,
@@ -109,7 +109,7 @@ func (d *LightUserService) subscribeUser(
 	return nil
 }
 
-func (d *LightUserService) UnsubscribeUser() error {
+func (d *LightUserService) unsubscribeUser() error {
 	lightUserLog.Debugf("LightUserService->UnsubscribeUser begin")
 	if d.LightUser == nil {
 		lightUserLog.Warnf("LightUserService->UnsubscribeUser: user is nil")
