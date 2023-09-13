@@ -334,12 +334,12 @@ func (d *DmsgService) UnSubscribeSrcUser() error {
 	}
 	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser:\nsrcUserInfo: %+v", d.SrcUserInfo)
 
+	d.SrcUserInfo.CancelCtx()
+	d.SrcUserInfo.Subscription.Cancel()
 	err := d.SrcUserInfo.Topic.Close()
 	if err != nil {
 		dmsgLog.Logger.Warnf("DmsgService->unSubscribeSrcUser: Topic.Close error: %v", err)
 	}
-	d.SrcUserInfo.CancelCtx()
-	d.SrcUserInfo.Subscription.Cancel()
 	d.SrcUserInfo = nil
 	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser end")
 	return nil
@@ -411,15 +411,15 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 		dmsgLog.Logger.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
 		return fmt.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
 	}
-	err := userInfo.Topic.Close()
-	if err != nil {
-		dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
-	}
 
 	if userInfo.CancelCtx != nil {
 		userInfo.CancelCtx()
 	}
 	userInfo.Subscription.Cancel()
+	err := userInfo.Topic.Close()
+	if err != nil {
+		dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
+	}
 	delete(d.destUserInfoList, userPubkey)
 
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser end")
