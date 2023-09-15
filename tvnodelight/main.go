@@ -106,10 +106,10 @@ func initMsgClient(
 		return nil, nil, err
 	}
 
-	err = dmsgService.Stop()
-	if err != nil {
-		return nil, nil, err
-	}
+	// err = dmsgService.Stop()
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	return tvInfra, dmsgService, nil
 }
