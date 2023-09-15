@@ -31,9 +31,9 @@ for raw in $binpaths; do
   # Expand the $HOME variable.
   binpath=$(eval echo "$raw")
   mkdir -p "$binpath"
-  if mv "$bin" "$binpath/tvnode" ; then
+  if cp "$bin" "$binpath/tvnode" ; then
     echo "Moved $bin to $binpath"
-    mv "$sh" "$binpath/tvnode_start.sh"
+    cp "$sh" "$binpath/tvnode_start.sh"
     exit 0
   else
     if [ -d "$binpath" ] && [ ! -w "$binpath" ]; then
