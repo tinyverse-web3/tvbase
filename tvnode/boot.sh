@@ -64,7 +64,7 @@ log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S").log"
 
 echo "start tvnode..."
 nohup tvnode > "$log_filename" 2>&1 &
-wait $!
+
 if [ $? -eq 0 ]; then
     pid=$!
     echo "tvnode is started, write to $pid_file, pid: $pid, logfile is $log_filename"

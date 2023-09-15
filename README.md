@@ -65,3 +65,9 @@ echo '[url "git@github.com:tinyverse-web3/"]
 
 go env -w GOPRIVATE="github.com/tinyverse-web3/*"
 ```
+
+## compile sdk
+```shell
+gomobile bind -o ./output/android/core.aar -target=android -androidapi 19 github.com/tinyverse-web3/gomobile-libp2p/go/bind/core 
+
+```
