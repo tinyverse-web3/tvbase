@@ -2,6 +2,7 @@
 #
 # Installation script for tvnode. It tries to move $bin in one of the
 # directories stored in $binpaths.
+echo "start go build..."
 go build
 INSTALL_DIR=$(dirname $0)
 

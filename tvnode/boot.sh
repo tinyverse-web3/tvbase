@@ -17,25 +17,31 @@ fi
 
 user_dir="~"
 user_dir=$(eval echo "$user_dir")
+
+conf_path="$user_dir/.tvnode"
+if [ ! -d "$conf_path" ]; then
+    mkdir "$conf_path"
+    echo "tvnode Folder created successfully, it is $conf_path"
+fi
+
 pid_file="$user_dir/.tvnode/tvnode.pid"
 
 isKillOldPid=0
 if [ -f "$pid_file" ]; then
     pid=$(cat "$pid_file")
-    echo "killing tvnode, pid: $pid"
     if [ -z "$pid" ]; then
         echo "pid is empty"
     else
-        echo "$pid_file is exist, killing process with PID: $pid"
+        echo "$pid_file is exist, start terminite tvnode process($pid)"
         kill_output=$(kill -9 "$pid" 2>&1)
         kill_result=$?
         if [ $kill_result -eq 0 ]; then
-            echo "process killed successfully"
+            echo "success to terminite tvnode"
             isKillOldPid=1
         elif [ $kill_result -eq 1 ]; then
-            echo "process for tvnode isn't exist"
+            echo "tvnode process($pid) isn't exist"
         else 
-            echo "failed to kill process for tvnode (errorCode: $kill_result, output: $kill_output)"
+            echo "failed to terminite tvnode($pid) process (errorCode: $kill_result, output: $kill_output)"
         fi
     fi
 fi
@@ -51,17 +57,18 @@ fi
 #     fi
 # fi
 
-echo "start tvnode..."
+
 
 log_dir="$user_dir/.tvnode"
-log_prefix="tvnode"
-log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S")_$log_prefix.log"
+log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S").log"
+
+echo "start tvnode..."
 nohup tvnode > "$log_filename" 2>&1 &
-pid=$!
+wait $!
 if [ $? -eq 0 ]; then
-    echo "tvnode is started, write to $pid_file, pid: $pid."
+    pid=$!
+    echo "tvnode is started, write to $pid_file, pid: $pid, logfile is $log_filename"
     echo "$pid" > $pid_file
 else
-    cat $log_filename
-    echo "tvnode execution failed. check $log_filename for details."
+    echo "fail to exec tvnode."
 fi
