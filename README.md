@@ -11,7 +11,7 @@ Compile program need install golang
 ## ipfs daemon --enable-gc
 ## ipfs shutdown
 
-## start tvnode
+### start tvnode
 git clone git@github.com:tinyverse-web3/tvbase.git
 cd tvbase/tvnode
 go build
@@ -56,4 +56,12 @@ cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && rm ~
 # Just deploy without clearing any data
 ```shell
 cd ~/tvbase/tvnode && git pull && chmod +x ./install.sh  && ./install.sh && ./boot.sh
+```
+
+## config github private repository, need join tinyverse-web3 org
+```shell
+echo '[url "git@github.com:tinyverse-web3/"]
+ insteadOf = https://github.com/tinyverse-web3/'  >> ~/.gitconfig 
+
+go env -w GOPRIVATE="github.com/tinyverse-web3/*"
 ```
