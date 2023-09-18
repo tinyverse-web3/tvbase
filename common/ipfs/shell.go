@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"context"
+	"io"
 
 	shell "github.com/ipfs/go-ipfs-api"
 	ma "github.com/multiformats/go-multiaddr"
@@ -13,7 +14,7 @@ type IpfsShellProxy struct {
 	url string
 }
 
-var ipfsShellProxy *IpfsShellProxy
+var ipfsShell *IpfsShellProxy
 
 func CreateIpfsShellProxy(url string) (*IpfsShellProxy, error) {
 	ret := &IpfsShellProxy{}
@@ -21,12 +22,12 @@ func CreateIpfsShellProxy(url string) (*IpfsShellProxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipfsShellProxy = ret
+	ipfsShell = ret
 	return ret, nil
 }
 
 func GetIpfsShellProxy() *IpfsShellProxy {
-	return ipfsShellProxy
+	return ipfsShell
 }
 
 func (s *IpfsShellProxy) Init(url string) error {
@@ -100,4 +101,8 @@ func (s *IpfsShellProxy) IndirectPin(cid string, ctx context.Context) error {
 
 func (s *IpfsShellProxy) Unpin(cid string) error {
 	return s.sh.Unpin(cid)
+}
+
+func (s *IpfsShellProxy) Cat(cid string) (io.ReadCloser, error) {
+	return s.sh.Cat(cid)
 }

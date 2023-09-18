@@ -204,17 +204,11 @@ func main() {
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
 
-	cp, err := ipfsCustomProtocol.GetCidStatusServiceProtocol()
+	cp, err := ipfsCustomProtocol.GetSummaryServiceProtocol()
 	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetCidStatusServiceProtocol :%v", err)
+		mainLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(cp)
-
-	pp, err := ipfsCustomProtocol.GetPinServiceProtocol()
-	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetPinServiceProtocol :%v", err)
-	}
-	tb.GetDmsg().GetCustomProtocolService().RegistServer(pp)
 
 	<-ctx.Done()
 }

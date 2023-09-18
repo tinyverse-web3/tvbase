@@ -14,20 +14,10 @@ message SyncFileRes {
     string CID = 1;
 }
 
-message CidStatusReq {
+message SummaryReq {
     string CID = 1;
 }
 
-message CidStatusRes {
-    string CID = 1;
-    bool isPin = 2;
-}
-
-message PinReq {
-    string CID = 1;
-    int64 timeout = 2;
-}
-
-message PinRes {
+message SummaryRes {
     string CID = 1;
 }
