@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"context"
+	"io"
 
 	shell "github.com/ipfs/go-ipfs-api"
 	ma "github.com/multiformats/go-multiaddr"
@@ -100,4 +101,8 @@ func (s *IpfsShellProxy) IndirectPin(cid string, ctx context.Context) error {
 
 func (s *IpfsShellProxy) Unpin(cid string) error {
 	return s.sh.Unpin(cid)
+}
+
+func (s *IpfsShellProxy) Cat(cid string) (io.ReadCloser, error) {
+	return s.sh.Cat(cid)
 }

@@ -184,17 +184,11 @@ func main() {
 	}
 	tb.RegistCSSProtocol(fp)
 
-	cp, err := ipfsCustomProtocol.GetCidStatusServiceProtocol()
+	cp, err := ipfsCustomProtocol.GetSummaryServiceProtocol()
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetCidStatusServiceProtocol :%v", err)
+		tvsLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
 	}
 	tb.RegistCSSProtocol(cp)
-
-	pp, err := ipfsCustomProtocol.GetPinServiceProtocol()
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetPinServiceProtocol :%v", err)
-	}
-	tb.RegistCSSProtocol(pp)
 
 	<-ctx.Done()
 	// tvInfrasture.Stop()
