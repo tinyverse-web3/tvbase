@@ -31,7 +31,7 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	tvutil "github.com/tinyverse-web3/tvbase/common/util"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
@@ -463,7 +463,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 }
 
 func (m *TvBase) init(rootPath string) error {
-	fullPath, err := tvutil.GetRootPath(rootPath)
+	fullPath, err := tvbaseUtil.GetRootPath(rootPath)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
 		return err

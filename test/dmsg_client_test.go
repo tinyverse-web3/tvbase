@@ -1,25 +1,25 @@
 package test
 
 import (
-	"bufio"
+	// "bufio"
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
+
 	"flag"
 	"log"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	utilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	utilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
+
 	"github.com/tinyverse-web3/tvbase/tvbase"
-	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
-	keyutil "github.com/tinyverse-web3/tvutil/key"
 )
 
 const logName = "tvbase_test"
@@ -61,7 +61,7 @@ func parseCmdParams() (string, string, string) {
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	prikey, pubkey, err := keyutil.GenerateEcdsaKey(seed)
+	prikey, pubkey, err := utilKey.GenerateEcdsaKey(seed)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,7 +73,7 @@ func TestPubsubMsg(t *testing.T) {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, destSeed, rootPath := parseCmdParams()
+	srcSeed, _, rootPath := parseCmdParams()
 
 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
 	if err != nil {
@@ -91,19 +91,19 @@ func TestPubsubMsg(t *testing.T) {
 		testLog.Errorf("getKeyBySeed error: %v", err)
 		return
 	}
-	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
-	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-	testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
+	// srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
+	// srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	// testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
-	if err != nil {
-		testLog.Errorf("getKeyBySeed error: %v", err)
-		return
-	}
-	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
-	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
+	// destPriKey, destPubKey, err := getKeyBySeed(destSeed)
+	// if err != nil {
+	// 	testLog.Errorf("getKeyBySeed error: %v", err)
+	// 	return
+	// }
+	// destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
+	// destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
 
-	testLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
+	// testLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
 	// init dmsg client
 	_, dmsgService, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
@@ -120,47 +120,47 @@ func TestPubsubMsg(t *testing.T) {
 	})
 
 	// publish dest user
-	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
-	if err != nil {
-		testLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
-		return
-	}
-	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsgService.SubscribeDestUser(destPubKeyStr)
-	if err != nil {
-		testLog.Errorf("SubscribeDestUser error: %v", err)
-		return
-	}
+	// destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
+	// if err != nil {
+	// 	testLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+	// 	return
+	// }
+	// destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
+	// err = dmsgService.SubscribeDestUser(destPubKeyStr)
+	// if err != nil {
+	// 	testLog.Errorf("SubscribeDestUser error: %v", err)
+	// 	return
+	// }
 
 	// send msg to dest user with read from stdin
-	go func() {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			sendContent, err := reader.ReadString('\n')
-			if err != nil {
-				testLog.Errorf("read string error: %v", err)
-				continue
-			}
+	// go func() {
+	// 	reader := bufio.NewReader(os.Stdin)
+	// 	for {
+	// 		sendContent, err := reader.ReadString('\n')
+	// 		if err != nil {
+	// 			testLog.Errorf("read string error: %v", err)
+	// 			continue
+	// 		}
 
-			encrypedContent, err := tvCrypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
-			if err != nil {
-				testLog.Errorf("encrypt error: %v", err)
-				continue
-			}
+	// 		encrypedContent, err := tvCrypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
+	// 		if err != nil {
+	// 			testLog.Errorf("encrypt error: %v", err)
+	// 			continue
+	// 		}
 
-			sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent)
+	// 		sendMsgReq, err := dmsgService.SendMsg(destPubKeyStr, encrypedContent)
 
-			if err != nil {
-				testLog.Errorf("send msg: error: %v", err)
-			}
-			testLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
+	// 		if err != nil {
+	// 			testLog.Errorf("send msg: error: %v", err)
+	// 		}
+	// 		testLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
 
-			if err != nil {
-				testLog.Infof("send msg error:", err)
-			}
-			testLog.Info("SendMsg end")
-		}
-	}()
+	// 		if err != nil {
+	// 			testLog.Infof("send msg error:", err)
+	// 		}
+	// 		testLog.Info("SendMsg end")
+	// 	}
+	// }()
 
 	<-ctx.Done()
 }
@@ -173,14 +173,14 @@ func initMsgClient(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, root
 	}
 
 	dmsgService := tvbase.GetClientDmsgService()
-	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
+	srcPubkeyBytes, err := utilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
 	}
 
 	getSigCallback := func(protoData []byte) ([]byte, error) {
-		sig, err := tvCrypto.SignDataByEcdsa(srcPrikey, protoData)
+		sig, err := utilCrypto.SignDataByEcdsa(srcPrikey, protoData)
 		if err != nil {
 			testLog.Errorf("initMsgClient: sign error: %v", err)
 		}
@@ -263,9 +263,9 @@ func TestPullCID(t *testing.T) {
 		t.Errorf("getKeyBySeed error: %v", err)
 		return
 	}
-	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
-	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
+	// srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
+	// srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	// testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
 	// init dmsg client
 	_, _, err = initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)

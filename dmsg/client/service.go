@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
+	utilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/dmsg"
 	dmsgClientCommon "github.com/tinyverse-web3/tvbase/dmsg/client/common"
@@ -17,7 +18,6 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
-	keyUtil "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -150,7 +150,7 @@ func (d *DmsgService) InitUser(
 	getSigCallback dmsgClientCommon.GetSigCallback,
 ) (chan error, error) {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
-	userPubkey := keyUtil.TranslateKeyProtoBufToString(userPubkeyData)
+	userPubkey := utilKey.TranslateKeyProtoBufToString(userPubkeyData)
 	err := d.SubscribeSrcUser(userPubkey, getSigCallback)
 	if err != nil {
 		return nil, err
@@ -285,12 +285,12 @@ func (d *DmsgService) SubscribeSrcUser(
 		return fmt.Errorf("DmsgService->SubscribeSrcUser: user key(%s) is already exist in destUserInfoList", userPubkeyHex)
 	}
 
-	srcUserPubkeyData, err := keyUtil.TranslateKeyStringToProtoBuf(userPubkeyHex)
+	srcUserPubkeyData, err := utilKey.TranslateKeyStringToProtoBuf(userPubkeyHex)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: TranslateKeyStringToProtoBuf error: %v", err)
 		return err
 	}
-	userPubkey, err := keyUtil.ECDSAProtoBufToPublicKey(srcUserPubkeyData)
+	userPubkey, err := utilKey.ECDSAProtoBufToPublicKey(srcUserPubkeyData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: Public key is not ECDSA KEY")
 		return err
