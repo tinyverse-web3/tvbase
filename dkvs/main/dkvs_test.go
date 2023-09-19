@@ -839,9 +839,9 @@ func TestDkvsTTL(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa21")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa44")
 	tValue1 := []byte("world1")
-	ttl := dkvs.GetTtlFromDuration(time.Hour)
+	ttl := dkvs.GetTtlFromDuration(15 * time.Second)
 	issuetime := dkvs.TimeNow()
 	fmt.Printf("tKey: %v", tKey)
 	data := dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
@@ -858,13 +858,13 @@ func TestDkvsTTL(t *testing.T) {
 		fmt.Println("Timeout occurred")
 	}
 	//等待时手工从网络获取这个key
-
-	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, maxttl)
+	tValue2 := []byte("world2")
+	data = dkvs.GetRecordSignData(tKey, tValue2, pkBytes, issuetime, maxttl)
 	sigData2, err := priv.Sign(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = kv.Put(tKey, tValue1, pkBytes, issuetime, maxttl, sigData2)
+	err = kv.Put(tKey, tValue2, pkBytes, issuetime, maxttl, sigData2)
 	if err != nil {
 		t.Fatal(err)
 	}

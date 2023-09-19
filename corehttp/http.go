@@ -17,6 +17,10 @@ func InitHttpServer(t tvCommon.TvBaseService) {
 		QueryProviders(),
 		QueryAllConnectdPeers(),
 		QuerySystemResouce(),
+		GetDemoKey(),
+		GetEncryptedDemoValue(),
+		PubDemoKey(),
+		GetDemoKeyValue(),
 	}
 	Process = proc
 	proc.Go(func(p process.Process) {
