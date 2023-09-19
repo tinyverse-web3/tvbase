@@ -12,6 +12,7 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
+	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
@@ -22,7 +23,6 @@ import (
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
-	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

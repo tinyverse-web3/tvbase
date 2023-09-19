@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvutil/crypto"
 	"google.golang.org/protobuf/proto"
 )
 

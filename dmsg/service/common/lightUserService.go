@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
-	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 )
 
 var lightUserLog = ipfsLog.Logger("dmsg.service.lightuser")

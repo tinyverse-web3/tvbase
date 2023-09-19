@@ -6,6 +6,8 @@ import (
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
+	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
@@ -15,8 +17,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
-	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
-	tvutilKey "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

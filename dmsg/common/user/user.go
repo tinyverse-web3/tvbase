@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
-	"github.com/tinyverse-web3/tvutil/crypto"
 )
 
 var targetList map[string]*Target

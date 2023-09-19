@@ -7,8 +7,8 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
 	"github.com/libp2p/go-libp2p/p2p/muxer/yamux"
+	"github.com/tinyverse-web3/tvbase/tvbase/internal/mplex"
 )
 
 func yamuxTransport() network.Multiplexer {

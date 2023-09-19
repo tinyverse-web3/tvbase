@@ -14,13 +14,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
-	tvutilCrypto "github.com/tinyverse-web3/tvutil/crypto"
-	tvUtilKey "github.com/tinyverse-web3/tvutil/key"
 )
 
 const logName = "tvnodelight"
