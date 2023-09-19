@@ -3,20 +3,7 @@
 # Installation script for tvnode. It tries to move $bin in one of the
 # directories stored in $binpaths.
 echo "start go build..."
-
-if [ "$(uname)" = "Darwin" ]; then
-    export GOOS=darwin
-    export GOARCH=amd64
-elif [ "$(uname)" = "Linux" ]; then
-    export GOOS=linux
-    export GOARCH=amd64
-else
-    echo "unknow system"
-    exit -1
-fi
-
-
-go build -a
+go build
 INSTALL_DIR=$(dirname $0)
 
 bin="$INSTALL_DIR/tvnode"
@@ -31,6 +18,10 @@ for raw in $binpaths; do
   # Expand the $HOME variable.
   binpath=$(eval echo "$raw")
   mkdir -p "$binpath"
+  destfile="$binpath/tvnode"
+  if [ -f "$destfile" ]; then
+    rm "$destfile"
+  fi
   if cp "$bin" "$binpath/tvnode" ; then
     echo "Moved $bin to $binpath"
     cp "$sh" "$binpath/tvnode_start.sh"
