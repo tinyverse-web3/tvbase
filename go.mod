@@ -8,7 +8,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.1.3
-	github.com/ipfs/go-ipfs-api v0.6.0
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/juju/ratelimit v1.0.2
 	github.com/libp2p/go-libp2p v0.27.7
@@ -16,6 +15,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230719100413-e03bc18af6a1
 	github.com/tinyverse-web3/tvutil v0.0.0-20230719073602-eff568f409f6
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
