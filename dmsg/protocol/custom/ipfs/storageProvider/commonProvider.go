@@ -11,10 +11,9 @@ import (
 
 // https://nft.storage/api-docs/
 type CommonProvider struct {
-	apikey          string
 	uploadMaxSize   int
-	authHeader      string
-	authPrefix      string
+	authKey         string
+	authValue       string
 	ratelimitBucket *ratelimit.Bucket
 }
 
@@ -23,17 +22,16 @@ func (p *CommonProvider) Init(
 	intervalTime time.Duration,
 	ratio int64,
 	uploadMaxSize int,
-	authHeaeder string,
-	authPrefix string,
+	authKey string,
+	authValue string,
 ) {
-	p.apikey = apikey
 	p.uploadMaxSize = uploadMaxSize
-	p.authHeader = authHeaeder
-	p.authPrefix = authPrefix
+	p.authKey = authKey
+	p.authValue = authValue
 	p.ratelimitBucket = ratelimit.NewBucket(intervalTime, ratio)
 }
 
-func (p *CommonProvider) Upload(cid string, timeout time.Duration, PostUrl string) ([]byte, error) {
+func (p *CommonProvider) Upload(cid string, timeout time.Duration, postUrl string) ([]byte, error) {
 	logger.Debugf("CommonProvider->Updoad begin: cid: %s", cid)
 
 	p.ratelimitBucket.Wait(1)
@@ -46,15 +44,13 @@ func (p *CommonProvider) Upload(cid string, timeout time.Duration, PostUrl strin
 	}
 	defer reader.Close()
 
-	req, err := http.NewRequest("POST", PostUrl, reader)
+	req, err := http.NewRequest("POST", postUrl, reader)
 	if err != nil {
 		logger.Errorf("CommonProvider->Updoad: http.NewRequest error: %v", err)
 		return nil, nil
 	}
 
-	// authheader := p.authHeader
-	// value := "Bearer " + p.authPrefix + p.apikey
-	req.Header.Set("Authorization", "Bearer "+p.apikey)
+	req.Header.Set(p.authKey, p.authValue)
 
 	_, size, err := sh.BlockStat(cid)
 	if err != nil {
@@ -62,7 +58,7 @@ func (p *CommonProvider) Upload(cid string, timeout time.Duration, PostUrl strin
 		return nil, err
 	}
 
-	if size >= p.uploadMaxSize { // max size 100MB limit, big size file need to split more car format content
+	if size >= p.uploadMaxSize {
 		logger.Errorf("CommonProvider->Updoad: file too large, uploadMaxSize: %d byte, factSize: %d byte", p.uploadMaxSize, size)
 		return nil, err
 	}
@@ -85,5 +81,73 @@ func (p *CommonProvider) Upload(cid string, timeout time.Duration, PostUrl strin
 
 	logger.Debugf("CommonProvider->Updoad: body: %s", string(responseBody))
 	logger.Debugf("CommonProvider->Updoad end")
+	return responseBody, nil
+}
+
+func (p *CommonProvider) CheckCid(cid string, postUrl string) ([]byte, error) {
+	logger.Debugf("CommonProvider->CheckCid begin: cid: %s", cid)
+
+	p.ratelimitBucket.Wait(1)
+
+	req, err := http.NewRequest("GET", postUrl+"/"+cid, nil)
+	if err != nil {
+		logger.Errorf("CommonProvider->CheckCid: http.NewRequest error: %v", err)
+		return nil, nil
+	}
+
+	req.Header.Set(p.authKey, p.authValue)
+
+	client := &http.Client{
+		Timeout: CommonTimeout,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Errorf("CommonProvider->CheckCid: client.Do error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Errorf("CommonProvider->CheckCid: io.ReadAll error: %v", err)
+		return nil, err
+	}
+
+	logger.Debugf("CommonProvider->CheckCid: body: %s", string(responseBody))
+	logger.Debugf("CommonProvider->CheckCid end")
+	return responseBody, nil
+}
+
+func (p *CommonProvider) DeleteCid(cid string, postUrl string) ([]byte, error) {
+	logger.Debugf("CommonProvider->DeleteCid begin: cid: %s", cid)
+
+	p.ratelimitBucket.Wait(1)
+
+	req, err := http.NewRequest("DELETE", postUrl+"/"+cid, nil)
+	if err != nil {
+		logger.Errorf("CommonProvider->DeleteCid: http.NewRequest error: %v", err)
+		return nil, nil
+	}
+
+	req.Header.Set(p.authKey, p.authValue)
+
+	client := &http.Client{
+		Timeout: CommonTimeout,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Errorf("CommonProvider->DeleteCid: client.Do error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Errorf("CommonProvider->DeleteCid: io.ReadAll error: %v", err)
+		return nil, err
+	}
+
+	logger.Debugf("CommonProvider->DeleteCid: body: %s", string(responseBody))
+	logger.Debugf("CommonProvider->DeleteCid end")
 	return responseBody, nil
 }
