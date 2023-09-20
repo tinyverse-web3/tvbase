@@ -178,7 +178,7 @@ func main() {
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.NewSyncFileUploadService(tb)
+	fp, err := ipfsCustomProtocol.NewSyncFileUploadService()
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: GetFileSyncServiceProtocol :%v", err)
 	}

@@ -1,7 +1,6 @@
 package syncfile
 
 import (
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
@@ -13,10 +12,10 @@ type SyncFileUploadService struct {
 	customProtocol.CustomStreamServiceProtocol
 }
 
-func NewSyncFileUploadService(tvBaseService tvbaseCommon.TvBaseService) (*SyncFileUploadService, error) {
+func NewSyncFileUploadService() (*SyncFileUploadService, error) {
 
 	p := &SyncFileUploadService{}
-	err := p.Init(tvBaseService)
+	err := p.Init()
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +23,7 @@ func NewSyncFileUploadService(tvBaseService tvbaseCommon.TvBaseService) (*SyncFi
 	return p, nil
 }
 
-func (p *SyncFileUploadService) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+func (p *SyncFileUploadService) Init() error {
 	p.CustomStreamServiceProtocol.Init(TV_SYNCFILE_UPLOAD_SERVICE)
 	return nil
 }
