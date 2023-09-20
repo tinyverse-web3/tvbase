@@ -9,7 +9,7 @@ import (
 var (
 	Web3PostURL     = "https://api.web3.storage/upload"
 	Web3CarPostURL  = "https://api.web3.storage/car"
-	Web3CheckCidURL = "https://api.nft.storage/check"
+	Web3CheckCidURL = "https://api.web3.storage/status"
 )
 
 // https://web3.storage/docs/reference/http-api/
@@ -59,9 +59,7 @@ func (p *Web3) Upload(
 	return isOk, resp, nil
 }
 
-func (p *Web3) CheckCid(
-	cid string,
-) (isOk bool, resp map[string]interface{}, err error) {
+func (p *Web3) CheckCid(cid string) (isOk bool, resp map[string]interface{}, err error) {
 	responseData, err := p.CommonProvider.CheckCid(cid, Web3CheckCidURL)
 	if err != nil {
 		return false, nil, err
@@ -75,14 +73,18 @@ func (p *Web3) CheckCid(
 
 	resp, ok := data.(map[string]interface{})
 	if !ok {
-		return false, nil, fmt.Errorf("Web3->ParseResponse: failure to convert json object")
+		return false, nil, fmt.Errorf("Web3->CheckCid: failure to convert json object")
 	}
 
 	isOk, ok = resp["ok"].(bool)
 	if !ok {
-		return false, nil, fmt.Errorf("Web3->ParseResponse: failure to get ok object, error: %v", resp)
+		return false, nil, fmt.Errorf("Web3->CheckCid: failure to get ok object, error: %v", resp)
 	}
 	return isOk, resp, nil
+}
+
+func (p *Web3) DeleteCid(cid string, postUrl string) (isOk bool, resp map[string]interface{}, err error) {
+	return false, nil, nil
 }
 
 func (p *Web3) UploadCar(cid string, timeout time.Duration) ([]byte, error) {
