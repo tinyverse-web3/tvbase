@@ -41,7 +41,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROTOCOL,
-			Result: "FileSyncServiceProtocol->HandleRequest: proto.Unmarshal error: " + err.Error(),
+			Result: "proto.Unmarshal error:" + err.Error(),
 		}
 		logger.Debugf(retCode.Result)
 		return responseContent, retCode, nil
@@ -66,7 +66,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	if syncFileReq.Data == nil || len(syncFileReq.Data) == 0 {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_IPFS,
-			Result: "FileSyncServiceProtocol->HandleRequest: syncFileReq.Data is empty",
+			Result: "syncFileReq.Data is empty",
 		}
 		logger.Errorf(retCode.Result)
 		return responseContent, retCode, nil
@@ -76,7 +76,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_IPFS,
-			Result: "FileSyncServiceProtocol->HandleRequest: sh.BlockPutVo error: " + err.Error(),
+			Result: "sh.BlockPutVo error: " + err.Error(),
 		}
 		logger.Errorf(retCode.Result)
 		return responseContent, retCode, nil
@@ -85,7 +85,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	if cid != syncFileReq.CID {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROTOCOL,
-			Result: "FileSyncServiceProtocol->HandleRequest: calculated CID is different from the input parameter CID, calculated cid :" + cid,
+			Result: "calculated CID is different from the input parameter CID, calculated cid:" + cid,
 		}
 		logger.Errorf(retCode.Result)
 		return responseContent, retCode, nil
@@ -95,7 +95,7 @@ func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_IPFS,
-			Result: "FileSyncServiceProtocol->HandleRequest: sh.DirectPin error: " + err.Error(),
+			Result: "sh.DirectPin error:" + err.Error(),
 		}
 		logger.Errorf(retCode.Result)
 		return responseContent, retCode, nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	ipfspb "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs/pb"
@@ -60,13 +61,22 @@ func (p *SummaryServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 		logger.Debugf(retCode.Result)
 		return responseContent, retCode, nil
 	}
-	logger.Debugf("SummaryServiceProtocol->HandleRequest: syncFileReq.CID: %v", summaryReq.CID)
+	logger.Debugf("SummaryServiceProtocol->HandleRequest: CID: %v", summaryReq.CID)
 
-	err = p.upload3rdIpfsProvider(summaryReq.CID)
+	sh := tvbaseIpfs.GetIpfsShellProxy()
+	isPin := sh.IsPin(summaryReq.CID)
+	if !isPin {
+		retCode = &pb.RetCode{
+			Code:   CODE_ERROR_NOPIN,
+			Result: "local ipfs no pin data",
+		}
+		return responseContent, retCode, nil
+	}
+	resp, err := p.upload3rdIpfsProvider(summaryReq.CID)
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROVIDER,
-			Result: "SummaryServiceProtocol->HandleRequest: upload3rdIpfsProvider error: " + err.Error(),
+			Result: err.Error(),
 		}
 		logger.Debugf(retCode.Result)
 		return responseContent, retCode, nil
@@ -78,7 +88,7 @@ func (p *SummaryServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	responseContent, _ = proto.Marshal(summaryRes)
 	retCode = &pb.RetCode{
 		Code:   0,
-		Result: "success",
+		Result: fmt.Sprintf("%v", resp),
 	}
 	logger.Debugf("SummaryServiceProtocol->HandleRequest end")
 	return responseContent, retCode, nil
@@ -92,13 +102,18 @@ func (p *SummaryServiceProtocol) AddWeb3Uploader(apikey string) {
 	p.uploadManager.AddWeb3Uploader(apikey)
 }
 
-func (p *SummaryServiceProtocol) upload3rdIpfsProvider(cid string) error {
-	// sh := tvbaseIpfs.GetIpfsShellProxy()
+func (p *SummaryServiceProtocol) upload3rdIpfsProvider(cid string) (map[string]interface{}, error) {
 	if len(p.uploadManager.NftUploaderList) == 0 {
-		return fmt.Errorf("SummaryServiceProtocol->upload3rdIpfsProvider: no ntfUploder service")
+		return nil, fmt.Errorf("no ntfUploder service")
 	}
 	nftUploader := p.uploadManager.NftUploaderList[0]
 	uploadTimeout := 30 * time.Minute
-	nftUploader.Upload(cid, uploadTimeout)
-	return nil
+	isOk, resp, err := nftUploader.Upload(cid, uploadTimeout)
+	if err != nil {
+		return resp, fmt.Errorf("upload error:%v", err)
+	}
+	if !isOk {
+		return resp, fmt.Errorf("upload response isn't ok, response:%v", resp)
+	}
+	return resp, nil
 }

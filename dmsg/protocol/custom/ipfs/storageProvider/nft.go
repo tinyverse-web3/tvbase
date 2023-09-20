@@ -9,8 +9,9 @@ import (
 // https://nft.storage/api-docs/
 
 var (
-	NftPostURL     = "https://api.nft.storage/upload"
-	NftCheckCidURL = "https://api.nft.storage/check"
+	NftPostURL      = "https://api.nft.storage/upload"
+	NftCheckCidURL  = "https://api.nft.storage/check"
+	NftDeleteCidURL = "https://api.nft.storage"
 )
 
 type Nft struct {
@@ -30,10 +31,7 @@ func NewNft(apikey string) *Nft {
 	return nft
 }
 
-func (p *Nft) Upload(
-	cid string,
-	timeout time.Duration,
-) (isOk bool, resp map[string]interface{}, err error) {
+func (p *Nft) Upload(cid string, timeout time.Duration) (isOk bool, resp map[string]interface{}, err error) {
 	responseData, err := p.CommonProvider.Upload(cid, timeout, NftPostURL)
 	if err != nil {
 		return false, nil, err
@@ -47,20 +45,18 @@ func (p *Nft) Upload(
 
 	resp, ok := data.(map[string]interface{})
 	if !ok {
-		return false, nil, fmt.Errorf("Nft->ParseResponse: failure to convert json object")
+		return false, nil, fmt.Errorf("Nft->Upload: failure to convert json object")
 	}
 
 	isOk, ok = resp["ok"].(bool)
 	if !ok {
-		return false, nil, fmt.Errorf("Nft->ParseResponse: failure to get ok object, error: %v", resp)
+		return false, nil, fmt.Errorf("Nft->Upload: failure to get ok object, error: %v", resp)
 	}
 
 	return isOk, resp, nil
 }
 
-func (p *Nft) CheckCid(
-	cid string,
-) (isOk bool, resp map[string]interface{}, err error) {
+func (p *Nft) CheckCid(cid string) (isOk bool, resp map[string]interface{}, err error) {
 	responseData, err := p.CommonProvider.CheckCid(cid, NftCheckCidURL)
 	if err != nil {
 		return false, nil, err
@@ -74,12 +70,36 @@ func (p *Nft) CheckCid(
 
 	resp, ok := data.(map[string]interface{})
 	if !ok {
-		return false, nil, fmt.Errorf("Nft->ParseResponse: failure to convert json object")
+		return false, nil, fmt.Errorf("Nft->CheckCid: failure to convert json object")
 	}
 
 	isOk, ok = resp["ok"].(bool)
 	if !ok {
-		return false, nil, fmt.Errorf("Nft->ParseResponse: failure to get ok object, error: %v", resp)
+		return false, nil, fmt.Errorf("Nft->CheckCid: failure to get ok object, error: %v", resp)
+	}
+	return isOk, resp, nil
+}
+
+func (p *Nft) DeleteCid(cid string, postUrl string) (isOk bool, resp map[string]interface{}, err error) {
+	responseData, err := p.CommonProvider.DeleteCid(cid, NftDeleteCidURL)
+	if err != nil {
+		return false, nil, err
+	}
+
+	var data interface{}
+	err = json.Unmarshal(responseData, &data)
+	if err != nil {
+		return false, nil, err
+	}
+
+	resp, ok := data.(map[string]interface{})
+	if !ok {
+		return false, nil, fmt.Errorf("Nft->DeleteCid: failure to convert json object")
+	}
+
+	isOk, ok = resp["ok"].(bool)
+	if !ok {
+		return false, nil, fmt.Errorf("Nft->DeleteCid: failure to get ok object, error: %v", resp)
 	}
 	return isOk, resp, nil
 }
