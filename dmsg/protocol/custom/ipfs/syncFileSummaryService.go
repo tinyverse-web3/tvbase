@@ -22,32 +22,28 @@ var (
 	}
 )
 
-type SummaryServiceProtocol struct {
+type SyncFileSummaryService struct {
 	customProtocol.CustomStreamServiceProtocol
 	uploadManager *storageprovider.UploadManager
 }
 
-var summaryServiceProtocol *SummaryServiceProtocol
-
-func GetSummaryServiceProtocol() (*SummaryServiceProtocol, error) {
-	if summaryServiceProtocol == nil {
-		summaryServiceProtocol = &SummaryServiceProtocol{}
-		err := summaryServiceProtocol.Init()
-		if err != nil {
-			return nil, err
-		}
+func NewSyncFileSummaryService() (*SyncFileSummaryService, error) {
+	p := &SyncFileSummaryService{}
+	err := p.Init()
+	if err != nil {
+		return nil, err
 	}
-	return summaryServiceProtocol, nil
+	return p, nil
 }
 
-func (p *SummaryServiceProtocol) Init() error {
-	p.CustomStreamServiceProtocol.Init(CID_STATUS_SERVICE)
+func (p *SyncFileSummaryService) Init() error {
+	p.CustomStreamServiceProtocol.Init(TV_SYNCFILE_SUMMARY_SERVICE)
 	p.uploadManager = storageprovider.NewUploaderManager()
 	p.uploadManager.AddNftUploader(NftApiKeyList[0])
 	return nil
 }
 
-func (p *SummaryServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
+func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 	responseContent []byte, retCode *pb.RetCode, err error) {
 	logger.Debugf("SummaryServiceProtocol->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
 
@@ -94,15 +90,15 @@ func (p *SummaryServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 	return responseContent, retCode, nil
 }
 
-func (p *SummaryServiceProtocol) AddNftUploader(apikey string) {
+func (p *SyncFileSummaryService) AddNftUploader(apikey string) {
 	p.uploadManager.AddNftUploader(apikey)
 }
 
-func (p *SummaryServiceProtocol) AddWeb3Uploader(apikey string) {
+func (p *SyncFileSummaryService) AddWeb3Uploader(apikey string) {
 	p.uploadManager.AddWeb3Uploader(apikey)
 }
 
-func (p *SummaryServiceProtocol) upload3rdIpfsProvider(cid string) (map[string]interface{}, error) {
+func (p *SyncFileSummaryService) upload3rdIpfsProvider(cid string) (map[string]interface{}, error) {
 	if len(p.uploadManager.NftUploaderList) == 0 {
 		return nil, fmt.Errorf("no ntfUploder service")
 	}

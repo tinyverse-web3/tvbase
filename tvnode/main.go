@@ -198,13 +198,13 @@ func main() {
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.GetFileSyncServiceProtocol(tb)
+	fp, err := ipfsCustomProtocol.NewSyncFileUploadService(tb)
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
 
-	cp, err := ipfsCustomProtocol.GetSummaryServiceProtocol()
+	cp, err := ipfsCustomProtocol.NewSyncFileSummaryService()
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
 	}
