@@ -9,29 +9,27 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type FileSyncServiceProtocol struct {
+type SyncFileUploadService struct {
 	customProtocol.CustomStreamServiceProtocol
 }
 
-var fileSyncServiceProtocol *FileSyncServiceProtocol
+func NewSyncFileUploadService(tvBaseService tvbaseCommon.TvBaseService) (*SyncFileUploadService, error) {
 
-func GetFileSyncServiceProtocol(tvBaseService tvbaseCommon.TvBaseService) (*FileSyncServiceProtocol, error) {
-	if fileSyncServiceProtocol == nil {
-		fileSyncServiceProtocol = &FileSyncServiceProtocol{}
-		err := fileSyncServiceProtocol.Init(tvBaseService)
-		if err != nil {
-			return nil, err
-		}
+	p := &SyncFileUploadService{}
+	err := p.Init(tvBaseService)
+	if err != nil {
+		return nil, err
 	}
-	return fileSyncServiceProtocol, nil
+
+	return p, nil
 }
 
-func (p *FileSyncServiceProtocol) Init(tvBaseService tvbaseCommon.TvBaseService) error {
-	p.CustomStreamServiceProtocol.Init(SYNCIPFSFILEPID)
+func (p *SyncFileUploadService) Init(tvBaseService tvbaseCommon.TvBaseService) error {
+	p.CustomStreamServiceProtocol.Init(TV_SYNCFILE_UPLOAD_SERVICE)
 	return nil
 }
 
-func (p *FileSyncServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
+func (p *SyncFileUploadService) HandleRequest(request *pb.CustomProtocolReq) (
 	responseContent []byte, retCode *pb.RetCode, err error) {
 	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
 

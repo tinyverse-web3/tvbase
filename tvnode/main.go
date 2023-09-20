@@ -178,13 +178,13 @@ func main() {
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.GetFileSyncServiceProtocol(tb)
+	fp, err := ipfsCustomProtocol.NewSyncFileUploadService(tb)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: GetFileSyncServiceProtocol :%v", err)
 	}
 	tb.RegistCSSProtocol(fp)
 
-	cp, err := ipfsCustomProtocol.GetSummaryServiceProtocol()
+	cp, err := ipfsCustomProtocol.NewSyncFileSummaryService()
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
 	}
