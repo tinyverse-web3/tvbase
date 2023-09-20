@@ -198,7 +198,7 @@ func main() {
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.NewSyncFileUploadService(tb)
+	fp, err := ipfsCustomProtocol.NewSyncFileUploadService()
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
