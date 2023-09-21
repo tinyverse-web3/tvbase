@@ -20,4 +20,5 @@ message SummaryReq {
 
 message SummaryRes {
     string CID = 1;
+    repeated string ProviderStoreCIDList = 2;
 }

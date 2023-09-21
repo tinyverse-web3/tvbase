@@ -97,7 +97,7 @@ func (p *SyncFileUploadService) HandleRequest(request *pb.CustomProtocolReq) (
 	}
 
 	retCode = &pb.RetCode{
-		Code:   CODE_PIN,
+		Code:   CODE_SUCC,
 		Result: "success",
 	}
 

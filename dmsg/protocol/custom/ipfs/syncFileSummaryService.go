@@ -20,6 +20,8 @@ var (
 	Web3ApiKeyList = []string{
 		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDAyYzZEYkJBMTQyOTA1MzliZjgwNkEzRkNDRDgzMDFmNWNjNTQ2ZDIiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2OTA2ODkxMjg3NDUsIm5hbWUiOiJ0ZXN0In0.nhArwLJYjFwTiW1-SSRPyrCCczyYQ4T2PAHcShFZXqg",
 	}
+
+	DefaultUploadTimeout = 30 * time.Minute
 )
 
 type SyncFileSummaryService struct {
@@ -68,7 +70,7 @@ func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 		}
 		return responseContent, retCode, nil
 	}
-	resp, err := p.upload3rdIpfsProvider(summaryReq.CID)
+	summaryRes, err := p.upload3rdIpfsProvider(summaryReq.CID)
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROVIDER,
@@ -78,13 +80,10 @@ func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 		return responseContent, retCode, nil
 	}
 
-	summaryRes := &ipfspb.SummaryRes{
-		CID: summaryReq.CID,
-	}
 	responseContent, _ = proto.Marshal(summaryRes)
 	retCode = &pb.RetCode{
-		Code:   0,
-		Result: fmt.Sprintf("%v", resp),
+		Code:   CODE_SUCC,
+		Result: fmt.Sprintf("%+v", summaryRes),
 	}
 	logger.Debugf("SummaryServiceProtocol->HandleRequest end")
 	return responseContent, retCode, nil
@@ -98,26 +97,48 @@ func (p *SyncFileSummaryService) AddWeb3Uploader(apikey string) {
 	p.uploadManager.AddWeb3Uploader(apikey)
 }
 
-func (p *SyncFileSummaryService) upload3rdIpfsProvider(cid string) (map[string]interface{}, error) {
-	if len(p.uploadManager.NftUploaderList) == 0 {
-		return nil, fmt.Errorf("no ntfUploder service")
+func (p *SyncFileSummaryService) upload3rdIpfsProvider(cid string) (summaryRes *ipfspb.SummaryRes, err error) {
+	summaryRes = &ipfspb.SummaryRes{
+		CID: cid,
 	}
-	nftUploader := p.uploadManager.NftUploaderList[0]
-	isOk, resp, err := nftUploader.CheckCid(cid)
+	providerStoreCid, err := p.uploadNftProvider(cid)
 	if err != nil {
-		return resp, fmt.Errorf("check cid error:%v", err)
-	}
-	if isOk {
-		return resp, nil
+		return summaryRes, err
 	}
 
-	uploadTimeout := 30 * time.Minute
-	isOk, resp, err = nftUploader.Upload(cid, uploadTimeout)
+	summaryRes.ProviderStoreCIDList = append(summaryRes.ProviderStoreCIDList, providerStoreCid)
+	return summaryRes, nil
+}
+
+func (p *SyncFileSummaryService) uploadNftProvider(cid string) (providerStoreCid string, err error) {
+	nftUploader := p.uploadManager.NftUploaderList[0]
+
+	isOk, resp, err := nftUploader.CheckCid(cid)
 	if err != nil {
-		return resp, fmt.Errorf("upload error:%v", err)
+		return providerStoreCid, fmt.Errorf("check cid error:%v", err)
+	}
+	if isOk {
+		logger.Debugf("upload cid:%v is already pin, resp: %v", cid, resp)
+		return cid, nil
+	}
+
+	isOk, resp, err = nftUploader.Upload(cid, DefaultUploadTimeout)
+	if err != nil {
+		return providerStoreCid, fmt.Errorf("upload error:%v", err)
 	}
 	if !isOk {
-		return resp, fmt.Errorf("upload response isn't ok, response:%v", resp)
+		return providerStoreCid, fmt.Errorf("upload response isn't ok, response:%v", resp)
 	}
-	return resp, nil
+
+	value, ok := resp["value"].(map[string]interface{})
+	if !ok {
+		return providerStoreCid, fmt.Errorf("failure to convert value json object")
+	}
+
+	providerStoreCid, ok = value["cid"].(string)
+	if !ok {
+		return providerStoreCid, fmt.Errorf("failure to convert cid json object")
+	}
+
+	return providerStoreCid, nil
 }

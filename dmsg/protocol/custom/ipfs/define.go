@@ -12,7 +12,7 @@ const PID_SERVICE_SYNCFILE_UPLOAD = "tvSyncFileUploadService"
 const PID_SERVICE_SYNCFILE_SUMMARY = "tvSyncFileSummaryService"
 
 const (
-	CODE_PIN            = 0
+	CODE_SUCC           = 0
 	CODE_ALREADY_PIN    = 1
 	CODE_ERROR_NOPIN    = -1
 	CODE_ERROR_IPFS     = -2
