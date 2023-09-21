@@ -13,24 +13,22 @@ type SyncFileUploadService struct {
 }
 
 func NewSyncFileUploadService() (*SyncFileUploadService, error) {
-
 	p := &SyncFileUploadService{}
 	err := p.Init()
 	if err != nil {
 		return nil, err
 	}
-
 	return p, nil
 }
 
 func (p *SyncFileUploadService) Init() error {
-	p.CustomStreamServiceProtocol.Init(TV_SYNCFILE_UPLOAD_SERVICE)
+	p.CustomStreamServiceProtocol.Init(PID_SERVICE_SYNCFILE_UPLOAD)
 	return nil
 }
 
 func (p *SyncFileUploadService) HandleRequest(request *pb.CustomProtocolReq) (
 	responseContent []byte, retCode *pb.RetCode, err error) {
-	logger.Debugf("FileSyncServiceProtocol->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
+	logger.Debugf("SyncFileUploadService->HandleRequest begin:\nrequest.BasicData: %v", request.BasicData)
 
 	syncFileReq := &ipfspb.SyncFileReq{}
 	err = proto.Unmarshal(request.Content, syncFileReq)
@@ -43,7 +41,7 @@ func (p *SyncFileUploadService) HandleRequest(request *pb.CustomProtocolReq) (
 		logger.Debugf(retCode.Result)
 		return responseContent, retCode, nil
 	}
-	logger.Debugf("FileSyncServiceProtocol->HandleRequest: syncFileReq.CID: %v", syncFileReq.CID)
+	logger.Debugf("SyncFileUploadService->HandleRequest: syncFileReq.CID: %v", syncFileReq.CID)
 
 	syncFileRes := &ipfspb.SyncFileRes{
 		CID: syncFileReq.CID,
@@ -103,6 +101,6 @@ func (p *SyncFileUploadService) HandleRequest(request *pb.CustomProtocolReq) (
 		Result: "success",
 	}
 
-	logger.Debugf("FileSyncServiceProtocol->HandleRequest end")
+	logger.Debugf("SyncFileUploadService->HandleRequest end")
 	return responseContent, retCode, nil
 }

@@ -23,7 +23,8 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	ipfsCustomProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
+	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -198,13 +199,19 @@ func main() {
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.NewSyncFileUploadService()
+	pp, err := pullcid.NewPullCidService()
+	if err != nil {
+		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
+	}
+	tb.GetDmsg().GetCustomProtocolService().RegistServer(pp)
+
+	fp, err := syncfile.NewSyncFileUploadService()
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
 
-	cp, err := ipfsCustomProtocol.NewSyncFileSummaryService()
+	cp, err := syncfile.NewSyncFileSummaryService()
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
 	}
