@@ -41,6 +41,10 @@ func (s *IpfsShellProxy) Init(url string) error {
 		return err
 	}
 	s.sh = shell.NewShell(url)
+	_, _, err = s.sh.Version()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
