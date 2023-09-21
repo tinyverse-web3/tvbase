@@ -37,7 +37,7 @@ func NewSyncFileSummaryService() (*SyncFileSummaryService, error) {
 }
 
 func (p *SyncFileSummaryService) Init() error {
-	p.CustomStreamServiceProtocol.Init(TV_SYNCFILE_SUMMARY_SERVICE)
+	p.CustomStreamServiceProtocol.Init(PID_SERVICE_SYNCFILE_SUMMARY)
 	p.uploadManager = storageprovider.NewUploaderManager()
 	p.uploadManager.AddNftUploader(NftApiKeyList[0])
 	return nil
