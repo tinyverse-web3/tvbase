@@ -103,8 +103,16 @@ func (p *SyncFileSummaryService) upload3rdIpfsProvider(cid string) (map[string]i
 		return nil, fmt.Errorf("no ntfUploder service")
 	}
 	nftUploader := p.uploadManager.NftUploaderList[0]
+	isOk, resp, err := nftUploader.CheckCid(cid)
+	if err != nil {
+		return resp, fmt.Errorf("check cid error:%v", err)
+	}
+	if isOk {
+		return resp, nil
+	}
+
 	uploadTimeout := 30 * time.Minute
-	isOk, resp, err := nftUploader.Upload(cid, uploadTimeout)
+	isOk, resp, err = nftUploader.Upload(cid, uploadTimeout)
 	if err != nil {
 		return resp, fmt.Errorf("upload error:%v", err)
 	}
