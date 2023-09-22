@@ -344,3 +344,22 @@ func IpfsGetObjectLinks(cid string, ctx context.Context) ([]CidObjectLink, time.
 	Logger.Debugf("IpfsGetOjbectLinks: cmd out: %s, elapsed time: %v", cmdOut, allElapsedTime.Seconds())
 	return objectLinks, allElapsedTime, nil
 }
+
+func RoutingFindProvs(
+	ctx context.Context,
+	cid string,
+	maxProviders int,
+) (elapsedTime time.Duration, providerList []string, err error) {
+	startTime := time.Now()
+	cmdOut, err := exec.CommandContext(ctx, "ipfs", "routing", "findprovs", cid, fmt.Sprintf("--num-providers=%d", maxProviders)).CombinedOutput()
+	elapsedTime = time.Since(startTime)
+	Logger.Debugf("RoutingFindProvs: \ncid: %s\nmaxProviders:%d\ncmdout:\n%s\nelapsed time: %+v",
+		cid, maxProviders, cmdOut, elapsedTime.Seconds())
+	if err != nil {
+		Logger.Errorf("RoutingFindProvs: \ncid: %s\nmaxProviders:%d\ncmdout:\n%s\nelapsed time: %+v, error:%+v",
+			cid, maxProviders, cmdOut, elapsedTime.Seconds(), err)
+		return elapsedTime, providerList, err
+	}
+	providerList = strings.Split(strings.TrimRight(string(cmdOut), "\n"), "\n")
+	return elapsedTime, providerList, nil
+}

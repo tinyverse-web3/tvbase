@@ -1,6 +1,7 @@
 package syncfile
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -70,7 +71,7 @@ func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 		}
 		return responseContent, retCode, nil
 	}
-	summaryRes, err := p.upload3rdIpfsProvider(summaryReq.CID)
+	summaryRes, err := p.upload3rdIpfsProvider(summaryReq)
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROVIDER,
@@ -97,17 +98,48 @@ func (p *SyncFileSummaryService) AddWeb3Uploader(apikey string) {
 	p.uploadManager.AddWeb3Uploader(apikey)
 }
 
-func (p *SyncFileSummaryService) upload3rdIpfsProvider(cid string) (summaryRes *ipfspb.SummaryRes, err error) {
+func (p *SyncFileSummaryService) upload3rdIpfsProvider(summaryReq *ipfspb.SummaryReq) (summaryRes *ipfspb.SummaryRes, err error) {
 	summaryRes = &ipfspb.SummaryRes{
-		CID: cid,
+		CID:          summaryReq.CID,
+		ProivderList: make([]*ipfspb.Provider, 0),
 	}
-	providerStoreCid, err := p.uploadNftProvider(cid)
+	providerStoreCid, err := p.uploadNftProvider(summaryReq.CID)
 	if err != nil {
 		return summaryRes, err
 	}
 
-	summaryRes.ProviderStoreCIDList = append(summaryRes.ProviderStoreCIDList, providerStoreCid)
+	peerIdList, err := p.queryPeerList(summaryReq.CID, int(summaryReq.MaxProviderCount))
+	if err != nil {
+		return summaryRes, err
+	}
+	summaryRes.ProivderList = append(summaryRes.ProivderList, &ipfspb.Provider{
+		CID:        providerStoreCid,
+		PeerIdList: peerIdList,
+	})
+
+	if providerStoreCid != summaryReq.CID {
+		peerIdList, err := p.queryPeerList(summaryReq.CID, int(summaryReq.MaxProviderCount))
+		if err != nil {
+			return summaryRes, err
+		}
+		summaryRes.ProivderList = append(summaryRes.ProivderList, &ipfspb.Provider{
+			CID:        providerStoreCid,
+			PeerIdList: peerIdList,
+		})
+	}
 	return summaryRes, nil
+}
+
+func (p *SyncFileSummaryService) queryPeerList(cid string, maxProviderCount int) ([]string, error) {
+	timeout := time.Duration(maxProviderCount) * 10 * time.Second
+	ctx, cancel := context.WithTimeout(p.Ctx, timeout)
+	defer cancel()
+
+	_, peerIdList, err := tvbaseIpfs.RoutingFindProvs(ctx, cid, maxProviderCount)
+	if err != nil {
+		return nil, err
+	}
+	return peerIdList, nil
 }
 
 func (p *SyncFileSummaryService) uploadNftProvider(cid string) (providerStoreCid string, err error) {
