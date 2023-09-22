@@ -110,3 +110,25 @@ func (s *IpfsShellProxy) Unpin(cid string) error {
 func (s *IpfsShellProxy) Cat(cid string) (io.ReadCloser, error) {
 	return s.sh.Cat(cid)
 }
+
+func (s *IpfsShellProxy) FindProviders(cid string, maxProviders int) (providerList []string, err error) {
+	info := struct {
+		ID        string
+		Extra     string
+		Type      int
+		Responses []struct {
+			Addrs []string
+			ID    string
+		}
+	}{}
+
+	err = s.sh.Request("routing/findprovs", cid).Option("num-providers", maxProviders).Exec(context.Background(), &info)
+	if err != nil {
+		return nil, err
+	}
+	for _, addr := range info.Responses {
+		providerList = append(providerList, addr.ID)
+	}
+
+	return providerList, nil
+}

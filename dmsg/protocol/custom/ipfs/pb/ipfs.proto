@@ -16,9 +16,15 @@ message SyncFileRes {
 
 message SummaryReq {
     string CID = 1;
+    int32 MaxProviderCount = 2;
+}
+
+message Provider {
+    string CID = 1;
+    repeated string PeerIdList = 2;
 }
 
 message SummaryRes {
     string CID = 1;
-    repeated string ProviderStoreCIDList = 2;
+    repeated Provider ProivderList = 2;
 }
