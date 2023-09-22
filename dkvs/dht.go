@@ -21,6 +21,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-base32"
+	tvPb "github.com/tinyverse-web3/tvbase/common/pb"
+	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -179,7 +181,7 @@ func (d *Dkvs) putAllUnsyncKeyToNetwork(peerID peer.ID) error {
 	Logger.Info("putAllUnsyncKeyToNetwork---> start")
 	Logger.Info("sync start unsyncDb content: ---")
 	d.printUnsyncedDb()
-	d.putAllKeysToPeers() //将db中未同步的key再一次put到基他节点
+	d.putAllKeysToPeers() //将db中未同步的key再一次put到其他节点
 	Logger.Info("putAllUnsyncKeyToNetwork---> end")
 	if d.getUnsyncedDbSize() > 0 {
 		Logger.Info("sync end unsyncDb content: ---")
@@ -192,9 +194,12 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 	peers, err := d.baseService.GetAvailableServicePeerList(key)
 	if err != nil {
 		Logger.Error("d.baseService.GetAvailableServicePeerList(key) not return any connected node")
-		return err
+		serviceNodeCount := d.tryToConnectNetPeers() //当GetAvailableServicePeerList返回为空时将主动连接网络节点以提高连接节的稳定性
+		if serviceNodeCount == 0 {                   //没有连接到任何服务节点
+			return err
+		}
 	}
-	isInDhTNet := false
+	isInDhtNet := false
 	wg := sync.WaitGroup{}
 	for _, p := range peers {
 		wg.Add(1)
@@ -211,7 +216,7 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 			if err != nil {
 				Logger.Warnf("putKeyToNetNode--> failed putting value to this peer failed--->{key: %v, pee: %v, err: %v} ", key, p, err)
 			} else {
-				isInDhTNet = true
+				isInDhtNet = true
 				Logger.Debugf("putKeyToNetNode--> success putting value to this peer--->{key: %v, pee: %v} ", key, p)
 				err := d.updateProvider(ctx, p, key)
 				if err != nil {
@@ -221,7 +226,7 @@ func (d *Dkvs) putKeyToNetNode(ctx context.Context, key string, rec *recpb.Recor
 		}(p)
 	}
 	wg.Wait()
-	if isInDhTNet {
+	if isInDhtNet {
 		d.enableProvider(ctx, key) //makes this node announce that it can provide a value for the given key
 	} else {
 		Logger.Errorf("putKeyToNetNode--> key not put any other node--->{key: %v}", key)
@@ -277,7 +282,8 @@ func (d *Dkvs) closeUnsyncedDB(cxt context.Context) error {
 }
 
 func (d *Dkvs) printUnsyncedDb() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	results, err := d.dkvsdb.Query(ctx, q)
 	if err != nil {
@@ -291,7 +297,8 @@ func (d *Dkvs) printUnsyncedDb() {
 }
 
 func (d *Dkvs) getUnsyncedDbSize() uint64 {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	var size uint64 = 0
 	results, err := d.dkvsdb.Query(ctx, q)
@@ -308,7 +315,8 @@ func (d *Dkvs) getUnsyncedDbSize() uint64 {
 
 func (d *Dkvs) putAllKeysToPeers() error {
 	// Query the DataStore for all keys and values
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := query.Query{}
 	results, err := d.dkvsdb.Query(ctx, q)
 	if err != nil {
@@ -445,4 +453,65 @@ func (d *Dkvs) periodicallyProcessUnsyncKey() {
 			}
 		}
 	}()
+}
+
+// 主动连接之前连接过网络服务节点以提高网络的稳定性
+func (d *Dkvs) tryToConnectNetPeers() int { //主动连接网络节点
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	host := d.idht.Host()
+	peers := host.Network().Peers()
+	baseService := d.baseService
+	nodeInfoService := baseService.GetNodeInfoService()
+	if len(peers) == 0 {
+		cfg := d.baseService.GetConfig()
+		bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(cfg.Bootstrap.BootstrapPeers)
+		if err == nil {
+			peers = ParsePeersAddrInfo(bootstrapPeerAddrInfoList)
+		}
+	}
+	if len(peers) == 0 {
+		return 0
+	}
+
+	var mutex sync.Mutex
+	var wg sync.WaitGroup
+	serviceNodeCount := 0
+	for _, p := range peers {
+		pId := p
+		wg.Add(1) // 增加WaitGroup的计数
+		go func() {
+			defer wg.Done() // 当goroutine完成时减少WaitGroup的计数
+			result := nodeInfoService.Request(ctx, pId)
+			if result == nil {
+				Logger.Debugf("tryToConnectNetPeers->try get peer info: %v, result is nil", pId.Pretty())
+				return
+			}
+			if result.Error != nil {
+				Logger.Debugf("tryToConnectNetPeers: try get peer info: %v happen error, result: %v", pId.Pretty(), result)
+				return
+			}
+
+			if result.NodeInfo == nil {
+				Logger.Warnf("tryToConnectNetPeers: result node info is nil: pereID %s", pId.Pretty())
+				return
+			}
+			switch result.NodeInfo.NodeType {
+			case tvPb.NodeType_Light:
+			case tvPb.NodeType_Full:
+				// 使用互斥锁保护共享变量的修改
+				mutex.Lock()
+				serviceNodeCount++
+				mutex.Unlock()
+				Logger.Debugf("tryToConnectNetPeers--->Successfully connected to the servcie node: {id: %s}", pId.Pretty())
+			}
+			if serviceNodeCount >= 2 {
+				// 当serviceNodeCount大于等于2时，触发退出防止过多的连接
+				return
+			}
+		}()
+	}
+	// 等待所有goroutine完成
+	wg.Wait()
+	return serviceNodeCount
 }

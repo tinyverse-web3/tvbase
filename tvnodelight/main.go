@@ -16,8 +16,9 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
-	"github.com/tinyverse-web3/tvbase/common/define"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/load"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -29,7 +30,6 @@ var mainLog = ipfsLog.Logger(logName)
 
 func parseCmdParams() (string, string, string, string) {
 	help := flag.Bool("help", false, "Display help")
-	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
 	srcSeed := flag.String("srcSeed", "", "src user pubkey")
 	destSeed := flag.String("destSeed", "", "desc user pubkey")
 	channelSeed := flag.String("channelSeed", "", "channel pubkey")
@@ -41,14 +41,6 @@ func parseCmdParams() (string, string, string, string) {
 		mainLog.Info("tinverse tvnodelight")
 		mainLog.Info("Usage 1(default program run path): Run './tvnodelight -srcSeed softwarecheng@gmail.com' -destSeed softwarecheng@126.com")
 		mainLog.Info("Usage 2(special data root path): Run './tvnodelight -srcSeed softwarecheng@gmail.com' -destSeed softwarecheng@126.com, -rootPath ./light1")
-		os.Exit(0)
-	}
-	if *generateCfg {
-
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, define.LightMode)
-		if err != nil {
-			mainLog.Fatal(err)
-		}
 		os.Exit(0)
 	}
 
@@ -74,8 +66,9 @@ func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
+	cfg *config.TvbaseConfig,
 	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
-	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
@@ -108,13 +101,16 @@ func main() {
 
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, destSeed, channelSeed, rootPath := parseCmdParams()
-
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	rootPath, err := tvbaseUtil.GetRootPath(rootPath)
 	if err != nil {
-		mainLog.Errorf("InitConfig error: %v", err)
-		return
+		mainLog.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	cfg, err := load.LoadConfig(rootPath)
+	if err != nil || cfg == nil {
+		mainLog.Fatalf("tvnode->main: loadConfig: %v", err)
+	}
+
+	err = tvbaseUtil.SetLogModule(cfg.Log.ModuleLevels)
 	if err != nil {
 		mainLog.Errorf("InitLog error: %v", err)
 		return
@@ -155,7 +151,7 @@ func main() {
 	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", channelSeed, channelPrikeyHex, channelPubkeyHex)
 
 	// init dmsg
-	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, cfg.Tvbase, ctx)
 	if err != nil {
 		mainLog.Errorf("initDmsg error: %v", err)
 		return

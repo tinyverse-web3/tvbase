@@ -5,20 +5,24 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
+	ds "github.com/ipfs/go-datastore"
 	badgerds "github.com/ipfs/go-ds-badger2"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/routing"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	cm "github.com/tinyverse-web3/tvbase/dkvs/common"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
@@ -29,13 +33,18 @@ type Dkvs struct {
 	dhtDatastore   db.Datastore
 	protoMessenger *kadpb.ProtocolMessenger
 	baseService    tvCommon.TvBaseService
-	baseServiceCfg *tvConfig.NodeConfig
+	baseServiceCfg *tvConfig.TvbaseConfig
 }
 
 var _dkvs *Dkvs = nil
 
+var (
+	currentReadRecMode = cm.NetworkFirst //默认读取数据模式：网络优先
+	modeMutex          sync.RWMutex      // 用于保护全局模式配置项的互斥锁
+)
+
 func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
-	rootPath := tvbase.GetConfig().RootPath
+	rootPath := tvbase.GetRootPath()
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	dkvsdb, err := createBadgerDB(dbPath)
 	if err != nil {
@@ -60,7 +69,7 @@ func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
 	}
 
 	// register a network event to handler unsynckey
-	tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
+	// tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
 
 	// Periodically process unsynchronized keys
 	_dkvs.periodicallyProcessUnsyncKey()
@@ -99,7 +108,7 @@ func (d *Dkvs) Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl 
 func (d *Dkvs) Get(key string) ([]byte, []byte, uint64, uint64, []byte, error) {
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
-		Logger.Error(err)
+		Logger.Errorf("{key: %v, err: %s}", key, err.Error())
 		return nil, nil, 0, 0, nil, err
 	}
 
@@ -132,12 +141,14 @@ func (d *Dkvs) FastGetRecord(key string) (*pb.DkvsRecord, error) {
 }
 
 func (d *Dkvs) Has(key string) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if !isValidKey(key) {
 		err := errors.New("invalid key")
 		Logger.Error(err)
 		return false
 	}
-	_, err := d.idht.GetValue(context.Background(), RecordKey(key))
+	_, err := d.idht.GetValue(ctx, RecordKey(key))
 	return err == nil
 }
 
@@ -323,25 +334,13 @@ func (d *Dkvs) putRecord(key string, record *pb.DkvsRecord) error {
 }
 
 func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
-	fullPath := dbRootDir
-	if !filepath.IsAbs(fullPath) {
-		rootPath, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		fullPath = filepath.Join(rootPath, fullPath)
-	}
-	err := os.MkdirAll(fullPath, 0755)
-	if err != nil {
-		return nil, err
-	}
 	defopts := badgerds.DefaultOptions
 	defopts.SyncWrites = false
 	defopts.Truncate = true
-	return badgerds.NewDatastore(fullPath, &defopts)
+	return badgerds.NewDatastore(dbRootDir, &defopts)
 }
 
-func getProtocolMessenger(baseServiceCfg *tvConfig.NodeConfig, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
+func getProtocolMessenger(baseServiceCfg *tvConfig.TvbaseConfig, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
 	v1proto := baseServiceCfg.DHT.ProtocolPrefix + baseServiceCfg.DHT.ProtocolID
 	protocols := []protocol.ID{protocol.ID(v1proto)}
 	msgSender := kaddht.NewMessageSenderImpl(dht.Host(), protocols)
@@ -460,17 +459,85 @@ func (d *Dkvs) dhtPut(key string, value []byte) error {
 }
 
 func (d *Dkvs) dhtGetRecord(key string) (*pb.DkvsRecord, error) {
+	priority := d.GetReadRecMode()
+
+	if priority == cm.LocalFirst {
+		return d.readRecordFromLocal(key)
+	}
+
+	//net first
+	netCh := make(chan struct {
+		Record *pb.DkvsRecord
+		Error  error
+	})
+	localCh := make(chan struct {
+		Record *pb.DkvsRecord
+		Error  error
+	})
+	// 启动goroutine执行readRecordFromDhtNet函数
+	go func() {
+		result, err := d.readRecordFromDhtNet(key) //从网络中读取
+		netCh <- struct {
+			Record *pb.DkvsRecord
+			Error  error
+		}{Record: result, Error: err}
+	}()
+
+	// 启动goroutine执行readRecordFromLocal函数
+	go func() {
+		result, err := d.readRecordFromLocal(key) //从本地读取
+		localCh <- struct {
+			Record *pb.DkvsRecord
+			Error  error
+		}{Record: result, Error: err}
+	}()
+
+	select {
+	case res := <-netCh:
+		return res.Record, res.Error
+	case <-time.After(25 * time.Second):
+		Logger.Debugf("Due to the timeout (>25 seconds) of reading from dht, the local data is directly returned): {key: %s}", key)
+		res := <-localCh
+		return res.Record, res.Error
+	}
+}
+
+func (d *Dkvs) readRecordFromDhtNet(key string) (*pb.DkvsRecord, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var val []byte
 	val, err := d.dhtGetRecordFromNet(ctx, key)
 	if err != nil {
-		Logger.Errorf("dhtGetRecord--> key does not exist on the network {key: %s, err: %v}", key, err)
+		Logger.Errorf("readRecordFromDhtNet--> key does not exist on the network {key: %s, err: %v}", key, err)
+		//go delBadRecFromLocal(d, key) //参考lbp2p-kad-dht handleGetValue, 删除掉本地过期的key TODO 暂时注释以保留过期数据
 		return nil, err
 	}
 	e := new(pb.DkvsRecord)
 	if err := proto.Unmarshal(val, e); err != nil {
-		Logger.Errorf("dhtGetRecord--> found an invalid dkvs entry: v%", err)
+		Logger.Errorf("readRecordFromDhtNet--> found an invalid dkvs entry: v%", err)
+		return nil, err
+	}
+	go saveKeyToLocal(d, key, val) //执行异步操作, 如果本地没有这个key,在本地也保留一份
+	return e, nil
+}
+
+func (d *Dkvs) readRecordFromLocal(key string) (*pb.DkvsRecord, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var val []byte
+	libp2pRec, err := d.getLocal(ctx, key)
+	if err != nil {
+		Logger.Errorf("readRecordFromLocal--->Failed to read key from local node {key: %s} err: %s", key, err.Error())
+		return nil, err
+	}
+	if libp2pRec == nil {
+		Logger.Errorf("readRecordFromLocal--->Failed to read key from local node {key: %s}", key)
+		return nil, ErrNotFound
+	}
+	val = libp2pRec.GetValue()
+	e := new(pb.DkvsRecord)
+	if err := proto.Unmarshal(val, e); err != nil {
+		Logger.Errorf("readRecordFromLocal--> found an invalid dkvs entry: v%", err)
 		return nil, err
 	}
 	return e, nil
@@ -493,12 +560,13 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 		}),
 	}
 
-	//d.baseService.GetAvailableServicePeerList(key) //增加Get的稳定性
-
 	err := retry.Do(
 		func() error {
 			var err error
 			val, err = d.idht.GetValue(ctx, key)
+			if err != nil && err == routing.ErrNotFound {
+				d.tryToConnectNetPeers() //主动连接之前连接过网络服务节点以提高网络的稳定性
+			}
 			return err
 		},
 		retryStrategy...,
@@ -572,6 +640,20 @@ func (d *Dkvs) IsApprovedPubkey(sn string, pk []byte) bool {
 	return VerifyCertApprove(cert, pk)
 }
 
+// 获取dkvs当前的读取记录优先级,返回为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
+func (d *Dkvs) GetReadRecMode() cm.ReadPriority {
+	modeMutex.Lock()
+	defer modeMutex.Unlock()
+	return currentReadRecMode
+}
+
+// 设置dkvs读取记录的优先级，入参为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
+func (d *Dkvs) SetReadRecMode(readPriority cm.ReadPriority) {
+	modeMutex.Lock()
+	defer modeMutex.Unlock()
+	currentReadRecMode = readPriority
+}
+
 func isApprovedPubkey(sn string, pk []byte) bool {
 	if _dkvs != nil {
 		return _dkvs.IsApprovedPubkey(sn, pk)
@@ -585,4 +667,52 @@ func isApprovedService(sn string) bool {
 		return _dkvs.IsApprovedService(sn)
 	}
 	return false
+}
+
+func saveKeyToLocal(d *Dkvs, key string, val []byte) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err := d.putKeyToLocalNode(ctx, key, val)
+	if err != nil {
+		Logger.Errorf("saveKeyToLocal--> the new key-value fails to be saved locally {key: %s, err: %s}", key, err.Error())
+	} else {
+		Logger.Debugf("saveKeyToLocal--->the new key-value is successfully saved locally {key: %s}", key)
+	}
+}
+
+func delBadRecFromLocal(d *Dkvs, key string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dskey := d.mkDsKey(key)
+	dht := d.idht
+	buf, err := d.dhtDatastore.Get(ctx, dskey)
+	if err == ds.ErrNotFound {
+		Logger.Debugf("delBadRecFromLocal--->finding value in datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+	if err != nil {
+		Logger.Warningf("delBadRecFromLocal--->error retrieving record from datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+	rec := new(recpb.Record)
+	err = proto.Unmarshal(buf, rec)
+	if err != nil {
+		// Bad data in datastore, log it but don't return an error, we'll just overwrite it
+		Logger.Warningf("delBadRecFromLocal--->failed to unmarshal record from datastore {key: %s, error: %s}", key, err.Error())
+		return
+	}
+
+	var recordIsBad bool
+	err = dht.Validator.Validate(string(rec.GetKey()), rec.GetValue())
+	if (err != nil) && (err == ErrExpiredRecord) { //过期的记录要删除掉
+		Logger.Debugf("delBadRecFromLocal---local record verify failed {key: %v,  err: %s}", key, err.Error())
+		recordIsBad = true
+	}
+	if recordIsBad {
+		err := d.dhtDatastore.Delete(ctx, dskey)
+		if err != nil {
+			Logger.Error("delBadRecFromLocal--->Failed to delete bad record from datastore: {key: %s, error: %s}", key, err.Error())
+		}
+		Logger.Infof("delBadRecFromLocal---Successfully delete bad record from datastore {key: %s}", key)
+	}
 }

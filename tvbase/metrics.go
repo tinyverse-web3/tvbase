@@ -12,7 +12,7 @@ import (
 )
 
 func (m *TvBase) initMetric() {
-	addr := ":" + strconv.Itoa(m.nodeCfg.Metrics.ApiPort)
+	addr := ":" + strconv.Itoa(m.cfg.Metrics.ApiPort)
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		http.ListenAndServe(addr, nil)

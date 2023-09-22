@@ -33,27 +33,18 @@ import (
 	"go.uber.org/fx"
 )
 
-func (m *TvBase) initConfig(rootPath string, defaultMode define.NodeMode) error {
-	var err error
-	m.nodeCfg, err = tvConfig.InitNodeConfigFile(rootPath, defaultMode)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
-	identityPath := m.nodeCfg.RootPath + identity.IdentityFileName
+	identityPath := m.rootPath + identity.IdentityFileName
 	_, err := os.Stat(identityPath)
 	if os.IsNotExist(err) {
-		identity.GenIdenityFile(m.nodeCfg.RootPath)
+		identity.GenIdenityFile(m.rootPath)
 	}
 	privteKey, err := identity.LoadIdentity(identityPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	swarmPsk, fprint, err := identity.LoadSwarmKey(m.nodeCfg.RootPath + identity.SwarmPskFileName)
+	swarmPsk, fprint, err := identity.LoadSwarmKey(m.rootPath + identity.SwarmPskFileName)
 	if err != nil {
 		tvLog.Logger.Infof("no private swarm key")
 	}
@@ -72,7 +63,7 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	// This service is highly rate-limited and should not cause any performance issues.
 	// for service node
 
-	switch m.nodeCfg.AutoNAT.ServiceMode {
+	switch m.cfg.AutoNAT.ServiceMode {
 	default:
 		return nil, fmt.Errorf("TvBase->createNATOpts: unhandled autonat service mode")
 	case tvConfig.AutoNATServiceDisabled:
@@ -86,21 +77,21 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 		// to dhtclient.
 		fallthrough
 	case tvConfig.AutoNATServiceEnabled:
-		if !m.nodeCfg.Swarm.DisableNatPortMap {
+		if !m.cfg.Swarm.DisableNatPortMap {
 			opts = append(opts, libp2p.EnableNATService())
-			if m.nodeCfg.AutoNAT.Throttle != nil { // todo need to config
+			if m.cfg.AutoNAT.Throttle != nil { // todo need to config
 				opts = append(opts,
 					libp2p.AutoNATServiceRateLimit(
-						m.nodeCfg.AutoNAT.Throttle.GlobalLimit,
-						m.nodeCfg.AutoNAT.Throttle.PeerLimit,
-						m.nodeCfg.AutoNAT.Throttle.Interval,
+						m.cfg.AutoNAT.Throttle.GlobalLimit,
+						m.cfg.AutoNAT.Throttle.PeerLimit,
+						m.cfg.AutoNAT.Throttle.Interval,
 					),
 				)
 			}
 		}
 	}
 
-	switch m.nodeCfg.Mode {
+	switch m.cfg.Mode {
 	case define.LightMode:
 		opts = append(opts,
 			// for client node, use default host NATManager,
@@ -133,13 +124,13 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	opts = append(opts,
 		libp2p.UserAgent(common.GetUserAgentVersion()),
 		libp2p.Identity(privateKey),
-		libp2p.ListenAddrStrings(m.nodeCfg.Network.ListenAddrs...),
+		libp2p.ListenAddrStrings(m.cfg.Network.ListenAddrs...),
 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
 		libp2p.Security(noise.ID, noise.New),
 	)
 
 	// smux
-	res, err := makeSmuxTransportOption(m.nodeCfg.Swarm.Transports)
+	res, err := makeSmuxTransportOption(m.cfg.Swarm.Transports)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
 		return nil, err
@@ -147,7 +138,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	opts = append(opts, res)
 
 	// Libp2pForceReachability -- for debug
-	switch m.nodeCfg.Network.Libp2pForceReachability {
+	switch m.cfg.Network.Libp2pForceReachability {
 	case "public":
 		opts = append(opts, libp2p.ForceReachabilityPublic())
 	case "private":
@@ -167,9 +158,9 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	opts = append(opts, transportOpts...)
 
 	// annouceAddrs
-	if len(m.nodeCfg.Network.AnnounceAddrs) > 0 {
+	if len(m.cfg.Network.AnnounceAddrs) > 0 {
 		var announce []ma.Multiaddr
-		for _, s := range m.nodeCfg.Network.AnnounceAddrs {
+		for _, s := range m.cfg.Network.AnnounceAddrs {
 			a := ma.StringCast(s)
 			announce = append(announce, a)
 		}
@@ -179,7 +170,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			}),
 		)
 	} else {
-		if m.nodeCfg.Mode == define.ServiceMode && !m.nodeCfg.Network.IsLocalNet {
+		if m.cfg.Mode == define.ServiceMode && !m.cfg.Network.IsLocalNet {
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
@@ -213,9 +204,9 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 
 	// connection manager
 	cm, err := connmgr.NewConnManager(
-		m.nodeCfg.ConnMgr.ConnMgrLo,
-		m.nodeCfg.ConnMgr.ConnMgrHi,
-		connmgr.WithGracePeriod(m.nodeCfg.ConnMgr.ConnMgrGrace),
+		m.cfg.ConnMgr.ConnMgrLo,
+		m.cfg.ConnMgr.ConnMgrHi,
+		connmgr.WithGracePeriod(m.cfg.ConnMgr.ConnMgrGrace),
 	)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
@@ -241,7 +232,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	}
 	opts = append(opts, relayOpts...)
 
-	switch m.nodeCfg.Mode {
+	switch m.cfg.Mode {
 	case define.LightMode:
 		// holePunching
 		opts = append(opts,
@@ -254,16 +245,16 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		)
 	case define.ServiceMode:
 		// BandwidthCounter
-		if !m.nodeCfg.Swarm.DisableBandwidthMetrics {
+		if !m.cfg.Swarm.DisableBandwidthMetrics {
 			reporter := metrics.NewBandwidthCounter()
 			opts = append(opts, libp2p.BandwidthReporter(reporter))
 		}
 
 		// connection gater filters
-		if len(m.nodeCfg.Swarm.AddrFilters) > 0 {
+		if len(m.cfg.Swarm.AddrFilters) > 0 {
 			filter := ma.NewFilters()
 			opts = append(opts, libp2p.ConnectionGater((*filtersConnectionGater)(filter)))
-			for _, addr := range m.nodeCfg.Swarm.AddrFilters {
+			for _, addr := range m.cfg.Swarm.AddrFilters {
 				f, err := mamask.NewMask(addr)
 				if err != nil {
 					tvLog.Logger.Errorf("tvBase->createCommonOpts: incorrectly formatted address filter in config: %s", addr)
@@ -279,7 +270,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 
 func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 	var err error
-	bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(m.nodeCfg.Bootstrap.BootstrapPeers)
+	bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(m.cfg.Bootstrap.BootstrapPeers)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createRouteOpt: tvUtil.ParseBootstrapPeers(bsCfgPeers): error: %v", err)
 		return nil, err
@@ -287,7 +278,7 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 	opt := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 		var modeOption kaddht.Option
 
-		switch m.nodeCfg.Mode {
+		switch m.cfg.Mode {
 		case define.ServiceMode:
 			modeOption = kaddht.Mode(kaddht.ModeServer)
 		case define.LightMode:
@@ -295,8 +286,8 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 		}
 		m.dht, err = kaddht.New(m.ctx,
 			h,
-			kaddht.ProtocolPrefix(protocol.ID(m.nodeCfg.DHT.ProtocolPrefix)), // kaddht.ProtocolPrefix("/test"),
-			kaddht.Validator(dkvs.Validator{}),                               // kaddht.NamespacedValidator("tinyverseNetwork", blankValidator{}),
+			kaddht.ProtocolPrefix(protocol.ID(m.cfg.DHT.ProtocolPrefix)), // kaddht.ProtocolPrefix("/test"),
+			kaddht.Validator(dkvs.Validator{}),                           // kaddht.NamespacedValidator("tinyverseNetwork", blankValidator{}),
 			// EnableOptimisticProvide enables an optimization that skips the last hops of the provide process.
 			// This works by using the network size estimator (which uses the keyspace density of queries)
 			// to optimistically send ADD_PROVIDER requests when we most likely have found the last hop.

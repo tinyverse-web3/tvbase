@@ -34,8 +34,12 @@ func (m *TvBase) GetHost() host.Host {
 	return m.host
 }
 
-func (m *TvBase) GetConfig() *tvConfig.NodeConfig {
-	return m.nodeCfg
+func (m *TvBase) GetRootPath() string {
+	return m.rootPath
+}
+
+func (m *TvBase) GetConfig() *tvConfig.TvbaseConfig {
+	return m.cfg
 }
 
 func (m *TvBase) GetTraceSpan() trace.Span {

@@ -8,7 +8,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.1.3
-	github.com/ipfs/go-ipfs-api v0.6.0
+	github.com/ipfs/go-ipfs-api v0.7.0
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/juju/ratelimit v1.0.2
 	github.com/libp2p/go-libp2p v0.31.0
@@ -26,6 +26,7 @@ require (
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0 // indirect
+	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta.0.20220111032746-97732e52810c // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
@@ -49,7 +50,6 @@ require (
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect

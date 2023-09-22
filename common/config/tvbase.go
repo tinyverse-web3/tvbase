@@ -1,11 +1,6 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/ipfs/kubo/config"
@@ -15,40 +10,32 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 )
 
-var (
-	NodeConfigFileName = "config.json"
-	LightPort          = "0"
-	ServicePort        = "9000"
+const (
+	LightPort   = "0"
+	ServicePort = "9000"
 )
 
-// NodeConfig stores the full configuration of the relays, ACLs and other settings
+// TvbaseConfig stores the full configuration of the relays, ACLs and other settings
 // that influence behaviour of a relay daemon.
-type NodeConfig struct {
-	RootPath       string
-	Mode           define.NodeMode
-	Network        NetworkConfig
-	Swarm          config.SwarmConfig
-	AutoNAT        AutoNATConfig
-	ConnMgr        ConnMgrConfig
-	Relay          RelayConfig
-	ACL            ACLConfig
-	Bootstrap      BootstrapConfig
-	PartialLimit   rcmgr.PartialLimitConfig
-	DHT            DHTConfig
-	DMsg           DMsgConfig
-	CustomProtocol CustomProtocolConfig
-	Metrics        MetricsConfig
-	CoreHttp       CoreHttpConfig
-	Log            LogConfig
-	Disc           DiscConfig
+type TvbaseConfig struct {
+	Mode         define.NodeMode
+	Network      NetworkConfig
+	Swarm        config.SwarmConfig
+	AutoNAT      AutoNATConfig
+	ConnMgr      ConnMgrConfig
+	Relay        RelayConfig
+	ACL          ACLConfig
+	Bootstrap    BootstrapConfig
+	PartialLimit rcmgr.PartialLimitConfig
+	DHT          DHTConfig
+	DMsg         DMsgConfig
+	Metrics      MetricsConfig
+	CoreHttp     CoreHttpConfig
+	Disc         DiscConfig
 }
 
 type DiscConfig struct {
 	EnableProfile bool
-}
-
-type LogConfig struct {
-	ModuleLevels map[string]string
 }
 
 // NetworkConfig controls listen and annouce settings for the libp2p host.
@@ -140,6 +127,7 @@ type DHTConfig struct {
 	DatastorePath  string
 	ProtocolPrefix string
 	ProtocolID     string
+	MaxRecordAge   time.Duration
 }
 
 type DMsgConfig struct {
@@ -152,14 +140,6 @@ type DMsgConfig struct {
 	DatastorePath   string
 }
 
-type CustomProtocolConfig struct {
-	IpfsSyncFile IpfsSyncFileConfig
-}
-
-type IpfsSyncFileConfig struct {
-	IpfsURL string
-}
-
 type MetricsConfig struct {
 	ApiPort int
 }
@@ -168,27 +148,12 @@ type CoreHttpConfig struct {
 	ApiPort int
 }
 
-// returns a default relay configuration using default resource
-func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
-	listenPort := LightPort
-	switch mode {
-	case define.ServiceMode:
-		listenPort = ServicePort
-	}
-	return &NodeConfig{
+func NewDefaultTvbaseConfig() *TvbaseConfig {
+	ret := TvbaseConfig{
 		Mode: define.LightMode,
 		Network: NetworkConfig{
-			IsLocalNet: false,
-			ListenAddrs: []string{
-				"/ip4/0.0.0.0/tcp/" + listenPort,
-				"/ip4/0.0.0.0/udp/" + listenPort + "/quic",
-				"/ip4/0.0.0.0/udp/" + listenPort + "/quic-v1",
-				"/ip4/0.0.0.0/udp/" + listenPort + "/quic-v1/webtransport",
-				"/ip6/::/tcp/" + listenPort,
-				"/ip6/::/udp/" + listenPort + "/quic",
-				"/ip6/::/udp/" + listenPort + "/quic-v1",
-				"/ip6/::/udp/" + listenPort + "/quic-v1/webtransport",
-			},
+			IsLocalNet:              false,
+			ListenAddrs:             []string{},
 			Libp2pForceReachability: "",
 			Peers:                   []peer.AddrInfo{},
 			EnableMdns:              true,
@@ -236,6 +201,7 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			DatastorePath:  "dht_data",
 			ProtocolPrefix: "/tvnode",
 			ProtocolID:     "/kad/1.0.0",
+			MaxRecordAge:   time.Hour * 24 * 365 * 100,
 		},
 		DMsg: DMsgConfig{
 			MaxMsgCount:     1000,
@@ -245,11 +211,6 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			MaxChannelCount: 1000,
 			KeepChannelDay:  30,
 			DatastorePath:   "msg_data",
-		},
-		CustomProtocol: CustomProtocolConfig{
-			IpfsSyncFile: IpfsSyncFileConfig{
-				IpfsURL: "/ip4/127.0.0.1/tcp/5001",
-			},
 		},
 		Relay: RelayConfig{
 			Enabled: true,
@@ -270,15 +231,6 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 				MaxReservationsPerASN:  32,  //default 32
 			},
 		},
-		Log: LogConfig{
-			ModuleLevels: map[string]string{
-				"tvbase":      "debug",
-				"dkvs":        "debug",
-				"dmsg":        "debug",
-				"tvnode":      "debug",
-				"tvnodelight": "debug",
-			},
-		},
 		Disc: DiscConfig{
 			EnableProfile: false,
 		},
@@ -289,146 +241,45 @@ func NewDefaultNodeConfig(mode define.NodeMode) *NodeConfig {
 			ApiPort: 9099,
 		},
 	}
+	return &ret
 }
 
-// LoadConfig reads a relay daemon JSON configuration from the given path.
-// The configuration is first initialized with DefaultConfig, so all unset
-// fields will take defaults from there.
-func (cfg *NodeConfig) LoadConfig(filePath string) error {
-	if filePath != "" {
-		cfgFile, err := os.Open(filePath)
-		if err != nil {
-			return err
+func (cfg *TvbaseConfig) InitMode(mode define.NodeMode) {
+	cfg.Mode = mode
+	switch cfg.Mode {
+	case define.ServiceMode:
+		cfg.Network.ListenAddrs = []string{
+			"/ip4/0.0.0.0/udp/" + ServicePort + "/quic",
+			"/ip6/::/udp/" + ServicePort + "/quic",
+			"/ip4/0.0.0.0/tcp/" + ServicePort,
+			"/ip6/::/tcp/" + ServicePort,
 		}
-		defer cfgFile.Close()
-
-		decoder := json.NewDecoder(cfgFile)
-		err = decoder.Decode(&cfg)
-		if err != nil {
-			return err
+	case define.LightMode:
+		cfg.Network.ListenAddrs = []string{
+			"/ip4/0.0.0.0/udp/" + LightPort + "/quic",
+			"/ip6/::/udp/" + LightPort + "/quic",
+			"/ip4/0.0.0.0/tcp/" + LightPort,
+			"/ip6/::/tcp/" + LightPort,
 		}
 	}
-	return nil
 }
 
-func Merge2GenConfigFile(rootPath string, mode define.NodeMode) error {
-	cfg := &NodeConfig{}
-	cfgPath := rootPath + NodeConfigFileName
-	defaultCfg := NewDefaultNodeConfig(mode)
-	_, err := os.Stat(cfgPath)
-	if os.IsNotExist(err) {
-		cfg = defaultCfg
-	} else {
-		err = cfg.LoadConfig(cfgPath)
-		if err != nil {
-			return err
-		}
-		cfg, err = mergeJSON(cfg, defaultCfg)
-		if err != nil {
-			return err
-		}
-	}
-	file, err := json.MarshalIndent(cfg, "", " ")
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(cfgPath, file, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+func (cfg *TvbaseConfig) ClearBootstrapPeers() {
+	cfg.Bootstrap.BootstrapPeers = []string{}
 }
 
-func InitNodeConfigFile(rootPath string, defaultMode define.NodeMode) (*NodeConfig, error) {
-	var cfg *NodeConfig = &NodeConfig{}
-	_, err := os.Stat(rootPath)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(rootPath, 0755)
-		if err != nil {
-			fmt.Println("GenConfig: Failed to create directory:", err)
-			return nil, err
-		}
-	}
-	cfgPath := rootPath + NodeConfigFileName
-	_, err = os.Stat(cfgPath)
-	if os.IsNotExist(err) {
-		cfg = NewDefaultNodeConfig(defaultMode)
-		file, _ := json.MarshalIndent(cfg, "", " ")
-		if err := os.WriteFile(rootPath+NodeConfigFileName, file, 0644); err != nil {
-			fmt.Println("InitConfig: Failed to WriteFile:", err)
-			return nil, err
-		}
-	} else {
-		err = cfg.LoadConfig(cfgPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	cfg.RootPath = rootPath
-	if !filepath.IsAbs(cfg.DHT.DatastorePath) {
-		cfg.DHT.DatastorePath = rootPath + cfg.DHT.DatastorePath
-	}
-	if !filepath.IsAbs(cfg.DMsg.DatastorePath) {
-		cfg.DMsg.DatastorePath = rootPath + cfg.DMsg.DatastorePath
-	}
-	return cfg, nil
+func (cfg *TvbaseConfig) AddBootstrapPeer(peer string) {
+	cfg.Bootstrap.BootstrapPeers = append(cfg.Bootstrap.BootstrapPeers, peer)
 }
 
-func mergeJSON(srcCfg, destCfg *NodeConfig) (*NodeConfig, error) {
-	srcBytes, err := json.Marshal(srcCfg)
-	if err != nil {
-		return nil, err
-	}
-	destBytes, err := json.Marshal(destCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	var srcMap map[string]any
-	var destMap map[string]any
-	err = json.Unmarshal(srcBytes, &srcMap)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(destBytes, &destMap)
-	if err != nil {
-		return nil, err
-	}
-
-	mergeJsonFields(srcMap, destMap)
-
-	data, err := json.Marshal(srcMap)
-	if err != nil {
-		return nil, err
-	}
-
-	ret := &NodeConfig{}
-	err = json.Unmarshal(data, ret)
-	if err != nil {
-		return nil, err
-	}
-	return ret, nil
+func (cfg *TvbaseConfig) SetLocalNet(isLocalNet bool) {
+	cfg.Network.IsLocalNet = isLocalNet
 }
 
-func mergeJsonFields(srcObj, destObj map[string]any) error {
-	for key, value := range destObj {
-		if value == nil {
-			continue
-		}
-		if reflect.TypeOf(value).Kind() == reflect.Map {
-			if srcObj[key] == nil {
-				srcObj[key] = make(map[string]any)
-			}
-			err := mergeJsonFields(srcObj[key].(map[string]any), value.(map[string]any))
-			if err != nil {
-				return err
-			}
-		} else {
-			if srcObj[key] == nil {
-				srcObj[key] = value
-			}
-		}
-	}
-	return nil
+func (cfg *TvbaseConfig) SetMdns(enable bool) {
+	cfg.Network.EnableMdns = enable
+}
+
+func (cfg *TvbaseConfig) SetDhtProtocolPrefix(prefix string) {
+	cfg.DHT.ProtocolPrefix = prefix
 }

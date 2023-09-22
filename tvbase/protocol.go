@@ -5,6 +5,6 @@ import (
 )
 
 func (m *TvBase) initProtocol() error {
-	m.nodeInfoService = tvProtocol.NewNodeInfoService(m.host, m.nodeCfg.Mode)
+	m.nodeInfoService = tvProtocol.NewNodeInfoService(m.host, m.cfg.Mode)
 	return nil
 }

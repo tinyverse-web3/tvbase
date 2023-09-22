@@ -39,20 +39,20 @@ func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 	var manager network.ResourceManager
 
 	tvLog.Logger.Debug("tvBase->initResourceManager: libp2p resource manager is enabled")
-	limitConfig, msg, err := LimitConfig(m.nodeCfg.Swarm, m.nodeCfg.PartialLimit)
+	limitConfig, msg, err := LimitConfig(m.cfg.Swarm, m.cfg.PartialLimit)
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->initResourceManager: creating final Resource Manager config: %w", err)
 		return nil, err
 	}
 
-	if !isPartialConfigEmpty(m.nodeCfg.PartialLimit) {
+	if !isPartialConfigEmpty(m.cfg.PartialLimit) {
 		tvLog.Logger.Warn(`tvBase->initResourceManager: libp2p-resource-limit-overrides.json has been loaded, "default" fields will be filled in with autocomputed defaults.`)
 	}
 
 	// We want to see this message on startup, that's why we are using fmt instead of log.
 	tvLog.Logger.Debug(msg)
 
-	if err := ensureConnMgrMakeSenseVsResourceMgr(limitConfig, m.nodeCfg.Swarm); err != nil {
+	if err := ensureConnMgrMakeSenseVsResourceMgr(limitConfig, m.cfg.Swarm); err != nil {
 		return nil, err
 	}
 
@@ -64,9 +64,9 @@ func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 
 	ropts := []rcmgr.Option{rcmgr.WithMetrics(createRcmgrMetrics()), rcmgr.WithTraceReporter(str)}
 
-	if len(m.nodeCfg.Swarm.ResourceMgr.Allowlist) > 0 {
+	if len(m.cfg.Swarm.ResourceMgr.Allowlist) > 0 {
 		var mas []ma.Multiaddr
-		for _, maStr := range m.nodeCfg.Swarm.ResourceMgr.Allowlist {
+		for _, maStr := range m.cfg.Swarm.ResourceMgr.Allowlist {
 			ma, err := ma.NewMultiaddr(maStr)
 			if err != nil {
 				tvLog.Logger.Warnf("tvBase->initResourceManager: failed to parse multiaddr=%v for allowlist, skipping. err=%v", maStr, err)
@@ -79,7 +79,7 @@ func (m *TvBase) initResourceManager() (network.ResourceManager, error) {
 	}
 
 	if os.Getenv("LIBP2P_DEBUG_RCMGR") != "" {
-		traceFilePath := filepath.Join(m.nodeCfg.RootPath, NetLimitTraceFilename)
+		traceFilePath := filepath.Join(m.rootPath, NetLimitTraceFilename)
 		ropts = append(ropts, rcmgr.WithTrace(traceFilePath))
 	}
 

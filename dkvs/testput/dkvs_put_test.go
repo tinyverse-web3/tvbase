@@ -2,6 +2,7 @@ package testput
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -9,18 +10,24 @@ import (
 	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
 func init() {
-	nodeConfig, err := tvUtil.LoadNodeConfig()
-	if err != nil {
-		fmt.Printf("init error: %v", err)
-		return
+	logCfg := map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
 	}
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	err := tvUtil.SetLogModule(logCfg)
 	if err != nil {
 		fmt.Printf("init error: %v", err)
 		return
@@ -43,8 +50,10 @@ func bytesToHexString(input []byte) string {
 
 func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
-
-	tvbase, err := tvbase.NewTvbase() //如果不传入任何参数，默认数据存储路径是当前路径下
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +201,10 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 }
 
 func TestUnsyncedDb(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +292,10 @@ func TestUnsyncedDb(t *testing.T) {
 }
 
 func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -17,8 +20,10 @@ func init() {
 }
 
 func TestHttpServer(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
-	//_, err := tvbase.NewTvbase("./testdata") //如果不传入任何参数，默认数据存储路径是当前路径下
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.ServiceMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./testdata")
 	if err != nil {
 		t.Fatal(err)
 	}

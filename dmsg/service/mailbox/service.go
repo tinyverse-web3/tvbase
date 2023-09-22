@@ -71,7 +71,9 @@ func (d *MailboxService) Start(
 	d.BaseService.Start(enableService)
 	if d.EnableService {
 		var err error
-		d.datastore, err = db.CreateBadgerDB(d.GetConfig().DatastorePath)
+		cfg := d.BaseService.TvBase.GetConfig()
+		filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
+		d.datastore, err = db.CreateBadgerDB(filepath)
 		if err != nil {
 			log.Errorf("MailboxService->Start: create datastore error %v", err)
 			return err

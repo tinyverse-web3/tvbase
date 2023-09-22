@@ -20,9 +20,11 @@ import (
 	"github.com/mitchellh/go-homedir"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/load"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
@@ -88,7 +90,22 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, define.ServiceMode)
+		fullPath, err := tvbaseUtil.GetRootPath(*rootPath)
+		if err != nil {
+			mainLog.Fatalf("GetRootPath error: %v", err)
+		}
+		_, err = os.Stat(fullPath)
+		if os.IsNotExist(err) {
+			err := os.MkdirAll(fullPath, 0755)
+			if err != nil {
+				mainLog.Fatalf("MkdirAll error: %v", err)
+			}
+		}
+		err = load.GenConfigFile(fullPath, define.ServiceMode)
+		if err != nil {
+			mainLog.Fatalf("Failed to generate config file: %v", err)
+		}
+		err = load.GenIdentityFile(fullPath)
 		if err != nil {
 			mainLog.Fatalf("Failed to generate config file: %v", err)
 		}
@@ -135,20 +152,20 @@ func parseCmdParams() string {
 	return *rootPath
 }
 
+func initLog(cfg *config.LogConfig) (err error) {
+	err = tvbaseUtil.SetLogModule(cfg.ModuleLevels)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	rootPath := parseCmdParams()
-
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath, define.ServiceMode)
+	rootPath, err := tvbaseUtil.GetRootPath(rootPath)
 	if err != nil {
-		mainLog.Errorf("tvnode->main: %v", err)
-		return
+		mainLog.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-	if err != nil {
-		mainLog.Fatalf("tvnode->main: init log: %v", err)
-	}
-
 	pidFileName, err := getPidFileName(rootPath)
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: get pid file name: %v", err)
@@ -174,9 +191,25 @@ func main() {
 		}
 	}()
 
-	ctx := context.Background()
+	cfg, err := load.LoadConfig(rootPath)
+	if err != nil || cfg == nil {
+		mainLog.Fatalf("tvnode->main: loadConfig: %v", err)
+	}
 
-	//src
+	err = initLog(cfg.Log)
+	if err != nil {
+		mainLog.Fatalf("tvnode->main: initLog: %v", err)
+	}
+
+	// test enviroment
+	// cfg.Tvbase.SetLocalNet(true)
+	// cfg.Tvbase.SetMdns(false)
+	// cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
+	// cfg.Tvbase.ClearBootstrapPeers()
+	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWPThTtBAaC5vvnj6NE2iQSfuBHRUdtPweM6dER62R57R2")
+	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
+
+	ctx := context.Background()
 	userSeed := "softwarecheng@gmail.com"
 	srcPrikey, srcPubkey, err := getKeyBySeed(userSeed)
 	if err != nil {
@@ -187,13 +220,13 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	mainLog.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
 
-	tb, _, err := initDmsg(srcPubkey, srcPrikey, rootPath, ctx)
+	tb, _, err := initDmsg(srcPubkey, srcPrikey, cfg.Tvbase, rootPath, ctx)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: initDmsg: %v", err)
 		return
 	}
 
-	_, err = tvbaseIpfs.CreateIpfsShellProxy(nodeConfig.CustomProtocol.IpfsSyncFile.IpfsURL)
+	_, err = tvbaseIpfs.CreateIpfsShellProxy(cfg.CustomProtocol.IpfsSyncFile.IpfsURL)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
 		return
@@ -217,15 +250,17 @@ func main() {
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(cp)
 
+	tb.Start()
 	<-ctx.Done()
 }
 
 func initDmsg(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
+	cfg *config.TvbaseConfig,
 	rootPath string,
 	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
-	tb, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}

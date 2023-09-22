@@ -19,12 +19,12 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 		libp2p.EnableRelay(),
 	)
 
-	switch m.nodeCfg.Mode {
+	switch m.cfg.Mode {
 	case define.LightMode:
 		// auto relay -- static relays
-		if len(m.nodeCfg.Swarm.RelayClient.StaticRelays) > 0 {
-			staticRelays := make([]peer.AddrInfo, 0, len(m.nodeCfg.Swarm.RelayClient.StaticRelays))
-			for _, s := range m.nodeCfg.Swarm.RelayClient.StaticRelays {
+		if len(m.cfg.Swarm.RelayClient.StaticRelays) > 0 {
+			staticRelays := make([]peer.AddrInfo, 0, len(m.cfg.Swarm.RelayClient.StaticRelays))
+			for _, s := range m.cfg.Swarm.RelayClient.StaticRelays {
 				var addr *peer.AddrInfo
 				var err error
 				addr, err = peer.AddrInfoFromString(s)
@@ -91,7 +91,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 				}
 
 				// Always feed trusted IDs (Peering.Peers in the config)
-				for _, trustedPeer := range m.nodeCfg.Network.Peers {
+				for _, trustedPeer := range m.cfg.Network.Peers {
 					if len(trustedPeer.Addrs) == 0 {
 						continue
 					}
@@ -134,7 +134,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 		}()
 	case define.ServiceMode:
 		// enable relay server
-		def := m.nodeCfg.Relay.Resources
+		def := m.cfg.Relay.Resources
 		var ropts []relayv2.Option
 		ropts = append(ropts, relayv2.WithResources(relayv2.Resources{
 			Limit: &relayv2.RelayLimit{
@@ -149,7 +149,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 			MaxReservationsPerPeer: def.MaxReservationsPerPeer,
 			MaxReservationsPerASN:  def.MaxReservationsPerASN,
 		}))
-		acl, err := NewACL(m.host, m.nodeCfg.ACL)
+		acl, err := NewACL(m.host, m.cfg.ACL)
 		if err == nil {
 			ropts = append(ropts, relayv2.WithACL(acl))
 		}

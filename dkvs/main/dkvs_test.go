@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
@@ -11,6 +12,8 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -18,12 +21,16 @@ import (
 )
 
 func init() {
-	nodeConfig, err := tvUtil.LoadNodeConfig()
-	if err != nil {
-		fmt.Printf("init error: %v", err)
-		return
+	logCfg := map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
 	}
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	err := tvUtil.SetLogModule(logCfg)
 	if err != nil {
 		fmt.Printf("init error: %v", err)
 		return
@@ -33,7 +40,10 @@ func init() {
 func TestDkvs(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +64,7 @@ func TestDkvs(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa18")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa28")
 	tValue1 := []byte("world1")
 	tValue2 := []byte("mtv2")
 	tValue3 := []byte("mtv3")
@@ -171,7 +181,10 @@ func bytesToHexString(input []byte) string {
 
 func TestGun(t *testing.T) {
 
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +350,10 @@ func TestGun(t *testing.T) {
 
 func TestTransferKey(t *testing.T) {
 
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -556,7 +572,10 @@ func hash(key string) (hashKey string) {
 }
 
 func TestMultiWriters(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,7 +642,10 @@ func TestMultiWriters(t *testing.T) {
 }
 
 func TestMultiWritersWithCert(t *testing.T) {
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -818,7 +840,10 @@ func TestDkvsTTL(t *testing.T) {
 	maxttl := dkvs.GetMaxTtl()
 	fmt.Printf("maxttl: %v", maxttl)
 
-	tvbase, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -839,9 +864,9 @@ func TestDkvsTTL(t *testing.T) {
 	fmt.Println("seed: ", seed)
 	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
 
-	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa20")
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa44")
 	tValue1 := []byte("world1")
-	ttl := dkvs.GetTtlFromDuration(time.Hour)
+	ttl := dkvs.GetTtlFromDuration(15 * time.Second)
 	issuetime := dkvs.TimeNow()
 	fmt.Printf("tKey: %v", tKey)
 	data := dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
@@ -858,13 +883,13 @@ func TestDkvsTTL(t *testing.T) {
 		fmt.Println("Timeout occurred")
 	}
 	//等待时手工从网络获取这个key
-
-	data = dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, maxttl)
+	tValue2 := []byte("world2")
+	data = dkvs.GetRecordSignData(tKey, tValue2, pkBytes, issuetime, maxttl)
 	sigData2, err := priv.Sign(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = kv.Put(tKey, tValue1, pkBytes, issuetime, maxttl, sigData2)
+	err = kv.Put(tKey, tValue2, pkBytes, issuetime, maxttl, sigData2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -902,4 +927,47 @@ func TestDkvsTTL(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		fmt.Println("Timeout occurred")
 	}
+}
+
+func TestDkvsDbMaxRecordAge(t *testing.T) {
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(define.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kv := tvbase.GetDkvsService()
+
+	seed := "oIBBgepoPyhdJTYC"
+	priv, err := dkvs.GetPriKeyBySeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := priv.GetPublic()
+	pkBytes, err := ic.MarshalPublicKey(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("seed: ", seed)
+	fmt.Println("pubkey: ", bytesToHexString(pkBytes))
+
+	tKey := "/" + dkvs.PUBSERVICE_DAUTH + "/" + hash("dkvs-k001-aa25")
+	tValue1 := []byte("world1")
+	ttl := dkvs.GetTtlFromDuration(time.Minute)
+	issuetime := dkvs.TimeNow()
+	fmt.Printf("tKey: %v", tKey)
+	data := dkvs.GetRecordSignData(tKey, tValue1, pkBytes, issuetime, ttl)
+	sigData1, err := priv.Sign(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = kv.Put(tKey, tValue1, pkBytes, issuetime, ttl, sigData1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {}
+	//等待时手工从网络获取这个key
 }
