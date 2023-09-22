@@ -12,8 +12,7 @@ import (
 
 	// "time"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/config"
 
 	// dmsg "github.com/tinyverse-web3/tvbase/dmsg"
 	utilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
@@ -28,7 +27,6 @@ var tvcLog = ipfsLog.Logger(logName)
 
 func parseCmdParams() (string, string, string, string) {
 	help := flag.Bool("help", false, "Display help")
-	generateCfg := flag.Bool("init", false, "init generate identityKey and config file")
 	srcSeed := flag.String("srcSeed", "", "src user pubkey")
 	destSeed := flag.String("destSeed", "", "desc user pubkey")
 	pubSeed := flag.String("pubSeed", "", "desc user pubkey")
@@ -42,15 +40,6 @@ func parseCmdParams() (string, string, string, string) {
 		tvcLog.Info("Usage 2(special data root path): Run './tvnodelight -srcSeed softwarecheng@gmail.com' -destSeed softwarecheng@126.com, -rootPath ./light1")
 		os.Exit(0)
 	}
-	if *generateCfg {
-
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.LightMode)
-		if err != nil {
-			tvcLog.Fatal(err)
-		}
-		os.Exit(0)
-	}
-
 	if *srcSeed == "" {
 		log.Fatal("Please provide seed for generate src user public key")
 	}
@@ -72,14 +61,16 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 func initMsgClient(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
-	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
-	tvInfra, err := tvbase.NewTvbase(rootPath, ctx, true)
+	cfg *config.TvbaseConfig,
+	ctx context.Context,
+) (*tvbase.TvBase, *dmsgClient.DmsgService, error) {
+	cfg.InitMode(config.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		tvcLog.Fatalf("InitMsgClient error: %v", err)
 	}
 
-	dmsgService := tvInfra.GetClientDmsgService()
+	dmsgService := tvbase.GetClientDmsgService()
 	srcPubkeyBytes, err := utilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		tvcLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -110,7 +101,7 @@ func initMsgClient(
 	// 	return nil, nil, err
 	// }
 
-	return tvInfra, dmsgService, nil
+	return tvbase, dmsgService, nil
 }
 
 func main() {

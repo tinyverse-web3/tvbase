@@ -47,7 +47,8 @@ type TvBaseService interface {
 	DiscoverRendezvousPeers()
 	GetServicePeerList() tvPeer.PeerInfoList
 	GetLightPeerList() tvPeer.PeerInfoList
-	GetConfig() *config.NodeConfig
+	GetRootPath() string
+	GetConfig() *config.TvbaseConfig
 	GetNodeInfoService() *tvProtocol.NodeInfoService
 	GetDht() *kaddht.IpfsDHT
 	GetCtx() context.Context

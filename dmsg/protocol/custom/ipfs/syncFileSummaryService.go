@@ -108,6 +108,9 @@ func (p *SyncFileSummaryService) upload3rdIpfsProvider(summaryReq *ipfspb.Summar
 		return summaryRes, err
 	}
 
+	if summaryReq.MaxProviderCount == 0 {
+		summaryReq.MaxProviderCount = 20
+	}
 	peerIdList, err := p.queryPeerList(summaryReq.CID, int(summaryReq.MaxProviderCount))
 	if err != nil {
 		return summaryRes, err

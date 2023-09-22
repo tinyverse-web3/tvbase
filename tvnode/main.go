@@ -14,9 +14,10 @@ import (
 	filelock "github.com/MichaelS11/go-file-lock"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/load"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -81,7 +82,22 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
+		fullPath, err := tvbaseUtil.GetRootPath(*rootPath)
+		if err != nil {
+			tvsLog.Fatalf("GetRootPath error: %v", err)
+		}
+		_, err = os.Stat(fullPath)
+		if os.IsNotExist(err) {
+			err := os.MkdirAll(fullPath, 0755)
+			if err != nil {
+				tvsLog.Fatalf("MkdirAll error: %v", err)
+			}
+		}
+		err = load.GenConfigFile(fullPath, config.ServiceMode)
+		if err != nil {
+			tvsLog.Fatalf("Failed to generate config file: %v", err)
+		}
+		err = load.GenIdentityFile(fullPath)
 		if err != nil {
 			tvsLog.Fatalf("Failed to generate config file: %v", err)
 		}
@@ -128,20 +144,20 @@ func parseCmdParams() string {
 	return *rootPath
 }
 
+func initLog(cfg *config.LogConfig) (err error) {
+	err = tvbaseUtil.SetLogModule(cfg.ModuleLevels)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	rootPath := parseCmdParams()
-
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	rootPath, err := tvbaseUtil.GetRootPath(rootPath)
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: %v", err)
-		return
+		tvsLog.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: init log: %v", err)
-	}
-
 	pidFileName, err := getPidFileName(rootPath)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
@@ -167,13 +183,31 @@ func main() {
 		}
 	}()
 
+	cfg, err := load.LoadConfig(rootPath)
+	if err != nil || cfg == nil {
+		tvsLog.Fatalf("tvnode->main: loadConfig: %v", err)
+	}
+
+	err = initLog(cfg.Log)
+	if err != nil {
+		tvsLog.Fatalf("tvnode->main: initLog: %v", err)
+	}
+
+	// test enviroment
+	// cfg.Tvbase.SetLocalNet(true)
+	// cfg.Tvbase.SetMdns(false)
+	// cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
+	// cfg.Tvbase.ClearBootstrapPeers()
+	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWPThTtBAaC5vvnj6NE2iQSfuBHRUdtPweM6dER62R57R2")
+	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
+
 	ctx := context.Background()
-	tb, err := tvbase.NewTvbase(rootPath, ctx, true)
+	tb, err := tvbase.NewTvbase(ctx, cfg.Tvbase, rootPath)
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
 	}
 
-	_, err = tvbaseIpfs.CreateIpfsShellProxy(nodeConfig.CustomProtocol.IpfsSyncFile.IpfsURL)
+	_, err = tvbaseIpfs.CreateIpfsShellProxy(cfg.CustomProtocol.IpfsSyncFile.IpfsURL)
 	if err != nil {
 		tvsLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
 		return
@@ -197,6 +231,7 @@ func main() {
 	}
 	tb.RegistCSSProtocol(cp)
 
+	tb.Start()
 	<-ctx.Done()
 	// tvInfrasture.Stop()
 	// Logger.Info("tvnode_->main: Gracefully shut down daemon")

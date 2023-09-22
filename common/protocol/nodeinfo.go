@@ -28,10 +28,10 @@ const (
 
 type NodeInfoService struct {
 	Host       host.Host
-	NodeConfig *config.NodeConfig
+	NodeConfig *config.TvbaseConfig
 }
 
-func NewNodeInfoService(h host.Host, c *config.NodeConfig) *NodeInfoService {
+func NewNodeInfoService(h host.Host, c *config.TvbaseConfig) *NodeInfoService {
 	ps := &NodeInfoService{h, c}
 	h.SetStreamHandler(ID, ps.requestHandler)
 	return ps

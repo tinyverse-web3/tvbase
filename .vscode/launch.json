@@ -39,6 +39,15 @@
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode/main.go",
             "args": ["-rootPath", "./"]
+        },
+        {
+            "name": "tvnode-init",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode/main.go",
+            "args": ["-rootPath", "./", "-init"]
         }
     ]
 }

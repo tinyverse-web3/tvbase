@@ -65,7 +65,8 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	cfg := d.BaseService.GetConfig()
-	d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+	filepath := d.BaseService.GetRootPath() + cfg.DMsg.DatastorePath
+	d.datastore, err = db.CreateDataStore(filepath, cfg.Mode)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->Init: create datastore error %v", err)
 		return err

@@ -25,13 +25,12 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
 	ma "github.com/multiformats/go-multiaddr"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
 	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
@@ -52,7 +51,7 @@ type TvBase struct {
 	host                   host.Host
 	dht                    *kaddht.IpfsDHT
 	dhtDatastore           db.Datastore
-	nodeCfg                *tvConfig.NodeConfig
+	cfg                    *config.TvbaseConfig
 	lightPeerListMutex     sync.Mutex
 	servicePeerListMutex   sync.Mutex
 	servicePeerList        tvPeer.PeerInfoList
@@ -65,70 +64,37 @@ type TvBase struct {
 	isRendezvous           bool
 	rendezvousChanList     []chan bool
 	launch                 *fx.App
+	rootPath               string
 }
 
 // new tvbase
-func NewTvbase(options ...any) (*TvBase, error) {
-	var isStart bool = true
-	var rootPath string = ""
-	ctx := context.Background()
-	var ok bool = false
-
-	if len(options) > 0 {
-		rootPath, ok = options[0].(string)
-		if !ok {
-			tvLog.Logger.Errorf("NewTvbase: options[0](rootPath) is not string")
-			return nil, fmt.Errorf("NewTvbase: options[0](rootPath) is not string")
-		}
-	}
-
-	if len(options) > 1 {
-		ctx, ok = options[1].(context.Context)
-		if !ok {
-			tvLog.Logger.Errorf("NewTvbase: options[1](ctx) is not context.Context")
-			return nil, fmt.Errorf("NewTvbase: options[1](ctx) is not context.Context")
-		}
-	}
-
-	if len(options) > 2 {
-		isStart, ok = options[2].(bool)
-		if !ok {
-			tvLog.Logger.Errorf("NewTvbase: options[0](isStart) is not bool")
-			return nil, fmt.Errorf("NewTvbase: options[0](isStart) is not bool")
-		}
-	}
-
+func NewTvbase(ctx context.Context, cfg *config.TvbaseConfig, rootPath string) (*TvBase, error) {
 	m := &TvBase{
-		ctx: ctx,
+		ctx:      ctx,
+		cfg:      cfg,
+		rootPath: rootPath,
 	}
 
-	err := m.init(rootPath)
+	err := m.init()
 	if err != nil {
 		return m, err
 	}
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
+	switch m.cfg.Mode {
+	case config.LightMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "LightMode")
-	case tvConfig.ServiceMode:
+	case config.ServiceMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "ServiceMode")
 	default:
-		tvLog.Logger.Errorf("NewTvbase: mode is not exist: mode: %s", m.nodeCfg.Mode)
-		return m, fmt.Errorf("NewTvbase: mode is not exist: mode: %v", m.nodeCfg.Mode)
-	}
-
-	if isStart {
-		err = m.Start()
-		if err != nil {
-			return m, err
-		}
+		tvLog.Logger.Errorf("NewTvbase: mode is not exist: mode: %s", m.cfg.Mode)
+		return m, fmt.Errorf("NewTvbase: mode is not exist: mode: %v", m.cfg.Mode)
 	}
 	return m, nil
 }
 
 func (m *TvBase) Start() error {
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
+	switch m.cfg.Mode {
+	case config.LightMode:
+	case config.ServiceMode:
 		m.initMetric()
 	}
 
@@ -216,7 +182,7 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	fxOpts = append(fxOpts, initTraceOpt)
 
 	// profile
-	if m.nodeCfg.Disc.EnableProfile {
+	if m.cfg.Disc.EnableProfile {
 		var profileOpt fx.Option
 		stopProfilingFunc, err := profileIfEnabled()
 		if err != nil {
@@ -237,9 +203,9 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 	}
 
 	var intrOpt fx.Option
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
-	case tvConfig.ServiceMode:
+	switch m.cfg.Mode {
+	case config.LightMode:
+	case config.ServiceMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -316,7 +282,7 @@ func (m *TvBase) initFx(opt fx.Option) error {
 }
 
 func (m *TvBase) checkListenAddrs() error {
-	for _, addr := range m.nodeCfg.Network.ListenAddrs {
+	for _, addr := range m.cfg.Network.ListenAddrs {
 		subkeys := strings.Split(addr, "/")
 		l := len(subkeys)
 		if l < 5 {
@@ -363,7 +329,8 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		return nil, err
 	}
 
-	m.dhtDatastore, err = db.CreateDataStore(m.nodeCfg.DHT.DatastorePath, m.nodeCfg.Mode)
+	filepath := m.rootPath + m.cfg.DHT.DatastorePath
+	m.dhtDatastore, err = db.CreateDataStore(filepath, m.cfg.Mode)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
 		return nil, err
@@ -391,8 +358,8 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 	})
 
 	// resource manager
-	switch m.nodeCfg.Mode {
-	case tvConfig.ServiceMode:
+	switch m.cfg.Mode {
+	case config.ServiceMode:
 		rmgr, err := m.initResourceManager()
 		if err != nil {
 			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
@@ -462,18 +429,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 	return m.host, nil
 }
 
-func (m *TvBase) init(rootPath string) error {
-	fullPath, err := tvbaseUtil.GetRootPath(rootPath)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-	err = m.initConfig(fullPath)
-	if err != nil {
-		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
-		return err
-	}
-
+func (m *TvBase) init() error {
 	rand.Seed(time.Now().UnixNano())
 
 	// init fx launch
@@ -502,10 +458,10 @@ func (m *TvBase) init(rootPath string) error {
 
 func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	var err error
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
+	switch m.cfg.Mode {
+	case config.LightMode:
 		m.DmsgService, err = dmsgClient.CreateService(m)
-	case tvConfig.ServiceMode:
+	case config.ServiceMode:
 		m.DmsgService, err = dmsgService.CreateService(m)
 	}
 	if err != nil {
@@ -528,7 +484,7 @@ func (m *TvBase) bootstrap() error {
 	}
 
 	var wg sync.WaitGroup
-	for _, bootstrapPeer := range m.nodeCfg.Bootstrap.BootstrapPeers {
+	for _, bootstrapPeer := range m.cfg.Bootstrap.BootstrapPeers {
 		tvLog.Logger.Debugf("tvBase->bootstrap:\nbootstrapPeer: %+v", bootstrapPeer)
 		mulitAddr, err := ma.NewMultiaddr(bootstrapPeer)
 		if err != nil {
@@ -680,10 +636,10 @@ func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
 	outPrint := ""
 	outPrint += "TvBase->PrintDiagnosisInfo\n"
 	mode := ""
-	switch m.nodeCfg.Mode {
-	case tvConfig.LightMode:
+	switch m.cfg.Mode {
+	case config.LightMode:
 		mode = "LightMode"
-	case tvConfig.ServiceMode:
+	case config.ServiceMode:
 		mode = "ServiceMode"
 	}
 	outPrint += fmt.Sprintf("hostID: %s	mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",
