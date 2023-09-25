@@ -14,6 +14,7 @@ const PID_SERVICE_SYNCFILE_SUMMARY = "tvSyncFileSummaryService"
 const (
 	CODE_SUCC           = 0
 	CODE_ALREADY_PIN    = 1
+	CODE_WORKING        = 2
 	CODE_ERROR_NOPIN    = -1
 	CODE_ERROR_IPFS     = -2
 	CODE_ERROR_PROTOCOL = -3
