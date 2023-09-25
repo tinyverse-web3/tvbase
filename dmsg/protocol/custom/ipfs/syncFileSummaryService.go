@@ -71,20 +71,27 @@ func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 		}
 		return responseContent, retCode, nil
 	}
-	summaryRes, err := p.upload3rdIpfsProvider(summaryReq)
-	if err != nil {
-		retCode = &pb.RetCode{
-			Code:   CODE_ERROR_PROVIDER,
-			Result: err.Error(),
-		}
-		logger.Debugf(retCode.Result)
-		return responseContent, retCode, nil
+	summaryRes := &ipfspb.SummaryRes{
+		CID:          summaryReq.CID,
+		ProivderList: nil,
 	}
+
+	go func() {
+		summaryRes, err = p.upload3rdIpfsProvider(summaryReq)
+		if err != nil {
+			retCode = &pb.RetCode{
+				Code:   CODE_SUCC,
+				Result: "upload working",
+			}
+			logger.Debugf(retCode.Result)
+			// return responseContent, retCode, nil
+		}
+	}()
 
 	responseContent, _ = proto.Marshal(summaryRes)
 	retCode = &pb.RetCode{
-		Code:   CODE_SUCC,
-		Result: fmt.Sprintf("%+v", summaryRes),
+		Code:   CODE_WORKING,
+		Result: fmt.Sprintf("upload working"),
 	}
 	logger.Debugf("SummaryServiceProtocol->HandleRequest end")
 	return responseContent, retCode, nil
