@@ -81,7 +81,7 @@ func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (
 		if err != nil {
 			retCode = &pb.RetCode{
 				Code:   CODE_SUCC,
-				Result: "upload working",
+				Result: fmt.Sprintf("error: %+v", err),
 			}
 			logger.Debugf(retCode.Result)
 			// return responseContent, retCode, nil
@@ -174,12 +174,12 @@ func (p *SyncFileSummaryService) uploadNftProvider(cid string) (providerStoreCid
 
 	value, ok := resp["value"].(map[string]interface{})
 	if !ok {
-		return providerStoreCid, fmt.Errorf("failure to convert value json object")
+		return providerStoreCid, fmt.Errorf("failure to convert value json object, resp:%v", resp)
 	}
 
 	providerStoreCid, ok = value["cid"].(string)
 	if !ok {
-		return providerStoreCid, fmt.Errorf("failure to convert cid json object")
+		return providerStoreCid, fmt.Errorf("failure to convert cid json object, resp:%v", resp)
 	}
 
 	return providerStoreCid, nil
