@@ -3,6 +3,7 @@ package identity
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"os"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -110,9 +111,9 @@ func GenIdenityFile(rootPath string) error {
 	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
 	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
 	peerId, _ := peer.IDFromPublicKey(publicKey)
-	tvLog.Logger.Infof("generate identity:\n")
-	tvLog.Logger.Infof("privateKey:%s\n", privateKeyStr)
-	tvLog.Logger.Infof("publicKey:%s\n", publicKeyStr)
-	tvLog.Logger.Infof("peerId: %s\n", peerId.Pretty())
+	fmt.Printf("generate identity:\n")
+	fmt.Printf("privateKey:%s\n", privateKeyStr)
+	fmt.Printf("publicKey:%s\n", publicKeyStr)
+	fmt.Printf("peerId: %s\n", peerId.Pretty())
 	return nil
 }
