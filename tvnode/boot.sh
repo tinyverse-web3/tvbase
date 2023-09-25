@@ -59,8 +59,14 @@ fi
 
 
 
-log_dir="$user_dir/.tvnode"
-log_filename="$log_dir/$(date +"%Y-%m-%d_%H-%M-%S").log"
+root_dir="$user_dir/.tvnode"
+log_back_dir="$root_dir/log"
+log_filename="$root_dir/$(date +"%Y-%m-%d_%H-%M-%S").log"
+
+if [ ! -d "$log_back_dir" ]; then
+    mkdir "$log_back_dir"
+fi
+mv "$root_dir/"*.log "$log_back_dir"
 
 echo "start tvnode..."
 nohup tvnode > "$log_filename" 2>&1 &
