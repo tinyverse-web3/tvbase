@@ -1,7 +1,7 @@
 <h1 align="center">tinyverse libp2p tvbase</h1>
 <p align="center">Libp2p node for decentralized message and key-value storage</p>
 
-## Getting started for tvnode
+## Getting started for tvbase
 
 Compile program need install golang
 
