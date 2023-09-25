@@ -16,7 +16,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.11.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230919093228-3167a916e329
+	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230925051301-3df0ab09958f
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
@@ -27,7 +27,6 @@ require (
 require (
 	github.com/bits-and-blooms/bitset v1.5.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/btcsuite/btcd v0.22.0-beta.0.20220111032746-97732e52810c // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.10.0 // indirect
