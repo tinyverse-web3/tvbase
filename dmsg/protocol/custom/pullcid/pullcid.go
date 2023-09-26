@@ -139,7 +139,7 @@ func (p *PullCidServiceProtocol) HandleRequest(request *pb.CustomProtocolReq) (
 		return responseContent, retCode, nil
 	}
 
-	responseContent, err = json.Marshal(pullCidRequest)
+	responseContent, err = json.Marshal(pullCidResponse)
 	if err != nil {
 		retCode = &pb.RetCode{
 			Code:   CODE_ERROR_PROTOCOL,
