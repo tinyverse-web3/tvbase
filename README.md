@@ -1,5 +1,5 @@
-<h1 align="center">tinyverse libp2p tvbase</h1>
-<p align="center">Libp2p node for decentralized message and key-value storage</p>
+<h1 align="center">tvbase</h1>
+<p align="center">TVN node for message protocol and DKVS</p>
 
 ## Getting started for tvbase
 
