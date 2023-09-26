@@ -29,6 +29,7 @@ type ProxyPubsubService struct {
 	stopCleanRestResource chan bool
 	maxPubsubCount        int
 	keepPubsubDay         int
+	enableService         bool
 }
 
 func (d *ProxyPubsubService) Init(
@@ -55,7 +56,8 @@ func (d *ProxyPubsubService) Start(
 	enableLightUserPubsub bool,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, enableLightUserPubsub)
+	d.enableService = enableService
+	err := d.LightUserService.Start(pubkeyData, getSig, enableLightUserPubsub)
 	if err != nil {
 		return err
 	}
@@ -357,7 +359,7 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 
 func (d *ProxyPubsubService) cleanRestResource() {
 	go func() {
-		if d.EnableService {
+		if d.enableService {
 			d.stopCleanRestResource = make(chan bool)
 			ticker := time.NewTicker(12 * time.Hour)
 			defer ticker.Stop()

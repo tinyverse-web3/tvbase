@@ -15,7 +15,6 @@ type ProtocolHandle interface {
 }
 
 type DmsgServiceInterface interface {
-	IsEnableService() bool
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)

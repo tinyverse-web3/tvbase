@@ -58,7 +58,7 @@ func (d *CustomProtocolService) Start(
 	timeout time.Duration,
 ) error {
 	log.Debug("CustomProtocolService->Start begin")
-	err := d.LightUserService.Start(enableService, pubkeyData, getSig, false)
+	err := d.LightUserService.Start(pubkeyData, getSig, false)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (d *CustomProtocolService) RegistClient(client dmsgProtocolCustom.ClientHan
 		return fmt.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
 	}
 	d.clientStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ClientStreamProtocol{
-		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, d.EnableService),
+		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, false),
 		Handle:   client,
 	}
 	client.SetCtx(d.TvBase.GetCtx())
@@ -204,7 +204,7 @@ func (d *CustomProtocolService) RegistServer(service dmsgProtocolCustom.ServerHa
 		return fmt.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 	}
 	d.serverStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ServerStreamProtocol{
-		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, d.EnableService),
+		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, true),
 		Handle:   service,
 	}
 	service.SetCtx(d.TvBase.GetCtx())

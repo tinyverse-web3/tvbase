@@ -31,12 +31,7 @@ var waitMessageList map[string]*waitMessage
 
 type BaseService struct {
 	TvBase             common.TvBaseService
-	EnableService      bool
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
-}
-
-func (d *BaseService) Start(enableService bool) {
-	d.EnableService = enableService
 }
 
 func (d *BaseService) Init(baseService common.TvBaseService) error {
@@ -64,10 +59,6 @@ func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 }
 
 // DmsgServiceInterface
-func (d *BaseService) IsEnableService() bool {
-	return d.EnableService
-}
-
 func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
 	if err != nil {

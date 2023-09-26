@@ -40,6 +40,7 @@ type MailboxService struct {
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
+	enableService         bool
 }
 
 func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*MailboxService, error) {
@@ -68,8 +69,7 @@ func (d *MailboxService) Start(
 	timeout time.Duration,
 ) error {
 	log.Debugf("MailboxService->Start begin\nenableService: %v", enableService)
-	d.BaseService.Start(enableService)
-	if d.EnableService {
+	if d.enableService {
 		var err error
 		cfg := d.BaseService.TvBase.GetConfig()
 		filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
@@ -464,7 +464,7 @@ func (d *MailboxService) OnPubsubMsgRequest(
 		return nil, nil, true, nil
 	}
 
-	if d.EnableService {
+	if d.enableService {
 		pubkey := request.BasicData.Pubkey
 		user := d.getServiceUser(pubkey)
 		if user == nil {
@@ -494,7 +494,7 @@ func (d *MailboxService) OnPubsubMsgResponse(
 func (d *MailboxService) cleanRestResource() {
 	go func() {
 		d.stopCleanRestResource = make(chan bool)
-		if d.EnableService {
+		if d.enableService {
 			serviceTicker := time.NewTicker(12 * time.Hour)
 			defer serviceTicker.Stop()
 			for {
@@ -642,7 +642,7 @@ func (d *MailboxService) initUser(
 		return err
 	}
 
-	if !d.EnableService {
+	if !d.enableService {
 		if d.TvBase.GetIsRendezvous() {
 			return d.initMailbox(pubkey)
 		} else {

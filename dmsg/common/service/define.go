@@ -23,7 +23,6 @@ func GetQueryPeerTopicName() string {
 }
 
 type BaseService interface {
-	IsEnableService() bool
 	GetConfig() *config.DMsgConfig
 	PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error
 }

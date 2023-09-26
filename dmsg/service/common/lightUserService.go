@@ -17,12 +17,10 @@ type LightUserService struct {
 }
 
 func (d *LightUserService) Start(
-	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	enableUserPubsub bool,
 ) error {
-	d.BaseService.Start(enableService)
 	return d.initUser(pubkeyData, getSig, enableUserPubsub)
 }
 
