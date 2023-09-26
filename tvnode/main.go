@@ -19,14 +19,12 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	ipfsUtil "github.com/tinyverse-web3/mtv_go_utils/ipfs"
 	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
-	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/common/load"
 	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
-	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -226,28 +224,11 @@ func main() {
 		return
 	}
 
-	_, err = tvbaseIpfs.CreateIpfsShellProxy(cfg.CustomProtocol.IpfsSyncFile.IpfsURL)
+	_, err = ipfsUtil.CreateIpfsShellProxy(cfg.CustomProtocol.IpfsSyncFile.IpfsURL)
 	if err != nil {
 		mainLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
 		return
 	}
-
-	pp, err := pullcid.NewPullCidService()
-	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
-	}
-	tb.GetDmsg().GetCustomProtocolService().RegistServer(pp)
-
-	fp, err := syncfile.NewSyncFileUploadService()
-	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
-	}
-	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
-
-	cp := syncfile.NewSyncFileSummaryService()
-	cp.SetNftUploaderList(cfg.CustomProtocol.IpfsSyncFile.NftApiKeys)
-
-	tb.GetDmsg().GetCustomProtocolService().RegistServer(cp)
 
 	tb.Start()
 	<-ctx.Done()

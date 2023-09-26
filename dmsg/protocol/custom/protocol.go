@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/log"
 )
 
 type CustomProtocol struct {

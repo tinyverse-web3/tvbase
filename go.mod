@@ -16,7 +16,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.11.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230925051301-3df0ab09958f
+	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230926054744-a24f7f0e1131
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
