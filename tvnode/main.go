@@ -244,10 +244,9 @@ func main() {
 	}
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(fp)
 
-	cp, err := syncfile.NewSyncFileSummaryService()
-	if err != nil {
-		mainLog.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
-	}
+	cp := syncfile.NewSyncFileSummaryService()
+	cp.SetNftUploaderList(cfg.CustomProtocol.IpfsSyncFile.NftApiKeys)
+
 	tb.GetDmsg().GetCustomProtocolService().RegistServer(cp)
 
 	tb.Start()

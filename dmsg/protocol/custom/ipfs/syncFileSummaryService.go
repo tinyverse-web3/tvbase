@@ -30,20 +30,29 @@ type SyncFileSummaryService struct {
 	uploadManager *storageprovider.UploadManager
 }
 
-func NewSyncFileSummaryService() (*SyncFileSummaryService, error) {
+func NewSyncFileSummaryService() *SyncFileSummaryService {
 	p := &SyncFileSummaryService{}
-	err := p.Init()
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	p.Init()
+	return p
 }
 
-func (p *SyncFileSummaryService) Init() error {
+func (p *SyncFileSummaryService) Init() {
 	p.CustomStreamServiceProtocol.Init(PID_SERVICE_SYNCFILE_SUMMARY)
 	p.uploadManager = storageprovider.NewUploaderManager()
-	p.uploadManager.AddNftUploader(NftApiKeyList[0])
-	return nil
+}
+
+func (p *SyncFileSummaryService) SetNftUploaderList(apiKeyList []string) {
+	p.uploadManager.CleanNftUploader()
+	for _, apikey := range apiKeyList {
+		p.uploadManager.AddNftUploader(apikey)
+	}
+}
+
+func (p *SyncFileSummaryService) SetWeb3UploaderList(apiKeyList []string) {
+	p.uploadManager.CleanWeb3Uploader()
+	for _, apikey := range apiKeyList {
+		p.uploadManager.AddWeb3Uploader(apikey)
+	}
 }
 
 func (p *SyncFileSummaryService) HandleRequest(request *pb.CustomProtocolReq) (

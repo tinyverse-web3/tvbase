@@ -10,7 +10,8 @@ type CustomProtocolConfig struct {
 }
 
 type IpfsSyncFileConfig struct {
-	IpfsURL string
+	IpfsURL    string
+	NftApiKeys []string
 }
 
 type TvNodeConfig struct {

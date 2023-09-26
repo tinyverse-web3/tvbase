@@ -13,8 +13,16 @@ func NewUploaderManager() *UploadManager {
 	return ret
 }
 
+func (p *UploadManager) CleanNftUploader() {
+	p.NftUploaderList = make([]*Nft, 0)
+}
+
 func (p *UploadManager) AddNftUploader(apikey string) {
 	p.NftUploaderList = append(p.NftUploaderList, NewNft(apikey))
+}
+
+func (p *UploadManager) CleanWeb3Uploader() {
+	p.Web3UploaderList = make([]*Web3, 0)
 }
 
 func (p *UploadManager) AddWeb3Uploader(apikey string) {
