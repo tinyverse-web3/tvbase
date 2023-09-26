@@ -44,7 +44,7 @@ import (
 )
 
 type TvBase struct {
-	dmsg                   *service.Dmsg
+	dmsgService            *service.DmsgService
 	DkvsService            tvbaseCommon.DkvsService
 	TracerSpan             trace.Span
 	ctx                    context.Context
@@ -451,7 +451,7 @@ func (m *TvBase) init() error {
 func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	var err error
 
-	m.dmsg, err = service.CreateService(m)
+	m.dmsgService, err = service.CreateService(m)
 
 	if err != nil {
 		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
@@ -459,7 +459,7 @@ func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
 	}
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			return m.dmsg.Stop()
+			return m.dmsgService.Stop()
 		},
 	})
 	return nil
@@ -548,8 +548,8 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 	return nil
 }
 
-func (m *TvBase) GetDmsg() *service.Dmsg {
-	return m.dmsg
+func (m *TvBase) GetDmsgService() *service.DmsgService {
+	return m.dmsgService
 }
 
 func (m *TvBase) GetDkvsService() tvbaseCommon.DkvsService {

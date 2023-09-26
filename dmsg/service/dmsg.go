@@ -14,16 +14,16 @@ import (
 	service "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 )
 
-type Dmsg struct {
+type DmsgService struct {
 	mailboxService        service.MailboxService
 	msgService            service.MsgService
 	customProtocolService service.CustomProtocolService
 	channelService        service.ChannelService
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*Dmsg, error) {
+func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*DmsgService, error) {
 	dmsgCommonPubsub.NewPubsubMgr(tvbaseService.GetCtx(), tvbaseService.GetHost())
-	d := &Dmsg{}
+	d := &DmsgService{}
 	err := d.Init(tvbaseService)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*Dmsg, error) {
 	return d, nil
 }
 
-func (d *Dmsg) Init(tvbase tvbaseCommon.TvBaseService) error {
+func (d *DmsgService) Init(tvbase tvbaseCommon.TvBaseService) error {
 	var err error
 	d.mailboxService, err = mailboxService.CreateService(tvbase)
 	if err != nil {
@@ -52,23 +52,23 @@ func (d *Dmsg) Init(tvbase tvbaseCommon.TvBaseService) error {
 	return nil
 }
 
-func (d *Dmsg) GetMailboxService() service.MailboxService {
+func (d *DmsgService) GetMailboxService() service.MailboxService {
 	return d.mailboxService
 }
 
-func (d *Dmsg) GetMsgService() service.MsgService {
+func (d *DmsgService) GetMsgService() service.MsgService {
 	return d.msgService
 }
 
-func (d *Dmsg) GetCustomProtocolService() service.CustomProtocolService {
+func (d *DmsgService) GetCustomProtocolService() service.CustomProtocolService {
 	return d.customProtocolService
 }
 
-func (d *Dmsg) GetChannelService() service.ChannelService {
+func (d *DmsgService) GetChannelService() service.ChannelService {
 	return d.channelService
 }
 
-func (d *Dmsg) Start(
+func (d *DmsgService) Start(
 	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
@@ -93,7 +93,7 @@ func (d *Dmsg) Start(
 	return nil
 }
 
-func (d *Dmsg) Stop() error {
+func (d *DmsgService) Stop() error {
 	err := d.mailboxService.Stop()
 	if err != nil {
 		return err

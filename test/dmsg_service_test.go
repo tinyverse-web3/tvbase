@@ -44,7 +44,7 @@ package test
 // 	// 	panic(err)
 // 	// }
 
-// 	// err = tvbase.GetDmsg().GetCustomProtocolService().RegistServer(p)
+// 	// err = tvbase.GetDmsgService().GetCustomProtocolService().RegistServer(p)
 // 	// if err != nil {
 // 	// 	panic(err)
 // 	// }
@@ -86,7 +86,7 @@ package test
 // }
 
 // func readConsoleToSendMsg(base *tvbase.TvBase) {
-// 	dmsg := base.GetDmsg()
+// 	dmsg := base.GetDmsgService()
 
 // 	pk := "0400d3192b5e36d458bce6b8b7c9fbe19c90acfd01a6da7f01cf4729ac3976c957c2ac4ab38ff899fcdca6ddba661785c34eb00c2cd5b2b6d014ca6911463b3fa2"
 // 	var destPubsub *dmsgUser.ProxyPubsub

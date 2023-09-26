@@ -175,7 +175,7 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 // 		return nil, nil, err
 // 	}
 
-// 	dmsg := tvbase.GetDmsg()
+// 	dmsg := tvbase.GetDmsgService()
 // 	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
 // 	if err != nil {
 // 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -272,13 +272,13 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 // 	// 	return
 // 	// }
 
-// 	// err = tvbase.GetDmsg().GetCustomProtocolService().RegistClient(pullCidProtocol)
+// 	// err = tvbase.GetDmsgService().GetCustomProtocolService().RegistClient(pullCidProtocol)
 // 	// if err != nil {
 // 	// 	testLog.Errorf("RegistClient error: %v", err)
 // 	// 	return
 // 	// }
 
-// 	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsg().GetCustomProtocolService().QueryPeer("pullcid")
+// 	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsgService().GetCustomProtocolService().QueryPeer("pullcid")
 // 	if err != nil {
 // 		testLog.Errorf("QueryPeer error: %v", err)
 // 		return

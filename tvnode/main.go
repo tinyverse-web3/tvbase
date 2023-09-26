@@ -239,13 +239,13 @@ func initDmsg(
 	srcPrikey *ecdsa.PrivateKey,
 	cfg *config.TvbaseConfig,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
+	ctx context.Context) (*tvbase.TvBase, *service.DmsgService, error) {
 	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		mainLog.Fatalf("initDmsg error: %v", err)
 	}
 
-	dmsgService := tb.GetDmsg()
+	dmsgService := tb.GetDmsgService()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
