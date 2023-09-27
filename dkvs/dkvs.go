@@ -19,9 +19,9 @@ import (
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	cm "github.com/tinyverse-web3/tvbase/dkvs/common"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -32,7 +32,7 @@ type Dkvs struct {
 	dkvsdb         db.Datastore // 对这个对象的操作要考虑加锁
 	dhtDatastore   db.Datastore
 	protoMessenger *kadpb.ProtocolMessenger
-	baseService    tvCommon.TvBaseService
+	baseService    define.TvBaseService
 	baseServiceCfg *tvConfig.TvbaseConfig
 }
 
@@ -43,7 +43,7 @@ var (
 	modeMutex          sync.RWMutex      // 用于保护全局模式配置项的互斥锁
 )
 
-func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
+func NewDkvs(tvbase define.TvBaseService) *Dkvs {
 	rootPath := tvbase.GetRootPath()
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	dkvsdb, err := createBadgerDB(dbPath)

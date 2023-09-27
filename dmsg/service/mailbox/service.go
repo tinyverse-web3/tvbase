@@ -13,8 +13,8 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -43,7 +43,7 @@ type MailboxService struct {
 	enableService         bool
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*MailboxService, error) {
+func CreateService(tvbaseService define.TvBaseService) (*MailboxService, error) {
 	d := &MailboxService{}
 	err := d.Init(tvbaseService)
 	if err != nil {
@@ -52,7 +52,7 @@ func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*MailboxService, e
 	return d, nil
 }
 
-func (d *MailboxService) Init(tvbaseService tvbaseCommon.TvBaseService) error {
+func (d *MailboxService) Init(tvbaseService define.TvBaseService) error {
 	err := d.BaseService.Init(tvbaseService)
 	if err != nil {
 		return err

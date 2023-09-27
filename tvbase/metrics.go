@@ -8,7 +8,7 @@ import (
 	prometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/version"
 )
 
 func (m *TvBase) initMetric() {
@@ -26,8 +26,8 @@ func (m *TvBase) initMetric() {
 	}, []string{"version", "commit"})
 
 	nodeInfoMetric.With(prometheus.Labels{
-		"version": tvCommon.CurrentVersionNumber,
-		"commit":  tvCommon.CurrentCommit,
+		"version": version.CurrentVersionNumber,
+		"commit":  version.CurrentCommit,
 	}).Set(1)
 
 	prometheus.MustRegister(&NodeCollector{Node: m})

@@ -24,9 +24,7 @@ import (
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem"
 	ma "github.com/multiformats/go-multiaddr"
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
@@ -45,13 +43,13 @@ import (
 
 type TvBase struct {
 	dmsgService            *service.DmsgService
-	DkvsService            tvbaseCommon.DkvsService
+	DkvsService            define.DkvsService
 	TracerSpan             trace.Span
 	ctx                    context.Context
 	host                   host.Host
 	dht                    *kaddht.IpfsDHT
 	dhtDatastore           db.Datastore
-	cfg                    *tvConfig.TvbaseConfig
+	cfg                    *config.TvbaseConfig
 	lightPeerListMutex     sync.Mutex
 	servicePeerListMutex   sync.Mutex
 	servicePeerList        tvPeer.PeerInfoList
@@ -80,9 +78,9 @@ func NewTvbase(ctx context.Context, cfg *config.TvbaseConfig, rootPath string) (
 		return m, err
 	}
 	switch m.cfg.Mode {
-	case define.LightMode:
+	case config.LightMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "LightMode")
-	case define.ServiceMode:
+	case config.ServiceMode:
 		tvLog.Logger.Infof("NewTvbase: mode: %s", "ServiceMode")
 	default:
 		tvLog.Logger.Errorf("NewTvbase: mode is not exist: mode: %s", m.cfg.Mode)
@@ -93,8 +91,8 @@ func NewTvbase(ctx context.Context, cfg *config.TvbaseConfig, rootPath string) (
 
 func (m *TvBase) Start() error {
 	switch m.cfg.Mode {
-	case define.LightMode:
-	case define.ServiceMode:
+	case config.LightMode:
+	case config.ServiceMode:
 		m.initMetric()
 	}
 
@@ -197,8 +195,8 @@ func (m *TvBase) initDisc() (fx.Option, error) {
 
 	var intrOpt fx.Option
 	switch m.cfg.Mode {
-	case define.LightMode:
-	case define.ServiceMode:
+	case config.LightMode:
+	case config.ServiceMode:
 		// interrupt
 		intrh := NewIntrHandler()
 		var cancelFunc context.CancelFunc
@@ -351,7 +349,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 
 	// resource manager
 	switch m.cfg.Mode {
-	case define.ServiceMode:
+	case config.ServiceMode:
 		rmgr, err := m.initResourceManager()
 		if err != nil {
 			tvLog.Logger.Errorf("tvbase->createCommonOpts: error: %v", err)
@@ -552,7 +550,7 @@ func (m *TvBase) GetDmsgService() *service.DmsgService {
 	return m.dmsgService
 }
 
-func (m *TvBase) GetDkvsService() tvbaseCommon.DkvsService {
+func (m *TvBase) GetDkvsService() define.DkvsService {
 	return m.DkvsService
 }
 
@@ -607,8 +605,8 @@ func logAndUnwrapFxError(fxAppErr error) error {
 	return fmt.Errorf("constructing the node (see log for full detail): %w", err)
 }
 
-func (m *TvBase) PrintDiagnosisInfo() *tvbaseCommon.DiagnosisInfo {
-	ret := &tvbaseCommon.DiagnosisInfo{
+func (m *TvBase) PrintDiagnosisInfo() *define.DiagnosisInfo {
+	ret := &define.DiagnosisInfo{
 		Host:                   m.host,
 		Dht:                    m.dht,
 		IsRendezvous:           m.isRendezvous,
@@ -621,9 +619,9 @@ func (m *TvBase) PrintDiagnosisInfo() *tvbaseCommon.DiagnosisInfo {
 	outPrint += "TvBase->PrintDiagnosisInfo\n"
 	mode := ""
 	switch m.cfg.Mode {
-	case define.LightMode:
+	case config.LightMode:
 		mode = "LightMode"
-	case define.ServiceMode:
+	case config.ServiceMode:
 		mode = "ServiceMode"
 	}
 	outPrint += fmt.Sprintf("hostID: %s	mode: %s\nisDiscoverRendzvousing: %v	isRendezvous: %v\n",

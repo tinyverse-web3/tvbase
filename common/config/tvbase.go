@@ -7,7 +7,13 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	relayv2 "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
-	"github.com/tinyverse-web3/tvbase/common/define"
+)
+
+type NodeMode int32
+
+const (
+	ServiceMode NodeMode = iota
+	LightMode
 )
 
 const (
@@ -18,7 +24,7 @@ const (
 // TvbaseConfig stores the full configuration of the relays, ACLs and other settings
 // that influence behaviour of a relay daemon.
 type TvbaseConfig struct {
-	Mode         define.NodeMode
+	Mode         NodeMode
 	Network      NetworkConfig
 	Swarm        config.SwarmConfig
 	AutoNAT      AutoNATConfig
@@ -150,7 +156,7 @@ type CoreHttpConfig struct {
 
 func NewDefaultTvbaseConfig() *TvbaseConfig {
 	ret := TvbaseConfig{
-		Mode: define.LightMode,
+		Mode: LightMode,
 		Network: NetworkConfig{
 			IsLocalNet:              false,
 			ListenAddrs:             []string{},
@@ -244,17 +250,17 @@ func NewDefaultTvbaseConfig() *TvbaseConfig {
 	return &ret
 }
 
-func (cfg *TvbaseConfig) InitMode(mode define.NodeMode) {
+func (cfg *TvbaseConfig) InitMode(mode NodeMode) {
 	cfg.Mode = mode
 	switch cfg.Mode {
-	case define.ServiceMode:
+	case ServiceMode:
 		cfg.Network.ListenAddrs = []string{
 			"/ip4/0.0.0.0/udp/" + ServicePort + "/quic",
 			"/ip6/::/udp/" + ServicePort + "/quic",
 			"/ip4/0.0.0.0/tcp/" + ServicePort,
 			"/ip6/::/tcp/" + ServicePort,
 		}
-	case define.LightMode:
+	case LightMode:
 		cfg.Network.ListenAddrs = []string{
 			"/ip4/0.0.0.0/udp/" + LightPort + "/quic",
 			"/ip6/::/udp/" + LightPort + "/quic",

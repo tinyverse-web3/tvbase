@@ -7,10 +7,8 @@ import (
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
-
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	"go.opentelemetry.io/otel/attribute"
@@ -38,7 +36,7 @@ func (m *TvBase) GetRootPath() string {
 	return m.rootPath
 }
 
-func (m *TvBase) GetConfig() *tvConfig.TvbaseConfig {
+func (m *TvBase) GetConfig() *config.TvbaseConfig {
 	return m.cfg
 }
 
@@ -71,7 +69,7 @@ func (m *TvBase) TraceSpan(componentName string, spanName string, options ...any
 	defer span.End()
 
 	if len(options) >= 3 {
-		traceSpanCallback, ok := options[1].(tvCommon.TraceSpanCallback)
+		traceSpanCallback, ok := options[1].(define.TraceSpanCallback)
 		if !ok {
 			tvLog.Logger.Errorf("tvBase->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
 			return fmt.Errorf("tvBase->TraceSpan: options[2](traceSpanCallback) is not TraceSpanCallback")
@@ -91,9 +89,9 @@ func (m *TvBase) SetTracerStatus(err error) {
 }
 
 func (m *TvBase) GetAvailableServicePeerList(key string) ([]peer.ID, error) {
-	return m.getAvailablePeerList(key, define.ServiceMode)
+	return m.getAvailablePeerList(key, config.ServiceMode)
 }
 
 func (m *TvBase) GetAvailableLightPeerList(key string) ([]peer.ID, error) {
-	return m.getAvailablePeerList(key, define.LightMode)
+	return m.getAvailablePeerList(key, config.LightMode)
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ipfs/boxo/tracing"
 	logging "github.com/ipfs/go-log"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/version"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdkTrace "go.opentelemetry.io/otel/sdk/trace"
@@ -50,7 +50,7 @@ func NewTracerProvider(ctx context.Context) (shutdownTracerProvider, error) {
 		resource.Default(),
 		resource.NewSchemaless(
 			semconv.ServiceNameKey.String("tvbase"),
-			semconv.ServiceVersionKey.String(tvCommon.CurrentVersionNumber),
+			semconv.ServiceVersionKey.String(version.CurrentVersionNumber),
 		),
 	)
 	if err != nil {

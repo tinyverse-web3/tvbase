@@ -22,12 +22,11 @@ import (
 	webtransport "github.com/libp2p/go-libp2p/p2p/transport/webtransport"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	"github.com/tinyverse-web3/tvbase/common"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
-	"github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/version"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	mamask "github.com/whyrusleeping/multiaddr-filter"
 	"go.uber.org/fx"
@@ -66,8 +65,8 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	switch m.cfg.AutoNAT.ServiceMode {
 	default:
 		return nil, fmt.Errorf("TvBase->createNATOpts: unhandled autonat service mode")
-	case tvConfig.AutoNATServiceDisabled:
-	case tvConfig.AutoNATServiceUnset:
+	case config.AutoNATServiceDisabled:
+	case config.AutoNATServiceUnset:
 		// TODO
 		//
 		// We're enabling the AutoNAT service by default on _all_ nodes
@@ -76,7 +75,7 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 		// We should consider disabling it by default if the dht is set
 		// to dhtclient.
 		fallthrough
-	case tvConfig.AutoNATServiceEnabled:
+	case config.AutoNATServiceEnabled:
 		if !m.cfg.Swarm.DisableNatPortMap {
 			opts = append(opts, libp2p.EnableNATService())
 			if m.cfg.AutoNAT.Throttle != nil { // todo need to config
@@ -92,13 +91,13 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 	}
 
 	switch m.cfg.Mode {
-	case define.LightMode:
+	case config.LightMode:
 		opts = append(opts,
 			// for client node, use default host NATManager,
 			// attempt to open a port in your network's firewall using UPnP
 			libp2p.NATPortMap(),
 		)
-	case define.ServiceMode:
+	case config.ServiceMode:
 	}
 
 	return opts, nil
@@ -122,7 +121,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	var opts []libp2p.Option
 
 	opts = append(opts,
-		libp2p.UserAgent(common.GetUserAgentVersion()),
+		libp2p.UserAgent(version.GetUserAgentVersion()),
 		libp2p.Identity(privateKey),
 		libp2p.ListenAddrStrings(m.cfg.Network.ListenAddrs...),
 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
@@ -170,7 +169,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 			}),
 		)
 	} else {
-		if m.cfg.Mode == define.ServiceMode && !m.cfg.Network.IsLocalNet {
+		if m.cfg.Mode == config.ServiceMode && !m.cfg.Network.IsLocalNet {
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
@@ -233,7 +232,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	opts = append(opts, relayOpts...)
 
 	switch m.cfg.Mode {
-	case define.LightMode:
+	case config.LightMode:
 		// holePunching
 		opts = append(opts,
 			libp2p.EnableHolePunching(),
@@ -243,7 +242,7 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		opts = append(opts,
 			libp2p.DisableMetrics(),
 		)
-	case define.ServiceMode:
+	case config.ServiceMode:
 		// BandwidthCounter
 		if !m.cfg.Swarm.DisableBandwidthMetrics {
 			reporter := metrics.NewBandwidthCounter()
@@ -279,9 +278,9 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 		var modeOption kaddht.Option
 
 		switch m.cfg.Mode {
-		case define.ServiceMode:
+		case config.ServiceMode:
 			modeOption = kaddht.Mode(kaddht.ModeServer)
-		case define.LightMode:
+		case config.LightMode:
 			modeOption = kaddht.Mode(kaddht.ModeAuto)
 		}
 		m.dht, err = kaddht.New(m.ctx,

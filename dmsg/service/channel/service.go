@@ -5,7 +5,7 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -22,7 +22,7 @@ type ChannelService struct {
 	dmsgServiceCommon.ProxyPubsubService
 }
 
-func CreateService(tvbase tvbaseCommon.TvBaseService) (*ChannelService, error) {
+func CreateService(tvbase define.TvBaseService) (*ChannelService, error) {
 	d := &ChannelService{}
 	cfg := tvbase.GetConfig().DMsg
 	err := d.Init(tvbase, cfg.MaxChannelCount, cfg.KeepChannelDay)

@@ -21,7 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/multiformats/go-base32"
-	tvPb "github.com/tinyverse-web3/tvbase/common/pb"
+	tvPb "github.com/tinyverse-web3/tvbase/common/protocol/pb"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dkvs/kaddht"
 	"go.opentelemetry.io/otel"

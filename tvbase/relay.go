@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
 	relayv2 "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
-	"github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 )
 
@@ -20,7 +20,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 	)
 
 	switch m.cfg.Mode {
-	case define.LightMode:
+	case config.LightMode:
 		// auto relay -- static relays
 		if len(m.cfg.Swarm.RelayClient.StaticRelays) > 0 {
 			staticRelays := make([]peer.AddrInfo, 0, len(m.cfg.Swarm.RelayClient.StaticRelays))
@@ -132,7 +132,7 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 			}
 
 		}()
-	case define.ServiceMode:
+	case config.ServiceMode:
 		// enable relay server
 		def := m.cfg.Relay.Resources
 		var ropts []relayv2.Option

@@ -11,7 +11,6 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/tinyverse-web3/tvbase/common/config"
-	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -52,7 +51,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.LightMode)
+	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +202,7 @@ func TestDkvsPutKeyToOtherNode(t *testing.T) {
 func TestUnsyncedDb(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.LightMode)
+	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
@@ -294,7 +293,7 @@ func TestUnsyncedDb(t *testing.T) {
 func TestPutUnsyncedKeyToOtherNode(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.LightMode)
+	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)

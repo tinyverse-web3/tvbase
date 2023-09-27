@@ -11,8 +11,8 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	mtvCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	keyUtils "github.com/tinyverse-web3/mtv_go_utils/key"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
-	tvPb "github.com/tinyverse-web3/tvbase/common/pb"
+	define "github.com/tinyverse-web3/tvbase/common/define"
+	tvPb "github.com/tinyverse-web3/tvbase/common/protocol/pb"
 )
 
 type DemoKey struct {
@@ -41,7 +41,7 @@ type GetDemoKeyResult struct {
 }
 
 // 返回所有bootstrap节点及已经连接过的服务节点
-func getConnetedServerNode(t tvCommon.TvBaseService) []Node {
+func getConnetedServerNode(t define.TvBaseService) []Node {
 	host := t.GetHost()
 	peerstore := host.Peerstore()
 	peers := host.Network().Peers()
@@ -174,7 +174,7 @@ func generateAESKey(privateKey, seed string) string {
 	return passwordHash
 }
 
-func pubDemoKey(t tvCommon.TvBaseService, privateKey, dkvsKey, dkvsValue, ttlStr, issueTimeStr string) PutDemoKeyResult {
+func pubDemoKey(t define.TvBaseService, privateKey, dkvsKey, dkvsValue, ttlStr, issueTimeStr string) PutDemoKeyResult {
 	var result = new(PutDemoKeyResult)
 	result.Result = ""
 	dkvs := t.GetDkvsService()
@@ -216,7 +216,7 @@ func pubDemoKey(t tvCommon.TvBaseService, privateKey, dkvsKey, dkvsValue, ttlStr
 	return *result
 }
 
-func getDemoKeyValue(t tvCommon.TvBaseService, aesKey, dkvsKey string) GetDemoKeyResult {
+func getDemoKeyValue(t define.TvBaseService, aesKey, dkvsKey string) GetDemoKeyResult {
 	var result = new(GetDemoKeyResult)
 	result.Key = dkvsKey
 	dkvs := t.GetDkvsService()

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -33,7 +33,7 @@ type ProxyPubsubService struct {
 }
 
 func (d *ProxyPubsubService) Init(
-	tvbase tvbaseCommon.TvBaseService,
+	tvbase define.TvBaseService,
 	maxPubsubCount int,
 	keepPubsubDay int) error {
 	err := d.LightUserService.Init(tvbase)

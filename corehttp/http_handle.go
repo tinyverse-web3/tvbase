@@ -19,7 +19,7 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/dkvs"
 	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
@@ -77,7 +77,7 @@ type CpuInfo struct {
 }
 
 func QueryAllKeyOption() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		db := t.GetDhtDatabase()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -142,7 +142,7 @@ func QueryAllKeyOption() ServeOption {
 }
 
 func QueryKeyOption() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		dkvsService := t.GetDkvsService()
@@ -222,7 +222,7 @@ func QueryKeyOption() ServeOption {
 }
 
 func QueryProviders() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		kvSevice := t.GetDkvsService()
@@ -261,7 +261,7 @@ func QueryProviders() ServeOption {
 }
 
 func QueryAllConnectdPeers() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/queryAllPeers", func(w http.ResponseWriter, r *http.Request) {
 			nodeList := getConnetedServerNode(t)
 			jsonData, err := json.Marshal(nodeList)
@@ -283,7 +283,7 @@ func QueryAllConnectdPeers() ServeOption {
 }
 
 func QuerySystemResouce() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/querySysRes", func(w http.ResponseWriter, r *http.Request) {
 			ctx := t.GetCtx()
 			var sysRes = new(SysRes)
@@ -381,7 +381,7 @@ func QuerySystemResouce() ServeOption {
 }
 
 func GetDemoKey() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/getDemoKey", func(w http.ResponseWriter, r *http.Request) {
 			queryParams := r.URL.Query()
 			querySeed := queryParams.Get("seed")
@@ -410,7 +410,7 @@ func GetDemoKey() ServeOption {
 }
 
 func GetEncryptedDemoValue() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/getEncryptedDemoValue", func(w http.ResponseWriter, r *http.Request) {
 			queryParams := r.URL.Query()
 			queryPrivateKey := queryParams.Get("private_key")
@@ -457,7 +457,7 @@ func GetEncryptedDemoValue() ServeOption {
 }
 
 func PubDemoKey() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/pubDemoKey", func(w http.ResponseWriter, r *http.Request) {
 			queryParams := r.URL.Query()
 			queryPrivateKey := queryParams.Get("private_key")
@@ -511,7 +511,7 @@ func PubDemoKey() ServeOption {
 }
 
 func GetDemoKeyValue() ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/getDemoKeyValue", func(w http.ResponseWriter, r *http.Request) {
 			queryParams := r.URL.Query()
 			queryAesKey := queryParams.Get("aes_key")

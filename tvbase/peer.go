@@ -5,10 +5,10 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
-	"github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
-	tvPb "github.com/tinyverse-web3/tvbase/common/pb"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
+	tvPb "github.com/tinyverse-web3/tvbase/common/protocol/pb"
 )
 
 func (m *TvBase) initPeer() error {
@@ -89,7 +89,7 @@ func (m *TvBase) GetLightPeerList() tvPeer.PeerInfoList {
 	return m.lightPeerList
 }
 
-func (m *TvBase) getAvailablePeerList(key string, nodeMode define.NodeMode) ([]libp2pPeer.ID, error) {
+func (m *TvBase) getAvailablePeerList(key string, nodeMode config.NodeMode) ([]libp2pPeer.ID, error) {
 	var findedPeerList []libp2pPeer.ID
 	closestPeerList, err := m.dht.GetClosestPeers(m.ctx, key)
 	if err != nil {
@@ -99,9 +99,9 @@ func (m *TvBase) getAvailablePeerList(key string, nodeMode define.NodeMode) ([]l
 
 	var peerList tvPeer.PeerInfoList
 	switch nodeMode {
-	case define.ServiceMode:
+	case config.ServiceMode:
 		peerList = m.servicePeerList
-	case define.LightMode:
+	case config.LightMode:
 		peerList = m.lightPeerList
 	default:
 		return nil, fmt.Errorf("tvBase->getAvailablePeerList: invalid node mode")

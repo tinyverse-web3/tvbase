@@ -4,11 +4,11 @@ import (
 	"net"
 	"net/http"
 
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 )
 
 func RedirectOption(path string, redirect string) ServeOption {
-	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+	return func(t define.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		headers := map[string][]string{}
 		handler := &redirectHandler{redirect, headers}
 

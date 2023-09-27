@@ -8,8 +8,8 @@ import (
 	"unsafe"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
@@ -30,11 +30,11 @@ type waitMessage struct {
 var waitMessageList map[string]*waitMessage
 
 type BaseService struct {
-	TvBase             common.TvBaseService
+	TvBase             define.TvBaseService
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 }
 
-func (d *BaseService) Init(baseService common.TvBaseService) error {
+func (d *BaseService) Init(baseService define.TvBaseService) error {
 	d.TvBase = baseService
 	var err error
 	if err != nil {

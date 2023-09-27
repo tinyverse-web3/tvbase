@@ -15,7 +15,7 @@ import (
 	periodicproc "github.com/jbenet/goprocess/periodic"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 )
 
 var Process goprocess.Process
@@ -28,11 +28,11 @@ const shutdownTimeout = 30 * time.Second
 // It returns the mux to expose to future options, which may be a new mux if it
 // is interested in mediating requests to future options, or the same mux
 // initially passed in if not.
-type ServeOption func(tvCommon.TvBaseService, net.Listener, *http.ServeMux) (*http.ServeMux, error)
+type ServeOption func(define.TvBaseService, net.Listener, *http.ServeMux) (*http.ServeMux, error)
 
 // makeHandler turns a list of ServeOptions into a http.Handler that implements
 // all of the given options, in order.
-func makeHandler(n tvCommon.TvBaseService, l net.Listener, options ...ServeOption) (http.Handler, error) {
+func makeHandler(n define.TvBaseService, l net.Listener, options ...ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
 	mux := topMux
 	for _, option := range options {
@@ -63,7 +63,7 @@ func makeHandler(n tvCommon.TvBaseService, l net.Listener, options ...ServeOptio
 // TODO intelligently parse address strings in other formats so long as they
 // unambiguously map to a valid multiaddr. e.g. for convenience, ":8080" should
 // map to "/ip4/0.0.0.0/tcp/8080".
-func ListenAndServe(n tvCommon.TvBaseService, listeningMultiAddr string, options ...ServeOption) error {
+func ListenAndServe(n define.TvBaseService, listeningMultiAddr string, options ...ServeOption) error {
 	addr, err := ma.NewMultiaddr(listeningMultiAddr)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func ListenAndServe(n tvCommon.TvBaseService, listeningMultiAddr string, options
 
 // Serve accepts incoming HTTP connections on the listener and pass them
 // to ServeOption handlers.
-func Serve(node tvCommon.TvBaseService, lis net.Listener, options ...ServeOption) error {
+func Serve(node define.TvBaseService, lis net.Listener, options ...ServeOption) error {
 	// make sure we close this no matter what.
 	defer lis.Close()
 

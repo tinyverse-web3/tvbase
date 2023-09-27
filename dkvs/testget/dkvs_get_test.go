@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
@@ -52,7 +51,7 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.LightMode)
+	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
@@ -120,12 +119,12 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.LightMode)
+	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvBase tvCommon.TvBaseService = tvbase
+	var tvBase define.TvBaseService = tvbase
 	kv := dkvs.NewDkvs(tvBase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)

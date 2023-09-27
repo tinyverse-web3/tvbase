@@ -15,16 +15,18 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
-	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
+	"github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/config"
-	"github.com/tinyverse-web3/tvbase/common/load"
-	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
-const logName = "tvnodelight"
+const (
+	logName        = "tvnodelight"
+	configFileName = "config.json"
+)
 
 var mainLog = ipfsLog.Logger(logName)
 
@@ -55,7 +57,7 @@ func parseCmdParams() (string, string, string, string) {
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	prikey, pubkey, err := tvUtilKey.GenerateEcdsaKey(seed)
+	prikey, pubkey, err := key.GenerateEcdsaKey(seed)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -74,7 +76,7 @@ func initDmsg(
 	}
 
 	dmsg := tvbase.GetDmsgService()
-	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
+	userPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
 		return nil, nil, err
@@ -101,19 +103,18 @@ func main() {
 
 	// init srcSeed, destSeed, rootPath from cmd params
 	srcSeed, destSeed, channelSeed, rootPath := parseCmdParams()
-	rootPath, err := tvbaseUtil.GetRootPath(rootPath)
+	rootPath, err := util.GetRootPath(rootPath)
 	if err != nil {
 		mainLog.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-	cfg, err := load.LoadConfig(rootPath)
+	cfg, err := loadConfig(rootPath)
 	if err != nil || cfg == nil {
 		mainLog.Fatalf("tvnode->main: loadConfig: %v", err)
 	}
 
-	err = tvbaseUtil.SetLogModule(cfg.Log.ModuleLevels)
+	err = initLog()
 	if err != nil {
-		mainLog.Errorf("InitLog error: %v", err)
-		return
+		mainLog.Fatalf("tvnode->main: initLog: %v", err)
 	}
 
 	//src
@@ -151,7 +152,7 @@ func main() {
 	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", channelSeed, channelPrikeyHex, channelPubkeyHex)
 
 	// init dmsg
-	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, cfg.Tvbase, ctx)
+	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, cfg, ctx)
 	if err != nil {
 		mainLog.Errorf("initDmsg error: %v", err)
 		return
@@ -233,13 +234,13 @@ func main() {
 	dmsg.GetMailboxService().SetOnMsgRequest(mailOnRequest)
 
 	// publish dest user
-	destPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(destPubKey)
+	destPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
-	destPubkeyStr := tvUtilKey.TranslateKeyProtoBufToString(destPubkeyData)
+	destPubkeyStr := key.TranslateKeyProtoBufToString(destPubkeyData)
 	err = dmsg.GetMsgService().SubscribeDestUser(destPubkeyStr)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
@@ -248,13 +249,13 @@ func main() {
 	}
 
 	// publish channel
-	channelPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(channelPubKey)
+	channelPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(channelPubKey)
 	if err != nil {
 		tvbase.SetTracerStatus(err)
 		mainLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
 		return
 	}
-	channelPubkeyStr := tvUtilKey.TranslateKeyProtoBufToString(channelPubkeyData)
+	channelPubkeyStr := key.TranslateKeyProtoBufToString(channelPubkeyData)
 	channelService := dmsg.GetChannelService()
 
 	mainLog.Debugf("channelPubkeyStr: %v", channelPubkeyStr)
@@ -334,4 +335,36 @@ func main() {
 
 	<-ctx.Done()
 	mainLog.Info("tvnodelight->main: gracefully shut down")
+}
+
+func loadConfig(rootPath string) (*config.TvbaseConfig, error) {
+	ret := &config.TvbaseConfig{}
+
+	configFilePath := rootPath + configFileName
+	_, err := os.Stat(configFilePath)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	err = config.LoadConfig(ret, configFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func initLog() (err error) {
+	var moduleLevels = map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
+	}
+	err = util.SetLogModule(moduleLevels)
+	if err != nil {
+		return err
+	}
+	return nil
 }

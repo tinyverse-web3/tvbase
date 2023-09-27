@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -30,7 +30,7 @@ type CustomProtocolService struct {
 	queryPeerTarget          *dmsgUser.Target
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*CustomProtocolService, error) {
+func CreateService(tvbaseService define.TvBaseService) (*CustomProtocolService, error) {
 	d := &CustomProtocolService{}
 	err := d.Init(tvbaseService)
 	if err != nil {
@@ -39,7 +39,7 @@ func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*CustomProtocolSer
 	return d, nil
 }
 
-func (d *CustomProtocolService) Init(tvbaseService tvbaseCommon.TvBaseService) error {
+func (d *CustomProtocolService) Init(tvbaseService define.TvBaseService) error {
 	err := d.LightUserService.Init(tvbaseService)
 	if err != nil {
 		return err

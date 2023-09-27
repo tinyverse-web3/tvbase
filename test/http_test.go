@@ -9,7 +9,6 @@ import (
 	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	"github.com/tinyverse-web3/tvbase/dkvs"
@@ -22,7 +21,7 @@ func init() {
 func TestHttpServer(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(define.ServiceMode)
+	cfg.InitMode(config.ServiceMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./testdata")
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +32,7 @@ func TestHttpServer(t *testing.T) {
 	//通过postman发送请求来测试http api
 }
 
-func putSomeValue(tvbase tvCommon.TvBaseService) error {
+func putSomeValue(tvbase define.TvBaseService) error {
 	kv := tvbase.GetDkvsService() //.表示当前路径
 	seed := "oIBBgepoPyhdJTYB"    //dkvs.RandString(16)
 	priv, err := dkvs.GetPriKeyBySeed(seed)

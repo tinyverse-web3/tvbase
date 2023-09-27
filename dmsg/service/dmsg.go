@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	tvbaseCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	channelService "github.com/tinyverse-web3/tvbase/dmsg/service/channel"
@@ -21,7 +21,7 @@ type DmsgService struct {
 	channelService        service.ChannelService
 }
 
-func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*DmsgService, error) {
+func CreateService(tvbaseService define.TvBaseService) (*DmsgService, error) {
 	dmsgCommonPubsub.NewPubsubMgr(tvbaseService.GetCtx(), tvbaseService.GetHost())
 	d := &DmsgService{}
 	err := d.Init(tvbaseService)
@@ -31,7 +31,7 @@ func CreateService(tvbaseService tvbaseCommon.TvBaseService) (*DmsgService, erro
 	return d, nil
 }
 
-func (d *DmsgService) Init(tvbase tvbaseCommon.TvBaseService) error {
+func (d *DmsgService) Init(tvbase define.TvBaseService) error {
 	var err error
 	d.mailboxService, err = mailboxService.CreateService(tvbase)
 	if err != nil {

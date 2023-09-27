@@ -1,29 +1,32 @@
 package test
 
 import (
-	// "bufio"
-	// "context"
+	"bufio"
+	"context"
 	"crypto/ecdsa"
-	// "encoding/hex"
+	"encoding/hex"
 	"flag"
 	"log"
 	"os"
+	"testing"
+	"time"
 
-	// "testing"
-	// "time"
-
-	// "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	// tvCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
-	keyutil "github.com/tinyverse-web3/mtv_go_utils/key"
-	// tvIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
-	// tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	// "github.com/tinyverse-web3/tvbase/dmsg/pb"
-	// "github.com/tinyverse-web3/tvbase/dmsg/service"
-	// "github.com/tinyverse-web3/tvbase/tvbase"
+	cryptoUtil "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	"github.com/tinyverse-web3/mtv_go_utils/ipfs"
+	"github.com/tinyverse-web3/mtv_go_utils/key"
+	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	"github.com/tinyverse-web3/tvbase/dmsg/service"
+	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
-const logName = "tvbase_test"
+const (
+	logName        = "tvbase_test"
+	configFileName = "config.json"
+)
 
 var testLog = ipfsLog.Logger(logName)
 
@@ -53,354 +56,353 @@ func parseCmdParams() (string, string, string) {
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	prikey, pubkey, err := keyutil.GenerateEcdsaKey(seed)
+	prikey, pubkey, err := key.GenerateEcdsaKey(seed)
 	if err != nil {
 		return nil, nil, err
 	}
 	return prikey, pubkey, nil
 }
 
-// func TestPubsubMsg(t *testing.T) {
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+func TestPubsubMsg(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-// 	// init srcSeed, destSeed, rootPath from cmd params
-// 	srcSeed, destSeed, rootPath := parseCmdParams()
+	// init srcSeed, destSeed, rootPath from cmd params
+	srcSeed, destSeed, rootPath := parseCmdParams()
 
-// 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
-// 	if err != nil {
-// 		testLog.Errorf("TestPubsubMsg error: %v", err)
-// 		return
-// 	}
-// 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-// 	if err != nil {
-// 		testLog.Errorf("TestPubsubMsg error: %v", err)
-// 		return
-// 	}
+	cfg, err := loadConfig(rootPath)
+	if err != nil {
+		testLog.Errorf("TestPubsubMsg error: %v", err)
+		return
+	}
 
-// 	srcPrikey, srcPubkey, err := getKeyBySeed(srcSeed)
-// 	if err != nil {
-// 		testLog.Errorf("getKeyBySeed error: %v", err)
-// 		return
-// 	}
-// 	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
-// 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-// 	testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
+	err = initLog()
+	if err != nil {
+		testLog.Fatalf("tvnode->main: initLog: %v", err)
+	}
 
-// 	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
-// 	if err != nil {
-// 		testLog.Errorf("getKeyBySeed error: %v", err)
-// 		return
-// 	}
-// 	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
-// 	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
+	srcPrikey, srcPubkey, err := getKeyBySeed(srcSeed)
+	if err != nil {
+		testLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
+	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-// 	testLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
+	destPriKey, destPubKey, err := getKeyBySeed(destSeed)
+	if err != nil {
+		testLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	destPrikeyHex := hex.EncodeToString(crypto.FromECDSA(destPriKey))
+	destPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(destPubKey))
 
-// 	// init dmsg client
-// 	_, dmsg, err := initMsgClient(srcPubkey, srcPrikey, rootPath, ctx)
-// 	if err != nil {
-// 		testLog.Errorf("init acceptable error: %v", err)
-// 		return
-// 	}
+	testLog.Infof("dest user: seed:%s, prikey:%s, pubkey:%s", destSeed, destPrikeyHex, destPubkeyHex)
 
-// 	// set src user msg receive callback
-// 	onReceiveMsg := func(
-// 		srcUserPubkey string,
-// 		destUserPubkey string,
-// 		msgContent []byte,
-// 		timeStamp int64,
-// 		msgID string,
-// 		direction string) ([]byte, error) {
-// 		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
-// 			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
-// 		return nil, nil
-// 	}
-// 	dmsg.GetMsgService().SetOnMsgRequest(onReceiveMsg)
-// 	dmsg.GetMailboxService().SetOnMsgRequest(onReceiveMsg)
-// 	// publish dest user
-// 	destPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(destPubKey)
-// 	if err != nil {
-// 		testLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
-// 		return
-// 	}
-// 	destPubKeyStr := keyutil.TranslateKeyProtoBufToString(destPubkeyBytes)
-// 	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
-// 	if err != nil {
-// 		testLog.Errorf("SubscribeDestUser error: %v", err)
-// 		return
-// 	}
+	// init dmsg client
+	_, dmsg, err := initService(srcPubkey, srcPrikey, cfg, rootPath, ctx)
+	if err != nil {
+		testLog.Errorf("init acceptable error: %v", err)
+		return
+	}
 
-// 	// send msg to dest user with read from stdin
-// 	go func() {
-// 		reader := bufio.NewReader(os.Stdin)
-// 		for {
-// 			sendContent, err := reader.ReadString('\n')
-// 			if err != nil {
-// 				testLog.Errorf("read string error: %v", err)
-// 				continue
-// 			}
+	// set src user msg receive callback
+	onReceiveMsg := func(
+		srcUserPubkey string,
+		destUserPubkey string,
+		msgContent []byte,
+		timeStamp int64,
+		msgID string,
+		direction string) ([]byte, error) {
+		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
+			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+		return nil, nil
+	}
+	dmsg.GetMsgService().SetOnMsgRequest(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnMsgRequest(onReceiveMsg)
+	// publish dest user
+	destPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
+	if err != nil {
+		testLog.Errorf("ECDSAPublicKeyToProtoBuf error: %v", err)
+		return
+	}
+	destPubKeyStr := key.TranslateKeyProtoBufToString(destPubkeyBytes)
+	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
+	if err != nil {
+		testLog.Errorf("SubscribeDestUser error: %v", err)
+		return
+	}
 
-// 			encrypedContent, err := tvCrypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
-// 			if err != nil {
-// 				testLog.Errorf("encrypt error: %v", err)
-// 				continue
-// 			}
+	// send msg to dest user with read from stdin
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			sendContent, err := reader.ReadString('\n')
+			if err != nil {
+				testLog.Errorf("read string error: %v", err)
+				continue
+			}
 
-// 			sendMsgReq, err := dmsg.GetMsgService().SendMsg(destPubKeyStr, encrypedContent)
+			encrypedContent, err := cryptoUtil.EncryptWithPubkey(destPubKey, []byte(sendContent))
+			if err != nil {
+				testLog.Errorf("encrypt error: %v", err)
+				continue
+			}
 
-// 			if err != nil {
-// 				testLog.Errorf("send msg: error: %v", err)
-// 			}
-// 			testLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
+			sendMsgReq, err := dmsg.GetMsgService().SendMsg(destPubKeyStr, encrypedContent)
 
-// 			if err != nil {
-// 				testLog.Infof("send msg error:", err)
-// 			}
-// 			testLog.Info("SendMsg end")
-// 		}
-// 	}()
+			if err != nil {
+				testLog.Errorf("send msg: error: %v", err)
+			}
+			testLog.Infof("send msg: sendMsgReq: %v", sendMsgReq)
 
-// 	<-ctx.Done()
-// }
+			if err != nil {
+				testLog.Infof("send msg error:", err)
+			}
+			testLog.Info("SendMsg end")
+		}
+	}()
 
-// func initMsgClient(
-// 	srcPubkey *ecdsa.PublicKey,
-// 	srcPrikey *ecdsa.PrivateKey,
-// 	rootPath string,
-// 	ctx context.Context) (*tvbase.TvBase, *service.Dmsg, error) {
-// 	tvbase, err := tvbase.NewTvbase(rootPath, ctx, true)
-// 	if err != nil {
-// 		testLog.Errorf("InitMsgClient error: %v", err)
-// 		return nil, nil, err
-// 	}
+	<-ctx.Done()
+}
 
-// 	dmsg := tvbase.GetDmsgService()
-// 	srcPubkeyBytes, err := keyutil.ECDSAPublicKeyToProtoBuf(srcPubkey)
-// 	if err != nil {
-// 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
-// 		return nil, nil, err
-// 	}
+func initService(
+	srcPubkey *ecdsa.PublicKey,
+	srcPrikey *ecdsa.PrivateKey,
+	cfg *config.TvbaseConfig,
+	rootPath string,
+	ctx context.Context) (*tvbase.TvBase, *service.DmsgService, error) {
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, rootPath)
+	if err != nil {
+		testLog.Errorf("initService error: %v", err)
+		return nil, nil, err
+	}
 
-// 	getSigCallback := func(protoData []byte) ([]byte, error) {
-// 		sig, err := tvCrypto.SignDataByEcdsa(srcPrikey, protoData)
-// 		if err != nil {
-// 			testLog.Errorf("initMsgClient: sign error: %v", err)
-// 		}
-// 		testLog.Debugf("sign = %v", sig)
-// 		return sig, nil
-// 	}
+	dmsg := tvbase.GetDmsgService()
+	srcPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
+	if err != nil {
+		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
+		return nil, nil, err
+	}
 
-// 	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
+	getSigCallback := func(protoData []byte) ([]byte, error) {
+		sig, err := cryptoUtil.SignDataByEcdsa(srcPrikey, protoData)
+		if err != nil {
+			testLog.Errorf("initMsgClient: sign error: %v", err)
+		}
+		testLog.Debugf("sign = %v", sig)
+		return sig, nil
+	}
 
-// 	return tvbase, dmsg, nil
-// }
+	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
+	if err != nil {
+		return nil, nil, err
+	}
 
-// func TestIpfsCmd(t *testing.T) {
-// 	// t.Parallel()
-// 	// t.Skip()
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+	return tvbase, dmsg, nil
+}
 
-// 	nodeConfig, err := tvUtil.LoadNodeConfig()
-// 	if err != nil {
-// 		testLog.Errorf("TestIpfsCmd error: %v", err)
-// 		return
-// 	}
-// 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-// 	if err != nil {
-// 		testLog.Errorf("TestIpfsCmd error: %v", err)
-// 		return
-// 	}
+func TestPullCID(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-// 	err = tvIpfs.CheckIpfsCmd()
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
+	rootPath := "."
+	srcSeed := "a"
+	cfg, err := loadConfig("./")
+	if err != nil {
+		testLog.Errorf("TestPullCID error: %v", err)
+		return
+	}
+	err = initLog()
+	if err != nil {
+		testLog.Errorf("TestPullCID error: %v", err)
+		return
+	}
 
-// 	cid := "QmTX7d5vWYrmKzj35MwcEJYsrA6P7Uf6ieWWNJf7kdjdX4"
-// 	timeout := 5 * time.Minute
-// 	// timeout = 1 * time.Second
-// 	dataSize, allElapsedTime, pidStatus, err := tvIpfs.IpfsGetObject(cid, ctx, timeout)
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	testLog.Debugf("cid: %s, dataSize: %d, allElapsedTime: %v seconds, pidStatus: %v", cid, dataSize, allElapsedTime.Seconds(), pidStatus)
-// }
+	srcPrkey, srcPubkey, err := getKeyBySeed(srcSeed)
+	if err != nil {
+		testLog.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
+	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
+	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-// func TestPullCID(t *testing.T) {
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+	// init dmsg client
+	tvbase, _, err := initService(srcPubkey, srcPrkey, cfg, rootPath, ctx)
+	if err != nil {
+		testLog.Errorf("init acceptable error: %v", err)
+		return
+	}
 
-// 	rootPath := "."
-// 	srcSeed := "a"
-// 	nodeConfig, err := tvUtil.LoadNodeConfig()
-// 	if err != nil {
-// 		testLog.Errorf("TestPullCID error: %v", err)
-// 		return
-// 	}
-// 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-// 	if err != nil {
-// 		testLog.Errorf("TestPullCID error: %v", err)
-// 		return
-// 	}
+	// pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
+	// if err != nil {
+	// 	testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
+	// 	return
+	// }
 
-// 	srcPrkey, srcPubkey, err := getKeyBySeed(srcSeed)
-// 	if err != nil {
-// 		testLog.Errorf("getKeyBySeed error: %v", err)
-// 		return
-// 	}
-// 	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
-// 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-// 	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
+	// err = tvbase.GetDmsgService().GetCustomProtocolService().RegistClient(pullCidProtocol)
+	// if err != nil {
+	// 	testLog.Errorf("RegistClient error: %v", err)
+	// 	return
+	// }
 
-// 	// init dmsg client
-// 	tvbase, _, err := initMsgClient(srcPubkey, srcPrkey, rootPath, ctx)
-// 	if err != nil {
-// 		testLog.Errorf("init acceptable error: %v", err)
-// 		return
-// 	}
+	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsgService().GetCustomProtocolService().QueryPeer("pullcid")
+	if err != nil {
+		testLog.Errorf("QueryPeer error: %v", err)
+		return
+	}
+	testLog.Debugf("queryPeerRequest: %v", queryPeerRequest)
+	queryPeerResponseData := <-queryPeerResponseChan
+	queryPeerResponse, ok := queryPeerResponseData.(*pb.QueryPeerRes)
+	if !ok {
+		testLog.Errorf("QueryPeerRes error: %v", err)
+		return
+	}
+	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
+	// peerId := queryPeerResponse.BasicData.PeerID
+	// bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
+	// localPeerID := "12D3KooWDHUopoYJemJxzMSrTFPpshbKFaEJv3xX1SogvZpcMEic"
+	/*
+		## shell for generate random cid file
+		dd if=/dev/urandom of=random-file bs=1k  count=1
+		## add random file to ipfs
+		ipfs add ./random-file
+		## check cid
+		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
+	*/
 
-// 	// pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
-// 	// if err != nil {
-// 	// 	testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-// 	// 	return
-// 	// }
+	CID_RANDOM_1K := "QmfTpubWPxpiWy8LDi3XKKgirpJQqkobhxvHR1UVabkezz"
+	CID_RANDOM_1M := "QmadujPGectw6pm7Sx9McePenrUohpLfzE4FxhnzHCM6vS"
+	CID_RANDOM_10M := "QmVa9N59PRDeqTSV6L3wRTMDfU5vycviBky41q6aGyJZmX"
+	cid := CID_RANDOM_1K
+	cid = CID_RANDOM_1M
+	cid = CID_RANDOM_10M
+	cid = CID_RANDOM_10M
 
-// 	// err = tvbase.GetDmsgService().GetCustomProtocolService().RegistClient(pullCidProtocol)
-// 	// if err != nil {
-// 	// 	testLog.Errorf("RegistClient error: %v", err)
-// 	// 	return
-// 	// }
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	info, _, err := ipfs.IpfsObjectStat(cid, timeoutCtx)
+	if err != nil {
+		return
+	}
+	contentSize := (*info)[ipfs.ObjectStatusField_CumulativeSize]
+	if contentSize >= 100*1024*1024 {
+		// TODO over 100MB need to be split using CAR,, implement it
+		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
+		return
+	}
 
-// 	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsgService().GetCustomProtocolService().QueryPeer("pullcid")
-// 	if err != nil {
-// 		testLog.Errorf("QueryPeer error: %v", err)
-// 		return
-// 	}
-// 	testLog.Debugf("queryPeerRequest: %v", queryPeerRequest)
-// 	queryPeerResponseData := <-queryPeerResponseChan
-// 	queryPeerResponse, ok := queryPeerResponseData.(*pb.QueryPeerRes)
-// 	if !ok {
-// 		testLog.Errorf("QueryPeerRes error: %v", err)
-// 		return
-// 	}
-// 	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
-// 	// peerId := queryPeerResponse.BasicData.PeerID
-// 	// bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
-// 	// localPeerID := "12D3KooWDHUopoYJemJxzMSrTFPpshbKFaEJv3xX1SogvZpcMEic"
-// 	/*
-// 		## shell for generate random cid file
-// 		dd if=/dev/urandom of=random-file bs=1k  count=1
-// 		## add random file to ipfs
-// 		ipfs add ./random-file
-// 		## check cid
-// 		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
-// 	*/
+	// pullCidResponseChan, err := pullCidProtocol.Request(ctx, peerId, &pullcid.PullCidRequest{
+	// 	CID:          cid,
+	// 	MaxCheckTime: 30 * time.Minute,
+	// })
+	if err != nil {
+		testLog.Errorf("pullCidProtocol.Request error: %v", err)
+		return
+	}
 
-// 	CID_RANDOM_1K := "QmfTpubWPxpiWy8LDi3XKKgirpJQqkobhxvHR1UVabkezz"
-// 	CID_RANDOM_1M := "QmadujPGectw6pm7Sx9McePenrUohpLfzE4FxhnzHCM6vS"
-// 	CID_RANDOM_10M := "QmVa9N59PRDeqTSV6L3wRTMDfU5vycviBky41q6aGyJZmX"
-// 	cid := CID_RANDOM_1K
-// 	cid = CID_RANDOM_1M
-// 	cid = CID_RANDOM_10M
-// 	cid = CID_RANDOM_10M
+	// go func() {
+	// 	timeout := 300 * time.Second
+	// 	startTime := time.Now()
+	// 	select {
+	// 	case pullCidResponse := <-pullCidResponseChan:
+	// 		elapsed := time.Since(startTime)
+	// 		testLog.Debugf("PullCidClientProtocol->Request: elapsed time: %v", elapsed.Seconds())
+	// 		if pullCidResponse == nil {
+	// 			testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
+	// 			return
+	// 		}
+	// 		switch pullCidResponse.PinStatus {
+	// 		case tvIpfs.PinStatus_ERR:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
+	// 		case tvIpfs.PinStatus_TIMEOUT:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
+	// 		case tvIpfs.PinStatus_PINNED:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
+	// 		default:
+	// 			testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
+	// 		}
+	// 		testLog.Debugf("PullCidClientProtocol->Request end")
+	// 		return
+	// 	case <-time.After(timeout):
+	// 		testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
+	// 		return
+	// 	case <-ctx.Done():
+	// 		testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
+	// 		return
+	// 	}
+	// }()
 
-// 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-// 	defer cancel()
-// 	info, _, err := tvIpfs.IpfsObjectStat(cid, timeoutCtx)
-// 	if err != nil {
-// 		return
-// 	}
-// 	contentSize := (*info)[tvIpfs.ObjectStatusField_CumulativeSize]
-// 	if contentSize >= 100*1024*1024 {
-// 		// TODO over 100MB need to be split using CAR,, implement it
-// 		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
-// 		return
-// 	}
+	<-ctx.Done()
+}
 
-// 	// pullCidResponseChan, err := pullCidProtocol.Request(ctx, peerId, &pullcid.PullCidRequest{
-// 	// 	CID:          cid,
-// 	// 	MaxCheckTime: 30 * time.Minute,
-// 	// })
-// 	if err != nil {
-// 		testLog.Errorf("pullCidProtocol.Request error: %v", err)
-// 		return
-// 	}
+func TesTinverseInfrasture(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-// 	// go func() {
-// 	// 	timeout := 300 * time.Second
-// 	// 	startTime := time.Now()
-// 	// 	select {
-// 	// 	case pullCidResponse := <-pullCidResponseChan:
-// 	// 		elapsed := time.Since(startTime)
-// 	// 		testLog.Debugf("PullCidClientProtocol->Request: elapsed time: %v", elapsed.Seconds())
-// 	// 		if pullCidResponse == nil {
-// 	// 			testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
-// 	// 			return
-// 	// 		}
-// 	// 		switch pullCidResponse.PinStatus {
-// 	// 		case tvIpfs.PinStatus_ERR:
-// 	// 			testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
-// 	// 		case tvIpfs.PinStatus_TIMEOUT:
-// 	// 			testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
-// 	// 		case tvIpfs.PinStatus_PINNED:
-// 	// 			testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
-// 	// 		default:
-// 	// 			testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
-// 	// 		}
-// 	// 		testLog.Debugf("PullCidClientProtocol->Request end")
-// 	// 		return
-// 	// 	case <-time.After(timeout):
-// 	// 		testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
-// 	// 		return
-// 	// 	case <-ctx.Done():
-// 	// 		testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
-// 	// 		return
-// 	// 	}
-// 	// }()
+	// init srcSeed, destSeed, rootPath from cmd params
+	srcSeed, _, rootPath := parseCmdParams()
 
-// 	<-ctx.Done()
-// }
+	cfg, err := loadConfig(rootPath)
+	if err != nil {
+		testLog.Errorf("loadConfig error: %v", err)
+		t.Errorf("loadConfig error: %v", err)
+		return
+	}
+	err = initLog()
+	if err != nil {
+		testLog.Errorf("initLog error: %v", err)
+		t.Errorf("initLog error: %v", err)
+		return
+	}
 
-// func TesTinverseInfrasture(t *testing.T) {
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+	srcPrikeyHex, srcPubkeyHex, err := getKeyBySeed(srcSeed)
+	if err != nil {
+		testLog.Errorf("getKeyBySeed error: %v", err)
+		t.Errorf("getKeyBySeed error: %v", err)
+		return
+	}
+	testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
-// 	// init srcSeed, destSeed, rootPath from cmd params
-// 	srcSeed, _, rootPath := parseCmdParams()
+	_, err = tvbase.NewTvbase(ctx, cfg, rootPath)
+	if err != nil {
+		t.Errorf("NewTvbase error: %v", err)
+		testLog.Errorf("NewTvbase error: %v", err)
+	}
 
-// 	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
-// 	if err != nil {
-// 		testLog.Errorf("TesTinverseInfrasture error: %v", err)
-// 		t.Errorf("TesTinverseInfrasture error: %v", err)
-// 		return
-// 	}
-// 	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-// 	if err != nil {
-// 		testLog.Errorf("TesTinverseInfrasture error: %v", err)
-// 		t.Errorf("TesTinverseInfrasture error: %v", err)
-// 		return
-// 	}
+	<-ctx.Done()
+}
 
-// 	srcPrikeyHex, srcPubkeyHex, err := getKeyBySeed(srcSeed)
-// 	if err != nil {
-// 		testLog.Errorf("getKeyBySeed error: %v", err)
-// 		t.Errorf("getKeyBySeed error: %v", err)
-// 		return
-// 	}
-// 	testLog.Infof("src user: seed:%s, prikey:%s, pubkey:%s", srcSeed, srcPrikeyHex, srcPubkeyHex)
+func loadConfig(rootPath string) (*config.TvbaseConfig, error) {
+	ret := &config.TvbaseConfig{}
 
-// 	_, err = tvbase.NewTvbase(rootPath, ctx, true)
-// 	if err != nil {
-// 		t.Errorf("NewInfrasture error: %v", err)
-// 		testLog.Errorf("InitMsgClient error: %v", err)
-// 	}
+	configFilePath := rootPath + configFileName
+	_, err := os.Stat(configFilePath)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	err = config.LoadConfig(ret, configFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
 
-// 	<-ctx.Done()
-// }
+func initLog() (err error) {
+	var moduleLevels = map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
+	}
+	err = util.SetLogModule(moduleLevels)
+	if err != nil {
+		return err
+	}
+	return nil
+}
