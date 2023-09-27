@@ -32,7 +32,7 @@ func (d *LightUserService) Stop() error {
 	return nil
 }
 
-// DmsgServiceInterface
+// DmsgService
 
 func (d *LightUserService) GetUserPubkeyHex() (string, error) {
 	if d.LightUser == nil {

@@ -136,7 +136,7 @@ func NewSeekMailboxProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.MailboxPpCallback,
-	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.MailboxPProtocol {
+	service dmsgProtocol.DmsgService) *dmsgProtocol.MailboxPProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
 	protocol := dmsgProtocol.NewMailboxPProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol

@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type DmsgServiceInterface interface {
+type DmsgService interface {
 	Init(tvbaseService TvBaseService) error
 	Stop() error
 }

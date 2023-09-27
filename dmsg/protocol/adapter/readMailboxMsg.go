@@ -171,7 +171,7 @@ func NewReadMailboxMsgProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.MailboxSpCallback,
-	service dmsgProtocol.DmsgServiceInterface,
+	service dmsgProtocol.DmsgService,
 	enableRequest bool,
 ) *dmsgProtocol.MailboxSProtocol {
 	adapter := NewReadMailboxMsgProtocolAdapter()

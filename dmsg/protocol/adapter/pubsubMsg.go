@@ -161,7 +161,7 @@ func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.PubsubMsgCallback,
-	service dmsgProtocol.DmsgServiceInterface) *dmsgProtocol.PubsubMsgProtocol {
+	service dmsgProtocol.DmsgService) *dmsgProtocol.PubsubMsgProtocol {
 	adapter := NewPubsubMsgProtocolAdapter()
 	protocol := dmsgProtocol.NewPubsubMsgProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol

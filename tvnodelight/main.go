@@ -64,7 +64,7 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return prikey, pubkey, nil
 }
 
-func initDmsg(
+func initService(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
 	rootPath string,
@@ -152,7 +152,7 @@ func main() {
 	mainLog.Infof("public user: seed:%s, prikey:%s, pubkey:%s", channelSeed, channelPrikeyHex, channelPubkeyHex)
 
 	// init dmsg
-	tvbase, dmsg, err := initDmsg(srcPubkey, srcPrikey, rootPath, cfg, ctx)
+	tvbase, dmsg, err := initService(srcPubkey, srcPrikey, rootPath, cfg, ctx)
 	if err != nil {
 		mainLog.Errorf("initDmsg error: %v", err)
 		return

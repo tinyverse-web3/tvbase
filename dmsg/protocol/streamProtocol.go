@@ -214,7 +214,7 @@ func NewCreateMsgPubsubSProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback CreatePubsubSpCallback,
-	service DmsgServiceInterface,
+	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
 ) *CreatePubsubSProtocol {
@@ -236,7 +236,7 @@ func NewCreateChannelSProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback CreatePubsubSpCallback,
-	service DmsgServiceInterface,
+	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
 ) *CreatePubsubSProtocol {
@@ -258,7 +258,7 @@ func NewMailboxSProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback MailboxSpCallback,
-	service DmsgServiceInterface,
+	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
 ) *MailboxSProtocol {
@@ -280,7 +280,7 @@ func NewCustomSProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback CustomSpCallback,
-	service DmsgServiceInterface,
+	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
 ) *CustomSProtocol {

@@ -22,7 +22,7 @@ type Protocol struct {
 	Ctx             context.Context
 	Host            host.Host
 	RequestInfoList sync.Map
-	Service         DmsgServiceInterface
+	Service         DmsgService
 	Adapter         Adapter
 }
 

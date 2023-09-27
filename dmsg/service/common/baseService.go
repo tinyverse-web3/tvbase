@@ -58,7 +58,7 @@ func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 	delete(d.ProtocolHandleList, pid)
 }
 
-// DmsgServiceInterface
+// DmsgService
 func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
 	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
 	if err != nil {

@@ -176,7 +176,7 @@ func NewCustomStreamProtocol(
 	host host.Host,
 	pid string,
 	callbck dmsgProtocol.CustomSpCallback,
-	service dmsgProtocol.DmsgServiceInterface,
+	service dmsgProtocol.DmsgService,
 	enableRequest bool) *dmsgProtocol.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = pid

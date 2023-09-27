@@ -149,7 +149,7 @@ func NewQueryPeerProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.QueryPeerCallback,
-	service dmsgProtocol.DmsgServiceInterface,
+	service dmsgProtocol.DmsgService,
 ) *dmsgProtocol.QueryPeerProtocol {
 	adapter := NewQueryPeerProtocolAdapter()
 	protocol := dmsgProtocol.NewQueryPeerProtocol(ctx, host, callback, service, adapter)

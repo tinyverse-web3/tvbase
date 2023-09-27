@@ -13,7 +13,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.11.0
 	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230926054744-a24f7f0e1131
+	github.com/tinyverse-web3/mtv_go_utils v0.0.0-20230927093723-c3570c9f829d
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
 	go.opentelemetry.io/contrib/propagators/autoprop v0.42.0
 	golang.org/x/crypto v0.12.0

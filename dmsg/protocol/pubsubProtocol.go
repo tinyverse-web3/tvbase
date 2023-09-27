@@ -105,7 +105,7 @@ func NewQueryPeerProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback QueryPeerCallback,
-	dmsg DmsgServiceInterface,
+	dmsg DmsgService,
 	adapter PpAdapter) *QueryPeerProtocol {
 	ret := &QueryPeerProtocol{}
 	ret.Ctx = ctx
@@ -121,7 +121,7 @@ func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback PubsubMsgCallback,
-	dmsg DmsgServiceInterface,
+	dmsg DmsgService,
 	adapter PpAdapter) *PubsubMsgProtocol {
 	ret := &PubsubMsgProtocol{}
 	ret.Ctx = ctx
@@ -137,7 +137,7 @@ func NewMailboxPProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback MailboxPpCallback,
-	dmsg DmsgServiceInterface,
+	dmsg DmsgService,
 	adapter PpAdapter) *MailboxPProtocol {
 	ret := &MailboxPProtocol{}
 	ret.Ctx = ctx

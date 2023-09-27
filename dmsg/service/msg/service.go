@@ -184,7 +184,7 @@ func (d *MsgService) OnPubsubMsgResponse(
 	return nil, nil
 }
 
-// DmsgServiceInterface
+// DmsgService
 func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	var target *dmsgUser.Target
 	if d.ProxyPubsubList[pubkey] != nil {

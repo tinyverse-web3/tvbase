@@ -159,7 +159,7 @@ func NewCreateChannelProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback dmsgProtocol.CreatePubsubSpCallback,
-	service dmsgProtocol.DmsgServiceInterface,
+	service dmsgProtocol.DmsgService,
 	enableRequest bool,
 ) *dmsgProtocol.CreatePubsubSProtocol {
 	adapter := NewCreateChannelProtocolAdapter()

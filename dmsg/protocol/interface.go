@@ -14,7 +14,7 @@ type ProtocolHandle interface {
 	HandleResponseData(protocolData []byte, moreList ...any) error
 }
 
-type DmsgServiceInterface interface {
+type DmsgService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)

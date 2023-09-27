@@ -151,7 +151,7 @@ func (d *MailboxService) ReadMailbox(timeout time.Duration) ([]msg.Msg, error) {
 	)
 }
 
-// DmsgServiceInterface
+// DmsgService
 func (d *MailboxService) GetUserPubkeyHex() (string, error) {
 	if d.lightMailboxUser == nil {
 		log.Errorf("MailboxService->GetUserPubkeyHex: user is nil")
