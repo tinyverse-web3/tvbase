@@ -79,7 +79,7 @@ func main() {
 		mainLog.Fatalf("tvnode->main: initLog: %v", err)
 	}
 
-	setTestEnv(cfg)
+	// setTestEnv(cfg)
 
 	ctx := context.Background()
 	userSeed := "softwarecheng@gmail.com"
