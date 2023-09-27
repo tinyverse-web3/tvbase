@@ -92,10 +92,10 @@ type Adapter interface {
 		requestProtoData protoreflect.ProtoMessage,
 		basicData *pb.BasicData,
 		moreList ...any) (protoreflect.ProtoMessage, error)
-	GetRequestBasicData(
-		requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
-	GetResponseBasicData(
-		responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	// GetRequestBasicData(
+	// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
+	// GetResponseBasicData(
+	// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
 	GetResponseRetCode(
 		responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
 	SetResponseRetCode(

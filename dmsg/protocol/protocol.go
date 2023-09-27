@@ -44,7 +44,13 @@ func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 		return nil, nil, false, err
 	}
 
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	// requestBasicData := p.Adapter.GetRequestBasicData(request)
+	requestBasicData, err := GetBasicData(request)
+	if err != nil {
+		log.Logger.Errorf("Protocol->HandleRequestData: GetRequestBasicData error: %+v", err)
+		return nil, nil, false, err
+	}
+
 	valid := AuthProtoMsg(request, requestBasicData)
 	if !valid {
 		log.Logger.Errorf("Protocol->HandleRequestData: failed to authenticate message")
@@ -96,7 +102,13 @@ func (p *Protocol) GetErrResponse(
 	request protoreflect.ProtoMessage,
 	err error) (protoreflect.ProtoMessage, error) {
 	responseErr := err
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	// requestBasicData := p.Adapter.GetRequestBasicData(request)
+	requestBasicData, err := GetBasicData(request)
+	if err != nil {
+		log.Logger.Errorf("Protocol->GetErrResponse: GetRequestBasicData error: %+v", err)
+		return nil, err
+	}
+
 	userPubkeyHex, err := p.Service.GetUserPubkeyHex()
 	if err != nil {
 		log.Logger.Errorf("Protocol->GetErrResponse: GetUserPubkeyHex error: %v", err)
@@ -150,7 +162,13 @@ func (p *Protocol) HandleResponseData(
 
 	log.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
-	responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
+	// responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
+	responseBasicData, err := GetBasicData(responseProtoMsg)
+	if err != nil {
+		log.Logger.Errorf("Protocol->HandleResponseData: GetBasicData error: %+v", err)
+		return fmt.Errorf("Protocol->HandleResponseData: GetBasicData error: %+v", err)
+	}
+
 	valid := AuthProtoMsg(responseProtoMsg, responseBasicData)
 	if !valid {
 		log.Logger.Errorf("Protocol->HandleResponseData:\nfailed to authenticate message, responseProtoMsg: %+v", responseProtoMsg)

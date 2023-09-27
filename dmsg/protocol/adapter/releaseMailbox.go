@@ -57,7 +57,7 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := GetRetCode(dataList)
+	retCode, err := dmsgProtocol.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -68,23 +68,23 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *ReleaseMailboxProtocolAdapter) GetRequestBasicData(
-	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.ReleaseMailboxReq)
-	if !ok {
-		return nil
-	}
-	return request.BasicData
-}
+// func (adapter *ReleaseMailboxProtocolAdapter) GetRequestBasicData(
+// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	request, ok := requestProtoMsg.(*pb.ReleaseMailboxReq)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return request.BasicData
+// }
 
-func (adapter *ReleaseMailboxProtocolAdapter) GetResponseBasicData(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
+// func (adapter *ReleaseMailboxProtocolAdapter) GetResponseBasicData(
+// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	response, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return response.BasicData
+// }
 
 func (adapter *ReleaseMailboxProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {

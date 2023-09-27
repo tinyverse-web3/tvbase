@@ -61,7 +61,7 @@ func (adapter *QueryPeerProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := GetRetCode(dataList)
+	retCode, err := dmsgProtocol.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -73,23 +73,23 @@ func (adapter *QueryPeerProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *QueryPeerProtocolAdapter) GetRequestBasicData(
-	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.QueryPeerReq)
-	if !ok {
-		return nil
-	}
-	return request.BasicData
-}
+// func (adapter *QueryPeerProtocolAdapter) GetRequestBasicData(
+// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	request, ok := requestProtoMsg.(*pb.QueryPeerReq)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return request.BasicData
+// }
 
-func (adapter *QueryPeerProtocolAdapter) GetResponseBasicData(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.QueryPeerRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
+// func (adapter *QueryPeerProtocolAdapter) GetResponseBasicData(
+// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	response, ok := responseProtoMsg.(*pb.QueryPeerRes)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return response.BasicData
+// }
 
 func (adapter *QueryPeerProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {

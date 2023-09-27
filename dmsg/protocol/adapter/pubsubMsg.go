@@ -72,7 +72,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
 		}
 	}
-	retCode, err := GetRetCode(dataList)
+	retCode, err := dmsgProtocol.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -84,23 +84,23 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *PubsubMsgProtocolAdapter) GetRequestBasicData(
-	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.MsgReq)
-	if !ok {
-		return nil
-	}
-	return request.BasicData
-}
+// func (adapter *PubsubMsgProtocolAdapter) GetRequestBasicData(
+// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	request, ok := requestProtoMsg.(*pb.MsgReq)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return request.BasicData
+// }
 
-func (adapter *PubsubMsgProtocolAdapter) GetResponseBasicData(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.MsgRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
+// func (adapter *PubsubMsgProtocolAdapter) GetResponseBasicData(
+// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	response, ok := responseProtoMsg.(*pb.MsgRes)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return response.BasicData
+// }
 
 func (adapter *PubsubMsgProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {

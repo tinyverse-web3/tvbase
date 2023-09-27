@@ -92,9 +92,15 @@ func main() {
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
 	mainLog.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
 
-	tb, _, err := initService(srcPubkey, srcPrikey, cfg, rootPath, ctx)
+	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
-		mainLog.Errorf("tvnode->main: initDmsg: %v", err)
+		mainLog.Fatalf("tvnode->main: NewTvbase error: %v", err)
+	}
+	tb.Start()
+
+	_, err = startDmsgService(srcPubkey, srcPrikey, tb)
+	if err != nil {
+		mainLog.Errorf("tvnode->main: initDmsgService: %v", err)
 		return
 	}
 
@@ -104,7 +110,6 @@ func main() {
 		return
 	}
 
-	tb.Start()
 	<-ctx.Done()
 }
 
@@ -118,22 +123,16 @@ func SetTestEnv(cfg *config.TvbaseConfig) {
 	cfg.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
 }
 
-func initService(
+func startDmsgService(
 	srcPubkey *ecdsa.PublicKey,
 	srcPrikey *ecdsa.PrivateKey,
-	cfg *config.TvbaseConfig,
-	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *service.DmsgService, error) {
-	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
-	if err != nil {
-		mainLog.Fatalf("initDmsg error: %v", err)
-	}
-
+	tb *tvbase.TvBase,
+) (*service.DmsgService, error) {
 	dmsgService := tb.GetDmsgService()
 	userPubkeyData, err := tvUtilKey.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		mainLog.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	getSig := func(protoData []byte) ([]byte, error) {
@@ -144,11 +143,11 @@ func initService(
 		return sig, nil
 	}
 
-	err = dmsgService.Start(true, userPubkeyData, getSig, 3*time.Second)
+	err = dmsgService.Start(true, userPubkeyData, getSig, 30*time.Second)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return tb, dmsgService, nil
+	return dmsgService, nil
 }
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
@@ -320,13 +319,20 @@ func parseCmdParams() string {
 
 func initLog() (err error) {
 	var moduleLevels = map[string]string{
-		"tvbase":         "debug",
-		"dkvs":           "debug",
-		"dmsg":           "debug",
-		"customProtocol": "debug",
-		"tvnode":         "debug",
-		"tvipfs":         "debug",
-		"core_http":      "debug",
+		"core_http":                "debug",
+		"customProtocol":           "debug",
+		"dkvs":                     "panic",
+		"dmsg":                     "debug",
+		"dmsg.common":              "debug",
+		"dmsg.protocol":            "debug",
+		"dmsg.service.base":        "debug",
+		"dmsg.service.channel":     "debug",
+		"dmsg.service.mail":        "debug",
+		"dmsg.service.msg":         "debug",
+		"dmsg.service.proxypubsub": "debug",
+		"tvbase":                   "info",
+		"tvipfs":                   "debug",
+		"tvnode":                   "error",
 	}
 	err = tvbaseUtil.SetLogModule(moduleLevels)
 	if err != nil {

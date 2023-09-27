@@ -73,7 +73,7 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := GetRetCode(dataList)
+	retCode, err := dmsgProtocol.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -99,23 +99,23 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *CustomStreamProtocolAdapter) GetRequestBasicData(
-	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
-	if !ok {
-		return nil
-	}
-	return request.BasicData
-}
+// func (adapter *CustomStreamProtocolAdapter) GetRequestBasicData(
+// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return request.BasicData
+// }
 
-func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return nil
-	}
-	return response.BasicData
-}
+// func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData(
+// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
+// 	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
+// 	if !ok {
+// 		return nil
+// 	}
+// 	return response.BasicData
+// }
 
 func (adapter *CustomStreamProtocolAdapter) GetResponseRetCode(
 	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {

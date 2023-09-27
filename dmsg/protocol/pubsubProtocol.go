@@ -61,8 +61,20 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	}
 
 	// send the response
-	responseBasicData := p.Adapter.GetResponseBasicData(response)
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	// responseBasicData := p.Adapter.GetResponseBasicData(response)
+	responseBasicData, err := GetBasicData(response)
+	if err != nil {
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetResponseBasicData error: %+v", err)
+		return err
+	}
+
+	// requestBasicData := p.Adapter.GetRequestBasicData(request)
+	requestBasicData, err := GetBasicData(response)
+	if err != nil {
+		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetRequestBasicData error: %+v", err)
+		return err
+	}
+
 	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
 	if err != nil {
 		return err
@@ -84,7 +96,13 @@ func (p *PubsubProtocol) Request(sigPubkey string, destPubkey string, dataList .
 		return nil, nil, err
 	}
 
-	requestBasicData := p.Adapter.GetRequestBasicData(request)
+	// requestBasicData := p.Adapter.GetRequestBasicData(request)
+	requestBasicData, err := GetBasicData(request)
+	if err != nil {
+		log.Logger.Errorf("PubsubProtocol->Request: GetRequestBasicData error: %+v", err)
+		return nil, nil, err
+	}
+
 	target, err := p.Service.GetPublishTarget(destPubkey)
 	if err != nil {
 		return nil, nil, err
