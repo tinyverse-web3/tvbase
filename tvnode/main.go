@@ -108,7 +108,7 @@ func main() {
 	<-ctx.Done()
 }
 
-func setTestEnv(cfg *config.TvbaseConfig) {
+func SetTestEnv(cfg *config.TvbaseConfig) {
 	// test enviroment
 	cfg.SetLocalNet(true)
 	cfg.SetMdns(false)
