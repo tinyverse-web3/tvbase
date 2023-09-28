@@ -51,9 +51,13 @@ func main() {
 	if err != nil {
 		logger.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-	cfg, err := loadConfig(rootPath)
+	cfg, err := initConfig()
 	if err != nil || cfg == nil {
-		logger.Fatalf("tvnode->main: loadConfig: %v", err)
+		logger.Fatalf("tvnode->main: initConfig: %v", err)
+	}
+
+	if false {
+		setTestEnv(cfg)
 	}
 
 	err = initLog()
