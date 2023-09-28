@@ -120,7 +120,7 @@ func genConfigFile(rootPath string, mode config.NodeMode) error {
 	cfg.InitMode(mode)
 	cfg.Identity.PrivKey = prikeyHex
 	// TODO: generate PrivSwarmKey
-	// defaultCfg.Identity.PrivSwarmKey = ""
+	// cfg.Identity.PrivSwarmKey = ""
 	file, _ := json.MarshalIndent(cfg, "", " ")
 	if err := os.WriteFile(rootPath+configFileName, file, 0644); err != nil {
 		logger.Infof("failed to WriteFile:", err)
