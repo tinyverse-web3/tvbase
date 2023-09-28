@@ -257,13 +257,14 @@ func (p *Protocol) GenRequestInfo(
 
 func (p *Protocol) TickCleanRequest() {
 	ticker := time.NewTicker(30 * time.Minute)
+	defaultTimeout := 5 * time.Minute
 	for {
 		select {
 		case <-ticker.C:
 			keysToDelete := []string{}
 			p.RequestInfoList.Range(func(k, v interface{}) bool {
 				var requestInfo *RequestInfo = v.(*RequestInfo)
-				if time.Since(time.Unix(requestInfo.CreateTimestamp, 0)) > 1*time.Minute {
+				if time.Since(time.Unix(requestInfo.CreateTimestamp, 0)) > defaultTimeout {
 					keysToDelete = append(keysToDelete, k.(string))
 				}
 				return true
