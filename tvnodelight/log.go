@@ -11,6 +11,10 @@ const (
 
 var logger = ipfsLog.Logger(logName)
 
+func init() {
+	ipfsLog.SetLogLevelRegex(logName, "info")
+}
+
 func initLog() (err error) {
 	var moduleLevels = map[string]string{
 		"tvbase":         "debug",

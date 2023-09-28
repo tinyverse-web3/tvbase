@@ -2,54 +2,50 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"fmt"
+	"encoding/hex"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/mitchellh/go-homedir"
-	tvUtilKey "github.com/tinyverse-web3/mtv_go_utils/key"
+	filelock "github.com/MichaelS11/go-file-lock"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/tinyverse-web3/mtv_go_utils/key"
 )
 
 func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	prikey, pubkey, err := tvUtilKey.GenerateEcdsaKey(seed)
+	prikey, pubkey, err := key.GenerateEcdsaKey(seed)
 	if err != nil {
 		return nil, nil, err
 	}
 	return prikey, pubkey, nil
 }
 
-func getPidFileName(rootPath string) (string, error) {
-	rootPath = strings.Trim(rootPath, " ")
-	if rootPath == "" {
-		rootPath = "."
+func getPidFileName(rootPath string) string {
+	return rootPath + filepath.Base(os.Args[0]) + ".pid"
+}
+
+func lockProcess(rootPath string) (lock *filelock.LockHandle, pidFileName string) {
+	pidFileName = getPidFileName(rootPath)
+	lock, err := filelock.New(pidFileName)
+	logger.Infof("tvnode->main: PID: %v", os.Getpid())
+	if err == filelock.ErrFileIsBeingUsed {
+		logger.Fatalf("tvnode->main: pid file is being locked: %v", err)
 	}
-	fullPath, err := homedir.Expand(rootPath)
 	if err != nil {
-		fmt.Println("getPidFileName->homedir.Expand: " + err.Error())
-		return "", err
+		logger.Fatalf("tvnode->main: pid file lock error: %v", err)
 	}
-	if !filepath.IsAbs(fullPath) {
-		defaultRootPath, err := os.Getwd()
-		if err != nil {
-			fmt.Println("getPidFileName->Getwd: " + err.Error())
-			return "", err
-		}
-		fullPath = filepath.Join(defaultRootPath, fullPath)
-	}
+	return lock, pidFileName
+}
 
-	if !strings.HasSuffix(fullPath, string(filepath.Separator)) {
-		fullPath += string(filepath.Separator)
+func getSeedKey(seed string) (prikey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey) {
+	userSeed := "softwarecheng@gmail.com"
+	var err error
+	prikey, pubkey, err = getKeyBySeed(userSeed)
+	if err != nil {
+		logger.Fatalf("tvnode->main: getKeyBySeed error: %v", err)
 	}
-	_, err = os.Stat(fullPath)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(fullPath, 0755)
-		if err != nil {
-			fmt.Println("getPidFileName->MkdirAll: " + err.Error())
-			return "", err
-		}
-	}
+	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(prikey))
+	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(pubkey))
+	logger.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
 
-	pidFile := fullPath + os.Args[0] + ".pid"
-	return pidFile, nil
+	return prikey, pubkey
 }

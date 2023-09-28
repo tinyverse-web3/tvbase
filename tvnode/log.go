@@ -11,6 +11,10 @@ const (
 
 var logger = ipfsLog.Logger(logName)
 
+func init() {
+	ipfsLog.SetLogLevelRegex(logName, "info")
+}
+
 func initLog() (err error) {
 	var moduleLevels = map[string]string{
 		"core_http":                "debug",
@@ -26,7 +30,6 @@ func initLog() (err error) {
 		"dmsg.service.proxypubsub": "debug",
 		"tvbase":                   "info",
 		"tvipfs":                   "debug",
-		"tvnode":                   "error",
 	}
 	err = util.SetLogModule(moduleLevels)
 	if err != nil {

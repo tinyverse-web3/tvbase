@@ -2,7 +2,6 @@ package tvbase
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/libp2p/go-libp2p"
@@ -34,10 +33,6 @@ import (
 
 func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
 	identityPath := m.rootPath + identity.IdentityFileName
-	_, err := os.Stat(identityPath)
-	if os.IsNotExist(err) {
-		identity.GenIdenityFile(m.rootPath)
-	}
 	privteKey, err := identity.LoadIdentity(identityPath)
 	if err != nil {
 		return nil, nil, err

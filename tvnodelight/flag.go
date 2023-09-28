@@ -7,27 +7,30 @@ import (
 )
 
 func parseCmdParams() (string, string, string, string) {
-	help := flag.Bool("help", false, "Display help")
-	srcSeed := flag.String("srcSeed", "", "src user pubkey")
-	destSeed := flag.String("destSeed", "", "desc user pubkey")
-	channelSeed := flag.String("channelSeed", "", "channel pubkey")
-	rootPath := flag.String("rootPath", "", "config file path")
+	help := flag.Bool("help", false, "display help")
+	srcseed := flag.String("src", "", "src user pubkey")
+	destseed := flag.String("dest", "", "desc user pubkey")
+	channelseed := flag.String("channel", "", "channel pubkey")
+	path := flag.String("path", "", "all data path")
 
 	flag.Parse()
 
 	if *help {
 		logger.Info("tinverse tvnodelight")
-		logger.Info("Usage 1(default program run path): Run './tvnodelight -srcSeed softwarecheng@gmail.com' -destSeed softwarecheng@126.com")
-		logger.Info("Usage 2(special data root path): Run './tvnodelight -srcSeed softwarecheng@gmail.com' -destSeed softwarecheng@126.com, -rootPath ./light1")
+		logger.Info("Usage Run './tvnodelight -src softwarecheng@gmail.com -dest softwarecheng@126.com -channel softwarecheng@126.com -path .'")
 		os.Exit(0)
 	}
 
-	if *srcSeed == "" {
-		log.Fatal("Please provide seed for generate src user public key")
+	if *srcseed == "" {
+		log.Fatal("Please provide seed for generate src user seed for public key")
 	}
-	if *destSeed == "" {
-		log.Fatal("Please provide seed for generate dest user public key")
+	if *destseed == "" {
+		log.Fatal("Please provide seed for generate dest user seed for public key")
 	}
 
-	return *srcSeed, *destSeed, *channelSeed, *rootPath
+	if *channelseed == "" {
+		log.Fatal("Please provide seed for generate channel seed for public key")
+	}
+
+	return *srcseed, *destseed, *channelseed, *path
 }

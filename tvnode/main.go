@@ -3,29 +3,17 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"os"
 	"time"
 
-	filelock "github.com/MichaelS11/go-file-lock"
-	"github.com/ethereum/go-ethereum/crypto"
-	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	"github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/mtv_go_utils/ipfs"
 	"github.com/tinyverse-web3/mtv_go_utils/key"
-	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
-func setTestEnv(cfg *config.TvbaseConfig) {
-	// test enviroment
-	cfg.SetLocalNet(true)
-	cfg.SetMdns(false)
-	cfg.SetDhtProtocolPrefix("/tvnode_test")
-	cfg.ClearBootstrapPeers()
-	cfg.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWPThTtBAaC5vvnj6NE2iQSfuBHRUdtPweM6dER62R57R2")
-	cfg.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
-}
+var tb *tvbase.TvBase
 
 func main() {
 	rootPath := parseCmdParams()
@@ -33,22 +21,10 @@ func main() {
 	if err != nil {
 		logger.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-	pidFileName, err := getPidFileName(rootPath)
-	if err != nil {
-		logger.Fatalf("tvnode->main: get pid file name: %v", err)
-	}
-	pidFileLockHandle, err := filelock.New(pidFileName)
-	logger.Infof("tvnode->main: PID: %v", os.Getpid())
-	if err == filelock.ErrFileIsBeingUsed {
-		logger.Errorf("tvnode->main: pid file is being locked: %v", err)
-		return
-	}
-	if err != nil {
-		logger.Errorf("tvnode->main: pid file lock: %v", err)
-		return
-	}
+
+	lock, pidFileName := lockProcess(rootPath)
 	defer func() {
-		err = pidFileLockHandle.Unlock()
+		err = lock.Unlock()
 		if err != nil {
 			logger.Errorf("tvnode->main: pid file unlock: %v", err)
 		}
@@ -73,31 +49,22 @@ func main() {
 	}
 
 	ctx := context.Background()
-	userSeed := "softwarecheng@gmail.com"
-	srcPrikey, srcPubkey, err := getKeyBySeed(userSeed)
-	if err != nil {
-		logger.Errorf("tvnode->main: getKeyBySeed error: %v", err)
-		return
-	}
-	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrikey))
-	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-	logger.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
-
-	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
+	tb, err = tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
 	tb.Start()
 
+	srcPrikey, srcPubkey := getSeedKey("softwarecheng@gmail.com")
 	err = startDmsgService(srcPubkey, srcPrikey, tb)
 	if err != nil {
-		logger.Errorf("tvnode->main: initDmsgService: %v", err)
+		logger.Errorf("tvnode->main: startDmsgService: %v", err)
 		return
 	}
 
 	_, err = ipfs.CreateIpfsShellProxy("/ip4/127.0.0.1/tcp/5001")
 	if err != nil {
-		logger.Errorf("tvnode->main: CreateIpfsShell: %v", err)
+		logger.Errorf("tvnode->main: CreateIpfsShellProxy: %v", err)
 		return
 	}
 
@@ -112,7 +79,7 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, t
 	}
 
 	getSig := func(protoData []byte) ([]byte, error) {
-		sig, err := tvutilCrypto.SignDataByEcdsa(srcPrikey, protoData)
+		sig, err := crypto.SignDataByEcdsa(srcPrikey, protoData)
 		if err != nil {
 			logger.Errorf("initDmsg: sig error: %v", err)
 		}

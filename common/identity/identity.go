@@ -2,13 +2,10 @@ package identity
 
 import (
 	"bytes"
-	"encoding/base64"
 	"os"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/pnet"
-	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"golang.org/x/crypto/salsa20"
 	"golang.org/x/crypto/sha3"
 )
@@ -18,22 +15,9 @@ const (
 	SwarmPskFileName = "swarmPsv1key.bin"
 )
 
-// LoadIdentity reads a private key from the given path and, if it does not
-// exist, generates a new one.
-func LoadIdentity(idPath string) (crypto.PrivKey, error) {
-	if _, err := os.Stat(idPath); err == nil {
-		return ReadIdentity(idPath)
-	} else if os.IsNotExist(err) {
-		tvLog.Logger.Infof("Generating peer identity in %s\n", idPath)
-		return generateIdentityFile(idPath)
-	} else {
-		return nil, err
-	}
-}
-
-// ReadIdentity reads a private key from the given path.
-func ReadIdentity(path string) (crypto.PrivKey, error) {
-	bytes, err := os.ReadFile(path)
+// LoadIdentity reads a private key from the given path.
+func LoadIdentity(path string) (crypto.PrivKey, error) {
+	bytes, err := os.ReadFile(path + IdentityFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -99,20 +83,10 @@ func LoadSwarmKey(path string) (pnet.PSK, PNetFingerprint, error) {
 	return psk, pnetFingerprint(psk), nil
 }
 
-func GenIdenityFile(rootPath string) error {
+func GenIdenityFile(rootPath string) (crypto.PrivKey, error) {
 	privateKey, err := generateIdentityFile(rootPath + IdentityFileName)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	privateKeyData, _ := crypto.MarshalPrivateKey(privateKey)
-	privateKeyStr := base64.StdEncoding.EncodeToString(privateKeyData)
-	publicKey := privateKey.GetPublic()
-	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
-	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
-	peerId, _ := peer.IDFromPublicKey(publicKey)
-	tvLog.Logger.Infof("generate identity:\n")
-	tvLog.Logger.Infof("privateKey:%s\n", privateKeyStr)
-	tvLog.Logger.Infof("publicKey:%s\n", publicKeyStr)
-	tvLog.Logger.Infof("peerId: %s\n", peerId.Pretty())
-	return nil
+	return privateKey, nil
 }
