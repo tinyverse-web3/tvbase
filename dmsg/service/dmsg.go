@@ -6,12 +6,11 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	channelService "github.com/tinyverse-web3/tvbase/dmsg/service/channel"
 	customProtocolService "github.com/tinyverse-web3/tvbase/dmsg/service/customProtocol"
 	mailboxService "github.com/tinyverse-web3/tvbase/dmsg/service/mailbox"
 	msgService "github.com/tinyverse-web3/tvbase/dmsg/service/msg"
-
-	service "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 )
 
 type DmsgService struct {

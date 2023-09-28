@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -28,7 +27,7 @@ func parseCmdParams() string {
 	path := flag.String("path", defaultPath, "all data path")
 	shutdown := flag.Bool("shutdown", false, "shutdown daemon")
 	help := flag.Bool("help", false, "Display help")
-	ident := flag.Bool("ident", false, "Display identity public key")
+	peer := flag.Bool("peer", false, "Display peerID")
 	flag.Parse()
 
 	if *help {
@@ -37,8 +36,8 @@ func parseCmdParams() string {
 		logger.Info("Usage step2: Run './tvnode' or './tvnode -path .' start tinyverse tvnode service.")
 		os.Exit(0)
 	}
-	if *ident {
-		prikey, err := identity.LoadIdentity(*path)
+	if *peer {
+		prikey, err := identity.LoadPrikey(tb.GetConfig().Identity.PrivKey)
 		if err != nil {
 			logger.Fatalf("LoadIdentity error: %v", err)
 		}
@@ -61,11 +60,6 @@ func parseCmdParams() string {
 		if err != nil {
 			logger.Fatalf("Failed to generate config file: %v", err)
 		}
-		err = genIdentityFile(rooPath)
-		if err != nil {
-			logger.Fatalf("Failed to generate config file: %v", err)
-		}
-		logger.Infof("Generate config file successfully.")
 		os.Exit(0)
 	}
 
@@ -106,6 +100,12 @@ func parseCmdParams() string {
 
 func genConfigFile(rootPath string, mode config.NodeMode) error {
 	defaultCfg := config.NewDefaultTvbaseConfig()
+	prikey, prikeyHex, err := identity.GenIdenity()
+	if err != nil {
+		return err
+	}
+	printPriKey(prikey)
+
 	cfg, err := loadConfig(rootPath)
 	if err != nil {
 		return err
@@ -118,22 +118,15 @@ func genConfigFile(rootPath string, mode config.NodeMode) error {
 		}
 	}
 	cfg.InitMode(mode)
+	cfg.Identity.PrivKey = prikeyHex
+	// TODO: generate PrivSwarmKey
+	// defaultCfg.Identity.PrivSwarmKey = ""
 	file, _ := json.MarshalIndent(cfg, "", " ")
 	if err := os.WriteFile(rootPath+configFileName, file, 0644); err != nil {
-		fmt.Println("CreateConfigFileIfNotExist: Failed to WriteFile:", err)
+		logger.Infof("failed to WriteFile:", err)
 		return err
 	}
-	fmt.Println("genConfigFile->generate node config file: " + rootPath + configFileName)
-	return nil
-}
-
-func genIdentityFile(rootPath string) error {
-	prikey, err := identity.GenIdenityFile(rootPath)
-	if err != nil {
-		logger.Errorf("tvnode->main: GenIdenityFile error: %+v", err)
-	}
-	logger.Infof("tvnode->main: generate identity file: %s", rootPath+identity.IdentityFileName)
-	printPriKey(prikey)
+	logger.Infof("generate config file: " + rootPath + configFileName)
 	return nil
 }
 
@@ -144,5 +137,5 @@ func printPriKey(privateKey crypto.PrivKey) {
 	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
 	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
 	peerId, _ := peer.IDFromPublicKey(publicKey)
-	logger.Infof("\nprivateKey:%s\npublicKey:%s\npeerId: %s\n", privateKeyStr, publicKeyStr, peerId.Pretty())
+	logger.Infof("\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
 }

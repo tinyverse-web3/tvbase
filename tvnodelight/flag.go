@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 )
 
@@ -22,14 +21,14 @@ func parseCmdParams() (string, string, string, string) {
 	}
 
 	if *srcseed == "" {
-		log.Fatal("Please provide seed for generate src user seed for public key")
+		logger.Fatal("Please provide seed for generate src user seed for public key")
 	}
 	if *destseed == "" {
-		log.Fatal("Please provide seed for generate dest user seed for public key")
+		logger.Fatal("Please provide seed for generate dest user seed for public key")
 	}
 
 	if *channelseed == "" {
-		log.Fatal("Please provide seed for generate channel seed for public key")
+		logger.Fatal("Please provide seed for generate channel seed for public key")
 	}
 
 	return *srcseed, *destseed, *channelseed, *path

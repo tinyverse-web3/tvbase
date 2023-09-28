@@ -50,13 +50,13 @@
             "args": ["-path", "./", "-init"]
         },
         {
-            "name": "tvnode-ident",
+            "name": "tvnode-peer",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-path", "./", "-ident"]
+            "args": ["-path", "./", "-peer"]
         },
     ]
 }

@@ -37,15 +37,14 @@ func lockProcess(rootPath string) (lock *filelock.LockHandle, pidFileName string
 }
 
 func getSeedKey(seed string) (prikey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey) {
-	userSeed := "softwarecheng@gmail.com"
 	var err error
-	prikey, pubkey, err = getKeyBySeed(userSeed)
+	prikey, pubkey, err = getKeyBySeed(seed)
 	if err != nil {
 		logger.Fatalf("tvnode->main: getKeyBySeed error: %v", err)
 	}
 	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(prikey))
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(pubkey))
-	logger.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", userSeed, srcPrikeyHex, srcPubkeyHex)
+	logger.Infof("tvnode->main:\nuserSeed: %s\nprikey: %s\npubkey: %s", seed, srcPrikeyHex, srcPubkeyHex)
 
 	return prikey, pubkey
 }

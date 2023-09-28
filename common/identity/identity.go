@@ -2,7 +2,7 @@ package identity
 
 import (
 	"bytes"
-	"os"
+	"encoding/base64"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/pnet"
@@ -10,35 +10,13 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-const (
-	IdentityFileName = "identity.bin"
-	SwarmPskFileName = "swarmPsv1key.bin"
-)
-
-// LoadIdentity reads a private key from the given path.
-func LoadIdentity(path string) (crypto.PrivKey, error) {
-	bytes, err := os.ReadFile(path + IdentityFileName)
+func LoadPrikey(prikeyHex string) (crypto.PrivKey, error) {
+	data, err := base64.StdEncoding.DecodeString(prikeyHex)
 	if err != nil {
 		return nil, err
 	}
 
-	return crypto.UnmarshalPrivateKey(bytes)
-}
-
-// generateIdentityFile writes a new random private key to the given path.
-func generateIdentityFile(path string) (crypto.PrivKey, error) {
-	privk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, 0)
-	if err != nil {
-		return privk, err
-	}
-
-	bytes, err := crypto.MarshalPrivateKey(privk)
-	if err != nil {
-		return privk, err
-	}
-
-	err = os.WriteFile(path, bytes, 0400)
-	return privk, err
+	return crypto.UnmarshalPrivateKey(data)
 }
 
 // PNet fingerprint section is taken from github.com/ipfs/kubo/core/node/libp2p/pnet.go
@@ -69,13 +47,13 @@ func pnetFingerprint(psk pnet.PSK) []byte {
 }
 
 // LoadSwarmKey loads a swarm key at the given filepath and decodes it as a PSKv1.
-func LoadSwarmKey(path string) (pnet.PSK, PNetFingerprint, error) {
-	pskBytes, err := os.ReadFile(path)
-	if err != nil || pskBytes == nil {
+func LoadSwarmKey(prikeyHex string) (pnet.PSK, PNetFingerprint, error) {
+	data, err := base64.StdEncoding.DecodeString(prikeyHex)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	psk, err := pnet.DecodeV1PSK(bytes.NewReader(pskBytes))
+	psk, err := pnet.DecodeV1PSK(bytes.NewReader(data))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,10 +61,16 @@ func LoadSwarmKey(path string) (pnet.PSK, PNetFingerprint, error) {
 	return psk, pnetFingerprint(psk), nil
 }
 
-func GenIdenityFile(rootPath string) (crypto.PrivKey, error) {
-	privateKey, err := generateIdentityFile(rootPath + IdentityFileName)
+func GenIdenity() (crypto.PrivKey, string, error) {
+	privk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, 0)
 	if err != nil {
-		return nil, err
+		return privk, "", err
 	}
-	return privateKey, nil
+
+	data, err := crypto.MarshalPrivateKey(privk)
+	if err != nil {
+		return privk, "", err
+	}
+
+	return privk, base64.StdEncoding.EncodeToString(data), nil
 }

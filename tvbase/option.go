@@ -32,20 +32,19 @@ import (
 )
 
 func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
-	identityPath := m.rootPath + identity.IdentityFileName
-	privteKey, err := identity.LoadIdentity(identityPath)
+	prikey, err := identity.LoadPrikey(m.cfg.Identity.PrivKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	swarmPsk, fprint, err := identity.LoadSwarmKey(m.rootPath + identity.SwarmPskFileName)
+	swarmPsk, fprint, err := identity.LoadSwarmKey(m.cfg.Identity.PrivSwarmKey)
 	if err != nil {
 		tvLog.Logger.Infof("no private swarm key")
 	}
 	if swarmPsk != nil {
 		tvLog.Logger.Infof("PSK detected, private identity: %x\n", fprint)
 	}
-	return privteKey, swarmPsk, nil
+	return prikey, swarmPsk, nil
 }
 
 func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {

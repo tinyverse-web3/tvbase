@@ -26,6 +26,7 @@ const (
 type TvbaseConfig struct {
 	Mode         NodeMode
 	Network      NetworkConfig
+	Identity     IdentityConfig
 	Swarm        config.SwarmConfig
 	AutoNAT      AutoNATConfig
 	ConnMgr      ConnMgrConfig
@@ -38,6 +39,11 @@ type TvbaseConfig struct {
 	Metrics      MetricsConfig
 	CoreHttp     CoreHttpConfig
 	Disc         DiscConfig
+}
+
+type IdentityConfig struct {
+	PrivKey      string
+	PrivSwarmKey string
 }
 
 type DiscConfig struct {
@@ -163,6 +169,10 @@ func NewDefaultTvbaseConfig() *TvbaseConfig {
 			Libp2pForceReachability: "",
 			Peers:                   []peer.AddrInfo{},
 			EnableMdns:              true,
+		},
+		Identity: IdentityConfig{
+			PrivKey:      "",
+			PrivSwarmKey: "",
 		},
 		Swarm: config.SwarmConfig{
 			AddrFilters:             nil,
