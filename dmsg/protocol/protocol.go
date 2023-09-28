@@ -272,7 +272,7 @@ func (p *Protocol) TickCleanRequest() {
 			for id := range keysToDelete {
 				p.RequestInfoList.Delete(id)
 			}
-			log.Logger.Debug("Protocol->TickCleanRequest: clean request data")
+			log.Logger.Debug("Protocol->TickCleanRequest: clean free request data")
 		case <-p.Ctx.Done():
 			err := p.Ctx.Err()
 			if err != nil {
