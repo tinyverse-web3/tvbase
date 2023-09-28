@@ -5,15 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "tvnodelight",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight",
-            "console": "integratedTerminal",
-            "args": ["-src", "a", "-dest", "b"]
-        },
-        {
             "name": "tvnodelight-a-b",
             "type": "go",
             "request": "launch",
