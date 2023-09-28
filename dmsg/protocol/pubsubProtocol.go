@@ -61,14 +61,12 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	}
 
 	// send the response
-	// responseBasicData := p.Adapter.GetResponseBasicData(response)
 	responseBasicData, err := GetBasicData(response)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetResponseBasicData error: %+v", err)
 		return err
 	}
 
-	// requestBasicData := p.Adapter.GetRequestBasicData(request)
 	requestBasicData, err := GetBasicData(response)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetRequestBasicData error: %+v", err)
@@ -96,7 +94,6 @@ func (p *PubsubProtocol) Request(sigPubkey string, destPubkey string, dataList .
 		return nil, nil, err
 	}
 
-	// requestBasicData := p.Adapter.GetRequestBasicData(request)
 	requestBasicData, err := GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: GetRequestBasicData error: %+v", err)

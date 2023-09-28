@@ -73,7 +73,7 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := dmsgProtocol.GetRetCode(dataList)
+	retCode, err := getRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -97,65 +97,6 @@ func (adapter *CustomStreamProtocolAdapter) InitResponse(
 	}
 	response.Content = content
 	return response, nil
-}
-
-// func (adapter *CustomStreamProtocolAdapter) GetRequestBasicData(
-// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return request.BasicData
-// }
-
-// func (adapter *CustomStreamProtocolAdapter) GetResponseBasicData(
-// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return response.BasicData
-// }
-
-func (adapter *CustomStreamProtocolAdapter) GetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
-	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return nil
-	}
-	return response.RetCode
-}
-
-func (adapter *CustomStreamProtocolAdapter) SetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage,
-	code int32,
-	result string) {
-	request, ok := responseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
-}
-
-func (adapter *CustomStreamProtocolAdapter) SetRequestSig(
-	requestProtoMsg protoreflect.ProtoMessage,
-	sig []byte) error {
-	request, ok := requestProtoMsg.(*pb.CustomProtocolReq)
-	if !ok {
-		return fmt.Errorf("CustomStreamProtocolAdapter->SetRequestSig: failed to cast request to *pb.CustomProtocolReq")
-	}
-	request.BasicData.Sig = sig
-	return nil
-}
-
-func (adapter *CustomStreamProtocolAdapter) SetResponseSig(
-	responseProtoMsg protoreflect.ProtoMessage, sig []byte) error {
-	response, ok := responseProtoMsg.(*pb.CustomProtocolRes)
-	if !ok {
-		return fmt.Errorf("CustomStreamProtocolAdapter->SetResponseSig: failed to cast request to *pb.CustomProtocolRes")
-	}
-	response.BasicData.Sig = sig
-	return nil
 }
 
 func (adapter *CustomStreamProtocolAdapter) CallRequestCallback(

@@ -44,7 +44,6 @@ func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 		return nil, nil, false, err
 	}
 
-	// requestBasicData := p.Adapter.GetRequestBasicData(request)
 	requestBasicData, err := GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleRequestData: GetRequestBasicData error: %+v", err)
@@ -87,9 +86,10 @@ func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 	if err != nil {
 		return request, nil, false, err
 	}
-	err = p.Adapter.SetResponseSig(response, sig)
+
+	err = SetBasicSig(response, sig)
 	if err != nil {
-		log.Logger.Errorf("Protocol->HandleRequestData: SetResponseSig error: %v", err)
+		log.Logger.Errorf("Protocol->HandleRequestData: SetBasicSig error: %v", err)
 		return request, nil, false, err
 	}
 	log.Logger.Debugf("Protocol->HandleRequestData: protocolResponse: %v", response)
@@ -102,7 +102,6 @@ func (p *Protocol) GetErrResponse(
 	request protoreflect.ProtoMessage,
 	err error) (protoreflect.ProtoMessage, error) {
 	responseErr := err
-	// requestBasicData := p.Adapter.GetRequestBasicData(request)
 	requestBasicData, err := GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("Protocol->GetErrResponse: GetRequestBasicData error: %+v", err)
@@ -125,7 +124,12 @@ func (p *Protocol) GetErrResponse(
 	if err != nil {
 		log.Logger.Warnf("Protocol->GetErrResponse: InitResponse error: %v", err)
 	}
-	p.Adapter.SetResponseRetCode(responseProtoMsg, -1, responseErr.Error())
+
+	err = SetRetCode(responseProtoMsg, -1, responseErr.Error())
+	if err != nil {
+		log.Logger.Warnf("Protocol->GetErrResponse: SetResponseRetCode error: %v", err)
+		return responseProtoMsg, err
+	}
 	responseProtoData, err := proto.Marshal(responseProtoMsg)
 	if err != nil {
 		log.Logger.Errorf("Protocol->GetErrResponse: marshal response error: %v", err)
@@ -135,9 +139,10 @@ func (p *Protocol) GetErrResponse(
 	if err != nil {
 		return responseProtoMsg, err
 	}
-	err = p.Adapter.SetResponseSig(responseProtoMsg, sig)
+
+	err = SetBasicSig(responseProtoMsg, sig)
 	if err != nil {
-		log.Logger.Errorf("Protocol->GetErrResponse: SetResponseSig error: %v", err)
+		log.Logger.Errorf("Protocol->GetErrResponse: SetBasicSig error: %v", err)
 		return responseProtoMsg, err
 	}
 	return responseProtoMsg, nil
@@ -162,7 +167,6 @@ func (p *Protocol) HandleResponseData(
 
 	log.Logger.Debugf("Protocol->HandleResponseData:\nResponseProtoMsg: %+v", responseProtoMsg)
 
-	// responseBasicData := p.Adapter.GetResponseBasicData(responseProtoMsg)
 	responseBasicData, err := GetBasicData(responseProtoMsg)
 	if err != nil {
 		log.Logger.Errorf("Protocol->HandleResponseData: GetBasicData error: %+v", err)
@@ -228,9 +232,10 @@ func (p *Protocol) GenRequestInfo(
 		log.Logger.Errorf("Protocol->GenRequestInfo: GetUserSig error: %v", err)
 		return "", nil, nil, err
 	}
-	err = p.Adapter.SetRequestSig(requestProtoMsg, sig)
+
+	err = SetBasicSig(requestProtoMsg, sig)
 	if err != nil {
-		log.Logger.Errorf("Protocol->GenRequestInfo: SetRequestSig error: %v", err)
+		log.Logger.Errorf("Protocol->GenRequestInfo: SetBasicSig error: %v", err)
 		return "", nil, nil, err
 	}
 

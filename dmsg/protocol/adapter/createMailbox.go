@@ -2,11 +2,9 @@ package adapter
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -58,7 +56,7 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := dmsgProtocol.GetRetCode(dataList)
+	retCode, err := getRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -67,66 +65,6 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(
 		RetCode:   retCode,
 	}
 	return response, nil
-}
-
-// func (adapter *CreateMailboxProtocolAdapter) GetRequestBasicData(
-// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	request, ok := requestProtoMsg.(*pb.CreateMailboxReq)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return request.BasicData
-// }
-
-// func (adapter *CreateMailboxProtocolAdapter) GetResponseBasicData(
-// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	response, ok := responseProtoMsg.(*pb.CreateMailboxRes)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return response.BasicData
-// }
-
-func (adapter *CreateMailboxProtocolAdapter) GetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
-	response, ok := responseProtoMsg.(*pb.CreateMailboxRes)
-	if !ok {
-		return nil
-	}
-	return response.RetCode
-}
-
-func (adapter *CreateMailboxProtocolAdapter) SetRequestSig(
-	requestProtoMsg protoreflect.ProtoMessage,
-	sig []byte) error {
-	request, ok := requestProtoMsg.(*pb.CreateMailboxReq)
-	if !ok {
-		return fmt.Errorf("CreateMailboxProtocolAdapter->SetRequestSig: failed to cast request to *pb.CreateMailboxReq")
-	}
-	request.BasicData.Sig = sig
-	return nil
-}
-
-func (adapter *CreateMailboxProtocolAdapter) SetResponseSig(
-	responseProtoMsg protoreflect.ProtoMessage,
-	sig []byte) error {
-	response, ok := responseProtoMsg.(*pb.CreateMailboxRes)
-	if !ok {
-		return fmt.Errorf("CreateMailboxProtocolAdapter->SetResponseSig: failed to cast request to *pb.CreateMailboxRes")
-	}
-	response.BasicData.Sig = sig
-	return nil
-}
-
-func (adapter *CreateMailboxProtocolAdapter) SetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage,
-	code int32,
-	result string) {
-	request, ok := responseProtoMsg.(*pb.CreateMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
 }
 
 func (adapter *CreateMailboxProtocolAdapter) CallRequestCallback(

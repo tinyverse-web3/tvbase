@@ -87,26 +87,11 @@ type Adapter interface {
 	GetEmptyResponse() protoreflect.ProtoMessage
 	InitRequest(
 		basicData *pb.BasicData,
-		moreList ...any) (protoreflect.ProtoMessage, error)
+		moreDataList ...any) (protoreflect.ProtoMessage, error)
 	InitResponse(
 		requestProtoData protoreflect.ProtoMessage,
 		basicData *pb.BasicData,
-		moreList ...any) (protoreflect.ProtoMessage, error)
-	// GetRequestBasicData(
-	// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData
-	// GetResponseBasicData(
-	// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData
-	GetResponseRetCode(
-		responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode
-	SetResponseRetCode(
-		responseProtoMsg protoreflect.ProtoMessage,
-		code int32, result string)
-	SetRequestSig(
-		requestProtoMsg protoreflect.ProtoMessage,
-		sig []byte) error
-	SetResponseSig(
-		responseProtoMsg protoreflect.ProtoMessage,
-		sig []byte) error
+		moreDataList ...any) (protoreflect.ProtoMessage, error)
 	CallRequestCallback(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
 	CallResponseCallback(

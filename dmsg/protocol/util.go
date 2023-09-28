@@ -80,39 +80,62 @@ func GenProtoData(pid pb.PID, protoData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func GetRetCode(dataList ...any) (*pb.RetCode, error) {
-	retCode := NewSuccRetCode()
-	if len(dataList) > 1 && dataList[1] != nil {
-		data, ok := dataList[1].(*pb.RetCode)
-		if !ok {
-			return nil, fmt.Errorf("getRetCode: fail to cast dataList[1] to *pb.RetCode")
-		} else {
-			if data == nil {
-				fmt.Printf("getRetCode: data == nil")
-				return nil, fmt.Errorf("getRetCode: data == nil")
-			}
-			retCode = data
-		}
-	}
-	return retCode, nil
-}
-
-func GetBasicData(requestProtoData any) (*pb.BasicData, error) {
-	v := reflect.ValueOf(requestProtoData)
+func GetBasicData(protoData any) (*pb.BasicData, error) {
+	v := reflect.ValueOf(protoData)
 	if v.Kind() != reflect.Ptr {
-		fmt.Print("GetBasicData: requestProtoData is not a pointer")
-		return nil, fmt.Errorf("GetBasicData: requestProtoData is not a pointer")
+		fmt.Print("GetBasicData: protoData is not a pointer")
+		return nil, fmt.Errorf("GetBasicData: protoData is not a pointer")
 	}
 	reflactValue := v.Elem().FieldByName("BasicData")
 	if !reflactValue.IsValid() {
-		fmt.Print("GetBasicData: requestProtoData.BasicData is invalid")
-		return nil, fmt.Errorf("GetBasicData: requestProtoData.BasicData is invalid")
+		fmt.Print("GetBasicData: protoData.BasicData is invalid")
+		return nil, fmt.Errorf("GetBasicData: protoData.BasicData is invalid")
 	}
-	basicDataInterface := reflactValue.Interface()
-	basicData, ok := basicDataInterface.(*pb.BasicData)
+	data := reflactValue.Interface()
+	ret, ok := data.(*pb.BasicData)
 	if !ok {
-		fmt.Print("GetBasicData: requestProtoData.BasicData is not a *pb.BasicData")
-		return nil, fmt.Errorf("GetBasicData: requestProtoData.BasicData is not a *pb.BasicData")
+		fmt.Print("GetBasicData: protoData.BasicData is not a *pb.BasicData")
+		return nil, fmt.Errorf("GetBasicData: protoData.BasicData is not a *pb.BasicData")
 	}
-	return basicData, nil
+	return ret, nil
+}
+
+func GetRetCode(protoData any) (*pb.RetCode, error) {
+	v := reflect.ValueOf(protoData)
+	if v.Kind() != reflect.Ptr {
+		fmt.Print("GetRetCode: protoData is not a pointer")
+		return nil, fmt.Errorf("GetRetCode: protoData is not a pointer")
+	}
+	reflactValue := v.Elem().FieldByName("RetCode")
+	if !reflactValue.IsValid() {
+		fmt.Print("GetRetCode: protoData.RetCode is invalid")
+		return nil, fmt.Errorf("GetRetCode: protoData.RetCode is invalid")
+	}
+	data := reflactValue.Interface()
+	ret, ok := data.(*pb.RetCode)
+	if !ok {
+		fmt.Print("GetRetCode: protoData.RetCode is not a *pb.RetCode")
+		return nil, fmt.Errorf("GetRetCode: protoData.RetCode is not a *pb.RetCode")
+	}
+	return ret, nil
+}
+
+func SetRetCode(protoData any, code int32, result string) error {
+	retCode, err := GetRetCode(protoData)
+	if err != nil {
+		return err
+	}
+
+	retCode.Code = code
+	retCode.Result = result
+	return nil
+}
+
+func SetBasicSig(protoData any, sig []byte) error {
+	basicData, err := GetBasicData(protoData)
+	if err != nil {
+		return err
+	}
+	basicData.Sig = sig
+	return nil
 }

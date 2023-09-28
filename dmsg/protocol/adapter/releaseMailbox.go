@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -57,7 +56,7 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := dmsgProtocol.GetRetCode(dataList)
+	retCode, err := getRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -66,65 +65,6 @@ func (adapter *ReleaseMailboxProtocolAdapter) InitResponse(
 		RetCode:   retCode,
 	}
 	return response, nil
-}
-
-// func (adapter *ReleaseMailboxProtocolAdapter) GetRequestBasicData(
-// 	requestProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	request, ok := requestProtoMsg.(*pb.ReleaseMailboxReq)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return request.BasicData
-// }
-
-// func (adapter *ReleaseMailboxProtocolAdapter) GetResponseBasicData(
-// 	responseProtoMsg protoreflect.ProtoMessage) *pb.BasicData {
-// 	response, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return response.BasicData
-// }
-
-func (adapter *ReleaseMailboxProtocolAdapter) GetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage) *pb.RetCode {
-	response, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
-	if !ok {
-		return nil
-	}
-	return response.RetCode
-}
-
-func (adapter *ReleaseMailboxProtocolAdapter) SetResponseRetCode(
-	responseProtoMsg protoreflect.ProtoMessage,
-	code int32,
-	result string) {
-	request, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
-	if !ok {
-		return
-	}
-	request.RetCode = dmsgProtocol.NewRetCode(code, result)
-}
-
-func (adapter *ReleaseMailboxProtocolAdapter) SetRequestSig(
-	requestProtoMsg protoreflect.ProtoMessage,
-	sig []byte) error {
-	request, ok := requestProtoMsg.(*pb.ReleaseMailboxReq)
-	if !ok {
-		return fmt.Errorf("ReleaseMailboxProtocolAdapter->SetRequestSig: failed to cast request to *pb.ReleaseMailboxReq")
-	}
-	request.BasicData.Sig = sig
-	return nil
-}
-
-func (adapter *ReleaseMailboxProtocolAdapter) SetResponseSig(
-	responseProtoMsg protoreflect.ProtoMessage, sig []byte) error {
-	response, ok := responseProtoMsg.(*pb.ReleaseMailboxRes)
-	if !ok {
-		return fmt.Errorf("ReleaseMailboxProtocolAdapter->SetResponseSig: failed to cast request to *pb.ReleaseMailboxRes")
-	}
-	response.BasicData.Sig = sig
-	return nil
 }
 
 func (adapter *ReleaseMailboxProtocolAdapter) CallRequestCallback(
