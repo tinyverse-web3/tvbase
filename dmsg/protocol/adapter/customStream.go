@@ -13,7 +13,7 @@ import (
 )
 
 type CustomStreamProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.CustomSProtocol
 	pid      string
 }

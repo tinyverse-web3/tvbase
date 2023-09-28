@@ -11,7 +11,7 @@ import (
 )
 
 type ReleaseMailboxProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.MailboxSProtocol
 }
 

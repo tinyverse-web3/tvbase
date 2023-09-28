@@ -12,7 +12,7 @@ import (
 )
 
 type PubsubMsgProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	Protocol *dmsgProtocol.PubsubMsgProtocol
 }
 

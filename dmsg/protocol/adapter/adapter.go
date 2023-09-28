@@ -9,51 +9,51 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type CommonProtocolAdapter struct {
+type AbstructProtocolAdapter struct {
 }
 
-func (adapter *CommonProtocolAdapter) GetRequestPID() pb.PID {
+func (adapter *AbstructProtocolAdapter) GetRequestPID() pb.PID {
 	return -1
 }
 
-func (adapter *CommonProtocolAdapter) GetResponsePID() pb.PID {
+func (adapter *AbstructProtocolAdapter) GetResponsePID() pb.PID {
 	return -1
 }
 
-func (adapter *CommonProtocolAdapter) GetStreamRequestPID() protocol.ID {
+func (adapter *AbstructProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return protocol.ID("unknown")
 }
 
-func (adapter *CommonProtocolAdapter) GetStreamResponsePID() protocol.ID {
+func (adapter *AbstructProtocolAdapter) GetStreamResponsePID() protocol.ID {
 	return protocol.ID("unknown")
 }
 
-func (adapter *CommonProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+func (adapter *AbstructProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
 	return nil
 }
-func (adapter *CommonProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+func (adapter *AbstructProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
 	return nil
 }
 
-func (adapter *CommonProtocolAdapter) InitRequest(
+func (adapter *AbstructProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	return nil, nil
 }
 
-func (adapter *CommonProtocolAdapter) InitResponse(
+func (adapter *AbstructProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	return nil, nil
 }
 
-func (adapter *CommonProtocolAdapter) CallRequestCallback(
+func (adapter *AbstructProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (any, any, error) {
 	return nil, nil, nil
 }
 
-func (adapter *CommonProtocolAdapter) CallResponseCallback(
+func (adapter *AbstructProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	return nil, nil

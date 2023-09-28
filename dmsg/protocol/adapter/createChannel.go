@@ -13,7 +13,7 @@ import (
 )
 
 type CreateChannelProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.CreatePubsubSProtocol
 }
 

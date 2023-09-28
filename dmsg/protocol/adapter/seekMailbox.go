@@ -10,7 +10,7 @@ import (
 )
 
 type SeekMailboxProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.MailboxPProtocol
 }
 

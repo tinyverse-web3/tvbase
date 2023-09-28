@@ -17,7 +17,7 @@ type ReadMailRequestParam struct {
 }
 
 type ReadMailboxMsgProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.MailboxSProtocol
 }
 

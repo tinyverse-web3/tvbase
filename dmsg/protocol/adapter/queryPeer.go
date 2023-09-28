@@ -12,7 +12,7 @@ import (
 )
 
 type QueryPeerProtocolAdapter struct {
-	CommonProtocolAdapter
+	AbstructProtocolAdapter
 	protocol *dmsgProtocol.QueryPeerProtocol
 }
 
