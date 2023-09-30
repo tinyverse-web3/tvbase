@@ -32,7 +32,7 @@ import (
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
-	"github.com/tinyverse-web3/tvbase/dmsg/service"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -42,7 +42,6 @@ import (
 )
 
 type TvBase struct {
-	dmsgService            *service.DmsgService
 	DkvsService            define.DkvsService
 	TracerSpan             trace.Span
 	ctx                    context.Context
@@ -135,13 +134,8 @@ func (m *TvBase) Start() error {
 	return nil
 }
 
-func (m *TvBase) Stop() {
-	if m.launch != nil {
-		stopErr := m.launch.Stop(context.Background())
-		if stopErr != nil {
-			tvLog.Logger.Errorf("tvBase->Stop: failure on stop: %v", stopErr)
-		}
-	}
+func (m *TvBase) Stop() error {
+	return m.launch.Stop(context.Background())
 }
 
 func (m *TvBase) initDisc() (fx.Option, error) {
@@ -434,7 +428,7 @@ func (m *TvBase) init() error {
 	fxOpts = append(fxOpts, fx.Provide(m.initHost))
 	fxOpts = append(fxOpts, fx.Invoke(m.initMdns))
 	fxOpts = append(fxOpts, fx.Invoke(m.netCheck))
-	fxOpts = append(fxOpts, fx.Invoke(m.initDmsgService))
+	fxOpts = append(fxOpts, fx.Invoke(m.initDmsg))
 	err = m.initFx(fx.Options(fxOpts...))
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
@@ -446,18 +440,11 @@ func (m *TvBase) init() error {
 	return nil
 }
 
-func (m *TvBase) initDmsgService(lc fx.Lifecycle) error {
-	var err error
-
-	m.dmsgService, err = service.CreateService(m)
-
-	if err != nil {
-		tvLog.Logger.Errorf("tvBase->init: error: %v", err)
-		return nil
-	}
+func (m *TvBase) initDmsg(lc fx.Lifecycle) error {
+	pubsub.NewPubsubMgr(m.ctx, m.host)
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			return m.dmsgService.Stop()
+			return nil
 		},
 	})
 	return nil
@@ -544,10 +531,6 @@ func (m *TvBase) netCheck(ph host.Host, lc fx.Lifecycle) error {
 		},
 	})
 	return nil
-}
-
-func (m *TvBase) GetDmsgService() *service.DmsgService {
-	return m.dmsgService
 }
 
 func (m *TvBase) GetDkvsService() define.DkvsService {

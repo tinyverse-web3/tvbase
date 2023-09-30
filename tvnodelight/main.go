@@ -18,11 +18,11 @@ import (
 )
 
 var tb *tvbase.TvBase
+var dmsgService *DmsgService
 
 func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvbase.TvBase) error {
 	userPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
-		logger.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
 		return err
 	}
 
@@ -34,7 +34,12 @@ func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvba
 		return sig, nil
 	}
 
-	err = tb.GetDmsgService().Start(false, userPubkeyData, getSig, 30*time.Second)
+	dmsgService, err = CreateDmsgService(tb)
+	if err != nil {
+		return err
+	}
+
+	err = dmsgService.Start(false, userPubkeyData, getSig, 30*time.Second)
 	if err != nil {
 		return err
 	}
@@ -73,12 +78,17 @@ func main() {
 	logger.Infof("tvnode->main: init channel seed")
 	_, channelPubKey := getSeedKey(channelSeed)
 
-	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
+	tb, err = tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		logger.Fatalf("NewTvbase error: %v", err)
 	}
 	tb.Start()
-	dmsgService := tb.GetDmsgService()
+	defer func() {
+		err = tb.Stop()
+		if err != nil {
+			logger.Errorf("tvnode->main: tb.Stop: %v", err)
+		}
+	}()
 
 	logger.Infof("tvnode->main: init src user seed")
 	srcPrikey, srcPubkey := getSeedKey(srcSeed)
@@ -88,6 +98,12 @@ func main() {
 		logger.Fatalf("startDmsgService error: %v", err)
 		return
 	}
+	defer func() {
+		err = dmsgService.Stop()
+		if err != nil {
+			logger.Errorf("tvnode->main: dmsgService.Stop: %v", err)
+		}
+	}()
 
 	// msgService
 	msgService := initMsgService(srcPrikey, destPrikey)
@@ -201,14 +217,14 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 		return nil, nil
 	}
 
-	ret := tb.GetDmsgService().GetMsgService()
+	ret := dmsgService.GetMsgService()
 	ret.SetOnMsgRequest(msgOnRequest)
 	ret.SetOnMsgResponse(msgOnResponse)
 	return ret
 }
 
 func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.ChannelService {
-	ret := tb.GetDmsgService().GetChannelService()
+	ret := dmsgService.GetChannelService()
 	channelOnRequest := func(requestPubkey string, requestDestPubkey string, requestContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
 		logger.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
 			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
@@ -225,8 +241,6 @@ func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKe
 }
 
 func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) {
-	dmsgService := tb.GetDmsgService()
-
 	mailOnRequest := func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
 		decrypedContent := []byte("")
 		var err error

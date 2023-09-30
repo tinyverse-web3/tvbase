@@ -15,11 +15,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type DmsgService interface {
-	Init(tvbaseService TvBaseService) error
-	Stop() error
-}
-
 type DkvsService interface {
 	Put(key string, val []byte, pubkey []byte, issuetime uint64, ttl uint64, sig []byte) error
 	// return: value, pubkey, issuetime, ttl, signature, err

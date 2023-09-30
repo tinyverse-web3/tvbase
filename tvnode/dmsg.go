@@ -1,11 +1,10 @@
-package service
+package main
 
 import (
 	"time"
 
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	dmsgCommonPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	channelService "github.com/tinyverse-web3/tvbase/dmsg/service/channel"
 	customProtocolService "github.com/tinyverse-web3/tvbase/dmsg/service/customProtocol"
@@ -20,8 +19,7 @@ type DmsgService struct {
 	channelService        service.ChannelService
 }
 
-func CreateService(tvbaseService define.TvBaseService) (*DmsgService, error) {
-	dmsgCommonPubsub.NewPubsubMgr(tvbaseService.GetCtx(), tvbaseService.GetHost())
+func CreateDmsgService(tvbaseService define.TvBaseService) (*DmsgService, error) {
 	d := &DmsgService{}
 	err := d.Init(tvbaseService)
 	if err != nil {

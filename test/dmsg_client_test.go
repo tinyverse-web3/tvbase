@@ -19,7 +19,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/service"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -172,14 +171,13 @@ func initService(
 	srcPrikey *ecdsa.PrivateKey,
 	cfg *config.TvbaseConfig,
 	rootPath string,
-	ctx context.Context) (*tvbase.TvBase, *service.DmsgService, error) {
-	tvbase, err := tvbase.NewTvbase(ctx, cfg, rootPath)
+	ctx context.Context) (*tvbase.TvBase, *DmsgService, error) {
+	tb, err := tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
 		testLog.Errorf("initService error: %v", err)
 		return nil, nil, err
 	}
 
-	dmsg := tvbase.GetDmsgService()
 	srcPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -195,12 +193,17 @@ func initService(
 		return sig, nil
 	}
 
-	err = dmsg.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
+	dmsgService, err := CreateDmsgService(tb)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return tvbase, dmsg, nil
+	err = dmsgService.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return tb, dmsgService, nil
 }
 
 func TestPullCID(t *testing.T) {
@@ -230,7 +233,7 @@ func TestPullCID(t *testing.T) {
 	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
 
 	// init dmsg client
-	tvbase, _, err := initService(srcPubkey, srcPrkey, cfg, rootPath, ctx)
+	tb, _, err := initService(srcPubkey, srcPrkey, cfg, rootPath, ctx)
 	if err != nil {
 		testLog.Errorf("init acceptable error: %v", err)
 		return
@@ -248,7 +251,13 @@ func TestPullCID(t *testing.T) {
 	// 	return
 	// }
 
-	queryPeerRequest, queryPeerResponseChan, err := tvbase.GetDmsgService().GetCustomProtocolService().QueryPeer("pullcid")
+	dmsgService, err := CreateDmsgService(tb)
+	if err != nil {
+		testLog.Errorf("CreateDmsgService error: %v", err)
+		return
+	}
+
+	queryPeerRequest, queryPeerResponseChan, err := dmsgService.GetCustomProtocolService().QueryPeer("pullcid")
 	if err != nil {
 		testLog.Errorf("QueryPeer error: %v", err)
 		return

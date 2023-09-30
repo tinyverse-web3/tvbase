@@ -14,6 +14,7 @@ import (
 )
 
 var tb *tvbase.TvBase
+var dmsgService *DmsgService
 
 func main() {
 	rootPath := parseCmdParams()
@@ -54,6 +55,12 @@ func main() {
 		logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
 	tb.Start()
+	defer func() {
+		err = tb.Stop()
+		if err != nil {
+			logger.Errorf("tvnode->main: tb.Stop: %v", err)
+		}
+	}()
 
 	srcPrikey, srcPubkey := getSeedKey("softwarecheng@gmail.com")
 	err = startDmsgService(srcPubkey, srcPrikey, tb)
@@ -61,6 +68,12 @@ func main() {
 		logger.Errorf("tvnode->main: startDmsgService: %v", err)
 		return
 	}
+	defer func() {
+		err = dmsgService.Stop()
+		if err != nil {
+			logger.Errorf("tvnode->main: tb.Stop: %v", err)
+		}
+	}()
 
 	_, err = ipfs.CreateIpfsShellProxy("/ip4/127.0.0.1/tcp/5001")
 	if err != nil {
@@ -86,7 +99,12 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, t
 		return sig, nil
 	}
 
-	err = tb.GetDmsgService().Start(true, userPubkeyData, getSig, 30*time.Second)
+	dmsgService, err = CreateDmsgService(tb)
+	if err != nil {
+		return err
+	}
+
+	err = dmsgService.Start(true, userPubkeyData, getSig, 30*time.Second)
 	if err != nil {
 		return err
 	}
