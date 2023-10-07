@@ -287,6 +287,7 @@ func (m *TvBase) checkListenAddrs() error {
 			conn, err := net.Listen(network, addrStr)
 			if err != nil {
 				tvLog.Logger.Errorf("TvBase->checkListenAddrs: Listen, addr: %v, error: %v", subkeys, err)
+				return err
 			}
 			conn.Close()
 		case "udp":

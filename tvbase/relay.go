@@ -2,6 +2,7 @@ package tvbase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -14,13 +15,30 @@ import (
 )
 
 func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
-	var opts []libp2p.Option
-	opts = append(opts,
-		libp2p.EnableRelay(),
-	)
+	enableRelayTransport := m.cfg.Swarm.Transports.Network.Relay.WithDefault(true)
+	enableRelayService := m.cfg.Swarm.RelayService.Enabled.WithDefault(enableRelayTransport)
+	enableRelayClient := m.cfg.Swarm.RelayClient.Enabled.WithDefault(enableRelayTransport)
 
-	switch m.cfg.Mode {
-	case config.LightMode:
+	if !enableRelayTransport {
+		if enableRelayService {
+			tvLog.Logger.Error("tvBase->createRelayOpts: Failed to enable `Swarm.RelayService`, it requires `Swarm.Transports.Network.Relay` to be true.")
+
+			return nil, fmt.Errorf("tvBase->createRelayOpts: failed to enable `Swarm.RelayService`, it requires `Swarm.Transports.Network.Relay` to be true")
+		}
+		if enableRelayClient {
+			tvLog.Logger.Error("tvBase->createRelayOpts: Failed to enable `Swarm.RelayClient`, it requires `Swarm.Transports.Network.Relay` to be true.")
+			return nil, fmt.Errorf("tvBase->createRelayOpts: failed to enable `Swarm.RelayClient`, it requires `Swarm.Transports.Network.Relay` to be true")
+		}
+	}
+
+	var opts []libp2p.Option
+	if enableRelayTransport {
+		opts = append(opts, libp2p.EnableRelay())
+	} else {
+		opts = append(opts, libp2p.DisableRelay())
+	}
+
+	if enableRelayClient {
 		// auto relay -- static relays
 		if len(m.cfg.Swarm.RelayClient.StaticRelays) > 0 {
 			staticRelays := make([]peer.AddrInfo, 0, len(m.cfg.Swarm.RelayClient.StaticRelays))
@@ -38,7 +56,6 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 
 		// auto relay -- dynamic find relays
 		relayPeerSignal := make(chan peer.AddrInfo)
-
 		opt := libp2p.EnableAutoRelayWithPeerSource(
 			func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
 				// TODO(9257): make this code smarter (have a state and actually try to grow the search outward) instead of a long running task just polling our K cluster.
@@ -130,25 +147,32 @@ func (m *TvBase) createRelayOpts() ([]libp2p.Option, error) {
 					}
 				}
 			}
-
 		}()
+	}
+	switch m.cfg.Mode {
+	case config.LightMode:
+
 	case config.ServiceMode:
 		// enable relay server
-		def := m.cfg.Relay.Resources
 		var ropts []relayv2.Option
-		ropts = append(ropts, relayv2.WithResources(relayv2.Resources{
-			Limit: &relayv2.RelayLimit{
-				Data:     def.Limit.Data,
-				Duration: def.Limit.Duration,
-			},
-			MaxCircuits:            int(int64(def.MaxCircuits)),
-			BufferSize:             int(int64(def.BufferSize)),
-			ReservationTTL:         def.ReservationTTL,
-			MaxReservations:        def.MaxReservations,
-			MaxReservationsPerIP:   def.MaxReservationsPerIP,
-			MaxReservationsPerPeer: def.MaxReservationsPerPeer,
-			MaxReservationsPerASN:  def.MaxReservationsPerASN,
-		}))
+		if enableRelayService {
+			def := m.cfg.Relay.Resources
+			relayOpts := m.cfg.Swarm.RelayService
+			ropts = append(ropts, relayv2.WithResources(relayv2.Resources{
+				Limit: &relayv2.RelayLimit{
+					Data:     def.Limit.Data,
+					Duration: def.Limit.Duration,
+				},
+				MaxCircuits:            int(relayOpts.MaxCircuits.WithDefault(int64(def.MaxCircuits))),
+				BufferSize:             int(relayOpts.BufferSize.WithDefault(int64(def.BufferSize))),
+				ReservationTTL:         relayOpts.ReservationTTL.WithDefault(def.ReservationTTL),
+				MaxReservations:        int(relayOpts.MaxReservations.WithDefault(int64(def.MaxReservations))),
+				MaxReservationsPerIP:   int(relayOpts.MaxReservationsPerIP.WithDefault(int64(def.MaxReservationsPerIP))),
+				MaxReservationsPerPeer: int(relayOpts.MaxReservationsPerPeer.WithDefault(int64(def.MaxReservationsPerPeer))),
+				MaxReservationsPerASN:  int(relayOpts.MaxReservationsPerASN.WithDefault(int64(def.MaxReservationsPerASN))),
+			}))
+		}
+
 		acl, err := NewACL(m.host, m.cfg.ACL)
 		if err == nil {
 			ropts = append(ropts, relayv2.WithACL(acl))

@@ -185,7 +185,38 @@ func NewDefaultTvbaseConfig() *TvbaseConfig {
 			RelayClient:             config.RelayClient{},
 			RelayService:            config.RelayService{},
 			ResourceMgr:             config.ResourceMgr{},
-			Transports:              config.Transports{},
+			Transports: config.Transports{
+				Network: struct {
+					QUIC         config.Flag `json:",omitempty"`
+					TCP          config.Flag `json:",omitempty"`
+					Websocket    config.Flag `json:",omitempty"`
+					Relay        config.Flag `json:",omitempty"`
+					WebTransport config.Flag `json:",omitempty"`
+				}{
+					QUIC:         config.Default,
+					TCP:          config.Default,
+					Websocket:    config.Default,
+					Relay:        config.Default,
+					WebTransport: config.Default,
+				},
+				Security: struct {
+					TLS   config.Priority `json:",omitempty"`
+					SECIO config.Priority `json:",omitempty"`
+					Noise config.Priority `json:",omitempty"`
+				}{
+					TLS:   config.DefaultPriority,
+					SECIO: config.DefaultPriority,
+					Noise: config.DefaultPriority,
+				},
+				Multiplexers: struct {
+					Yamux config.Priority `json:",omitempty"`
+					Mplex config.Priority `json:",omitempty"`
+				}{
+					Yamux: config.DefaultPriority,
+					Mplex: config.DefaultPriority,
+				},
+			},
+			EnableHolePunching: 0,
 		},
 		AutoNAT: AutoNATConfig{
 			ServiceMode: AutoNATServiceEnabled,

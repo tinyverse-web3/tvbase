@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	kuboConfig "github.com/ipfs/kubo/config"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -14,7 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
@@ -70,30 +71,26 @@ func (m *TvBase) createNATOpts() ([]libp2p.Option, error) {
 		// to dhtclient.
 		fallthrough
 	case config.AutoNATServiceEnabled:
-		if !m.cfg.Swarm.DisableNatPortMap {
-			opts = append(opts, libp2p.EnableNATService())
-			if m.cfg.AutoNAT.Throttle != nil { // todo need to config
-				opts = append(opts,
-					libp2p.AutoNATServiceRateLimit(
-						m.cfg.AutoNAT.Throttle.GlobalLimit,
-						m.cfg.AutoNAT.Throttle.PeerLimit,
-						m.cfg.AutoNAT.Throttle.Interval,
-					),
-				)
-			}
+		opts = append(opts, libp2p.EnableNATService())
+		if m.cfg.AutoNAT.Throttle != nil { // todo need to config
+			opts = append(opts,
+				libp2p.AutoNATServiceRateLimit(
+					m.cfg.AutoNAT.Throttle.GlobalLimit,
+					m.cfg.AutoNAT.Throttle.PeerLimit,
+					m.cfg.AutoNAT.Throttle.Interval,
+				),
+			)
 		}
+		// }
 	}
 
-	switch m.cfg.Mode {
-	case config.LightMode:
+	if !m.cfg.Swarm.DisableNatPortMap {
 		opts = append(opts,
 			// for client node, use default host NATManager,
 			// attempt to open a port in your network's firewall using UPnP
 			libp2p.NATPortMap(),
 		)
-	case config.ServiceMode:
 	}
-
 	return opts, nil
 }
 
@@ -118,9 +115,17 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 		libp2p.UserAgent(version.GetUserAgentVersion()),
 		libp2p.Identity(privateKey),
 		libp2p.ListenAddrStrings(m.cfg.Network.ListenAddrs...),
-		libp2p.Security(libp2ptls.ID, libp2ptls.New),
-		libp2p.Security(noise.ID, noise.New),
 	)
+
+	opts = append(opts, prioritizeOptions([]priorityOption{{
+		priority:        m.cfg.Swarm.Transports.Security.TLS,
+		defaultPriority: 200,
+		opt:             libp2p.Security(tls.ID, tls.New),
+	}, {
+		priority:        m.cfg.Swarm.Transports.Security.Noise,
+		defaultPriority: 100,
+		opt:             libp2p.Security(noise.ID, noise.New),
+	}}))
 
 	// smux
 	res, err := makeSmuxTransportOption(m.cfg.Swarm.Transports)
@@ -225,13 +230,28 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 	}
 	opts = append(opts, relayOpts...)
 
+	// holePunching
+	enableRelayTransport := m.cfg.Swarm.Transports.Network.Relay.WithDefault(true) // nolint
+	enableRelayClient := m.cfg.Swarm.RelayClient.Enabled.WithDefault(enableRelayTransport)
+	if m.cfg.Swarm.EnableHolePunching.WithDefault(true) {
+		if !enableRelayClient {
+			// If hole punching is explicitly enabled but the relay client is disabled then panic,
+			// otherwise just silently disable hole punching
+			if m.cfg.Swarm.EnableHolePunching != kuboConfig.Default {
+				tvLog.Logger.Error("tvBase->createCommonOpts: Failed to enable `Swarm.EnableHolePunching`, it requires `Swarm.RelayClient.Enabled` to be true.")
+				return nil, fmt.Errorf("tvBase->createCommonOpts: failed to enable `Swarm.EnableHolePunching`, it requires `Swarm.RelayClient.Enabled` to be true")
+			} else {
+				tvLog.Logger.Info("tvBase->createCommonOpts: HolePunching has been disabled due to the RelayClient being disabled.")
+			}
+		} else {
+			opts = append(opts,
+				libp2p.EnableHolePunching(),
+			)
+		}
+	}
+
 	switch m.cfg.Mode {
 	case config.LightMode:
-		// holePunching
-		opts = append(opts,
-			libp2p.EnableHolePunching(),
-		)
-
 		// metric
 		opts = append(opts,
 			libp2p.DisableMetrics(),
