@@ -69,6 +69,7 @@ func (d *MailboxService) Start(
 	timeout time.Duration,
 ) error {
 	log.Debugf("MailboxService->Start begin\nenableService: %v", enableService)
+	d.enableService = enableService
 	if d.enableService {
 		var err error
 		cfg := d.BaseService.TvBase.GetConfig()
@@ -83,9 +84,9 @@ func (d *MailboxService) Start(
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, enableService)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, enableService)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, enableService)
+	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, d.enableService)
+	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, d.enableService)
+	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, d.enableService)
 
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
@@ -93,7 +94,7 @@ func (d *MailboxService) Start(
 	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 
-	if enableService {
+	if d.enableService {
 		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	}

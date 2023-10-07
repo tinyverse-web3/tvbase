@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/tinyverse-web3/mtv_go_utils/crypto"
-	"github.com/tinyverse-web3/mtv_go_utils/ipfs"
 	"github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -74,12 +73,6 @@ func main() {
 			logger.Errorf("tvnode->main: tb.Stop: %v", err)
 		}
 	}()
-
-	_, err = ipfs.CreateIpfsShellProxy("/ip4/127.0.0.1/tcp/5001")
-	if err != nil {
-		logger.Errorf("tvnode->main: CreateIpfsShellProxy: %v", err)
-		return
-	}
 
 	<-ctx.Done()
 }
