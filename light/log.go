@@ -1,4 +1,4 @@
-package main
+package light
 
 import (
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -9,13 +9,13 @@ const (
 	logName = "tvnodelight"
 )
 
-var logger = ipfsLog.Logger(logName)
+var Logger = ipfsLog.Logger(logName)
 
 func init() {
 	ipfsLog.SetLogLevelRegex(logName, "info")
 }
 
-func initLog() (err error) {
+func InitLog() (err error) {
 	var moduleLevels = map[string]string{
 		"tvbase":         "debug",
 		"dkvs":           "debug",

@@ -14,11 +14,12 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/service"
+	"github.com/tinyverse-web3/tvbase/light"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
 var tb *tvbase.TvBase
-var dmsgService *DmsgService
+var dmsgService *light.DmsgService
 
 func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvbase.TvBase) error {
 	userPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
@@ -29,12 +30,12 @@ func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvba
 	getSig := func(protoData []byte) ([]byte, error) {
 		sig, err := crypto.SignDataByEcdsa(srcPrikey, protoData)
 		if err != nil {
-			logger.Errorf("initDmsg: sign error: %v", err)
+			light.Logger.Errorf("initDmsg: sign error: %v", err)
 		}
 		return sig, nil
 	}
 
-	dmsgService, err = CreateDmsgService(tb)
+	dmsgService, err = light.CreateDmsgService(tb)
 	if err != nil {
 		return err
 	}
@@ -51,82 +52,82 @@ func main() {
 	defer cancel()
 
 	// init srcSeed, destSeed, rootPath from cmd params
-	srcSeed, _, channelSeed, rootPath := parseCmdParams()
+	srcSeed, _, channelSeed, rootPath := light.ParseCmdParams()
 	rootPath, err := util.GetRootPath(rootPath)
 	if err != nil {
-		logger.Fatalf("tvnode->main: GetRootPath: %v", err)
+		light.Logger.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-	cfg, err := initConfig()
+	cfg, err := light.InitConfig()
 	if err != nil || cfg == nil {
-		logger.Fatalf("tvnode->main: initConfig: %v", err)
+		light.Logger.Fatalf("tvnode->main: InitConfig: %v", err)
 	}
 
 	if cfg.Identity.PrivKey == "" {
 		err = cfg.GenPrivKey()
 		if err != nil {
-			logger.Fatalf("tvnode->main: GenPrivKey: %v", err)
+			light.Logger.Fatalf("tvnode->main: GenPrivKey: %v", err)
 		}
 	}
 
-	if isTestEnv {
-		setTestEnv(cfg)
+	if light.IsTestEnv {
+		light.SetTestEnv(cfg)
 	}
 
-	err = initLog()
+	err = light.InitLog()
 	if err != nil {
-		logger.Fatalf("tvnode->main: initLog: %v", err)
+		light.Logger.Fatalf("tvnode->main: InitLog: %v", err)
 	}
 
 	//dest
-	logger.Infof("tvnode->main: init dest user seed")
-	destPrikey, destPubKey := getSeedKey(srcSeed)
+	light.Logger.Infof("tvnode->main: init dest user seed")
+	destPrikey, destPubKey := light.GetSeedKey(srcSeed)
 
 	// channel
-	logger.Infof("tvnode->main: init channel seed")
-	_, channelPubKey := getSeedKey(channelSeed)
+	light.Logger.Infof("tvnode->main: init channel seed")
+	_, channelPubKey := light.GetSeedKey(channelSeed)
 
 	tb, err = tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
-		logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
+		light.Logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
 	tb.Start()
 	defer func() {
 		err = tb.Stop()
 		if err != nil {
-			logger.Errorf("tvnode->main: tb.Stop: %v", err)
+			light.Logger.Errorf("tvnode->main: tb.Stop: %v", err)
 		}
 	}()
 
-	logger.Infof("tvnode->main: init src user seed")
-	srcPrikey, srcPubkey := getSeedKey(srcSeed)
+	light.Logger.Infof("tvnode->main: init src user seed")
+	srcPrikey, srcPubkey := light.GetSeedKey(srcSeed)
 
 	err = startDmsg(srcPubkey, srcPrikey, tb)
 	if err != nil {
-		logger.Fatalf("tvnode->main: startDmsg error: %v", err)
+		light.Logger.Fatalf("tvnode->main: startDmsg error: %v", err)
 		return
 	}
 	defer func() {
 		err = dmsgService.Stop()
 		if err != nil {
-			logger.Errorf("tvnode->main: dmsgService.Stop: %v", err)
+			light.Logger.Errorf("tvnode->main: dmsgService.Stop: %v", err)
 		}
 	}()
 
 	// msgService
 	msgService := initMsgService(srcPrikey, destPrikey)
 	if err != nil {
-		logger.Fatalf("tvnode->main: initMsgService error: %v", err)
+		light.Logger.Fatalf("tvnode->main: initMsgService error: %v", err)
 		return
 	}
-	destPubkeyStr, err := getPubkey(destPubKey)
+	destPubkeyStr, err := light.GetPubkey(destPubKey)
 	if err != nil {
-		logger.Fatalf("tvnode->main: getPubkey error: %v", err)
+		light.Logger.Fatalf("tvnode->main: GetPubkey error: %v", err)
 	}
-	logger.Debugf("tvnode->main: destPubkeyStr: %v", destPubkeyStr)
+	light.Logger.Debugf("tvnode->main: destPubkeyStr: %v", destPubkeyStr)
 	err = msgService.SubscribeDestUser(destPubkeyStr)
 	if err != nil {
 		tb.SetTracerStatus(err)
-		logger.Fatalf("tvnode->main: SetTracerStatus error: %v", err)
+		light.Logger.Fatalf("tvnode->main: SetTracerStatus error: %v", err)
 	}
 
 	initMailService(srcPrikey, destPrikey)
@@ -134,18 +135,18 @@ func main() {
 	// publish channelService channel
 	channelService := initChannelService(srcPrikey, destPrikey)
 	if err != nil {
-		logger.Fatalf("tvnode->main: initChannelService error: %v", err)
+		light.Logger.Fatalf("tvnode->main: initChannelService error: %v", err)
 		return
 	}
-	channelPubkeyStr, err := getPubkey(channelPubKey)
+	channelPubkeyStr, err := light.GetPubkey(channelPubKey)
 	if err != nil {
-		logger.Fatalf("tvnode->main: getPubkey error: %v", err)
+		light.Logger.Fatalf("tvnode->main: GetPubkey error: %v", err)
 	}
-	logger.Debugf("tvnode->main: getPubkey channelPubkeyStr: %v", channelPubkeyStr)
+	light.Logger.Debugf("tvnode->main: GetPubkey channelPubkeyStr: %v", channelPubkeyStr)
 	err = channelService.SubscribeChannel(channelPubkeyStr)
 	if err != nil {
 		tb.SetTracerStatus(err)
-		logger.Fatalf("tvnode->main: getPubkey channelService SubscribeChannel error: %v", err)
+		light.Logger.Fatalf("tvnode->main: GetPubkey channelService SubscribeChannel error: %v", err)
 	}
 
 	// send msg to dest user with read from stdin
@@ -154,13 +155,13 @@ func main() {
 		for {
 			sendContent, err := reader.ReadString('\n')
 			if err != nil {
-				logger.Errorf("tvnode->main: read string error: %v", err)
+				light.Logger.Errorf("tvnode->main: read string error: %v", err)
 				continue
 			}
 			sendContent = sendContent[:len(sendContent)-1]
 			encrypedContent, err := crypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
 			if err != nil {
-				logger.Errorf("tvnode->main: encrypt error: %v", err)
+				light.Logger.Errorf("tvnode->main: encrypt error: %v", err)
 				continue
 			}
 
@@ -169,9 +170,9 @@ func main() {
 			// encrypedContent = []byte(sendContent)
 			sendMsgReq, err := dmsgService.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
-				logger.Errorf("tvnode->main: send msg: error: %v", err)
+				light.Logger.Errorf("tvnode->main: send msg: error: %v", err)
 			}
-			logger.Infof("tvnode->main: send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
+			light.Logger.Infof("tvnode->main: send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
 				sendMsgReq.BasicData.Pubkey,
 				sendMsgReq.DestPubkey,
 				sendMsgReq.BasicData.ID,
@@ -186,12 +187,12 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigCh
-		logger.Infof("tvnodelight->main: received interrupt signal: %v", sig)
+		light.Logger.Infof("tvnodelight->main: received interrupt signal: %v", sig)
 		cancel()
 	}()
 
 	<-ctx.Done()
-	logger.Info("tvnodelight->main: gracefully shut down")
+	light.Logger.Info("tvnodelight->main: gracefully shut down")
 }
 
 func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.MsgService {
@@ -203,23 +204,23 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
-				logger.Errorf("decrypt error: %v", err)
+				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		case msg.MsgDirection.From:
 			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
-				logger.Errorf("decrypt error: %v", err)
+				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		}
-		logger.Infof("msgOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		light.Logger.Infof("msgOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcPubkey, destPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}
 
 	msgOnResponse := func(requestPubkey string, requestDestPubkey string, responseDestPubkey string, responseContent []byte, timeStamp int64, msgID string,
 	) ([]byte, error) {
-		logger.Infof("OnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponseDestPubkey: %s, \nresponseContent: %s, time:%v, msgID: %s",
+		light.Logger.Infof("OnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponseDestPubkey: %s, \nresponseContent: %s, time:%v, msgID: %s",
 			requestPubkey, requestDestPubkey, responseDestPubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
 		return nil, nil
 	}
@@ -233,12 +234,12 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.ChannelService {
 	ret := dmsgService.GetChannelService()
 	channelOnRequest := func(requestPubkey string, requestDestPubkey string, requestContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
-		logger.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
+		light.Logger.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
 			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
 		return nil, nil
 	}
 	channelOnResponse := func(requestPubkey string, requestDestPubkey string, responsePubkey string, responseContent []byte, timeStamp int64, msgID string) ([]byte, error) {
-		logger.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v\nmsgID: %s",
+		light.Logger.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v\nmsgID: %s",
 			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
 		return nil, nil
 	}
@@ -256,16 +257,16 @@ func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) 
 			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
-				logger.Errorf("decrypt error: %v", err)
+				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		case msg.MsgDirection.From:
 			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, msgContent)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
-				logger.Errorf("decrypt error: %v", err)
+				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		}
-		logger.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
+		light.Logger.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
 			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
 		return nil, nil
 	}

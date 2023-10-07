@@ -1,4 +1,4 @@
-package main
+package light
 
 import (
 	"encoding/base64"
@@ -9,7 +9,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/identity"
 )
 
-func initConfig() (*config.TvbaseConfig, error) {
+func InitConfig() (*config.TvbaseConfig, error) {
 	ret := config.NewDefaultTvbaseConfig()
 	ret.InitMode(config.LightMode)
 
@@ -23,12 +23,12 @@ func initConfig() (*config.TvbaseConfig, error) {
 	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
 	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
 	peerId, _ := peer.IDFromPublicKey(publicKey)
-	logger.Infof("\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
+	Logger.Infof("nodeinfo:\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
 	ret.Identity.PrivKey = prikeyHex
 	return ret, nil
 }
 
-func setTestEnv(cfg *config.TvbaseConfig) {
+func SetTestEnv(cfg *config.TvbaseConfig) {
 	cfg.SetLocalNet(true)
 	cfg.SetMdns(false)
 	cfg.SetDhtProtocolPrefix("/tvnode_test")

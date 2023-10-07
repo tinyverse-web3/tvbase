@@ -1,4 +1,4 @@
-package main
+package light
 
 import (
 	"crypto/ecdsa"
@@ -16,20 +16,20 @@ func getKeyBySeed(seed string) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	return prikey, pubkey, nil
 }
 
-func getSeedKey(seed string) (prikey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey) {
+func GetSeedKey(seed string) (prikey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey) {
 	var err error
 	prikey, pubkey, err = getKeyBySeed(seed)
 	if err != nil {
-		logger.Fatalf("tvnode->main: getKeyBySeed error: %v", err)
+		Logger.Fatalf("tvnode->main: getKeyBySeed error: %v", err)
 	}
 	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(prikey))
 	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(pubkey))
-	logger.Infof("tvnode->main:\nseed: %s\nprikey: %s\npubkey: %s", seed, srcPrikeyHex, srcPubkeyHex)
+	Logger.Infof("tvnode->main:\nseed: %s\nprikey: %s\npubkey: %s", seed, srcPrikeyHex, srcPubkeyHex)
 
 	return prikey, pubkey
 }
 
-func getPubkey(pubkey *ecdsa.PublicKey) (string, error) {
+func GetPubkey(pubkey *ecdsa.PublicKey) (string, error) {
 	pubkeyData, err := key.ECDSAPublicKeyToProtoBuf(pubkey)
 	if err != nil {
 		return "", err
