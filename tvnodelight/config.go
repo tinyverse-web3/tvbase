@@ -10,15 +10,13 @@ import (
 )
 
 func initConfig() (*config.TvbaseConfig, error) {
-	ret := &config.TvbaseConfig{}
-	cfg := config.NewDefaultTvbaseConfig()
-	cfg.InitMode(config.LightMode)
+	ret := config.NewDefaultTvbaseConfig()
+	ret.InitMode(config.LightMode)
 
 	privateKey, prikeyHex, err := identity.GenIdenity()
 	if err != nil {
 		return nil, err
 	}
-
 	privateKeyData, _ := crypto.MarshalPrivateKey(privateKey)
 	privateKeyStr := base64.StdEncoding.EncodeToString(privateKeyData)
 	publicKey := privateKey.GetPublic()
@@ -26,9 +24,7 @@ func initConfig() (*config.TvbaseConfig, error) {
 	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
 	peerId, _ := peer.IDFromPublicKey(publicKey)
 	logger.Infof("\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
-
-	cfg.Identity.PrivKey = prikeyHex
-
+	ret.Identity.PrivKey = prikeyHex
 	return ret, nil
 }
 
