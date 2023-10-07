@@ -22,12 +22,15 @@ const (
 	defaultPath    = "~/" + defaultDirName
 )
 
+var isTestEnv = false
+
 func parseCmdParams() string {
-	init := flag.Bool("init", false, "init generate identity key and config file")
-	path := flag.String("path", defaultPath, "all data path")
-	shutdown := flag.Bool("shutdown", false, "shutdown daemon")
-	help := flag.Bool("help", false, "Display help")
-	peer := flag.Bool("peer", false, "Display peerID")
+	init := flag.Bool("init", false, "Initialize tvnode with default setting configuration file if not already initialized.")
+	path := flag.String("path", defaultPath, "Path to configuration file and data file to use.")
+	shutdown := flag.Bool("shutdown", false, "Shut down the daemon process.")
+	help := flag.Bool("help", false, "Show help.")
+	showpeer := flag.Bool("showpeer", false, "Show peer ID.")
+	test := flag.Bool("test", false, "Operate in test environment.")
 	flag.Parse()
 
 	if *help {
@@ -36,7 +39,12 @@ func parseCmdParams() string {
 		logger.Info("Usage step2: Run './tvnode' or './tvnode -path .' start tinyverse tvnode service.")
 		os.Exit(0)
 	}
-	if *peer {
+
+	if *test {
+		isTestEnv = *test
+	}
+
+	if *showpeer {
 		prikey, err := identity.LoadPrikey(tb.GetConfig().Identity.PrivKey)
 		if err != nil {
 			logger.Fatalf("LoadIdentity error: %v", err)
@@ -45,18 +53,18 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *init {
-		rooPath, err := tvbaseUtil.GetRootPath(*path)
+		rootPath, err := tvbaseUtil.GetRootPath(*path)
 		if err != nil {
 			logger.Fatalf("GetRootPath error: %v", err)
 		}
-		_, err = os.Stat(rooPath)
+		_, err = os.Stat(rootPath)
 		if os.IsNotExist(err) {
-			err := os.MkdirAll(rooPath, 0755)
+			err := os.MkdirAll(rootPath, 0755)
 			if err != nil {
 				logger.Fatalf("MkdirAll error: %v", err)
 			}
 		}
-		err = genConfigFile(rooPath, config.ServiceMode)
+		err = genConfigFile(rootPath, config.ServiceMode)
 		if err != nil {
 			logger.Fatalf("Failed to generate config file: %v", err)
 		}

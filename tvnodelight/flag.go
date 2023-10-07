@@ -5,13 +5,15 @@ import (
 	"os"
 )
 
-func parseCmdParams() (string, string, string, string) {
-	help := flag.Bool("help", false, "display help")
-	srcseed := flag.String("src", "", "src user pubkey")
-	destseed := flag.String("dest", "", "desc user pubkey")
-	channelseed := flag.String("channel", "", "channel pubkey")
-	path := flag.String("path", "", "all data path")
+var isTestEnv = false
 
+func parseCmdParams() (string, string, string, string) {
+	help := flag.Bool("help", false, "Show help.")
+	src := flag.String("src", "", "Set src user pubkey")
+	dest := flag.String("dest", "", "Set desc user pubkey")
+	channel := flag.String("channel", "", "Set channel pubkey")
+	path := flag.String("path", "", "Path to configuration file and data file to use.")
+	test := flag.Bool("test", false, "Operate in test environment.")
 	flag.Parse()
 
 	if *help {
@@ -20,16 +22,20 @@ func parseCmdParams() (string, string, string, string) {
 		os.Exit(0)
 	}
 
-	if *srcseed == "" {
+	if *test {
+		isTestEnv = *test
+	}
+
+	if *src == "" {
 		logger.Fatal("Please provide seed for generate src user seed for public key")
 	}
-	if *destseed == "" {
+	if *dest == "" {
 		logger.Fatal("Please provide seed for generate dest user seed for public key")
 	}
 
-	if *channelseed == "" {
+	if *channel == "" {
 		logger.Fatal("Please provide seed for generate channel seed for public key")
 	}
 
-	return *srcseed, *destseed, *channelseed, *path
+	return *src, *dest, *channel, *path
 }

@@ -39,13 +39,20 @@ func main() {
 		logger.Fatalf("tvnode->main: loadConfig: %v", err)
 	}
 
+	if cfg.Identity.PrivKey == "" {
+		err = cfg.GenPrivKey()
+		if err != nil {
+			logger.Fatalf("tvnode->main: GenPrivKey: %v", err)
+		}
+	}
+
+	if isTestEnv {
+		setTestEnv(cfg)
+	}
+
 	err = initLog()
 	if err != nil {
 		logger.Fatalf("tvnode->main: initLog: %v", err)
-	}
-
-	if false {
-		setTestEnv(cfg)
 	}
 
 	ctx := context.Background()

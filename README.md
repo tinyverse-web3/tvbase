@@ -23,19 +23,14 @@ go build
 ## start tvnode light
 cd ../tvnodelight
 go build
-# the cmd option -srcSeed represents the user ID of the sender, 
-# the cmd option -destSeed represents the receiving end user ID
-# thd cmd option -rootPath represents root path for identify.bin, config.json and data files
+# the cmd option -src represents the user ID of the sender, 
+# the cmd option -dest represents the receiving end user ID
+# thd cmd option -path represents root path for identify.bin, config.json and data files
 # run tvnodelight1 in a terminal
-./tvnodelight -srcSeed a -destSeed b -rootPath ./tvnodelight/tvnodelight1
+./tvnodelight -src a -dest b -path ./a
 # run tvnodelight2 in other terminal
-./tvnodelight -srcSeed b -destSeed a -rootPath ./tvnodelight/tvnodelight2
+./tvnodelight -src b -dest a -path ./b
 # finally, enter content through the terminal at the two terminals for message communication
-```
-
-## Getting started for dkvs
-```shell
-## start dkvs
 ```
 
 ## develope

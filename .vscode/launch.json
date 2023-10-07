@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/tvnodelight",
             "console": "integratedTerminal",
-            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./"]
+            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test"]
         },
         {
             "name": "tvnodelight-b-a",
@@ -20,7 +20,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/tvnodelight",
             "console": "integratedTerminal",
-            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./"]
+            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test"]
         },
         {
             "name": "tvnode",
@@ -29,7 +29,7 @@
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-path", "./"]
+            "args": ["-path", "./", "-test"]
         },
         {
             "name": "tvnode-init",
@@ -47,7 +47,7 @@
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-path", "./", "-peer"]
+            "args": ["-path", "./", "-showpeer"]
         },
     ]
 }

@@ -1,12 +1,15 @@
 package config
 
 import (
+	"encoding/base64"
 	"time"
 
 	"github.com/ipfs/kubo/config"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	relayv2 "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
+	"github.com/tinyverse-web3/tvbase/common/identity"
 )
 
 type NodeMode int32
@@ -298,4 +301,27 @@ func (cfg *TvbaseConfig) SetMdns(enable bool) {
 
 func (cfg *TvbaseConfig) SetDhtProtocolPrefix(prefix string) {
 	cfg.DHT.ProtocolPrefix = prefix
+}
+
+func (cfg *TvbaseConfig) SetPrivKeyStr(prikey string) {
+	cfg.Identity.PrivKey = prikey
+}
+
+func (cfg *TvbaseConfig) SetPrivKey(prikey crypto.PrivKey) error {
+	data, err := crypto.MarshalPrivateKey(prikey)
+	if err != nil {
+		return err
+	}
+
+	cfg.Identity.PrivKey = base64.StdEncoding.EncodeToString(data)
+	return nil
+}
+
+func (cfg *TvbaseConfig) GenPrivKey() error {
+	_, prikeyHex, err := identity.GenIdenity()
+	if err != nil {
+		return err
+	}
+	cfg.Identity.PrivKey = prikeyHex
+	return nil
 }

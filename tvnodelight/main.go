@@ -61,7 +61,14 @@ func main() {
 		logger.Fatalf("tvnode->main: initConfig: %v", err)
 	}
 
-	if false {
+	if cfg.Identity.PrivKey == "" {
+		err = cfg.GenPrivKey()
+		if err != nil {
+			logger.Fatalf("tvnode->main: GenPrivKey: %v", err)
+		}
+	}
+
+	if isTestEnv {
 		setTestEnv(cfg)
 	}
 
@@ -80,7 +87,7 @@ func main() {
 
 	tb, err = tvbase.NewTvbase(ctx, cfg, rootPath)
 	if err != nil {
-		logger.Fatalf("NewTvbase error: %v", err)
+		logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
 	tb.Start()
 	defer func() {
@@ -95,7 +102,7 @@ func main() {
 
 	err = startDmsg(srcPubkey, srcPrikey, tb)
 	if err != nil {
-		logger.Fatalf("startDmsgService error: %v", err)
+		logger.Fatalf("tvnode->main: startDmsg error: %v", err)
 		return
 	}
 	defer func() {
@@ -108,18 +115,18 @@ func main() {
 	// msgService
 	msgService := initMsgService(srcPrikey, destPrikey)
 	if err != nil {
-		logger.Fatalf("initMsgService error: %v", err)
+		logger.Fatalf("tvnode->main: initMsgService error: %v", err)
 		return
 	}
 	destPubkeyStr, err := getPubkey(destPubKey)
 	if err != nil {
-		logger.Fatalf("msgService getPubkey error: %v", err)
+		logger.Fatalf("tvnode->main: getPubkey error: %v", err)
 	}
-	logger.Debugf("destPubkeyStr: %v", destPubkeyStr)
+	logger.Debugf("tvnode->main: destPubkeyStr: %v", destPubkeyStr)
 	err = msgService.SubscribeDestUser(destPubkeyStr)
 	if err != nil {
 		tb.SetTracerStatus(err)
-		logger.Fatalf("SubscribeDestUser error: %v", err)
+		logger.Fatalf("tvnode->main: SetTracerStatus error: %v", err)
 	}
 
 	initMailService(srcPrikey, destPrikey)
@@ -127,18 +134,18 @@ func main() {
 	// publish channelService channel
 	channelService := initChannelService(srcPrikey, destPrikey)
 	if err != nil {
-		logger.Fatalf("initChannelService error: %v", err)
+		logger.Fatalf("tvnode->main: initChannelService error: %v", err)
 		return
 	}
 	channelPubkeyStr, err := getPubkey(channelPubKey)
 	if err != nil {
-		logger.Fatalf("channelService getPubkey error: %v", err)
+		logger.Fatalf("tvnode->main: getPubkey error: %v", err)
 	}
-	logger.Debugf("channelPubkeyStr: %v", channelPubkeyStr)
+	logger.Debugf("tvnode->main: getPubkey channelPubkeyStr: %v", channelPubkeyStr)
 	err = channelService.SubscribeChannel(channelPubkeyStr)
 	if err != nil {
 		tb.SetTracerStatus(err)
-		logger.Fatalf("channelService SubscribeChannel error: %v", err)
+		logger.Fatalf("tvnode->main: getPubkey channelService SubscribeChannel error: %v", err)
 	}
 
 	// send msg to dest user with read from stdin
@@ -147,13 +154,13 @@ func main() {
 		for {
 			sendContent, err := reader.ReadString('\n')
 			if err != nil {
-				logger.Errorf("read string error: %v", err)
+				logger.Errorf("tvnode->main: read string error: %v", err)
 				continue
 			}
 			sendContent = sendContent[:len(sendContent)-1]
 			encrypedContent, err := crypto.EncryptWithPubkey(destPubKey, []byte(sendContent))
 			if err != nil {
-				logger.Errorf("encrypt error: %v", err)
+				logger.Errorf("tvnode->main: encrypt error: %v", err)
 				continue
 			}
 
@@ -162,9 +169,9 @@ func main() {
 			// encrypedContent = []byte(sendContent)
 			sendMsgReq, err := dmsgService.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
-				logger.Errorf("send msg: error: %v", err)
+				logger.Errorf("tvnode->main: send msg: error: %v", err)
 			}
-			logger.Infof("send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
+			logger.Infof("tvnode->main: send msg done->\nsrcPubKey:%v\ndestPubkey:%v\nid:%s, protocolID:%v, timestamp:%v,\nmsg:%v",
 				sendMsgReq.BasicData.Pubkey,
 				sendMsgReq.DestPubkey,
 				sendMsgReq.BasicData.ID,
