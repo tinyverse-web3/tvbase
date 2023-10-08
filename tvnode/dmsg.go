@@ -75,11 +75,11 @@ func (d *DmsgService) Start(
 	if err != nil {
 		return err
 	}
-	err = d.msgService.Start(enableService, pubkeyData, getSig, timeout, true)
+	err = d.msgService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
-	err = d.channelService.Start(enableService, pubkeyData, getSig, timeout, false)
+	err = d.channelService.Start(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}

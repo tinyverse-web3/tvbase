@@ -38,7 +38,6 @@ func (d *MsgService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
-	enableLightUserPubsub bool,
 ) error {
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 	ctx := d.TvBase.GetCtx()
@@ -47,9 +46,13 @@ func (d *MsgService) Start(
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(enableService, pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol, enableLightUserPubsub)
+	err := d.ProxyPubsubService.Start(pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol, true)
 	if err != nil {
 		return err
+	}
+
+	if enableService {
+		d.CleanRestPubsub(12 * time.Hour)
 	}
 
 	log.Debug("MsgService->Start end")
@@ -98,13 +101,8 @@ func (d *MsgService) OnPubsubMsgRequest(
 		msgDirection = msg.MsgDirection.To
 		log.Debugf("MsgService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID")
 	} else if request.DestPubkey != d.LightUser.Key.PubkeyHex {
-		log.Errorf(
-			"MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
+		log.Warnf("MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
 			d.LightUser.Key.PubkeyHex)
-		return nil, nil, true,
-			fmt.Errorf(
-				"MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
-				d.LightUser.Key.PubkeyHex)
 	}
 
 	if d.OnMsgRequest != nil {
@@ -122,7 +120,7 @@ func (d *MsgService) OnPubsubMsgRequest(
 		if err != nil {
 			retCode = &pb.RetCode{
 				Code:   dmsgProtocol.AlreadyExistCode,
-				Result: "MsgService->OnPubsubMsgRequest: " + err.Error(),
+				Result: "MsgService->OnPubsubMsgRequest: OnMsgRequest error: " + err.Error(),
 			}
 		}
 		return responseContent, retCode, false, nil
@@ -137,8 +135,7 @@ func (d *MsgService) OnPubsubMsgRequest(
 func (d *MsgService) OnPubsubMsgResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debugf(
-		"MsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
+	log.Debugf("MsgService->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
 	request, ok := requestProtoData.(*pb.MsgReq)
@@ -187,8 +184,8 @@ func (d *MsgService) OnPubsubMsgResponse(
 // DmsgService
 func (d *MsgService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
 	var target *dmsgUser.Target
-	if d.ProxyPubsubList[pubkey] != nil {
-		target = &d.ProxyPubsubList[pubkey].Target
+	if d.PubsubList[pubkey] != nil {
+		target = &d.PubsubList[pubkey].Target
 	} else if d.LightUser.Key.PubkeyHex == pubkey {
 		target = &d.LightUser.Target
 	}

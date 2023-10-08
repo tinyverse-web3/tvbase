@@ -40,7 +40,6 @@ type MailboxService struct {
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
-	enableService         bool
 }
 
 func CreateService(tvbaseService define.TvBaseService) (*MailboxService, error) {
@@ -69,8 +68,8 @@ func (d *MailboxService) Start(
 	timeout time.Duration,
 ) error {
 	log.Debugf("MailboxService->Start begin\nenableService: %v", enableService)
-	d.enableService = enableService
-	if d.enableService {
+
+	if enableService {
 		var err error
 		cfg := d.BaseService.TvBase.GetConfig()
 		filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
@@ -84,9 +83,9 @@ func (d *MailboxService) Start(
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, d.enableService)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, d.enableService)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, d.enableService)
+	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, enableService)
+	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, enableService)
+	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, enableService)
 
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
@@ -94,17 +93,21 @@ func (d *MailboxService) Start(
 	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 
-	if d.enableService {
+	if enableService {
 		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	}
 	// user
-	err := d.initUser(pubkeyData, getSig, timeout)
+	err := d.initUser(enableService, pubkeyData, getSig, timeout)
 	if err != nil {
 		return err
 	}
 
-	d.cleanRestResource()
+	d.stopCleanRestResource = make(chan bool)
+	if enableService {
+		d.cleanRestServiceUser(12 * time.Hour)
+	}
+	d.tickReadMailbox(3 * time.Second)
 	log.Debug("MailboxService->Start end")
 	return nil
 }
@@ -397,7 +400,7 @@ func (d *MailboxService) OnReadMailboxResponse(
 	for _, msg := range msgList {
 		log.Debugf("MailboxService->OnReadMailboxResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
 		if d.onReadMsg != nil {
-			d.onReadMsg(msg)
+			d.onReadMsg(&msg)
 		} else {
 			log.Warnf("MailboxService->OnReadMailboxResponse: callback func onReadMailmsg is nil")
 		}
@@ -465,16 +468,14 @@ func (d *MailboxService) OnPubsubMsgRequest(
 		return nil, nil, true, nil
 	}
 
-	if d.enableService {
-		pubkey := request.BasicData.Pubkey
-		user := d.getServiceUser(pubkey)
-		if user == nil {
-			log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
-			return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
-		}
-		user.LastTimestamp = time.Now().UnixNano()
-		d.saveMsg(requestProtoData)
+	pubkey := request.BasicData.Pubkey
+	user := d.getServiceUser(pubkey)
+	if user == nil {
+		log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
+		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 	}
+	user.LastTimestamp = time.Now().UnixNano()
+	d.saveMsg(requestProtoData)
 
 	log.Debugf("MailboxService->OnPubsubMsgRequest end")
 	return nil, nil, true, nil
@@ -492,56 +493,58 @@ func (d *MailboxService) OnPubsubMsgResponse(
 }
 
 // common
-func (d *MailboxService) cleanRestResource() {
+func (d *MailboxService) cleanRestServiceUser(dur time.Duration) {
 	go func() {
-		d.stopCleanRestResource = make(chan bool)
-		if d.enableService {
-			serviceTicker := time.NewTicker(12 * time.Hour)
-			defer serviceTicker.Stop()
-			for {
-				select {
-				case <-d.stopCleanRestResource:
-					return
-				case <-serviceTicker.C:
-					for pubkey, pubsub := range d.serviceUserList {
-						days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
-						// delete mailbox msg in datastore and unsubscribe mailbox when days is over, default days is 30
-						if days >= d.GetConfig().KeepMailboxDay {
-							var query = query.Query{
-								Prefix:   d.getMsgPrefix(pubkey),
-								KeysOnly: true,
-							}
-							user := d.getServiceUser(pubkey)
-							if user == nil {
-								log.Errorf("MailboxService->cleanRestResource: cannot find user for pubkey: %s", pubkey)
-								continue
-							}
-							go func() {
-								user.MsgRWMutex.Lock()
-								defer user.MsgRWMutex.Unlock()
-								results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
-								if err != nil {
-
-									log.Errorf("MailboxService->cleanRestResource: query error: %v", err)
-								}
-
-								for result := range results.Next() {
-									err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
-									if err != nil {
-										log.Errorf("MailboxService->cleanRestResource: datastore.Delete error: %+v", err)
-									}
-									log.Debugf("MailboxService->cleanRestResource: delete msg by key:%v", string(result.Key))
-								}
-							}()
-							d.unsubscribeServiceUser(pubkey)
+		serviceTicker := time.NewTicker(dur)
+		defer serviceTicker.Stop()
+		for {
+			select {
+			case <-d.stopCleanRestResource:
+				return
+			case <-serviceTicker.C:
+				for pubkey, pubsub := range d.serviceUserList {
+					days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
+					// delete mailbox msg in datastore and unsubscribe mailbox when days is over
+					if days >= d.GetConfig().KeepMailboxDay {
+						var query = query.Query{
+							Prefix:   d.getMsgPrefix(pubkey),
+							KeysOnly: true,
 						}
+						user := d.getServiceUser(pubkey)
+						if user == nil {
+							log.Errorf("MailboxService->cleanRestServiceUser: cannot find user for pubkey: %s", pubkey)
+							continue
+						}
+						func() {
+							user.MsgRWMutex.Lock()
+							defer user.MsgRWMutex.Unlock()
+							results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
+							if err != nil {
+
+								log.Errorf("MailboxService->cleanRestServiceUser: query error: %v", err)
+							}
+
+							for result := range results.Next() {
+								err = d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(result.Key))
+								if err != nil {
+									log.Errorf("MailboxService->cleanRestServiceUser: datastore.Delete error: %+v", err)
+								}
+								log.Debugf("MailboxService->cleanRestServiceUser: delete msg by key:%v", string(result.Key))
+							}
+						}()
+						d.unsubscribeServiceUser(pubkey)
 					}
-					continue
-				case <-d.TvBase.GetCtx().Done():
-					return
 				}
+				continue
+			case <-d.TvBase.GetCtx().Done():
+				return
 			}
 		}
+	}()
+}
+
+func (d *MailboxService) tickReadMailbox(dur time.Duration) {
+	go func() {
 		lightTicker := time.NewTicker(3 * time.Minute)
 		defer lightTicker.Stop()
 		for {
@@ -549,27 +552,18 @@ func (d *MailboxService) cleanRestResource() {
 			case <-d.stopCleanRestResource:
 				return
 			case <-lightTicker.C:
-				if d.lightMailboxUser == nil {
-					log.Errorf("MailboxService->ReadMailbox: user is nil")
-					continue
-				}
-				if d.lightMailboxUser.ServicePeerID == "" {
-					log.Errorf("MailboxService->ReadMailbox: servicePeerID is empty")
-					continue
-				}
 				_, err := d.readMailbox(
 					d.lightMailboxUser.ServicePeerID,
 					d.lightMailboxUser.Key.PubkeyHex,
 					30*time.Second, true)
 				if err != nil {
-					log.Errorf("MailboxService->cleanRestResource: readMailbox error: %v", err)
+					log.Errorf("MailboxService->tickReadMailbox: readMailbox error: %v", err)
 					continue
 				}
 			case <-d.TvBase.GetCtx().Done():
 				return
 			}
 		}
-
 	}()
 }
 
@@ -632,6 +626,7 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 
 // user
 func (d *MailboxService) initUser(
+	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
@@ -643,7 +638,7 @@ func (d *MailboxService) initUser(
 		return err
 	}
 
-	if !d.enableService {
+	if !enableService {
 		if d.TvBase.GetIsRendezvous() {
 			return d.initMailbox(pubkey)
 		} else {

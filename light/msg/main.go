@@ -249,27 +249,27 @@ func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKe
 }
 
 func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) {
-	mailOnRequest := func(srcUserPubkey string, destUserPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
+	mailOnRequest := func(message *msg.Msg) ([]byte, error) {
 		decrypedContent := []byte("")
 		var err error
-		switch direction {
+		switch message.Direction {
 		case msg.MsgDirection.To:
-			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, msgContent)
+			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, message.Content)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
 				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		case msg.MsgDirection.From:
-			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, msgContent)
+			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, message.Content)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
 				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		}
 		light.Logger.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			srcUserPubkey, destUserPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+			message.SrcPubkey, message.DestPubkey, string(decrypedContent), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
 
-	dmsgService.GetMailboxService().SetOnMsgRequest(mailOnRequest)
+	dmsgService.GetMailboxService().SetOnReadMsg(mailOnRequest)
 }

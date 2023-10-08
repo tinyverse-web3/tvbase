@@ -30,7 +30,7 @@ type Msg struct {
 	Direction  string
 }
 
-type OnReadMsg func(msg Msg) ([]byte, error)
+type OnReadMsg func(msg *Msg) ([]byte, error)
 
 type OnMsgRequest func(
 	srcPubkey string,

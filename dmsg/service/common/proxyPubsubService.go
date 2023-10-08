@@ -23,13 +23,12 @@ type ProxyPubsubService struct {
 	LightUserService
 	createPubsubProtocol  *dmsgProtocol.CreatePubsubSProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
-	ProxyPubsubList       map[string]*dmsgUser.ProxyPubsub
+	PubsubList            map[string]*dmsgUser.ProxyPubsub
 	OnMsgRequest          msg.OnMsgRequest
 	OnMsgResponse         msg.OnMsgResponse
 	stopCleanRestResource chan bool
 	maxPubsubCount        int
 	keepPubsubDay         int
-	enableService         bool
 }
 
 func (d *ProxyPubsubService) Init(
@@ -42,26 +41,19 @@ func (d *ProxyPubsubService) Init(
 	}
 	d.maxPubsubCount = maxPubsubCount
 	d.keepPubsubDay = keepPubsubDay
-	d.ProxyPubsubList = make(map[string]*dmsgUser.ProxyPubsub)
+	d.PubsubList = make(map[string]*dmsgUser.ProxyPubsub)
 	return nil
 }
 
 // sdk-common
 func (d *ProxyPubsubService) Start(
-	enableService bool,
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
 	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
 	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol,
-	enableLightUserPubsub bool,
+	isListenPubsubMsg bool,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
-	d.enableService = enableService
-	err := d.LightUserService.Start(pubkeyData, getSig, enableLightUserPubsub)
-	if err != nil {
-		return err
-	}
-
 	// stream protocol
 	d.createPubsubProtocol = createPubsubProtocol
 
@@ -69,7 +61,12 @@ func (d *ProxyPubsubService) Start(
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// light user
-	if enableLightUserPubsub {
+	err := d.LightUserService.Start(pubkeyData, getSig, isListenPubsubMsg)
+	if err != nil {
+		return err
+	}
+
+	if isListenPubsubMsg {
 		err = d.HandlePubsubProtocol(&d.LightUser.Target)
 		if err != nil {
 			log.Errorf("ProxyPubsubService->Start: HandlePubsubProtocol error: %v", err)
@@ -77,7 +74,6 @@ func (d *ProxyPubsubService) Start(
 		}
 	}
 
-	d.cleanRestResource()
 	log.Debug("ProxyPubsubService->Start end")
 	return nil
 }
@@ -102,7 +98,7 @@ func (d *ProxyPubsubService) Stop() error {
 }
 
 func (d *ProxyPubsubService) GetProxyPubsub(pubkey string) *dmsgUser.ProxyPubsub {
-	return d.ProxyPubsubList[pubkey]
+	return d.PubsubList[pubkey]
 }
 
 func (d *ProxyPubsubService) SubscribePubsub(
@@ -113,7 +109,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 ) error {
 	log.Debugf("ProxyPubsubService->SubscribePubsub begin:\npubkey: %s", pubkey)
 
-	if d.ProxyPubsubList[pubkey] != nil {
+	if d.PubsubList[pubkey] != nil {
 		log.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
 		return fmt.Errorf("ProxyPubsubService->SubscribePubsub: pubkey is already exist in ProxyPubsubList")
 	}
@@ -159,7 +155,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 		}
 	}
 
-	d.ProxyPubsubList[pubkey] = proxyPubsub
+	d.PubsubList[pubkey] = proxyPubsub
 	log.Debug("ProxyPubsubService->SubscribePubsub end")
 	return nil
 }
@@ -167,7 +163,7 @@ func (d *ProxyPubsubService) SubscribePubsub(
 func (d *ProxyPubsubService) UnsubscribePubsub(pubkey string) error {
 	log.Debugf("ProxyPubsubService->UnsubscribePubsub begin\npubKey: %s", pubkey)
 
-	proxyPubsub := d.ProxyPubsubList[pubkey]
+	proxyPubsub := d.PubsubList[pubkey]
 	if proxyPubsub == nil {
 		log.Errorf("ProxyPubsubService->UnsubscribePubsub: proxyPubsub is nil")
 		return fmt.Errorf("ProxyPubsubService->UnsubscribePubsub: proxyPubsub is nil")
@@ -176,14 +172,14 @@ func (d *ProxyPubsubService) UnsubscribePubsub(pubkey string) error {
 	if err != nil {
 		log.Warnf("ProxyPubsubService->UnsubscribePubsub: proxyPubsub.Close error: %v", err)
 	}
-	delete(d.ProxyPubsubList, pubkey)
+	delete(d.PubsubList, pubkey)
 
 	log.Debug("ProxyPubsubService->UnsubscribePubsub end")
 	return nil
 }
 
 func (d *ProxyPubsubService) UnsubscribePubsubList() error {
-	for pubkey := range d.ProxyPubsubList {
+	for pubkey := range d.PubsubList {
 		d.UnsubscribePubsub(pubkey)
 	}
 	return nil
@@ -234,12 +230,12 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 	if !isAvailable {
 		return nil, nil, false, errors.New("ProxyPubsubService->OnCreatePubusubRequest: exceeded the maximum number of mailbox service")
 	}
-	proxyPubsub := d.ProxyPubsubList[pubsubKey]
-	if proxyPubsub != nil {
-		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: proxyPubsub already exist")
+	pubsub := d.PubsubList[pubsubKey]
+	if pubsub != nil {
+		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: pubsub already exist")
 		retCode := &pb.RetCode{
 			Code:   dmsgProtocol.AlreadyExistCode,
-			Result: "ProxyPubsubService->OnCreatePubusubRequest: proxyPubsub already exist",
+			Result: "ProxyPubsubService->OnCreatePubusubRequest: pubsub already exist",
 		}
 		return nil, retCode, false, nil
 	}
@@ -249,15 +245,13 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 		return nil, nil, false, err
 	}
 
-	log.Debugf("ProxyPubsubService->OnCreatePubusubRequest end")
+	log.Debug("ProxyPubsubService->OnCreatePubusubRequest end")
 	return nil, nil, false, nil
 }
 
 func (d *ProxyPubsubService) OnCreatePubsubResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debugf("ProxyPubsubService->OnCreatePubsubResponse: begin")
-	log.Debugf("ProxyPubsubService->OnCreatePubsubResponse: end")
 	return nil, nil
 }
 
@@ -357,35 +351,33 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 	return nil
 }
 
-func (d *ProxyPubsubService) cleanRestResource() {
+func (d *ProxyPubsubService) CleanRestPubsub(dur time.Duration) {
 	go func() {
-		if d.enableService {
-			d.stopCleanRestResource = make(chan bool)
-			ticker := time.NewTicker(12 * time.Hour)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-d.stopCleanRestResource:
-					return
-				case <-ticker.C:
-					for pubkey, pubsub := range d.ProxyPubsubList {
-						days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
-						if pubsub.AutoClean && days >= d.keepPubsubDay {
-							d.UnsubscribePubsub(pubkey)
-							continue
-						}
+		d.stopCleanRestResource = make(chan bool)
+		ticker := time.NewTicker(dur)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-d.stopCleanRestResource:
+				return
+			case <-ticker.C:
+				for pubkey, pubsub := range d.PubsubList {
+					days := dmsgCommonUtil.DaysBetween(pubsub.LastTimestamp, time.Now().UnixNano())
+					if pubsub.AutoClean && days >= d.keepPubsubDay {
+						d.UnsubscribePubsub(pubkey)
+						continue
 					}
-					continue
-				case <-d.TvBase.GetCtx().Done():
-					return
 				}
+				continue
+			case <-d.TvBase.GetCtx().Done():
+				return
 			}
 		}
 	}()
 }
 
 func (d *ProxyPubsubService) isAvailablePubsub() bool {
-	len := len(d.ProxyPubsubList)
+	len := len(d.PubsubList)
 	if len >= d.maxPubsubCount {
 		log.Warnf("ProxyPubsubService->isAvailablePubsub: exceeded the maximum number of mailbox services, current destUserCount:%v", len)
 		return false

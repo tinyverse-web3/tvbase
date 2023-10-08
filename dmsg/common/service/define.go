@@ -60,7 +60,6 @@ type MsgService interface {
 		pubkeyData []byte,
 		getSig dmsgKey.GetSigCallback,
 		timeout time.Duration,
-		enableLightUserPubsub bool,
 	) error
 }
 
@@ -76,7 +75,6 @@ type ChannelService interface {
 		pubkeyData []byte,
 		getSig dmsgKey.GetSigCallback,
 		timeout time.Duration,
-		enableLightUserPubsub bool,
 	) error
 }
 

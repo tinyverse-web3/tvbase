@@ -19,9 +19,9 @@ type LightUserService struct {
 func (d *LightUserService) Start(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
-	enableUserPubsub bool,
+	enablePubsub bool,
 ) error {
-	return d.initUser(pubkeyData, getSig, enableUserPubsub)
+	return d.initUser(pubkeyData, getSig, enablePubsub)
 }
 
 func (d *LightUserService) Stop() error {
@@ -61,11 +61,11 @@ func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, er
 func (d *LightUserService) initUser(
 	pubkeyData []byte,
 	getSig dmsgKey.GetSigCallback,
-	enableUserPubsub bool,
+	enablePubsub bool,
 ) error {
 	lightUserLog.Debug("LightUserService->InitUser begin")
 	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
-	err := d.subscribeUser(pubkey, getSig, enableUserPubsub)
+	err := d.subscribeUser(pubkey, getSig, enablePubsub)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (d *LightUserService) initUser(
 func (d *LightUserService) subscribeUser(
 	pubkey string,
 	getSig dmsgKey.GetSigCallback,
-	enableUserPubsub bool,
+	enablePubsub bool,
 ) error {
 	lightUserLog.Debugf("LightUserService->subscribeUser begin\npubkey: %s", pubkey)
 	if d.LightUser != nil {
@@ -91,7 +91,7 @@ func (d *LightUserService) subscribeUser(
 		return err
 	}
 
-	if enableUserPubsub {
+	if enablePubsub {
 		err = target.InitPubsub(pubkey)
 		if err != nil {
 			lightUserLog.Errorf("LightUserService->subscribeUser: InitPubsub error: %v", err)

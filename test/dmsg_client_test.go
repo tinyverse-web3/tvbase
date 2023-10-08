@@ -18,6 +18,7 @@ import (
 	"github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
@@ -108,18 +109,14 @@ func TestPubsubMsg(t *testing.T) {
 
 	// set src user msg receive callback
 	onReceiveMsg := func(
-		srcUserPubkey string,
-		destUserPubkey string,
-		msgContent []byte,
-		timeStamp int64,
-		msgID string,
-		direction string) ([]byte, error) {
+		message *msg.Msg,
+	) ([]byte, error) {
 		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
-			srcUserPubkey, destUserPubkey, string(msgContent), time.Unix(timeStamp, 0), direction)
+			message.SrcPubkey, message.DestPubkey, string(message.Content), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
 	dmsg.GetMsgService().SetOnMsgRequest(onReceiveMsg)
-	dmsg.GetMailboxService().SetOnMsgRequest(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnReadMsg(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
