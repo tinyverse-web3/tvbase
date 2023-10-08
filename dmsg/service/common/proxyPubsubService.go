@@ -205,7 +205,7 @@ func (d *ProxyPubsubService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
 	d.OnReceiveMsg = cb
 }
 
-func (d *ProxyPubsubService) SetOnMsgResponse(cb msg.OnRespondMsg) {
+func (d *ProxyPubsubService) SetOnRespondMsg(cb msg.OnRespondMsg) {
 	d.OnResponseMsg = cb
 }
 

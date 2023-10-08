@@ -225,7 +225,7 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 
 	ret := dmsgService.GetMsgService()
 	ret.SetOnReceiveMsg(msgOnRequest)
-	ret.SetOnMsgResponse(msgOnResponse)
+	ret.SetOnRespondMsg(msgOnResponse)
 	return ret
 }
 
@@ -240,7 +240,7 @@ func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKe
 		return nil, nil
 	}
 	ret.SetOnReceiveMsg(channelOnRequest)
-	ret.SetOnMsgResponse(channelOnResponse)
+	ret.SetOnRespondMsg(channelOnResponse)
 	return ret
 }
 
