@@ -27,7 +27,7 @@ var isTestEnv = false
 func parseCmdParams() string {
 	init := flag.Bool("init", false, "Initialize tvnode with default setting configuration file if not already initialized.")
 	path := flag.String("path", defaultPath, "Path to configuration file and data file to use.")
-	shutdown := flag.Bool("shutdown", false, "Shut down the daemon process.")
+	shutdown := flag.Bool("shutdown", false, "Shutdown the daemon process.")
 	help := flag.Bool("help", false, "Show help.")
 	showpeer := flag.Bool("showpeer", false, "Show peer ID.")
 	test := flag.Bool("test", false, "Operate in test environment.")
