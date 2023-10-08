@@ -60,7 +60,11 @@ func (d *MsgService) Start(
 }
 
 func (d *MsgService) GetDestUser(pubkey string) *dmsgUser.ProxyPubsub {
-	return d.GetProxyPubsub(pubkey)
+	return d.GetPubsub(pubkey)
+}
+
+func (d *MsgService) IsExistDestUser(pubkey string) bool {
+	return d.GetPubsub(pubkey) != nil
 }
 
 func (d *MsgService) SubscribeDestUser(pubkey string) error {

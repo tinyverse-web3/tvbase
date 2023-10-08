@@ -97,7 +97,7 @@ func (d *ProxyPubsubService) Stop() error {
 	return nil
 }
 
-func (d *ProxyPubsubService) GetProxyPubsub(pubkey string) *dmsgUser.ProxyPubsub {
+func (d *ProxyPubsubService) GetPubsub(pubkey string) *dmsgUser.ProxyPubsub {
 	return d.PubsubList[pubkey]
 }
 

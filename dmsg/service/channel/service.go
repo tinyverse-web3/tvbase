@@ -59,7 +59,11 @@ func (d *ChannelService) Start(
 }
 
 func (d *ChannelService) GetChannel(pubkey string) *dmsgUser.ProxyPubsub {
-	return d.GetProxyPubsub(pubkey)
+	return d.GetPubsub(pubkey)
+}
+
+func (d *ChannelService) IsExistChannel(pubkey string) bool {
+	return d.GetPubsub(pubkey) != nil
 }
 
 func (d *ChannelService) SubscribeChannel(pubkey string) error {

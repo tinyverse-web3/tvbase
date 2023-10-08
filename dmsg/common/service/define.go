@@ -49,6 +49,7 @@ type MailboxService interface {
 
 type MsgService interface {
 	CommonService
+	IsExistDestUser(pubkey string) bool
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
@@ -65,6 +66,8 @@ type MsgService interface {
 
 type ChannelService interface {
 	CommonService
+	IsExistChannel(pubkey string) bool
+	GetChannel(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeChannel(pubkey string) error
 	UnsubscribeChannel(pubkey string) error
 	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
