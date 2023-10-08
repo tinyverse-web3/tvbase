@@ -30,16 +30,18 @@ type Msg struct {
 	Direction  string
 }
 
+type OnReadMailmsg func(msg Msg) ([]byte, error)
+
 type OnMsgRequest func(
-	requestPubkey string,
-	requestDestPubkey string,
-	requestContent []byte,
+	srcPubkey string,
+	destPubkey string,
+	content []byte,
 	timeStamp int64,
 	msgID string,
 	direction string) ([]byte, error)
 
 type OnMsgResponse func(
-	requestPubkey string,
+	requestSrcPubkey string,
 	requestDestPubkey string,
 	responseDestPubkey string,
 	responseContent []byte,

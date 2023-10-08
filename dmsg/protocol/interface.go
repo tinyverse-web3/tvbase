@@ -31,9 +31,9 @@ type MailboxSpCallback interface {
 	OnCreateMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
-	OnReadMailboxMsgRequest(
+	OnReadMailboxRequest(
 		requestProtoMsg protoreflect.ProtoMessage) (any, any, bool, error)
-	OnReadMailboxMsgResponse(
+	OnReadMailboxResponse(
 		requestProtoMsg protoreflect.ProtoMessage,
 		responseProtoMsg protoreflect.ProtoMessage) (any, error)
 	OnReleaseMailboxRequest(

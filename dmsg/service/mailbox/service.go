@@ -36,7 +36,7 @@ type MailboxService struct {
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
-	onMsgRequest          msg.OnMsgRequest
+	onReadMailmsg         msg.OnReadMailmsg
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -130,8 +130,8 @@ func (d *MailboxService) Stop() error {
 	return nil
 }
 
-func (d *MailboxService) SetOnMsgRequest(onMsgRequest msg.OnMsgRequest) {
-	d.onMsgRequest = onMsgRequest
+func (d *MailboxService) SetOnReadMailmsg(cb msg.OnReadMailmsg) {
+	d.onReadMailmsg = cb
 }
 
 // sdk-msg
@@ -303,12 +303,12 @@ func (d *MailboxService) OnReleaseMailboxResponse(
 	return nil, nil
 }
 
-func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	log.Debugf("MailboxService->OnReadMailboxMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	log.Debugf("MailboxService->OnReadMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.ReadMailboxReq)
 	if !ok {
-		log.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
-		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxMsgRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+		log.Errorf("MailboxService->OnReadMailboxRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
+		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
 	}
 
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
@@ -319,8 +319,8 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	pubkey := request.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
-		log.Errorf("MailboxService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
-		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxMsgRequest: cannot find user for pubkey: %s", pubkey)
+		log.Errorf("MailboxService->OnReadMailboxRequest: cannot find user for pubkey: %s", pubkey)
+		return nil, nil, false, fmt.Errorf("MailboxService->OnReadMailboxRequest: cannot find user for pubkey: %s", pubkey)
 	}
 
 	var query = query.Query{
@@ -364,46 +364,46 @@ func (d *MailboxService) OnReadMailboxMsgRequest(requestProtoData protoreflect.P
 	for _, needDeleteKey := range needDeleteKeyList {
 		err := d.datastore.Delete(d.TvBase.GetCtx(), datastore.NewKey(needDeleteKey))
 		if err != nil {
-			log.Errorf("MailboxService->OnReadMailboxMsgRequest: datastore.Delete error: %+v", err)
+			log.Errorf("MailboxService->OnReadMailboxRequest: datastore.Delete error: %+v", err)
 		}
 	}
 
 	if !find {
-		log.Debug("MailboxService->OnReadMailboxMsgRequest: user msgs is empty")
+		log.Debug("MailboxService->OnReadMailboxRequest: user msgs is empty")
 	}
 	user.LastTimestamp = time.Now().UnixNano()
-	log.Debugf("MailboxService->OnReadMailboxMsgRequest end")
+	log.Debugf("MailboxService->OnReadMailboxRequest end")
 	return requestParam, nil, false, nil
 }
 
-func (d *MailboxService) OnReadMailboxMsgResponse(
+func (d *MailboxService) OnReadMailboxResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debugf("MailboxService->OnReadMailboxMsgResponse: begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
+	log.Debugf("MailboxService->OnReadMailboxResponse: begin\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
 
 	response, ok := responseProtoData.(*pb.ReadMailboxRes)
 	if response == nil || !ok {
-		log.Errorf("MailboxService->OnReadMailboxMsgResponse: fail to convert responseProtoData to *pb.ReadMailboxMsgRes")
-		return nil, fmt.Errorf("MailboxService->OnReadMailboxMsgResponse: fail to convert responseProtoData to *pb.ReadMailboxMsgRes")
+		log.Errorf("MailboxService->OnReadMailboxResponse: fail to convert responseProtoData to *pb.ReadMailboxMsgRes")
+		return nil, fmt.Errorf("MailboxService->OnReadMailboxResponse: fail to convert responseProtoData to *pb.ReadMailboxMsgRes")
 	}
 
-	log.Debugf("MailboxService->OnReadMailboxMsgResponse: found (%d) new message", len(response.ContentList))
+	log.Debugf("MailboxService->OnReadMailboxResponse: found (%d) new message", len(response.ContentList))
 
 	msgList, err := d.parseReadMailboxResponse(responseProtoData, msg.MsgDirection.From)
 	if err != nil {
 		return nil, err
 	}
 	for _, msg := range msgList {
-		log.Debugf("MailboxService->OnReadMailboxMsgResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
-		if d.onMsgRequest != nil {
-			d.onMsgRequest(msg.SrcPubkey, msg.DestPubkey, msg.Content, msg.TimeStamp, msg.ID, msg.Direction)
+		log.Debugf("MailboxService->OnReadMailboxResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
+		if d.onReadMailmsg != nil {
+			d.onReadMailmsg(msg)
 		} else {
-			log.Errorf("MailboxService->OnReadMailboxMsgResponse: onMsgRequest is nil")
+			log.Warnf("MailboxService->OnReadMailboxResponse: callback func onReadMailmsg is nil")
 		}
 	}
 
-	log.Debug("MailboxService->OnReadMailboxMsgResponse end")
+	log.Debug("MailboxService->OnReadMailboxResponse end")
 	return nil, nil
 }
 

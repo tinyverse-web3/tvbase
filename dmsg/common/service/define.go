@@ -37,7 +37,7 @@ type CommonService interface {
 
 type MailboxService interface {
 	CommonService
-	SetOnMsgRequest(cb msg.OnMsgRequest)
+	SetOnReadMailmsg(cb msg.OnReadMailmsg)
 	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
 	Start(
 		enableService bool,

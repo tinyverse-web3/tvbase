@@ -16,40 +16,40 @@ type ReadMailRequestParam struct {
 	ExistData bool
 }
 
-type ReadMailboxMsgProtocolAdapter struct {
+type ReadMailboxProtocolAdapter struct {
 	AbstructProtocolAdapter
 	protocol *dmsgProtocol.MailboxSProtocol
 }
 
-func NewReadMailboxMsgProtocolAdapter() *ReadMailboxMsgProtocolAdapter {
-	ret := &ReadMailboxMsgProtocolAdapter{}
+func NewReadMailboxMsgProtocolAdapter() *ReadMailboxProtocolAdapter {
+	ret := &ReadMailboxProtocolAdapter{}
 	return ret
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetRequestPID() pb.PID {
+func (adapter *ReadMailboxProtocolAdapter) GetRequestPID() pb.PID {
 	return pb.PID_READ_MAILBOX_REQ
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetResponsePID() pb.PID {
+func (adapter *ReadMailboxProtocolAdapter) GetResponsePID() pb.PID {
 	return pb.PID_READ_MAILBOX_RES
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamRequestPID() protocol.ID {
+func (adapter *ReadMailboxProtocolAdapter) GetStreamRequestPID() protocol.ID {
 	return dmsgProtocol.PidReadMailboxMsgReq
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetStreamResponsePID() protocol.ID {
+func (adapter *ReadMailboxProtocolAdapter) GetStreamResponsePID() protocol.ID {
 	return dmsgProtocol.PidReadMailboxMsgRes
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+func (adapter *ReadMailboxProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
 	return &pb.ReadMailboxReq{}
 }
-func (adapter *ReadMailboxMsgProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+func (adapter *ReadMailboxProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
 	return &pb.ReadMailboxRes{}
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(
+func (adapter *ReadMailboxProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	request := &pb.ReadMailboxReq{
@@ -69,7 +69,7 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitRequest(
 	return request, nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
+func (adapter *ReadMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
@@ -95,16 +95,16 @@ func (adapter *ReadMailboxMsgProtocolAdapter) InitResponse(
 	return response, nil
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallRequestCallback(
+func (adapter *ReadMailboxProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
-	data, retCode, abort, err := adapter.protocol.Callback.OnReadMailboxMsgRequest(requestProtoData)
+	data, retCode, abort, err := adapter.protocol.Callback.OnReadMailboxRequest(requestProtoData)
 	return data, retCode, abort, err
 }
 
-func (adapter *ReadMailboxMsgProtocolAdapter) CallResponseCallback(
+func (adapter *ReadMailboxProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	data, err := adapter.protocol.Callback.OnReadMailboxMsgResponse(requestProtoData, responseProtoData)
+	data, err := adapter.protocol.Callback.OnReadMailboxResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
