@@ -36,7 +36,7 @@ type MailboxService struct {
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
-	onReadMsg             msg.OnReadMsg
+	onReceiveMsg          msg.OnReceiveMsg
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -133,12 +133,12 @@ func (d *MailboxService) Stop() error {
 	return nil
 }
 
-func (d *MailboxService) SetOnReadMsg(cb msg.OnReadMsg) {
-	d.onReadMsg = cb
+func (d *MailboxService) SetOnReceiveMsg(cb msg.OnReceiveMsg) {
+	d.onReceiveMsg = cb
 }
 
 // sdk-msg
-func (d *MailboxService) ReadMailbox(timeout time.Duration) ([]msg.Msg, error) {
+func (d *MailboxService) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error) {
 	if d.lightMailboxUser == nil {
 		log.Errorf("MailboxService->ReadMailbox: user is nil")
 		return nil, fmt.Errorf("MailboxService->ReadMailbox: user is nil")
@@ -398,9 +398,9 @@ func (d *MailboxService) OnReadMailboxResponse(
 		return nil, err
 	}
 	for _, msg := range msgList {
-		log.Debugf("MailboxService->OnReadMailboxResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
-		if d.onReadMsg != nil {
-			d.onReadMsg(&msg)
+		log.Debugf("MailboxService->OnReadMailboxResponse: From = %s, To = %s", msg.ReqPubkey, msg.DestPubkey)
+		if d.onReceiveMsg != nil {
+			d.onReceiveMsg(&msg)
 		} else {
 			log.Warnf("MailboxService->OnReadMailboxResponse: callback func onReadMailmsg is nil")
 		}
@@ -872,8 +872,8 @@ func (d *MailboxService) readMailbox(
 	pubkey string,
 	timeout time.Duration,
 	clearMode bool,
-) ([]msg.Msg, error) {
-	var msgList []msg.Msg
+) ([]msg.ReceiveMsg, error) {
+	var msgList []msg.ReceiveMsg
 	peerID, err := peer.Decode(peerIdHex)
 	if err != nil {
 		log.Errorf("MailboxService->readMailbox: fail to decode peer id: %v", err)
@@ -946,9 +946,9 @@ func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, pubkey string, t
 	return nil
 }
 
-func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect.ProtoMessage, direction string) ([]msg.Msg, error) {
+func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect.ProtoMessage, direction string) ([]msg.ReceiveMsg, error) {
 	log.Debugf("MailboxService->parseReadMailboxResponse begin:\nresponseProtoData: %v", responseProtoData)
-	msgList := []msg.Msg{}
+	msgList := []msg.ReceiveMsg{}
 	response, ok := responseProtoData.(*pb.ReadMailboxRes)
 	if response == nil || !ok {
 		log.Errorf("MailboxService->parseReadMailboxResponse: fail to convert to *pb.ReadMailboxMsgRes")
@@ -975,9 +975,9 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 		srcPubkey := fields[msg.MsgDestUserPubKeyIndex]
 		msgID := fields[msg.MsgIDIndex]
 
-		msgList = append(msgList, msg.Msg{
+		msgList = append(msgList, msg.ReceiveMsg{
 			ID:         msgID,
-			SrcPubkey:  srcPubkey,
+			ReqPubkey:  srcPubkey,
 			DestPubkey: destPubkey,
 			Content:    msgContent,
 			TimeStamp:  timeStamp,

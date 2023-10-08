@@ -108,15 +108,13 @@ func TestPubsubMsg(t *testing.T) {
 	}
 
 	// set src user msg receive callback
-	onReceiveMsg := func(
-		message *msg.Msg,
-	) ([]byte, error) {
+	onReceiveMsg := func(message *msg.ReceiveMsg) ([]byte, error) {
 		testLog.Infof("srcUserPubkey: %s, destUserPubkey: %s, msgContent: %s， time:%v, direction: %s",
-			message.SrcPubkey, message.DestPubkey, string(message.Content), time.Unix(message.TimeStamp, 0), message.Direction)
+			message.ReqPubkey, message.DestPubkey, string(message.Content), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
-	dmsg.GetMsgService().SetOnMsgRequest(onReceiveMsg)
-	dmsg.GetMailboxService().SetOnReadMsg(onReceiveMsg)
+	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {

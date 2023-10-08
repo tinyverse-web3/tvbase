@@ -19,4 +19,7 @@ const (
 	PidCreateMsgPubsubRes = "/tvbase/dmsg/createMsgPubsub/res/" + ProtocolVersion
 )
 
-const AlreadyExistCode = 1
+const (
+	ErrCode          = -1
+	AlreadyExistCode = 1
+)

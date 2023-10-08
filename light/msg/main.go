@@ -196,60 +196,56 @@ func main() {
 }
 
 func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.MsgService {
-	msgOnRequest := func(srcPubkey string, destPubkey string, msgContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
+	msgOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
 		var err error
 		decrypedContent := []byte("")
-		switch direction {
+		switch message.Direction {
 		case msg.MsgDirection.To:
-			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, msgContent)
+			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, message.Content)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
 				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		case msg.MsgDirection.From:
-			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, msgContent)
+			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, message.Content)
 			if err != nil {
 				decrypedContent = []byte(err.Error())
 				light.Logger.Errorf("decrypt error: %v", err)
 			}
 		}
 		light.Logger.Infof("msgOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			srcPubkey, destPubkey, string(decrypedContent), time.Unix(timeStamp, 0), direction)
+			message.ReqPubkey, message.DestPubkey, string(decrypedContent), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
 
-	msgOnResponse := func(requestPubkey string, requestDestPubkey string, responseDestPubkey string, responseContent []byte, timeStamp int64, msgID string,
-	) ([]byte, error) {
-		light.Logger.Infof("OnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponseDestPubkey: %s, \nresponseContent: %s, time:%v, msgID: %s",
-			requestPubkey, requestDestPubkey, responseDestPubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
+	msgOnResponse := func(message *msg.RespondMsg) ([]byte, error) {
+		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 		return nil, nil
 	}
 
 	ret := dmsgService.GetMsgService()
-	ret.SetOnMsgRequest(msgOnRequest)
+	ret.SetOnReceiveMsg(msgOnRequest)
 	ret.SetOnMsgResponse(msgOnResponse)
 	return ret
 }
 
 func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.ChannelService {
 	ret := dmsgService.GetChannelService()
-	channelOnRequest := func(requestPubkey string, requestDestPubkey string, requestContent []byte, timeStamp int64, msgID string, direction string) ([]byte, error) {
-		light.Logger.Infof("channelOnRequest-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nrequestContent: %s, time:%v, direction: %s\nmsgId: %s",
-			requestPubkey, requestDestPubkey, string(requestContent), time.Unix(timeStamp, 0), direction, msgID)
+	channelOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
+		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 		return nil, nil
 	}
-	channelOnResponse := func(requestPubkey string, requestDestPubkey string, responsePubkey string, responseContent []byte, timeStamp int64, msgID string) ([]byte, error) {
-		light.Logger.Infof("channelOnMsgResponse-> \nrequestPubkey: %s, \nrequestDestPubkey: %s, \nresponsePubkey: %s, \nresponseContent: %s, time:%v\nmsgID: %s",
-			requestPubkey, requestDestPubkey, responsePubkey, string(responseContent), time.Unix(timeStamp, 0), msgID)
+	channelOnResponse := func(message *msg.RespondMsg) ([]byte, error) {
+		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 		return nil, nil
 	}
-	ret.SetOnMsgRequest(channelOnRequest)
+	ret.SetOnReceiveMsg(channelOnRequest)
 	ret.SetOnMsgResponse(channelOnResponse)
 	return ret
 }
 
 func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) {
-	mailOnRequest := func(message *msg.Msg) ([]byte, error) {
+	mailOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
 		decrypedContent := []byte("")
 		var err error
 		switch message.Direction {
@@ -267,9 +263,9 @@ func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) 
 			}
 		}
 		light.Logger.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			message.SrcPubkey, message.DestPubkey, string(decrypedContent), time.Unix(message.TimeStamp, 0), message.Direction)
+			message.ReqPubkey, message.DestPubkey, string(decrypedContent), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
 
-	dmsgService.GetMailboxService().SetOnReadMsg(mailOnRequest)
+	dmsgService.GetMailboxService().SetOnReceiveMsg(mailOnRequest)
 }

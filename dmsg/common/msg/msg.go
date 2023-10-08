@@ -21,29 +21,26 @@ var MsgDirection = MsgDirectionStruct{
 	To:   "to",
 }
 
-type Msg struct {
+type ReceiveMsg struct {
 	ID         string
-	SrcPubkey  string
+	ReqPubkey  string
 	DestPubkey string
 	Content    []byte
 	TimeStamp  int64
 	Direction  string
 }
 
-type OnReadMsg func(msg *Msg) ([]byte, error)
+type RespondMsg struct {
+	ReqMsgID      string
+	ReqPubkey     string
+	ReqDestPubkey string
+	ReqTimeStamp  int64
+	RespMsgID     string
+	RespPubkey    string
+	RespContent   []byte
+	RespTimeStamp int64
+}
 
-type OnMsgRequest func(
-	srcPubkey string,
-	destPubkey string,
-	content []byte,
-	timeStamp int64,
-	msgID string,
-	direction string) ([]byte, error)
+type OnReceiveMsg func(msg *ReceiveMsg) ([]byte, error)
 
-type OnMsgResponse func(
-	requestSrcPubkey string,
-	requestDestPubkey string,
-	responseDestPubkey string,
-	responseContent []byte,
-	timeStamp int64,
-	msgID string) ([]byte, error)
+type OnRespondMsg func(msg *RespondMsg) ([]byte, error)

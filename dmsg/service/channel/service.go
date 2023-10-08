@@ -102,31 +102,29 @@ func (d *ChannelService) OnPubsubMsgRequest(
 	// 	return nil, nil, true, nil
 	// }
 
-	destPubkey := request.DestPubkey
-	proxyPubsub := d.PubsubList[destPubkey]
-	if proxyPubsub == nil && d.LightUser.Key.PubkeyHex != destPubkey {
+	proxyPubsub := d.PubsubList[request.DestPubkey]
+	if proxyPubsub == nil && d.LightUser.Key.PubkeyHex != request.DestPubkey {
 		log.Debugf("ChannelService->OnPubsubMsgRequest: lightUser/channel pubkey is not exist")
 		return nil, nil, true, fmt.Errorf("ChannelService->OnPubsubMsgRequest: lightUser/channel pubkey is not exist")
 	}
 
-	var retCode *pb.RetCode = nil
-	var responseContent []byte = nil
-	if d.OnMsgRequest != nil {
-		srcPubkey := request.BasicData.Pubkey
-		destPubkey := request.DestPubkey
-		msgDirection := msg.MsgDirection.From
+	var retCode *pb.RetCode
+	var responseContent []byte
+	if d.OnReceiveMsg != nil {
+		message := &msg.ReceiveMsg{
+			ID:         request.BasicData.ID,
+			ReqPubkey:  request.BasicData.Pubkey,
+			DestPubkey: request.DestPubkey,
+			Content:    request.Content,
+			TimeStamp:  request.BasicData.TS,
+			Direction:  msg.MsgDirection.From,
+		}
 		var err error
-		responseContent, err = d.OnMsgRequest(
-			srcPubkey,
-			destPubkey,
-			request.Content,
-			request.BasicData.TS,
-			request.BasicData.ID,
-			msgDirection)
+		responseContent, err = d.OnReceiveMsg(message)
 
 		if err != nil {
 			retCode = &pb.RetCode{
-				Code:   dmsgProtocol.AlreadyExistCode,
+				Code:   dmsgProtocol.ErrCode,
 				Result: "ChannelService->OnPubsubMsgRequest: " + err.Error(),
 			}
 		}
@@ -162,21 +160,28 @@ func (d *ChannelService) OnPubsubMsgResponse(
 		log.Warnf("ChannelService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("ChannelService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
-		if d.OnMsgResponse != nil {
-			requestPubkey := ""
-			requestDestPubkey := ""
+		if d.OnResponseMsg != nil {
+			reqPubkey := ""
+			reqDestPubkey := ""
+			reqMsgID := ""
+			reqTimeStamp := int64(0)
 			if request != nil {
-				requestPubkey = request.BasicData.Pubkey
-				requestDestPubkey = request.DestPubkey
+				reqMsgID = request.BasicData.ID
+				reqPubkey = request.BasicData.Pubkey
+				reqDestPubkey = request.DestPubkey
+				reqTimeStamp = request.BasicData.TS
 			}
-			d.OnMsgResponse(
-				requestPubkey,
-				requestDestPubkey,
-				response.BasicData.Pubkey,
-				response.Content,
-				response.BasicData.TS,
-				response.BasicData.ID,
-			)
+			message := &msg.RespondMsg{
+				ReqMsgID:      reqMsgID,
+				ReqPubkey:     reqPubkey,
+				ReqDestPubkey: reqDestPubkey,
+				ReqTimeStamp:  reqTimeStamp,
+				RespMsgID:     response.BasicData.ID,
+				RespPubkey:    response.BasicData.Pubkey,
+				RespContent:   response.Content,
+				RespTimeStamp: response.BasicData.TS,
+			}
+			d.OnResponseMsg(message)
 		} else {
 			log.Debugf("ChannelService->OnPubsubMsgRequest: onSendMsgResponse is nil")
 		}

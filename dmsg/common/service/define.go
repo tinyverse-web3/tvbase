@@ -37,8 +37,8 @@ type CommonService interface {
 
 type MailboxService interface {
 	CommonService
-	SetOnReadMsg(cb msg.OnReadMsg)
-	ReadMailbox(timeout time.Duration) ([]msg.Msg, error)
+	SetOnReceiveMsg(cb msg.OnReceiveMsg)
+	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
 	Start(
 		enableService bool,
 		pubkeyData []byte,
@@ -52,8 +52,8 @@ type MsgService interface {
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string) error
 	UnsubscribeDestUser(pubkey string) error
-	SetOnMsgRequest(onMsgReceive msg.OnMsgRequest)
-	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
+	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
+	SetOnMsgResponse(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 	Start(
 		enableService bool,
@@ -67,8 +67,8 @@ type ChannelService interface {
 	CommonService
 	SubscribeChannel(pubkey string) error
 	UnsubscribeChannel(pubkey string) error
-	SetOnMsgRequest(onMsgRequest msg.OnMsgRequest)
-	SetOnMsgResponse(onMsgResponse msg.OnMsgResponse)
+	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
+	SetOnMsgResponse(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 	Start(
 		enableService bool,

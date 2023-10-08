@@ -96,40 +96,39 @@ func (d *MsgService) OnPubsubMsgRequest(
 		return nil, nil, true, fmt.Errorf("MsgService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	msgDirection := msg.MsgDirection.From
+	direction := msg.MsgDirection.From
 	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		msgDirection = msg.MsgDirection.To
+		direction = msg.MsgDirection.To
 		log.Debugf("MsgService->OnPubsubMsgRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID")
 	} else if request.DestPubkey != d.LightUser.Key.PubkeyHex {
 		log.Warnf("MsgService->OnPubsubMsgRequest: LightUser pubkey isn't equal to destPubkey, d.LightUser.Key.PubkeyHex: %s",
 			d.LightUser.Key.PubkeyHex)
 	}
 
-	if d.OnMsgRequest != nil {
-		requestPubkey := request.BasicData.Pubkey
-		requestDestPubkey := request.DestPubkey
-
-		responseContent, err := d.OnMsgRequest(
-			requestPubkey,
-			requestDestPubkey,
-			request.Content,
-			request.BasicData.TS,
-			request.BasicData.ID,
-			msgDirection)
-		var retCode *pb.RetCode
+	var responseContent []byte
+	var retCode *pb.RetCode
+	if d.OnReceiveMsg != nil {
+		message := &msg.ReceiveMsg{
+			ID:         request.BasicData.ID,
+			ReqPubkey:  request.BasicData.Pubkey,
+			DestPubkey: request.DestPubkey,
+			Content:    request.Content,
+			TimeStamp:  request.BasicData.TS,
+			Direction:  direction,
+		}
+		var err error
+		responseContent, err = d.OnReceiveMsg(message)
 		if err != nil {
 			retCode = &pb.RetCode{
-				Code:   dmsgProtocol.AlreadyExistCode,
+				Code:   dmsgProtocol.ErrCode,
 				Result: "MsgService->OnPubsubMsgRequest: OnMsgRequest error: " + err.Error(),
 			}
 		}
-		return responseContent, retCode, false, nil
 	} else {
 		log.Warnf("MsgService->OnPubsubMsgRequest: OnReceiveMsg is nil")
 	}
-
 	log.Debugf("MsgService->OnPubsubMsgRequest end")
-	return nil, nil, false, nil
+	return responseContent, retCode, false, nil
 }
 
 func (d *MsgService) OnPubsubMsgResponse(
@@ -158,23 +157,30 @@ func (d *MsgService) OnPubsubMsgResponse(
 		log.Warnf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 		return nil, fmt.Errorf("MsgService->OnPubsubMsgResponse: fail RetCode: %+v", response.RetCode)
 	} else {
-		if d.OnMsgResponse != nil {
-			requestPubkey := ""
-			requestDestPubkey := ""
+		if d.OnResponseMsg != nil {
+			reqPubkey := ""
+			reqDestPubkey := ""
+			reqMsgID := ""
+			reqTimeStamp := int64(0)
 			if request != nil {
-				requestPubkey = request.BasicData.Pubkey
-				requestDestPubkey = request.DestPubkey
+				reqMsgID = request.BasicData.ID
+				reqPubkey = request.BasicData.Pubkey
+				reqDestPubkey = request.DestPubkey
+				reqTimeStamp = request.BasicData.TS
 			}
-			d.OnMsgResponse(
-				requestPubkey,
-				requestDestPubkey,
-				response.BasicData.Pubkey,
-				response.Content,
-				response.BasicData.TS,
-				response.BasicData.ID,
-			)
+			message := &msg.RespondMsg{
+				ReqMsgID:      reqMsgID,
+				ReqPubkey:     reqPubkey,
+				ReqDestPubkey: reqDestPubkey,
+				ReqTimeStamp:  reqTimeStamp,
+				RespMsgID:     response.BasicData.ID,
+				RespPubkey:    response.BasicData.Pubkey,
+				RespContent:   response.Content,
+				RespTimeStamp: response.BasicData.TS,
+			}
+			d.OnResponseMsg(message)
 		} else {
-			log.Debugf("MsgService->OnPubsubMsgResponse: onSendMsgResponse is nil")
+			log.Debugf("MsgService->OnPubsubMsgResponse: OnResponseMsg is nil")
 		}
 	}
 	log.Debugf("MsgService->OnPubsubMsgResponse end")
