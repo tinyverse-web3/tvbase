@@ -43,4 +43,4 @@ type RespondMsg struct {
 
 type OnReceiveMsg func(msg *ReceiveMsg) ([]byte, error)
 
-type OnRespondMsg func(msg *RespondMsg) ([]byte, error)
+type OnRespondMsg func(msg *RespondMsg)

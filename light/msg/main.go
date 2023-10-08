@@ -218,9 +218,8 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 		return nil, nil
 	}
 
-	msgOnResponse := func(message *msg.RespondMsg) ([]byte, error) {
+	msgOnResponse := func(message *msg.RespondMsg) {
 		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
-		return nil, nil
 	}
 
 	ret := dmsgService.GetMsgService()
@@ -235,9 +234,8 @@ func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKe
 		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 		return nil, nil
 	}
-	channelOnResponse := func(message *msg.RespondMsg) ([]byte, error) {
+	channelOnResponse := func(message *msg.RespondMsg) {
 		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
-		return nil, nil
 	}
 	ret.SetOnReceiveMsg(channelOnRequest)
 	ret.SetOnRespondMsg(channelOnResponse)
