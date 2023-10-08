@@ -120,10 +120,6 @@ func genConfigFile(rootPath string, mode config.NodeMode) error {
 	}
 	if cfg == nil {
 		cfg = defaultCfg
-	} else {
-		if err != nil {
-			return err
-		}
 	}
 	cfg.InitMode(mode)
 	cfg.Identity.PrivKey = prikeyHex
