@@ -36,7 +36,7 @@ type MailboxService struct {
 	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
 	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
-	onReadMailmsg         msg.OnReadMailmsg
+	onReadMsg             msg.OnReadMsg
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -130,8 +130,8 @@ func (d *MailboxService) Stop() error {
 	return nil
 }
 
-func (d *MailboxService) SetOnReadMailmsg(cb msg.OnReadMailmsg) {
-	d.onReadMailmsg = cb
+func (d *MailboxService) SetOnReadMsg(cb msg.OnReadMsg) {
+	d.onReadMsg = cb
 }
 
 // sdk-msg
@@ -396,8 +396,8 @@ func (d *MailboxService) OnReadMailboxResponse(
 	}
 	for _, msg := range msgList {
 		log.Debugf("MailboxService->OnReadMailboxResponse: From = %s, To = %s", msg.SrcPubkey, msg.DestPubkey)
-		if d.onReadMailmsg != nil {
-			d.onReadMailmsg(msg)
+		if d.onReadMsg != nil {
+			d.onReadMsg(msg)
 		} else {
 			log.Warnf("MailboxService->OnReadMailboxResponse: callback func onReadMailmsg is nil")
 		}
