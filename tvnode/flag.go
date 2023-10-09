@@ -26,11 +26,12 @@ var isTestEnv = false
 
 func parseCmdParams() string {
 	init := flag.Bool("init", false, "Initialize tvnode with default setting configuration file if not already initialized.")
+	mode := flag.String("mode", "service", "Initialize tvnode mode for service mode or light mode.")
 	path := flag.String("path", defaultPath, "Path to configuration file and data file to use.")
 	shutdown := flag.Bool("shutdown", false, "Shutdown the daemon process.")
 	help := flag.Bool("help", false, "Show help.")
 	showpeer := flag.Bool("showpeer", false, "Show peer ID.")
-	test := flag.Bool("test", false, "Operate in test environment.")
+	test := flag.Bool("test", false, "Run in test environment for different config, example bootstrap node...")
 	flag.Parse()
 
 	if *help {
@@ -53,18 +54,23 @@ func parseCmdParams() string {
 		os.Exit(0)
 	}
 	if *init {
-		rootPath, err := tvbaseUtil.GetRootPath(*path)
+		nodeMode := config.ServiceMode
+		if *mode == "light" {
+			nodeMode = config.LightMode
+		}
+
+		dataPath, err := tvbaseUtil.GetRootPath(*path)
 		if err != nil {
 			logger.Fatalf("GetRootPath error: %v", err)
 		}
-		_, err = os.Stat(rootPath)
+		_, err = os.Stat(dataPath)
 		if os.IsNotExist(err) {
-			err := os.MkdirAll(rootPath, 0755)
+			err := os.MkdirAll(dataPath, 0755)
 			if err != nil {
 				logger.Fatalf("MkdirAll error: %v", err)
 			}
 		}
-		err = genConfigFile(rootPath, config.ServiceMode)
+		err = genConfigFile(dataPath, nodeMode)
 		if err != nil {
 			logger.Fatalf("Failed to generate config file: %v", err)
 		}
