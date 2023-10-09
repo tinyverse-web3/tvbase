@@ -34,6 +34,10 @@ type BaseService struct {
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 }
 
+func init() {
+	waitMessageList = make(map[string]*waitMessage)
+}
+
 func (d *BaseService) Init(baseService define.TvBaseService) error {
 	d.TvBase = baseService
 	var err error
@@ -41,7 +45,6 @@ func (d *BaseService) Init(baseService define.TvBaseService) error {
 		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
-	waitMessageList = make(map[string]*waitMessage)
 	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
 	return nil
 }

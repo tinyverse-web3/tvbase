@@ -25,6 +25,7 @@ const (
 var isTestEnv = false
 var nodeMode config.NodeMode = config.ServiceMode
 var pkseed *string
+var bootpeer *string
 
 func parseCmdParams() string {
 	init := flag.Bool("init", false, "Initialize tvnode with default setting configuration file if not already initialized.")
@@ -35,6 +36,7 @@ func parseCmdParams() string {
 	showpeer := flag.Bool("showpeer", false, "Show peer ID.")
 	test := flag.Bool("test", false, "Run in test environment for different config, example bootstrap node...")
 	pkseed = flag.String("pkseed", "", "Seed for generating peer private key in test environment.")
+	bootpeer = flag.String("bootpeer", "", "Set bootstrap peerID in test environment.")
 	flag.Parse()
 
 	if *help {

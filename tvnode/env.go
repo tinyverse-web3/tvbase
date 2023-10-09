@@ -22,9 +22,6 @@ func setTestEnv(cfg *config.TvbaseConfig) error {
 			"/ip4/0.0.0.0/tcp/" + "0",
 			"/ip6/::/tcp/" + "0",
 		}
-		cfg.SetPrivKeyStr("CAESQOVslnc19q6dtCdQlIO7dqp9DGsd7pzt3xERVboQ40d613YL+ED0VgGMAZ/eCRmlAa3hhTsphsqSjvRTMjJaKP0=")
-		cfg.ClearBootstrapPeers()
-		cfg.AddBootstrapPeer("/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWFET1qH5xgeg3QrQm5NAMtvSJbKECH3AyBFQBghPZ8R2M")
 	case config.ServiceMode:
 		cfg.Network.ListenAddrs = []string{
 			"/ip4/0.0.0.0/udp/" + "9000" + "/quic",
@@ -32,8 +29,6 @@ func setTestEnv(cfg *config.TvbaseConfig) error {
 			"/ip4/0.0.0.0/tcp/" + "9000",
 			"/ip6/::/tcp/" + "9000",
 		}
-		cfg.SetPrivKeyStr("CAESQAo+pk645TCLemsAAPed3HuwOxCEnvTfp9IGJ7umqgE0UHXalXwaL8WagndTHAViieVzuOd0GJy1Bzp0elDZrAY=")
-		cfg.ClearBootstrapPeers()
 	}
 
 	if pkseed != nil {
@@ -56,25 +51,10 @@ func setTestEnv(cfg *config.TvbaseConfig) error {
 		logger.Infof("test identity:\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
 	}
 
+	cfg.ClearBootstrapPeers()
+	if bootpeer != nil {
+		cfg.AddBootstrapPeer(*bootpeer)
+	}
+
 	return nil
 }
-
-/*
-./tvnode -init -path "."
-privateKey: CAESQAo+pk645TCLemsAAPed3HuwOxCEnvTfp9IGJ7umqgE0UHXalXwaL8WagndTHAViieVzuOd0GJy1Bzp0elDZrAY=
-publicKey: CAESIFB12pV8Gi/FmoJ3UxwFYonlc7jndBictQc6dHpQ2awG
-peerId: 12D3KooWFET1qH5xgeg3QrQm5NAMtvSJbKECH3AyBFQBghPZ8R2M
-
-privateKey: CAESQOVslnc19q6dtCdQlIO7dqp9DGsd7pzt3xERVboQ40d613YL+ED0VgGMAZ/eCRmlAa3hhTsphsqSjvRTMjJaKP0=
-publicKey: CAESINd2C/hA9FYBjAGf3gkZpQGt4YU7KYbKko70UzIyWij9
-peerId: 12D3KooWQKSE15nnzRhEjC44JLGKJjCk7Zuqa8xKp8np8bXrUMKJ
-
-privateKey: CAESQHXYP9L8tCrfSrNckCsEfzXVHoTIqN//NLoRTagS2+1dpd+Cq3yuARouN1vwqaBNIXJHUHgejf8/WEEqy3Oonqk=
-publicKey: CAESIKXfgqt8rgEaLjdb8KmgTSFyR1B4Ho3/P1hBKstzqJ6p
-peerId: 12D3KooWLys7VNJqikW41xmEiZczuf7PN5tJ4DKDGPbUE8c9Am2x
-
-privateKey: CAESQD+OKGdG56I/1di6X0Q1jVgbM+a9qoEH871mMtiUOpu2sRYeDj1y172cSMUwI4Qwz1j9JYBVTVUaCvwYQc2ocTM=
-publicKey: CAESILEWHg49cte9nEjFMCOEMM9Y/SWAVU1VGgr8GEHNqHEz
-peerId: 12D3KooWMjdth95DnXU4rALF3TY3F9GUWgfVAGXRFsvUfKAVV75t
-
-*/

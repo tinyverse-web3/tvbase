@@ -11,7 +11,8 @@
             "mode": "auto",
             "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "node1"]
+            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "lightnode1", 
+            "bootpeer", "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWFET1qH5xgeg3QrQm5NAMtvSJbKECH3AyBFQBghPZ8R2M"]
         },
         {
             "name": "tvnodelight-test-b-a",
@@ -20,7 +21,8 @@
             "mode": "auto",
             "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "node1"]
+            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "lightnode2", 
+            "bootpeer", "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWFET1qH5xgeg3QrQm5NAMtvSJbKECH3AyBFQBghPZ8R2M"]
         },
         {
             "name": "tvnode-service-test-run",
@@ -29,7 +31,7 @@
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-path", "./", "-test"]
+            "args": ["-path", "./", "-test", "-pkseed", "servicenode1"]
         },
         {
             "name": "tvnode-service-product-run",

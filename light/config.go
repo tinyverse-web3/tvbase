@@ -42,9 +42,6 @@ func SetTestEnv(cfg *config.TvbaseConfig) error {
 			"/ip4/0.0.0.0/tcp/" + "0",
 			"/ip6/::/tcp/" + "0",
 		}
-		cfg.SetPrivKeyStr("CAESQOVslnc19q6dtCdQlIO7dqp9DGsd7pzt3xERVboQ40d613YL+ED0VgGMAZ/eCRmlAa3hhTsphsqSjvRTMjJaKP0=")
-		cfg.ClearBootstrapPeers()
-		cfg.AddBootstrapPeer("/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWFET1qH5xgeg3QrQm5NAMtvSJbKECH3AyBFQBghPZ8R2M")
 	case config.ServiceMode:
 		cfg.Network.ListenAddrs = []string{
 			"/ip4/0.0.0.0/udp/" + "9000" + "/quic",
@@ -52,8 +49,6 @@ func SetTestEnv(cfg *config.TvbaseConfig) error {
 			"/ip4/0.0.0.0/tcp/" + "9000",
 			"/ip6/::/tcp/" + "9000",
 		}
-		cfg.SetPrivKeyStr("CAESQAo+pk645TCLemsAAPed3HuwOxCEnvTfp9IGJ7umqgE0UHXalXwaL8WagndTHAViieVzuOd0GJy1Bzp0elDZrAY=")
-		cfg.ClearBootstrapPeers()
 	}
 
 	if pkseed != nil {
@@ -74,6 +69,11 @@ func SetTestEnv(cfg *config.TvbaseConfig) error {
 		publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
 		peerId, _ := peer.IDFromPublicKey(publicKey)
 		Logger.Infof("test identity:\nprivateKey: %s\npublicKey: %s\npeerId: %s", privateKeyStr, publicKeyStr, peerId.Pretty())
+	}
+
+	cfg.ClearBootstrapPeers()
+	if bootpeer != nil {
+		cfg.AddBootstrapPeer(*bootpeer)
 	}
 
 	return nil

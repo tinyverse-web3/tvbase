@@ -9,6 +9,7 @@ import (
 var IsTestEnv = false
 var nodeMode config.NodeMode
 var pkseed *string
+var bootpeer *string
 
 func ParseCmdParams() (string, string, string, string) {
 	src := flag.String("src", "", "Set src user pubkey")
@@ -18,6 +19,7 @@ func ParseCmdParams() (string, string, string, string) {
 	path := flag.String("path", "", "Path to configuration file and data file to use.")
 	test := flag.Bool("test", false, "Operate in test environment.")
 	pkseed = flag.String("pkseed", "", "Seed for generating peer private key in test environment.")
+	bootpeer = flag.String("bootpeer", "", "Set bootstrap peerID in test environment.")
 	flag.Parse()
 
 	if *mode == "service" {
