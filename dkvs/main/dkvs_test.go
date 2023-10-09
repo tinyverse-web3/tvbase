@@ -11,8 +11,8 @@ import (
 	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -440,7 +440,7 @@ func TestTransferKey(t *testing.T) {
 
 }
 
-func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
+func getNewRecordValue(kv define.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, error) {
 
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
 	if err != nil {
@@ -463,7 +463,7 @@ func getNewRecordValue(kv common.DkvsService, key string, sk ic.PrivKey, pk []by
 	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
 }
 
-func getNewRecordValue2(kv common.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, uint64, uint64, error) {
+func getNewRecordValue2(kv define.DkvsService, key string, sk ic.PrivKey, pk []byte, cert *dkvs_pb.Cert) ([]byte, []byte, uint64, uint64, error) {
 
 	var rv *dkvs_pb.CertsRecordValue
 	value1, _, issuetime, ttl, _, err := kv.Get(key)
@@ -485,7 +485,7 @@ func getNewRecordValue2(kv common.DkvsService, key string, sk ic.PrivKey, pk []b
 	//err = kv.Put(key, value2, pk, issuetime, ttl, sign2)
 }
 
-func testTransfer(kv common.DkvsService, key string, gvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
+func testTransfer(kv define.DkvsService, key string, gvalue []byte, privk1 ic.PrivKey, issuetime uint64, ttl uint64, privk2 ic.PrivKey) error {
 	pubkey1, _ := ic.MarshalPublicKey(privk1.GetPublic())
 	pubkey2, _ := ic.MarshalPublicKey(privk2.GetPublic())
 

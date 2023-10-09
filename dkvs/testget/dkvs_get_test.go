@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
-	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -124,7 +124,7 @@ func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvBase tvCommon.TvBaseService = tvbase
+	var tvBase define.TvBaseService = tvbase
 	kv := dkvs.NewDkvs(tvBase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
