@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test", "-mode", "light"]
+            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "node1"]
         },
         {
             "name": "tvnodelight-test-b-a",
@@ -20,7 +20,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test", "-mode", "light"]
+            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test", "-mode", "light", "-pkseed", "node1"]
         },
         {
             "name": "tvnode-service-test-run",
