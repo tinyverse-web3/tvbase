@@ -23,6 +23,8 @@ const (
 )
 
 var isTestEnv = false
+var nodeMode config.NodeMode = config.ServiceMode
+var pkseed *string
 
 func parseCmdParams() string {
 	init := flag.Bool("init", false, "Initialize tvnode with default setting configuration file if not already initialized.")
@@ -32,6 +34,7 @@ func parseCmdParams() string {
 	help := flag.Bool("help", false, "Show help.")
 	showpeer := flag.Bool("showpeer", false, "Show peer ID.")
 	test := flag.Bool("test", false, "Run in test environment for different config, example bootstrap node...")
+	pkseed = flag.String("pkseed", "", "Seed for generating peer private key in test environment.")
 	flag.Parse()
 
 	if *help {
@@ -53,12 +56,12 @@ func parseCmdParams() string {
 		printPriKey(prikey)
 		os.Exit(0)
 	}
-	if *init {
-		nodeMode := config.ServiceMode
-		if *mode == "light" {
-			nodeMode = config.LightMode
-		}
 
+	if *mode == "light" {
+		nodeMode = config.LightMode
+	}
+
+	if *init {
 		dataPath, err := tvbaseUtil.GetRootPath(*path)
 		if err != nil {
 			logger.Fatalf("GetRootPath error: %v", err)

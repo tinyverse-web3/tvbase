@@ -5,25 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "tvnodelight-a-b",
+            "name": "tvnode-light-test-a-b",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight",
+            "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test"]
+            "args": ["-src", "a", "-dest", "b", "-channel", "c", "-path", "./", "-test", "-mode", "light"]
         },
         {
-            "name": "tvnodelight-b-a",
+            "name": "tvnodelight-test-b-a",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight",
+            "program": "${workspaceFolder}/light",
             "console": "integratedTerminal",
-            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test"]
+            "args": ["-src", "b", "-dest", "a", "-channel", "c", "-path", "./", "-test", "-mode", "light"]
         },
         {
-            "name": "tvnode",
+            "name": "tvnode-service-test-run",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -32,7 +32,16 @@
             "args": ["-path", "./", "-test"]
         },
         {
-            "name": "tvnode-init",
+            "name": "tvnode-service-product-run",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-path", "./", "-test"]
+        },
+        {
+            "name": "tvnode-init-service",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -41,7 +50,16 @@
             "args": ["-path", "./", "-init"]
         },
         {
-            "name": "tvnode-peer",
+            "name": "tvnode-init-light",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-path", "./", "-init", "-mode", "light"]
+        },
+        {
+            "name": "tvnode-showpeer",
             "type": "go",
             "request": "launch",
             "mode": "auto",
