@@ -11,7 +11,7 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	mtvCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	keyUtils "github.com/tinyverse-web3/mtv_go_utils/key"
-	define "github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	tvPb "github.com/tinyverse-web3/tvbase/common/protocol/pb"
 )
 
