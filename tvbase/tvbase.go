@@ -511,7 +511,7 @@ func (m *TvBase) bootstrap() error {
 				tvLog.Logger.Warnf("tvBase->bootstrap: host.Connect error: %+v", err)
 			} else {
 				m.RegistServicePeer(addrInfo.ID)
-				tvLog.Logger.Debugf("tvBase->bootstrap: succ connect \naddrInfo: %+v", addrInfo)
+				tvLog.Logger.Infof("tvBase->bootstrap: succ connect \naddrInfo: %+v", addrInfo)
 			}
 		}(peerAddrInfo)
 	}
