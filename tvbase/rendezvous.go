@@ -124,6 +124,8 @@ func (m *TvBase) DiscoverRendezvousPeers() {
 				}
 			}
 			m.isRendezvous = true
+			tvbaseLog.Logger.Infof("tvBase->DiscoverRendezvousPeers: succ rendezvous")
+			m.PrintDiagnosisInfo()
 		}
 		m.isDiscoverRendzvousing = false
 	}
