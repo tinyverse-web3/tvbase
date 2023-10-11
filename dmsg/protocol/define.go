@@ -2,6 +2,7 @@ package protocol
 
 const (
 	ProtocolVersion = "0.0.1"
+	DataVersion     = "0.0.1"
 )
 
 const (

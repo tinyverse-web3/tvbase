@@ -22,7 +22,7 @@ func NewBasicData(host host.Host, pubKey string, pid pb.PID) *pb.BasicData {
 		TS:     time.Now().Unix(),
 		ID:     uuid.New().String(),
 		PID:    pid,
-		Ver:    ProtocolVersion,
+		Ver:    DataVersion,
 	}
 	return ret
 }
