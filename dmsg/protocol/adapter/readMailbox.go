@@ -114,9 +114,10 @@ func NewReadMailboxMsgProtocol(
 	callback dmsgProtocol.MailboxSpCallback,
 	service dmsgProtocol.DmsgService,
 	enableRequest bool,
+	pubkey string,
 ) *dmsgProtocol.MailboxSProtocol {
 	adapter := NewReadMailboxMsgProtocolAdapter()
-	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest)
+	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

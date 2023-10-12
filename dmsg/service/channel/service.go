@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -42,7 +43,9 @@ func (d *ChannelService) Start(
 	log.Debug("ChannelService->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, enableService)
+	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
+
+	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, enableService, pubkey)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)

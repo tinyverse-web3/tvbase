@@ -82,10 +82,11 @@ func (d *MailboxService) Start(
 
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
+	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
 	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, enableService)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, enableService)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, enableService)
+	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, enableService, pubkey)
+	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, enableService, pubkey)
+	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, enableService, pubkey)
 
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)

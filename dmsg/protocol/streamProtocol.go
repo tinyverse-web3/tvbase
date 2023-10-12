@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -77,7 +78,14 @@ func (p *StreamProtocol) HandleRequestData(
 		return fmt.Errorf("StreamProtocol->HandleRequestData: dataList[0] is not peer.ID")
 	}
 
-	streamResponseID := adapter.GetStreamResponsePID()
+	basicData, err := GetBasicData(request)
+	if err != nil {
+		log.Logger.Errorf("StreamProtocol->HandleRequestData: GetBasicData(request) error: %v", err)
+		return err
+	}
+
+	streamResponseID := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + basicData.Pubkey)
+
 	stream, err := p.Host.NewStream(p.Ctx, remotePeerID, streamResponseID)
 	if err != nil {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: NewStream error: %v", err)
@@ -175,6 +183,7 @@ func (p *StreamProtocol) Request(peerID peer.ID, pubkey string, dataList ...any)
 		log.Logger.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 		return nil, nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 	}
+
 	stream, err := p.Host.NewStream(p.Ctx, peerID, adapter.GetStreamRequestPID())
 	if err != nil {
 		requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
@@ -217,19 +226,21 @@ func NewCreateMsgPubsubSProtocol(
 	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
+	pubkey string,
 ) *CreatePubsubSProtocol {
-	protocol := &CreatePubsubSProtocol{}
-	protocol.Host = host
-	protocol.Ctx = ctx
-	protocol.Callback = callback
-	protocol.Service = service
-	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	p := &CreatePubsubSProtocol{}
+	p.Host = host
+	p.Ctx = ctx
+	p.Callback = callback
+	p.Service = service
+	p.Adapter = adapter
+	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
+	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
 	if enableRequest {
-		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
 	}
-	go protocol.TickCleanRequest()
-	return protocol
+	go p.TickCleanRequest()
+	return p
 }
 
 func NewCreateChannelSProtocol(
@@ -239,19 +250,21 @@ func NewCreateChannelSProtocol(
 	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
+	pubkey string,
 ) *CreatePubsubSProtocol {
-	protocol := &CreatePubsubSProtocol{}
-	protocol.Host = host
-	protocol.Ctx = ctx
-	protocol.Callback = callback
-	protocol.Service = service
-	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	p := &CreatePubsubSProtocol{}
+	p.Host = host
+	p.Ctx = ctx
+	p.Callback = callback
+	p.Service = service
+	p.Adapter = adapter
+	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
+	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
 	if enableRequest {
-		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
 	}
-	go protocol.TickCleanRequest()
-	return protocol
+	go p.TickCleanRequest()
+	return p
 }
 
 func NewMailboxSProtocol(
@@ -261,19 +274,21 @@ func NewMailboxSProtocol(
 	service DmsgService,
 	adapter SpAdapter,
 	enableRequest bool,
+	pubkey string,
 ) *MailboxSProtocol {
-	protocol := &MailboxSProtocol{}
-	protocol.Host = host
-	protocol.Ctx = ctx
-	protocol.Callback = callback
-	protocol.Service = service
-	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	p := &MailboxSProtocol{}
+	p.Host = host
+	p.Ctx = ctx
+	p.Callback = callback
+	p.Service = service
+	p.Adapter = adapter
+	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
+	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
 	if enableRequest {
-		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
 	}
-	go protocol.TickCleanRequest()
-	return protocol
+	go p.TickCleanRequest()
+	return p
 }
 
 func NewCustomSProtocol(

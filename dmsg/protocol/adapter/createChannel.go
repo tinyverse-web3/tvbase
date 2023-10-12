@@ -100,9 +100,10 @@ func NewCreateChannelProtocol(
 	callback dmsgProtocol.CreatePubsubSpCallback,
 	service dmsgProtocol.DmsgService,
 	enableRequest bool,
+	pubkey string,
 ) *dmsgProtocol.CreatePubsubSProtocol {
 	adapter := NewCreateChannelProtocolAdapter()
-	protocol := dmsgProtocol.NewCreateChannelSProtocol(ctx, host, callback, service, adapter, enableRequest)
+	protocol := dmsgProtocol.NewCreateChannelSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

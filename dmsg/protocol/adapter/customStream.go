@@ -118,7 +118,8 @@ func NewCustomStreamProtocol(
 	pid string,
 	callbck dmsgProtocol.CustomSpCallback,
 	service dmsgProtocol.DmsgService,
-	enableRequest bool) *dmsgProtocol.CustomSProtocol {
+	enableRequest bool,
+) *dmsgProtocol.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = pid
 	protocol := dmsgProtocol.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
