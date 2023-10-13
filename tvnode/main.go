@@ -108,5 +108,12 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, t
 	if err != nil {
 		return err
 	}
+
+	dmsgService.GetMailboxService().SetUserPubkey(userPubkeyData, getSig)
+	err = dmsgService.GetMailboxService().CreateMailbox(30 * time.Second)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
