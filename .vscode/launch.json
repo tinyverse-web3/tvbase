@@ -40,7 +40,7 @@
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-path", "./", "-test"]
+            "args": ["-path", "./"]
         },
         {
             "name": "tvnode-init-service",

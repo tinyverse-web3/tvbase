@@ -639,25 +639,19 @@ func (d *MailboxService) initUser(
 		return err
 	}
 
-	if !enableService {
-		if d.TvBase.GetIsRendezvous() {
-			return d.initMailbox(pubkey)
-		} else {
-			c := d.TvBase.RegistRendezvousChan()
-			select {
-			case <-c:
-				d.TvBase.UnregistRendezvousChan(c)
-				return d.initMailbox(pubkey)
-			case <-time.After(timeout):
-				return fmt.Errorf("MailboxService->initUser: timeout")
-			case <-d.TvBase.GetCtx().Done():
-				return d.TvBase.GetCtx().Err()
-			}
-		}
+	if d.TvBase.GetIsRendezvous() {
+		return d.initMailbox(pubkey)
 	}
-
-	log.Debug("MailboxService->initUser end")
-	return nil
+	c := d.TvBase.RegistRendezvousChan()
+	select {
+	case <-c:
+		d.TvBase.UnregistRendezvousChan(c)
+		return d.initMailbox(pubkey)
+	case <-time.After(timeout):
+		return fmt.Errorf("MailboxService->initUser: timeout")
+	case <-d.TvBase.GetCtx().Done():
+		return d.TvBase.GetCtx().Err()
+	}
 }
 
 func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback) error {
