@@ -426,6 +426,17 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 		return nil, nil, true, nil
 	}
 
+	pubkey := request.BasicData.Pubkey
+	user := d.getServiceUser(pubkey)
+	if user == nil {
+		log.Errorf("MailboxService->OnSeekMailboxRequest: cannot find user for pubkey: %s", pubkey)
+		retCode := &pb.RetCode{
+			Code:   dmsgProtocol.NoExistCode,
+			Result: "MailboxService->OnSeekMailboxRequest: pubkey no exist in serviceUserList",
+		}
+		return nil, retCode, false, fmt.Errorf("MailboxService->OnSeekMailboxRequest: cannot find user for pubkey: %s", pubkey)
+	}
+
 	log.Debug("MailboxService->OnSeekMailboxRequest end")
 	return nil, nil, false, nil
 }
@@ -782,6 +793,52 @@ func (d *MailboxService) isAvailableMailbox(pubKey string) bool {
 	return destUserCount < d.GetConfig().MaxMailboxCount
 }
 
+func (d *MailboxService) createMailbox(pubkey string) error {
+	hostId := d.TvBase.GetHost().ID().String()
+	servicePeerList, err := d.TvBase.GetAvailableServicePeerList(hostId)
+	if err != nil {
+		log.Errorf("MailboxService->createMailbox: getAvailableServicePeerList error: %v", err)
+		return err
+	}
+
+	peerID := d.TvBase.GetHost().ID().String()
+	for _, servicePeerID := range servicePeerList {
+		log.Debugf("MailboxService->createMailbox: servicePeerID: %v", servicePeerID)
+		if peerID == servicePeerID.String() {
+			continue
+		}
+		_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
+		if err != nil {
+			log.Errorf("MailboxService->createMailbox: createMailboxProtocol.Request error: %v", err)
+			continue
+		}
+
+		select {
+		case createMailboxResponseProtoData := <-createMailboxResponseChan:
+			log.Debugf("MailboxService->createMailbox: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
+			response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
+			if !ok || response == nil {
+				log.Errorf("MailboxService->createMailbox: createMailboxResponseChan is not CreateMailboxRes")
+				continue
+			}
+
+			switch response.RetCode.Code {
+			case 0, 1:
+				log.Debugf("MailboxService->createMailbox: createMailboxProtocol success")
+				return nil
+			default:
+				continue
+			}
+		case <-time.After(time.Second * 3):
+			continue
+		case <-d.TvBase.GetCtx().Done():
+			return nil
+		}
+	}
+	log.Error("MailboxService->createMailbox: no available service peers")
+	return nil
+}
+
 func (d *MailboxService) initMailbox(pubkey string) error {
 	log.Debug("MailboxService->initMailbox begin")
 	_, seekMailboxResponseChan, err := d.seekMailboxProtocol.Request(
@@ -802,64 +859,24 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 			log.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
 			return fmt.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
 			// skip seek when seek mailbox quest fail, create a new mailbox
-		} else {
+		} else if response.RetCode.Code == dmsgProtocol.SuccCode {
 			log.Debugf("MailboxService->initMailbox: seekMailboxProtoData success")
 			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey, 30*time.Second)
 			return nil
+		} else if response.RetCode.Code == dmsgProtocol.NoExistCode {
+			d.createMailbox(pubkey)
 		}
 	case <-time.After(3 * time.Second):
 		log.Debugf("MailboxService->initMailbox: time.After 3s, create new mailbox")
 		// begin create new mailbox
-
-		hostId := d.TvBase.GetHost().ID().String()
-		servicePeerList, err := d.TvBase.GetAvailableServicePeerList(hostId)
-		if err != nil {
-			log.Errorf("MailboxService->initMailbox: getAvailableServicePeerList error: %v", err)
-			return err
-		}
-
-		peerID := d.TvBase.GetHost().ID().String()
-		for _, servicePeerID := range servicePeerList {
-			log.Debugf("MailboxService->initMailbox: servicePeerID: %v", servicePeerID)
-			if peerID == servicePeerID.String() {
-				continue
-			}
-			_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
-			if err != nil {
-				log.Errorf("MailboxService->initMailbox: createMailboxProtocol.Request error: %v", err)
-				continue
-			}
-
-			select {
-			case createMailboxResponseProtoData := <-createMailboxResponseChan:
-				log.Debugf("MailboxService->initMailbox: createMailboxResponseProtoData: %+v", createMailboxResponseProtoData)
-				response, ok := createMailboxResponseProtoData.(*pb.CreateMailboxRes)
-				if !ok || response == nil {
-					log.Errorf("MailboxService->initMailbox: createMailboxResponseChan is not CreateMailboxRes")
-					continue
-				}
-
-				switch response.RetCode.Code {
-				case 0, 1:
-					log.Debugf("MailboxService->initMailbox: createMailboxProtocol success")
-					return nil
-				default:
-					continue
-				}
-			case <-time.After(time.Second * 3):
-				continue
-			case <-d.TvBase.GetCtx().Done():
-				return nil
-			}
-		}
-
-		log.Error("MailboxService->InitUser: no available service peers")
+		d.createMailbox(pubkey)
 		return nil
 		// end create mailbox
 	case <-d.TvBase.GetCtx().Done():
 		log.Debug("MailboxService->InitUser: BaseService.GetCtx().Done()")
 		return nil
 	}
+	return nil
 }
 
 func (d *MailboxService) readMailbox(
@@ -986,15 +1003,15 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 func (d *MailboxService) saveMsg(protoMsg protoreflect.ProtoMessage) error {
 	MsgReq, ok := protoMsg.(*pb.MsgReq)
 	if !ok {
-		log.Errorf("MailboxService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
-		return fmt.Errorf("MailboxService->saveUserMsg: cannot convert %v to *pb.MsgReq", protoMsg)
+		log.Errorf("MailboxService->saveMsg: cannot convert %v to *pb.MsgReq", protoMsg)
+		return fmt.Errorf("MailboxService->saveMsg: cannot convert %v to *pb.MsgReq", protoMsg)
 	}
 
 	pubkey := MsgReq.BasicData.Pubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
-		log.Errorf("MailboxService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
-		return fmt.Errorf("MailboxService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
+		log.Errorf("MailboxService->saveMsg: cannot find src user pubsub for %v", pubkey)
+		return fmt.Errorf("MailboxService->saveMsg: cannot find src user pubsub for %v", pubkey)
 	}
 
 	user.MsgRWMutex.RLock()

@@ -21,6 +21,8 @@ const (
 )
 
 const (
+	SuccCode         = 0
 	ErrCode          = -1
 	AlreadyExistCode = 1
+	NoExistCode      = 2
 )
