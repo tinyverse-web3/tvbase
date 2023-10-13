@@ -113,7 +113,7 @@ func WaitMessage(ctx context.Context, pk string) (chan *ProtocolData, error) {
 					Data: m.Data[pidLen:],
 				}
 				for _, c := range chanList {
-					baseLog.Debugf("BaseService->WaitMessage: chan: %+v", c)
+					baseLog.Debugf("BaseService->WaitMessage: chan: %+v, protocolData: %+v", c, protocolData)
 					c <- protocolData
 				}
 			}

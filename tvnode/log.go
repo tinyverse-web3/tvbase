@@ -28,7 +28,7 @@ func initLog() (err error) {
 		"dmsg.service.mail":        "debug",
 		"dmsg.service.msg":         "debug",
 		"dmsg.service.proxypubsub": "debug",
-		"tvbase":                   "info",
+		"tvbase":                   "debug",
 		"tvipfs":                   "debug",
 	}
 	err = util.SetLogModule(moduleLevels)
