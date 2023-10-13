@@ -299,15 +299,19 @@ func (cfg *TvbaseConfig) InitMode(mode NodeMode) {
 	switch cfg.Mode {
 	case ServiceMode:
 		cfg.Network.ListenAddrs = []string{
-			"/ip4/0.0.0.0/udp/" + ServicePort + "/quic",
-			"/ip6/::/udp/" + ServicePort + "/quic",
+			"/ip4/0.0.0.0/udp/" + ServicePort + "/quic-v1",
+			"/ip4/0.0.0.0/udp/" + ServicePort + "/quic-v1/webtransport",
+			"/ip6/::/udp/" + ServicePort + "/quic-v1",
+			"/ip6/::/udp/" + ServicePort + "/quic-v1/webtransport",
 			"/ip4/0.0.0.0/tcp/" + ServicePort,
 			"/ip6/::/tcp/" + ServicePort,
 		}
 	case LightMode:
 		cfg.Network.ListenAddrs = []string{
-			"/ip4/0.0.0.0/udp/" + LightPort + "/quic",
-			"/ip6/::/udp/" + LightPort + "/quic",
+			"/ip4/0.0.0.0/udp/" + LightPort + "/quic-v1",
+			"/ip4/0.0.0.0/udp/" + LightPort + "/quic-v1/webtransport",
+			"/ip6/::/udp/" + LightPort + "/quic-v1",
+			"/ip6/::/udp/" + LightPort + "/quic-v1/webtransport",
 			"/ip4/0.0.0.0/tcp/" + LightPort,
 			"/ip6/::/tcp/" + LightPort,
 		}
