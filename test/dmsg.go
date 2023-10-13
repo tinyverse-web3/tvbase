@@ -71,7 +71,7 @@ func (d *DmsgService) Start(
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
 ) error {
-	err := d.mailboxService.Start(enableService, pubkeyData, getSig, timeout)
+	err := d.mailboxService.StartService()
 	if err != nil {
 		return err
 	}
