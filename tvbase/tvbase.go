@@ -315,7 +315,7 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		return nil, err
 	}
 
-	filepath := m.GetRootPath() + m.cfg.DMsg.DatastorePath
+	filepath := m.GetRootPath() + m.cfg.DHT.DatastorePath
 	m.dhtDatastore, err = db.CreateDataStore(filepath, m.cfg.Mode)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
