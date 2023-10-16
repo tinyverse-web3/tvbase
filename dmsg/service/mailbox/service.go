@@ -40,6 +40,7 @@ type MailboxService struct {
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
+	stopReadMailbox       chan bool
 	pubkey                string
 	getSig                dmsgKey.GetSigCallback
 }
@@ -73,7 +74,6 @@ func (d *MailboxService) CreateMailbox(timeout time.Duration) error {
 	if err != nil {
 		return err
 	}
-	d.tickReadMailbox(3 * time.Second)
 	return nil
 }
 
@@ -130,6 +130,7 @@ func (d *MailboxService) Stop() error {
 		log.Debugf("MailboxService->Stop: no receiver for stopCleanRestResource")
 	}
 	close(d.stopCleanRestResource)
+	close(d.stopReadMailbox)
 	log.Debug("MailboxService->Stop end")
 	return nil
 }
@@ -555,19 +556,23 @@ func (d *MailboxService) cleanRestServiceUser(dur time.Duration) {
 	}()
 }
 
-func (d *MailboxService) tickReadMailbox(dur time.Duration) {
+func (d *MailboxService) TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration) {
+	if d.stopReadMailbox != nil {
+		d.stopReadMailbox <- true
+		close(d.stopReadMailbox)
+	} else {
+		d.stopReadMailbox = make(chan bool)
+	}
+
 	go func() {
-		lightTicker := time.NewTicker(3 * time.Minute)
-		defer lightTicker.Stop()
+		ticker := time.NewTicker(checkDuration)
+		defer ticker.Stop()
 		for {
 			select {
-			case <-d.stopCleanRestResource:
+			case <-d.stopReadMailbox:
 				return
-			case <-lightTicker.C:
-				_, err := d.readMailbox(
-					d.lightMailboxUser.ServicePeerID,
-					d.lightMailboxUser.Key.PubkeyHex,
-					30*time.Second, true)
+			case <-ticker.C:
+				_, err := d.readMailbox(d.lightMailboxUser.ServicePeerID, d.lightMailboxUser.Key.PubkeyHex, readMailboxTimeout, true)
 				if err != nil {
 					log.Errorf("MailboxService->tickReadMailbox: readMailbox error: %v", err)
 					continue
@@ -878,12 +883,7 @@ func (d *MailboxService) initMailbox(pubkey string) error {
 	return nil
 }
 
-func (d *MailboxService) readMailbox(
-	peerIdHex string,
-	pubkey string,
-	timeout time.Duration,
-	clearMode bool,
-) ([]msg.ReceiveMsg, error) {
+func (d *MailboxService) readMailbox(peerIdHex string, pubkey string, timeout time.Duration, clearMode bool) ([]msg.ReceiveMsg, error) {
 	var msgList []msg.ReceiveMsg
 	peerID, err := peer.Decode(peerIdHex)
 	if err != nil {
