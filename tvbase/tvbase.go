@@ -30,7 +30,6 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
@@ -124,13 +123,6 @@ func (m *TvBase) Start() error {
 	if err := m.launch.Start(m.ctx); err != nil {
 		return logAndUnwrapFxError(err)
 	}
-
-	// switch m.nodeCfg.Mode {
-	// case define.LightMode:
-	// case define.ServiceMode:
-	// 	coreHttp.InitHttpServer(m)
-	// }
-	coreHttp.InitHttpServer(m) // for test
 	return nil
 }
 

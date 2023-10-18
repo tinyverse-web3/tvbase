@@ -60,7 +60,9 @@ func main() {
 	if err != nil {
 		logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
+
 	tb.Start()
+	tb.StartWebService()
 	defer func() {
 		err = tb.Stop()
 		if err != nil {
