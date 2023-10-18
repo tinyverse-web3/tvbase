@@ -32,6 +32,7 @@ var waitMessageList map[string]*waitMessage
 type BaseService struct {
 	TvBase             define.TvBaseService
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
+	proxyPubkey        string
 }
 
 func init() {
@@ -59,6 +60,14 @@ func (d *BaseService) RegistPubsubProtocol(pid pb.PID, handle dmsgProtocol.Proto
 
 func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 	delete(d.ProtocolHandleList, pid)
+}
+
+func (d *BaseService) SetProxyPubkey(proxyPubkey string) {
+	d.proxyPubkey = proxyPubkey
+}
+
+func (d *BaseService) GetProxyPubkey() string {
+	return d.proxyPubkey
 }
 
 // DmsgService

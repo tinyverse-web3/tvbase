@@ -68,7 +68,7 @@ func (p *Protocol) HandleRequestData(requestProtoData []byte, dataList ...any) (
 	}
 
 	// generate response message
-	responseBasicData := NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
+	responseBasicData := NewBasicData(p.Host, userPubkeyHex, p.Service.GetProxyPubkey(), p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
 	if err != nil {
@@ -116,6 +116,7 @@ func (p *Protocol) GetErrResponse(
 	responseBasicData := NewBasicData(
 		p.Host,
 		userPubkeyHex,
+		p.Service.GetProxyPubkey(),
 		p.Adapter.GetResponsePID(),
 	)
 	responseBasicData.ID = requestBasicData.ID
@@ -212,11 +213,12 @@ func (p *Protocol) HandleResponseData(
 }
 
 func (p *Protocol) GenRequestInfo(
-	sigPubkey string,
+	reqPubkey string,
+	proxyPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
 	log.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v",
-		sigPubkey, p.Adapter.GetRequestPID())
-	requestBasicData := NewBasicData(p.Host, sigPubkey, p.Adapter.GetRequestPID())
+		reqPubkey, p.Adapter.GetRequestPID())
+	requestBasicData := NewBasicData(p.Host, reqPubkey, proxyPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		log.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)

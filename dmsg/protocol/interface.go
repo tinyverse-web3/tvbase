@@ -16,6 +16,7 @@ type ProtocolHandle interface {
 
 type DmsgService interface {
 	GetUserPubkeyHex() (string, error)
+	GetProxyPubkey() string
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
 	PublishProtocol(

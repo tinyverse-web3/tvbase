@@ -15,14 +15,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func NewBasicData(host host.Host, pubKey string, pid pb.PID) *pb.BasicData {
+func NewBasicData(host host.Host, reqPubKey string, proxyPubkey string, pid pb.PID) *pb.BasicData {
 	ret := &pb.BasicData{
-		PeerID: host.ID().String(),
-		Pubkey: pubKey,
-		TS:     time.Now().Unix(),
-		ID:     uuid.New().String(),
-		PID:    pid,
-		Ver:    DataVersion,
+		PeerID:      host.ID().String(),
+		Pubkey:      reqPubKey,
+		ProxyPubkey: proxyPubkey,
+		TS:          time.Now().Unix(),
+		ID:          uuid.New().String(),
+		PID:         pid,
+		Ver:         DataVersion,
 	}
 	return ret
 }
@@ -51,7 +52,11 @@ func AuthProtoMsg(message proto.Message, basicData *pb.BasicData) bool {
 		return false
 	}
 	basicData.Sig = sig
-	pubkey, err := crypto.PubkeyFromHex(basicData.Pubkey)
+	pubkeyStr := basicData.Pubkey
+	if basicData.ProxyPubkey != "" {
+		pubkeyStr = basicData.ProxyPubkey
+	}
+	pubkey, err := crypto.PubkeyFromHex(pubkeyStr)
 	if err != nil {
 		log.Logger.Errorf("AuthProtoMsg: crypto.PubkeyFromHex error: %v", err)
 		return false

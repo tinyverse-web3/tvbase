@@ -161,9 +161,9 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 	log.Logger.Debugf("StreamProtocol->ResponseHandler end")
 }
 
-func (p *StreamProtocol) Request(peerID peer.ID, pubkey string, dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
-	log.Logger.Debugf("StreamProtocol->Request begin\npeerID: %s\npubkey: %s", peerID, pubkey)
-	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(pubkey, dataList...)
+func (p *StreamProtocol) Request(peerID peer.ID, reqPubkey string, proxyPubkey string, dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
+	log.Logger.Debugf("StreamProtocol->Request begin\npeerID: %s\npubkey: %s", peerID, reqPubkey)
+	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(reqPubkey, proxyPubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}
