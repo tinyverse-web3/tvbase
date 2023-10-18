@@ -18,6 +18,7 @@ import (
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
 	"github.com/tinyverse-web3/tvbase/common/load"
 	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/corehttp"
 	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -231,8 +232,11 @@ func main() {
 	}
 	tb.RegistCSSProtocol(cp)
 
-	tb.Start()
-	tb.StartWebService()
+	err = tb.Start()
+	if err != nil {
+		tvsLog.Fatalf("tvnode->main: Start: %v", err)
+	}
+	corehttp.StartWebService(tb)
 	<-ctx.Done()
 	// tvInfrasture.Stop()
 	// Logger.Info("tvnode_->main: Gracefully shut down daemon")

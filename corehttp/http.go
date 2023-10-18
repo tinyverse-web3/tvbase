@@ -7,7 +7,7 @@ import (
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 )
 
-func InitHttpServer(t tvCommon.TvBaseService) {
+func StartWebService(t tvCommon.TvBaseService) {
 
 	proc := process.WithParent(process.Background())
 	addr := "/ip4/0.0.0.0/tcp/" + strconv.Itoa(t.GetConfig().CoreHttp.ApiPort)
