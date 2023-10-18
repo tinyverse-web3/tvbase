@@ -232,6 +232,7 @@ func main() {
 	tb.RegistCSSProtocol(cp)
 
 	tb.Start()
+	tb.StartWebService()
 	<-ctx.Done()
 	// tvInfrasture.Stop()
 	// Logger.Info("tvnode_->main: Gracefully shut down daemon")

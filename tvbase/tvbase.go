@@ -31,7 +31,6 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	coreHttp "github.com/tinyverse-web3/tvbase/corehttp"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
@@ -133,13 +132,6 @@ func (m *TvBase) Start() error {
 	if err := m.launch.Start(m.ctx); err != nil {
 		return logAndUnwrapFxError(err)
 	}
-
-	// switch m.nodeCfg.Mode {
-	// case tvConfig.LightMode:
-	// case tvConfig.ServiceMode:
-	// 	coreHttp.InitHttpServer(m)
-	// }
-	coreHttp.InitHttpServer(m)
 
 	return nil
 }
