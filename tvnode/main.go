@@ -236,6 +236,12 @@ func main() {
 	if err != nil {
 		tvsLog.Fatalf("tvnode->main: Start: %v", err)
 	}
+
+	err = tb.DmsgService.Start()
+	if err != nil {
+		tvsLog.Fatalf("tvnode->main: Start: %v", err)
+	}
+
 	corehttp.StartWebService(tb)
 	<-ctx.Done()
 	// tvInfrasture.Stop()

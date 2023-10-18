@@ -45,6 +45,7 @@ type DmsgService struct {
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
 	d := &DmsgService{}
+	d.GetProxyPubkey()
 	err := d.Init(nodeService)
 	if err != nil {
 		return nil, err

@@ -124,10 +124,10 @@ func (m *TvBase) Start() error {
 	}
 	go m.DiscoverRendezvousPeers()
 
-	err = m.DmsgService.Start()
-	if err != nil {
-		return err
-	}
+	// err = m.DmsgService.Start()
+	// if err != nil {
+	// 	return err
+	// }
 
 	if err := m.launch.Start(m.ctx); err != nil {
 		return logAndUnwrapFxError(err)

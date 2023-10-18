@@ -20,6 +20,8 @@ import (
 type DmsgService interface {
 	Start() error
 	Stop() error
+	GetProxyPubkey() string
+	SetProxyPubkey(pubkey string)
 }
 
 type DkvsService interface {
