@@ -47,6 +47,7 @@ type DmsgService struct {
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo
 	stopCleanRestResource        chan bool
+	proxyPubkey                  string
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -132,6 +133,14 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 
 func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	return d.curSrcUserInfo.UserKey.PubKeyHex, nil
+}
+
+func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
+	d.proxyPubkey = proxyPubkey
+}
+
+func (d *DmsgService) GetProxyPubkey() string {
+	return d.proxyPubkey
 }
 
 func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {

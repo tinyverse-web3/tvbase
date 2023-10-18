@@ -109,9 +109,10 @@ func (p *StreamProtocol) ResponseHandler(stream network.Stream) {
 func (p *StreamProtocol) Request(
 	peerID peer.ID,
 	userPubkey string,
+	proxyPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	dmsgLog.Logger.Debugf("StreamProtocol->Request begin\npeerID: %s", peerID)
-	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(userPubkey, dataList...)
+	requestInfoId, requestProtoMsg, _, err := p.GenRequestInfo(userPubkey, proxyPubkey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}

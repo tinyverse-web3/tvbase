@@ -34,9 +34,9 @@ type ProtocolProxy struct {
 type DmsgService struct {
 	dmsg.DmsgService
 	ProtocolProxy
-	SrcUserInfo  *dmsgClientCommon.SrcUserInfo
-	onReceiveMsg dmsgClientCommon.OnReceiveMsg
-
+	SrcUserInfo                  *dmsgClientCommon.SrcUserInfo
+	onReceiveMsg                 dmsgClientCommon.OnReceiveMsg
+	proxyPubkey                  string
 	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
 	pubChannelInfoList           map[string]*dmsgClientCommon.PubChannelInfo
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
@@ -170,7 +170,7 @@ func (d *DmsgService) InitUser(
 			dmsgLog.Logger.Errorf("DmsgService->InitUser: SrcUserInfo.UserKey is nil")
 			return fmt.Errorf("DmsgService->InitUser: SrcUserInfo.UserKey is nil")
 		}
-		_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, d.SrcUserInfo.UserKey.PubkeyHex)
+		_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, d.SrcUserInfo.UserKey.PubkeyHex, d.proxyPubkey)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (d *DmsgService) InitUser(
 
 			for _, servicePeerID := range servicePeerList {
 				dmsgLog.Logger.Debugf("DmsgService->InitUser: servicePeerID: %v", servicePeerID)
-				_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, userPubkey)
+				_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, userPubkey, d.proxyPubkey)
 				if err != nil {
 					dmsgLog.Logger.Errorf("DmsgService->InitUser: createMailboxProtocol.Request error: %v", err)
 					continue
@@ -269,6 +269,14 @@ func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
 
 func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	return d.SrcUserInfo.UserKey.PubkeyHex, nil
+}
+
+func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
+	d.proxyPubkey = proxyPubkey
+}
+
+func (d *DmsgService) GetProxyPubkey() string {
+	return d.proxyPubkey
 }
 
 func (d *DmsgService) SubscribeSrcUser(
@@ -545,7 +553,7 @@ func (d *DmsgService) createPubChannelService(pubChannelInfo *dmsgClientCommon.P
 	}
 	for _, servicePeerID := range servicePeerList {
 		dmsgLog.Logger.Debugf("DmsgService->createPubChannelService: servicePeerID: %s", servicePeerID)
-		_, createPubChannelDoneChan, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, pubChannelInfo.PubKeyHex)
+		_, createPubChannelDoneChan, err := d.createPubChannelProtocol.Request(servicePeerID, srcPubkey, d.proxyPubkey, pubChannelInfo.PubKeyHex)
 		if err != nil {
 			continue
 		}
@@ -601,6 +609,7 @@ func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsg
 	protoData, _, err := d.sendMsgPubPrtocol.Request(
 		signPubkey,
 		destPubkey,
+		d.proxyPubkey,
 		msgContent,
 	)
 	if err != nil {
@@ -627,7 +636,7 @@ func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, err
 		dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: peer.Decode error: %v", err)
 		return msgList, err
 	}
-	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, d.SrcUserInfo.UserKey.PubkeyHex)
+	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, d.SrcUserInfo.UserKey.PubkeyHex, d.proxyPubkey)
 	if err != nil {
 		return msgList, err
 	}
@@ -664,7 +673,7 @@ func (d *DmsgService) releaseUnusedMailbox(peerIdHex string, pubkey string) erro
 		dmsgLog.Logger.Warnf("DmsgService->releaseUnusedMailbox: fail to decode peer id: %v", err)
 		return err
 	}
-	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey)
+	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey, d.proxyPubkey)
 	if err != nil {
 		return err
 	}
@@ -674,7 +683,7 @@ func (d *DmsgService) releaseUnusedMailbox(peerIdHex string, pubkey string) erro
 		if d.SrcUserInfo.MailboxPeerID == "" {
 			d.SrcUserInfo.MailboxPeerID = peerIdHex
 		} else if peerIdHex != d.SrcUserInfo.MailboxPeerID {
-			_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
+			_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey, d.proxyPubkey)
 			if err != nil {
 				return err
 			}
@@ -1029,6 +1038,7 @@ func (d *DmsgService) RequestCustomStreamProtocol(
 	request, responseChan, err := protocolInfo.Protocol.Request(
 		peerId,
 		d.SrcUserInfo.UserKey.PubkeyHex,
+		d.proxyPubkey,
 		pid,
 		content)
 	if err != nil {
