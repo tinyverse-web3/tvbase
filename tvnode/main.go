@@ -9,6 +9,7 @@ import (
 	"github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/corehttp"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -62,7 +63,9 @@ func main() {
 	}
 
 	tb.Start()
-	tb.StartWebService()
+
+	corehttp.StartWebService(tb)
+
 	defer func() {
 		err = tb.Stop()
 		if err != nil {

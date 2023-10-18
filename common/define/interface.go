@@ -47,7 +47,6 @@ type TvBaseService interface {
 	SetTracerStatus(err error)
 	GetAvailableServicePeerList(key string) ([]peer.ID, error)
 	GetAvailableLightPeerList(key string) ([]peer.ID, error)
-	StartWebService()
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
 	GetIsRendezvous() bool

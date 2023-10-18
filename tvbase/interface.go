@@ -11,7 +11,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
-	"github.com/tinyverse-web3/tvbase/corehttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -95,8 +94,4 @@ func (m *TvBase) GetAvailableServicePeerList(key string) ([]peer.ID, error) {
 
 func (m *TvBase) GetAvailableLightPeerList(key string) ([]peer.ID, error) {
 	return m.getAvailablePeerList(key, config.LightMode)
-}
-
-func (m *TvBase) StartWebService() {
-	corehttp.InitHttpServer(m)
 }
