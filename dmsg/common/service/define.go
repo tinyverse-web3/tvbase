@@ -38,6 +38,7 @@ type CommonService interface {
 type MailboxService interface {
 	CommonService
 	SetUserPubkey(pubkeyData []byte, getSig dmsgKey.GetSigCallback)
+	TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration)
 	CreateMailbox(timeout time.Duration) error
 	StartService() error
 	SetOnReceiveMsg(cb msg.OnReceiveMsg)
