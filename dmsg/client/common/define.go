@@ -119,6 +119,7 @@ type PubsubProtocolCallback interface {
 type ProtocolService interface {
 	GetUserPubkeyHex() (string, error)
 	GetProxyPubkey() string
+	GetProxyReqPubkey() string
 	GetUserSig(protoData []byte) ([]byte, error)
 	PublishProtocol(ctx context.Context, userPubkey string, pid pb.PID, protoData []byte) error
 }

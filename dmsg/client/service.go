@@ -37,6 +37,7 @@ type DmsgService struct {
 	SrcUserInfo                  *dmsgClientCommon.SrcUserInfo
 	onReceiveMsg                 dmsgClientCommon.OnReceiveMsg
 	proxyPubkey                  string
+	proxyReqPubkey               string
 	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
 	pubChannelInfoList           map[string]*dmsgClientCommon.PubChannelInfo
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
@@ -278,6 +279,14 @@ func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
 
 func (d *DmsgService) GetProxyPubkey() string {
 	return d.proxyPubkey
+}
+
+func (d *DmsgService) SetProxyReqPubkey(pubkey string) {
+	d.proxyReqPubkey = pubkey
+}
+
+func (d *DmsgService) GetProxyReqPubkey() string {
+	return d.proxyReqPubkey
 }
 
 func (d *DmsgService) SubscribeSrcUser(
@@ -606,9 +615,9 @@ func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
 
 func (d *DmsgService) SendMsg(destPubkey string, msgContent []byte) (*pb.SendMsgReq, error) {
 	dmsgLog.Logger.Debugf("DmsgService->SendMsg begin:\ndestPubkey: %v", destPubkey)
-	signPubkey := d.SrcUserInfo.UserKey.PubkeyHex
+	reqPubkey := d.SrcUserInfo.UserKey.PubkeyHex
 	protoData, _, err := d.sendMsgPubPrtocol.Request(
-		signPubkey,
+		reqPubkey,
 		destPubkey,
 		d.proxyPubkey,
 		msgContent,
