@@ -3,59 +3,21 @@ package identity
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"os"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/pnet"
-	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	"golang.org/x/crypto/salsa20"
 	"golang.org/x/crypto/sha3"
 )
 
-const (
-	IdentityFileName = "identity.bin"
-	SwarmPskFileName = "swarmPsv1key.bin"
-)
-
-// LoadIdentity reads a private key from the given path and, if it does not
-// exist, generates a new one.
-func LoadIdentity(idPath string) (crypto.PrivKey, error) {
-	if _, err := os.Stat(idPath); err == nil {
-		return ReadIdentity(idPath)
-	} else if os.IsNotExist(err) {
-		tvLog.Logger.Infof("Generating peer identity in %s\n", idPath)
-		return generateIdentityFile(idPath)
-	} else {
-		return nil, err
-	}
-}
-
-// ReadIdentity reads a private key from the given path.
-func ReadIdentity(path string) (crypto.PrivKey, error) {
-	bytes, err := os.ReadFile(path)
+func LoadPrikey(prikeyHex string) (crypto.PrivKey, error) {
+	data, err := base64.StdEncoding.DecodeString(prikeyHex)
 	if err != nil {
 		return nil, err
 	}
 
-	return crypto.UnmarshalPrivateKey(bytes)
-}
-
-// generateIdentityFile writes a new random private key to the given path.
-func generateIdentityFile(path string) (crypto.PrivKey, error) {
-	privk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, 0)
-	if err != nil {
-		return privk, err
-	}
-
-	bytes, err := crypto.MarshalPrivateKey(privk)
-	if err != nil {
-		return privk, err
-	}
-
-	err = os.WriteFile(path, bytes, 0400)
-	return privk, err
+	return crypto.UnmarshalPrivateKey(data)
 }
 
 // PNet fingerprint section is taken from github.com/ipfs/kubo/core/node/libp2p/pnet.go
@@ -100,20 +62,16 @@ func LoadSwarmKey(path string) (pnet.PSK, PNetFingerprint, error) {
 	return psk, pnetFingerprint(psk), nil
 }
 
-func GenIdenityFile(rootPath string) error {
-	privateKey, err := generateIdentityFile(rootPath + IdentityFileName)
+func GenIdenity() (crypto.PrivKey, string, error) {
+	privk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, 0)
 	if err != nil {
-		return err
+		return privk, "", err
 	}
-	privateKeyData, _ := crypto.MarshalPrivateKey(privateKey)
-	privateKeyStr := base64.StdEncoding.EncodeToString(privateKeyData)
-	publicKey := privateKey.GetPublic()
-	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
-	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
-	peerId, _ := peer.IDFromPublicKey(publicKey)
-	fmt.Printf("generate identity:\n")
-	fmt.Printf("privateKey:%s\n", privateKeyStr)
-	fmt.Printf("publicKey:%s\n", publicKeyStr)
-	fmt.Printf("peerId: %s\n", peerId.Pretty())
-	return nil
+
+	data, err := crypto.MarshalPrivateKey(privk)
+	if err != nil {
+		return privk, "", err
+	}
+
+	return privk, base64.StdEncoding.EncodeToString(data), nil
 }

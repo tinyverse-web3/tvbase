@@ -1,10 +1,5 @@
 package config
 
-import (
-	"encoding/json"
-	"os"
-)
-
 type CustomProtocolConfig struct {
 	IpfsSyncFile IpfsSyncFileConfig
 }
@@ -44,23 +39,6 @@ func NewDefaultTvNodeConfig() *TvNodeConfig {
 	}
 	ret.Tvbase = NewDefaultTvbaseConfig()
 	return &ret
-}
-
-func (cfg *TvNodeConfig) LoadConfig(filePath string) error {
-	if filePath != "" {
-		cfgFile, err := os.Open(filePath)
-		if err != nil {
-			return err
-		}
-		defer cfgFile.Close()
-
-		decoder := json.NewDecoder(cfgFile)
-		err = decoder.Decode(&cfg)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (cfg *TvNodeConfig) SetSyncFileIpfsUrl(ip string, port string) {

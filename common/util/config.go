@@ -1,6 +1,9 @@
 package util
 
 import (
+	"encoding/json"
+	"os"
+
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -16,4 +19,21 @@ func ParseBootstrapPeers(addrs []string) ([]peer.AddrInfo, error) {
 		}
 	}
 	return peer.AddrInfosFromP2pAddrs(maddrs...)
+}
+
+func LoadConfig(cfg any, filePath string) error {
+	if filePath != "" {
+		cfgFile, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer cfgFile.Close()
+
+		decoder := json.NewDecoder(cfgFile)
+		err = decoder.Decode(&cfg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

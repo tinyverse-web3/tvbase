@@ -21,10 +21,16 @@ const (
 	ServicePort = "9000"
 )
 
+type IdentityConfig struct {
+	PrivKey      string
+	PrivSwarmKey string
+}
+
 // TvbaseConfig stores the full configuration of the relays, ACLs and other settings
 // that influence behaviour of a relay daemon.
 type TvbaseConfig struct {
 	Mode         NodeMode
+	Identity     IdentityConfig
 	Network      NetworkConfig
 	Swarm        config.SwarmConfig
 	AutoNAT      AutoNATConfig
@@ -155,6 +161,10 @@ type CoreHttpConfig struct {
 func NewDefaultTvbaseConfig() *TvbaseConfig {
 	ret := TvbaseConfig{
 		Mode: LightMode,
+		Identity: IdentityConfig{
+			PrivKey:      "",
+			PrivSwarmKey: "",
+		},
 		Network: NetworkConfig{
 			IsLocalNet:              false,
 			ListenAddrs:             []string{},
