@@ -143,6 +143,13 @@ func (d *DmsgService) GetProxyPubkey() string {
 	return d.proxyPubkey
 }
 
+func (d *DmsgService) SetProxyReqPubkey(pubkey string) {
+}
+
+func (d *DmsgService) GetProxyReqPubkey() string {
+	return ""
+}
+
 func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
 	sign, err := utilCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
 	if err != nil {
