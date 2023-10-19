@@ -32,13 +32,13 @@
             "args": ["-srcSeed", "b", "-destSeed", "a", "-pubSeed", "c", "-rootPath", "./"]
         },
         {
-            "name": "tvnode-.",
+            "name": "tvnode-.test",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "console": "integratedTerminal",
             "program": "${workspaceFolder}/tvnode",
-            "args": ["-rootPath", "./"]
+            "args": ["-rootPath", "./", "-test"]
         },
         {
             "name": "tvnode-~",
