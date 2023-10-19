@@ -98,6 +98,7 @@ func main() {
 		logger.Fatalf("tvnode->main: initLog: %v", err)
 	}
 
+	logger.Infof("tvnode->main: isTest: %v", isTest)
 	if isTest {
 		cfg.Tvbase.SetLocalNet(true)
 		cfg.Tvbase.SetMdns(false)
@@ -105,6 +106,7 @@ func main() {
 		cfg.Tvbase.ClearBootstrapPeers()
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWGUjKn8SHYjdGsnzjFDT3G33svXCbLYXebsT9vsK8dyHu")
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWGhqQa67QMRFAisZSZ1snfCnpFtWtr4rXTZ2iPBfVu1RR")
+		logger.Infof("tvnode->main: test BootstrapPeers: %v", cfg.Tvbase.Bootstrap.BootstrapPeers)
 	}
 
 	ctx := context.Background()

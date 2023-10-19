@@ -69,7 +69,7 @@ fi
 mv "$root_dir/"*.log "$log_back_dir"
 
 echo "start tvnode..."
-nohup tvnode > "$log_filename" 2>&1 &
+nohup tvnode $1 > "$log_filename" 2>&1 &
 
 if [ $? -eq 0 ]; then
     pid=$!
