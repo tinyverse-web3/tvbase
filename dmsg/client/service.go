@@ -150,10 +150,11 @@ func (d *DmsgService) Stop() error {
 func (d *DmsgService) InitUser(
 	userPubkeyData []byte,
 	getSigCallback dmsgClientCommon.GetSigCallback,
+	isListenMsg bool,
 ) (chan error, error) {
 	dmsgLog.Logger.Debug("DmsgService->InitUser begin")
 	userPubkey := utilKey.TranslateKeyProtoBufToString(userPubkeyData)
-	err := d.SubscribeSrcUser(userPubkey, getSigCallback)
+	err := d.SubscribeSrcUser(userPubkey, getSigCallback, isListenMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +281,9 @@ func (d *DmsgService) GetProxyReqPubkey() string {
 
 func (d *DmsgService) SubscribeSrcUser(
 	userPubkeyHex string,
-	getSigCallback dmsgClientCommon.GetSigCallback) error {
+	getSigCallback dmsgClientCommon.GetSigCallback,
+	isListenMsg bool,
+) error {
 	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser begin\nuserPubkey: %s", userPubkeyHex)
 	if d.SrcUserInfo != nil {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: SrcUserInfo has initialized")
@@ -325,9 +328,11 @@ func (d *DmsgService) SubscribeSrcUser(
 		PubkeyHex: userPubkeyHex,
 	}
 
-	err = d.StartReadSrcUserPubsubMsg()
-	if err != nil {
-		return err
+	if isListenMsg {
+		err = d.StartReadSrcUserPubsubMsg()
+		if err != nil {
+			return err
+		}
 	}
 	dmsgLog.Logger.Debugf("DmsgService->SubscribeSrcUser end")
 	return nil

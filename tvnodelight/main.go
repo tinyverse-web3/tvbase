@@ -86,7 +86,7 @@ func initMsgClient(
 		return sig, nil
 	}
 
-	done, err := dmsgService.InitUser(srcPubkeyBytes, getSigCallback)
+	done, err := dmsgService.InitUser(srcPubkeyBytes, getSigCallback, true)
 	if err != nil {
 		return nil, nil, err
 	}
