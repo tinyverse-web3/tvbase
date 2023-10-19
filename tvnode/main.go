@@ -98,13 +98,14 @@ func main() {
 		logger.Fatalf("tvnode->main: initLog: %v", err)
 	}
 
-	// test enviroment
-	// cfg.Tvbase.SetLocalNet(true)
-	// cfg.Tvbase.SetMdns(false)
-	// cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
-	// cfg.Tvbase.ClearBootstrapPeers()
-	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWPThTtBAaC5vvnj6NE2iQSfuBHRUdtPweM6dER62R57R2")
-	// cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
+	if isTest {
+		cfg.Tvbase.SetLocalNet(true)
+		cfg.Tvbase.SetMdns(false)
+		cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
+		cfg.Tvbase.ClearBootstrapPeers()
+		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWPThTtBAaC5vvnj6NE2iQSfuBHRUdtPweM6dER62R57R2")
+		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWQvMGQWCRGdjtaFvqbdQ7qf8cw1x94hy1mWMvQovF6uAE")
+	}
 
 	ctx := context.Background()
 	tb, err := tvbase.NewTvbase(ctx, cfg.Tvbase, rootPath)
