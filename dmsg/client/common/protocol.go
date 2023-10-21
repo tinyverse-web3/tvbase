@@ -166,13 +166,6 @@ func (p *Protocol) GenRequestInfo(
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
 	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v", reqPubkey, p.Adapter.GetRequestPID())
 
-	if p.Service.GetProxyPubkey() != "" {
-		if p.Service.GetProxyReqPubkey() == "" {
-			dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: proxyReqPubkey is not set")
-			return "", nil, nil, fmt.Errorf("Protocol->GenRequestInfo: proxyReqPubkey is not set")
-		}
-		reqPubkey = p.Service.GetProxyReqPubkey()
-	}
 	requestBasicData := protocol.NewBasicData(p.Host, reqPubkey, proxyPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {

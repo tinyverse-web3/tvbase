@@ -37,7 +37,6 @@ type DmsgService struct {
 	SrcUserInfo                  *dmsgClientCommon.SrcUserInfo
 	onReceiveMsg                 dmsgClientCommon.OnReceiveMsg
 	proxyPubkey                  string
-	proxyReqPubkey               string
 	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
 	pubChannelInfoList           map[string]*dmsgClientCommon.PubChannelInfo
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
@@ -46,7 +45,6 @@ type DmsgService struct {
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
 	d := &DmsgService{}
-	d.GetProxyPubkey()
 	err := d.Init(nodeService)
 	if err != nil {
 		return nil, err
@@ -301,14 +299,6 @@ func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
 
 func (d *DmsgService) GetProxyPubkey() string {
 	return d.proxyPubkey
-}
-
-func (d *DmsgService) SetProxyReqPubkey(pubkey string) {
-	d.proxyReqPubkey = pubkey
-}
-
-func (d *DmsgService) GetProxyReqPubkey() string {
-	return d.proxyReqPubkey
 }
 
 func (d *DmsgService) SubscribeSrcUser(

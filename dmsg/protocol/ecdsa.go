@@ -20,9 +20,9 @@ func EcdsaAuthProtocolMsg(message proto.Message, basicData *pb.BasicData) (bool,
 	}
 	basicData.Sig = sig
 	basicPubkey := basicData.Pubkey
-	if basicData.ProxyPubkey != "" {
-		basicPubkey = basicData.ProxyPubkey
-	}
+	// if basicData.ProxyPubkey != "" {
+	// 	basicPubkey = basicData.ProxyPubkey
+	// }
 	pubkey, err := utilCrypto.PubkeyFromEcdsaHex(basicPubkey)
 	if err != nil {
 		return false, err

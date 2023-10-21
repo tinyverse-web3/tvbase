@@ -22,8 +22,6 @@ type DmsgService interface {
 	Stop() error
 	GetProxyPubkey() string
 	SetProxyPubkey(pubkey string)
-	GetProxyReqPubkey() string
-	SetProxyReqPubkey(pubkey string)
 }
 
 type DkvsService interface {

@@ -17,9 +17,9 @@ func AuthProtocolMsg(message proto.Message, basicData *pb.BasicData) bool {
 		return false
 	}
 	basicData.Sig = sig
-	if basicData.ProxyPubkey != "" {
-		return verifyData(protoData, basicData.ProxyPubkey, sig)
-	}
+	// if basicData.ProxyPubkey != "" {
+	// 	return verifyData(protoData, basicData.ProxyPubkey, sig)
+	// }
 	return verifyData(protoData, basicData.Pubkey, sig)
 }
 
