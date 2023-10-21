@@ -51,12 +51,12 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte) error {
 func (p *PubsubProtocol) Request(
 	reqPubKey string,
 	destUserPubkey string,
-	proxyPubkey string,
 	dataList ...any) (protoreflect.ProtoMessage, chan any, error) {
 	dmsgLog.Logger.Debugf("PubsubProtocol->Request begin:\nreqUserPubKey:%s", reqPubKey)
 
 	dataList = append([]any{destUserPubkey}, dataList...)
-	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(reqPubKey, proxyPubkey, dataList...)
+
+	requestInfoId, requestProtoMsg, requestProtoData, err := p.GenRequestInfo(reqPubKey, dataList...)
 	if err != nil {
 		return nil, nil, err
 	}

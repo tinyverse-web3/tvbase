@@ -162,11 +162,10 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 
 func (p *Protocol) GenRequestInfo(
 	reqPubkey string,
-	proxyPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
 	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v", reqPubkey, p.Adapter.GetRequestPID())
 
-	requestBasicData := protocol.NewBasicData(p.Host, reqPubkey, proxyPubkey, p.Adapter.GetRequestPID())
+	requestBasicData := protocol.NewBasicData(p.Host, reqPubkey, p.Service.GetProxyPubkey(), p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)
