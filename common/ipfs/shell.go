@@ -48,6 +48,10 @@ func (s *IpfsShellProxy) Init(url string) error {
 	return nil
 }
 
+func (s *IpfsShellProxy) Add(r io.Reader) (cid string, err error) {
+	return s.sh.Add(r, shell.Pin(true), shell.CidVersion(1))
+}
+
 func (s *IpfsShellProxy) BlockGet(cid string) (block []byte, err error) {
 	return s.sh.BlockGet(cid)
 }
