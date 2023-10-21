@@ -482,7 +482,12 @@ func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.Proto
 		dmsgLog.Logger.Errorf("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 		return nil, nil, errors.New("dmsgService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 	}
-	pubsub := d.getDestUserPubsub(request.BasicData.Pubkey)
+
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub != nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnCreateMailboxRequest: user public key pubsub already exist")
 		retCode := &pb.RetCode{
@@ -512,7 +517,12 @@ func (d *DmsgService) OnReleaseMailboxRequest(requestProtoData protoreflect.Prot
 		return nil, nil, fmt.Errorf("dmsgService->OnReleaseMailboxRequest: cannot convert to *pb.ReleaseMailboxReq")
 	}
 
-	err := d.unPublishDestUser(request.BasicData.Pubkey)
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
+	err := d.unPublishDestUser(pubkey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -528,6 +538,9 @@ func (d *DmsgService) OnReadMailboxMsgRequest(requestProtoData protoreflect.Prot
 	}
 
 	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnReadMailboxMsgRequest: cannot find src user pubsub for %s", pubkey)
@@ -679,6 +692,9 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (any,
 		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
 	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)

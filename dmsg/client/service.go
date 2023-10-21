@@ -179,7 +179,7 @@ func (d *DmsgService) InitUser(
 }
 
 func (d *DmsgService) IsExistMailbox(userPubkey string, duration time.Duration) bool {
-	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(userPubkey, userPubkey, d.proxyPubkey)
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, userPubkey, d.proxyPubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
 		return false
@@ -212,7 +212,7 @@ func (d *DmsgService) IsExistMailbox(userPubkey string, duration time.Duration) 
 
 func (d *DmsgService) CreateMailbox(userPubkey string) error {
 	dmsgLog.Logger.Debug("DmsgService->CreateMailbox begin")
-	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(userPubkey, userPubkey, d.proxyPubkey)
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, userPubkey, d.proxyPubkey)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (d *DmsgService) CreateMailbox(userPubkey string) error {
 
 		for _, servicePeerID := range servicePeerList {
 			dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: servicePeerID: %v", servicePeerID)
-			_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, userPubkey, d.proxyPubkey)
+			_, createMailboxDoneChan, err := d.createMailboxProtocol.Request(servicePeerID, d.SrcUserInfo.UserKey.PubkeyHex, d.proxyPubkey)
 			if err != nil {
 				dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: createMailboxProtocol.Request error: %v", err)
 				continue
@@ -930,22 +930,27 @@ func (d *DmsgService) OnQueryPeerResponse(requestProtoData protoreflect.ProtoMes
 }
 
 func (d *DmsgService) OnSendMsgRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
-	sendMsgReq, ok := requestProtoData.(*pb.SendMsgReq)
+	request, ok := requestProtoData.(*pb.SendMsgReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
 		return nil, fmt.Errorf("DmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", requestProtoData)
 	}
 
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
 	if d.onReceiveMsg != nil {
-		srcPubkey := sendMsgReq.BasicData.Pubkey
-		destPubkey := sendMsgReq.DestPubkey
+		srcPubkey := pubkey
+		destPubkey := request.DestPubkey
 		msgDirection := dmsg.MsgDirection.From
 		d.onReceiveMsg(
 			srcPubkey,
 			destPubkey,
-			sendMsgReq.Content,
-			sendMsgReq.BasicData.TS,
-			sendMsgReq.BasicData.ID,
+			request.Content,
+			request.BasicData.TS,
+			request.BasicData.ID,
 			msgDirection)
 	} else {
 		dmsgLog.Logger.Errorf("DmsgService->OnSendMsgRequest: OnReceiveMsg is nil")
