@@ -180,7 +180,7 @@ func (d *DmsgService) InitUser(
 
 }
 
-func (d *DmsgService) IsExistMailbox(userPubkey string) bool {
+func (d *DmsgService) IsExistMailbox(userPubkey string, duration time.Duration) bool {
 	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(userPubkey, userPubkey, d.proxyPubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
@@ -202,9 +202,8 @@ func (d *DmsgService) IsExistMailbox(userPubkey string) bool {
 			dmsgLog.Logger.Debugf("DmsgService->IsExistMailbox: seekMailboxProtoData success")
 			return true
 		}
-	case <-time.After(3 * time.Second):
+	case <-time.After(duration):
 		dmsgLog.Logger.Debugf("DmsgService->IsExistMailbox: time.After 3s timeout")
-		dmsgLog.Logger.Error("DmsgService->CreateMailbox: no available service peers")
 		return false
 
 	case <-d.BaseService.GetCtx().Done():
