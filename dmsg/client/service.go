@@ -414,7 +414,7 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg() error {
 }
 
 // dest user
-func (d *DmsgService) SubscribeDestUser(userPubkey string) error {
+func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error {
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\nuserPubkey: %s", userPubkey)
 	if d.IsExistDestUser(userPubkey) {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
@@ -439,9 +439,12 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string) error {
 	destUserInfo.Subscription = userSub
 	d.destUserInfoList[userPubkey] = destUserInfo
 
-	err = d.StartReadDestUserPubsubMsg(userPubkey)
-	if err != nil {
-		return err
+	if isListen {
+		err = d.StartReadDestUserPubsubMsg(userPubkey)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser end")
