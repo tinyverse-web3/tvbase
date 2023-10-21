@@ -464,7 +464,8 @@ func (d *Dkvs) tryToConnectNetPeers() int { //主动连接网络节点
 	baseService := d.baseService
 	nodeInfoService := baseService.GetNodeInfoService()
 	if len(peers) == 0 {
-		bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(nodeInfoService.NodeConfig.Bootstrap.BootstrapPeers)
+		cfg := d.baseService.GetConfig()
+		bootstrapPeerAddrInfoList, err := tvUtil.ParseBootstrapPeers(cfg.Bootstrap.BootstrapPeers)
 		if err == nil {
 			peers = ParsePeersAddrInfo(bootstrapPeerAddrInfoList)
 		}

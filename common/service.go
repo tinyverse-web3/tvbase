@@ -20,6 +20,10 @@ import (
 type DmsgService interface {
 	Start() error
 	Stop() error
+	GetProxyPubkey() string
+	SetProxyPubkey(pubkey string)
+	GetProxyReqPubkey() string
+	SetProxyReqPubkey(pubkey string)
 }
 
 type DkvsService interface {
@@ -47,7 +51,8 @@ type TvBaseService interface {
 	DiscoverRendezvousPeers()
 	GetServicePeerList() tvPeer.PeerInfoList
 	GetLightPeerList() tvPeer.PeerInfoList
-	GetConfig() *config.NodeConfig
+	GetRootPath() string
+	GetConfig() *config.TvbaseConfig
 	GetNodeInfoService() *tvProtocol.NodeInfoService
 	GetDht() *kaddht.IpfsDHT
 	GetCtx() context.Context

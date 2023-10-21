@@ -35,7 +35,7 @@ func (m *TvBase) HandlePeerFound(p libp2pPeer.AddrInfo) {
 }
 
 func (m *TvBase) initMdns(ph host.Host, lc fx.Lifecycle) (mdns.Service, error) {
-	if !m.nodeCfg.Network.EnableMdns {
+	if !m.cfg.Network.EnableMdns {
 		return nil, nil
 	}
 	mdnsService := mdns.NewMdnsService(ph, MdnsServiceName, m)

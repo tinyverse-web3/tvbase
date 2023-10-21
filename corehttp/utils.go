@@ -1,8 +1,13 @@
 package corehttp
 
 import (
+	"crypto/md5"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"os/user"
@@ -12,6 +17,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-base32"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -183,4 +189,73 @@ func formatUnixTime(unixTime uint64) string {
 	formattedTime := fmt.Sprintf("%v", timeObj)
 
 	return formattedTime
+}
+
+func getPriKeyBySeed(seed string) (crypto.PrivKey, error) {
+	aStringToHash := []byte(seed)
+	sha256Bytes := sha256.Sum256(aStringToHash)
+	keySeed := int64(binary.BigEndian.Uint64(sha256Bytes[:]))
+	r := rand.New(rand.NewSource(int64(keySeed)))
+	// Set your own keypair
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, r)
+	return priv, err
+}
+
+func bytesToHexString(input []byte) string {
+	hexString := "0x"
+	for _, b := range input {
+		hexString += fmt.Sprintf("%02x", b)
+	}
+	return hexString
+}
+
+// Hash 128 bit for specified string .
+func hash128(bytes []byte) (hashKey string) {
+	shaHash := md5.Sum(bytes)
+	hashKey = hex.EncodeToString(shaHash[:])
+	return hashKey
+}
+
+// Hash 256 bit for specified string .
+func hash256(bytes []byte) (hashKey string) {
+	shaHash := sha256.Sum256(bytes)
+	hashKey = hex.EncodeToString(shaHash[:])
+	return
+}
+
+// Hash 384 bit for specified string .
+func hash384(bytes []byte) (hashKey string) {
+	shaHash := sha512.Sum384(bytes)
+	hashKey = hex.EncodeToString(shaHash[:])
+	return
+}
+
+// Hash 512 bit for specified string .
+func hash512(bytes []byte) (hashKey string) {
+	shaHash := sha512.Sum512(bytes)
+	hashKey = hex.EncodeToString(shaHash[:])
+	return
+}
+
+func getTtlFromDuration(t time.Duration) uint64 {
+	return uint64(t.Milliseconds())
+}
+
+func timeNow() uint64 {
+	return uint64(time.Now().UnixMilli())
+}
+
+func getRecordSignData(key string, val []byte, pubkey []byte, issuetime uint64, ttl uint64) []byte {
+	sigData := make([]byte, len(key)+len(val)+len(pubkey)+16)
+	i := copy(sigData, []byte(key))
+	i += copy(sigData[i:], val)
+	i += copy(sigData[i:], pubkey)
+
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, issuetime)
+	i += copy(sigData[i:], b)
+	binary.LittleEndian.PutUint64(b, ttl)
+	copy(sigData[i:], b)
+
+	return sigData
 }

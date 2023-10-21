@@ -48,7 +48,7 @@ func (p *Protocol) HandleRequestData(
 		return requestProtoMsg, nil, err
 	}
 
-	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
+	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Service.GetProxyPubkey(), p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	responseProtoMsg, err := p.Adapter.InitResponse(responseBasicData, callbackData)
 	if err != nil {
@@ -90,6 +90,7 @@ func (p *Protocol) GetErrResponse(
 	responseBasicData := protocol.NewBasicData(
 		p.Host,
 		userPubkeyHex,
+		p.Service.GetProxyPubkey(),
 		p.Adapter.GetResponsePID(),
 	)
 	responseBasicData.ID = requestBasicData.ID
@@ -160,11 +161,19 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 }
 
 func (p *Protocol) GenRequestInfo(
-	srcUserPubkey string,
+	reqPubkey string,
+	proxyPubkey string,
 	dataList ...any) (string, protoreflect.ProtoMessage, []byte, error) {
-	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v",
-		srcUserPubkey, p.Adapter.GetRequestPID())
-	requestBasicData := protocol.NewBasicData(p.Host, srcUserPubkey, p.Adapter.GetRequestPID())
+	dmsgLog.Logger.Debugf("Protocol->GenRequestInfo begin:\nuserPubkey:%s\nrequestPID:%v", reqPubkey, p.Adapter.GetRequestPID())
+
+	if p.Service.GetProxyPubkey() != "" {
+		if p.Service.GetProxyReqPubkey() == "" {
+			dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: proxyReqPubkey is not set")
+			return "", nil, nil, fmt.Errorf("Protocol->GenRequestInfo: proxyReqPubkey is not set")
+		}
+		reqPubkey = p.Service.GetProxyReqPubkey()
+	}
+	requestBasicData := protocol.NewBasicData(p.Host, reqPubkey, proxyPubkey, p.Adapter.GetRequestPID())
 	requestProtoMsg, err := p.Adapter.InitRequest(requestBasicData, dataList...)
 	if err != nil {
 		dmsgLog.Logger.Errorf("Protocol->GenRequestInfo: InitRequest error: %v", err)

@@ -3,6 +3,7 @@ package protocol
 import (
 	"crypto/ecdsa"
 
+	utilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/tvbase/common/key"
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
@@ -18,7 +19,7 @@ func EcdsaAuthProtocolMsg(message proto.Message, basicData *pb.BasicData) (bool,
 		return false, nil
 	}
 	basicData.Sig = sig
-	pubkey, err := key.PubkeyFromEcdsaHex(basicData.Pubkey)
+	pubkey, err := utilCrypto.PubkeyFromEcdsaHex(basicData.Pubkey)
 	if err != nil {
 		return false, err
 	}

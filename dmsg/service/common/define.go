@@ -17,6 +17,7 @@ import (
 type ProtocolService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
+	GetProxyPubkey() string
 	RegPubsubProtocolResCallback(protocolID pb.PID, subscribe dmsgProtocol.ResSubscribe) error
 	RegPubsubProtocolReqCallback(protocolID pb.PID, subscribe dmsgProtocol.ReqSubscribe) error
 	PublishProtocol(ctx context.Context, userPubkey string, protocolID pb.PID, protocolData []byte) error

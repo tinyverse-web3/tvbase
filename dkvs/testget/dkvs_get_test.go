@@ -2,6 +2,7 @@ package testget
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -9,18 +10,23 @@ import (
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
+	"github.com/tinyverse-web3/tvbase/common/config"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
 func init() {
-	nodeConfig, err := tvUtil.LoadNodeConfig()
-	if err != nil {
-		fmt.Printf("init error: %v", err)
-		return
+	logCfg := map[string]string{
+		"tvbase":         "debug",
+		"dkvs":           "debug",
+		"dmsg":           "debug",
+		"customProtocol": "debug",
+		"tvnode":         "debug",
+		"tvipfs":         "debug",
+		"core_http":      "debug",
 	}
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
+	err := tvUtil.SetLogModule(logCfg)
 	if err != nil {
 		fmt.Printf("init error: %v", err)
 		return
@@ -43,7 +49,10 @@ func bytesToHexString(input []byte) string {
 func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 	//relayAddr := "/ip4/156.251.179.31/tcp/9000/p2p/12D3KooWSYLNGkmanka9QS7kV5CS8kqLZBT2PUwxX7WqL63jnbGx"
 
-	tvbase, err := tvbase.NewTvbase() //如果不传入任何参数，默认数据存储路径是当前路径下
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(config.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,11 +117,14 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 }
 
 func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
-	node, err := tvbase.NewTvbase()
+	ctx := context.Background()
+	cfg := config.NewDefaultTvbaseConfig()
+	cfg.InitMode(config.LightMode)
+	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tvBase tvCommon.TvBaseService = node
+	var tvBase tvCommon.TvBaseService = tvbase
 	kv := dkvs.NewDkvs(tvBase) //.表示当前路径
 
 	seed := "oIBBgepoPyhdJTYB" //dkvs.RandString(16)
@@ -148,6 +160,6 @@ func TestGetUnsyncedKeyFromOtherNode(t *testing.T) {
 	if err != nil || !bytes.Equal(value, tValue1) {
 		t.Fatal(err)
 	}
-	node.Stop()
+	tvbase.Stop()
 
 }

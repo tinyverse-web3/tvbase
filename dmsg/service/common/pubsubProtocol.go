@@ -48,7 +48,7 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 		return err
 	}
 
-	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Adapter.GetResponsePID())
+	responseBasicData := protocol.NewBasicData(p.Host, userPubkeyHex, p.Service.GetProxyPubkey(), p.Adapter.GetResponsePID())
 	responseBasicData.ID = requestBasicData.ID
 	response, err := p.Adapter.InitResponse(request, responseBasicData, requestCallbackData, retCodeData)
 	if err != nil {

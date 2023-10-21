@@ -2,22 +2,18 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 
 	filelock "github.com/MichaelS11/go-file-lock"
-	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
-	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	tvbaseIpfs "github.com/tinyverse-web3/tvbase/common/ipfs"
-	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
-	ipfsCustomProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
+	tvbaseUtil "github.com/tinyverse-web3/tvbase/common/util"
+	"github.com/tinyverse-web3/tvbase/corehttp"
+	syncfile "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/ipfs"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/custom/pullcid"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -25,10 +21,6 @@ const (
 	defaultPathName = ".tvnode"
 	defaultPathRoot = "~/" + defaultPathName
 )
-
-const logName = "tvnode"
-
-var tvsLog = ipfsLog.Logger(logName)
 
 func getPidFileName(rootPath string) (string, error) {
 	rootPath = strings.Trim(rootPath, " ")
@@ -65,137 +57,99 @@ func getPidFileName(rootPath string) (string, error) {
 	return pidFile, nil
 }
 
-func parseCmdParams() string {
-	generateCfg := flag.Bool("init", false, "init generate identity key and config file")
-	rootPath := flag.String("rootPath", defaultPathRoot, "config file path")
-	shutDown := flag.Bool("shutdown", false, "shutdown daemon")
-	help := flag.Bool("help", false, "Display help")
-
-	flag.Parse()
-
-	if *help {
-		tvsLog.Info("tinverse tvnode")
-		tvsLog.Info("Usage step1: Run './tvnode -init' generate identity key and config.")
-		tvsLog.Info("Usage step2: Run './tvnode' or './tvnode -rootPath .' start tinyverse tvnode service.")
-		os.Exit(0)
-	}
-	if *generateCfg {
-		err := tvUtil.GenConfig2IdentityFile(*rootPath, tvConfig.ServiceMode)
-		if err != nil {
-			tvsLog.Fatalf("Failed to generate config file: %v", err)
-		}
-		tvsLog.Infof("Generate config file successfully.")
-		os.Exit(0)
-	}
-
-	if *shutDown {
-		pidFile, err := getPidFileName(*rootPath)
-		if err != nil {
-			tvsLog.Infof("Failed to get pidFileName: %v", err)
-			os.Exit(0)
-		}
-		file, err := os.Open(pidFile)
-		if err != nil {
-			tvsLog.Infof("Failed to open pidFile: %v", err)
-			os.Exit(0)
-		}
-		defer file.Close()
-		content, err := io.ReadAll(file)
-		if err != nil {
-			tvsLog.Infof("Failed to read pidFile: %v", err)
-			os.Exit(0)
-		}
-		pid, err := strconv.Atoi(strings.TrimRight(string(content), "\r\n"))
-		if err != nil {
-			tvsLog.Errorf("The pidFile content is not a number, content: %v ,error: %v", content, err)
-		}
-
-		process, err := os.FindProcess(pid)
-		if err != nil {
-			tvsLog.Infof("Failed to find process: %v", err)
-			os.Exit(0)
-		}
-
-		err = process.Signal(syscall.SIGKILL)
-		if err != nil {
-			tvsLog.Infof("Failed to terminate process: %v", err)
-		}
-
-		tvsLog.Infof("Process terminated successfully")
-		os.Exit(0)
-	}
-	return *rootPath
-}
-
 func main() {
 	rootPath := parseCmdParams()
-
-	nodeConfig, err := tvUtil.LoadNodeConfig(rootPath)
+	rootPath, err := tvbaseUtil.GetRootPath(rootPath)
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: %v", err)
-		return
+		logger.Fatalf("tvnode->main: GetRootPath: %v", err)
 	}
-
-	err = tvUtil.SetLogModule(nodeConfig.Log.ModuleLevels)
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: init log: %v", err)
-	}
-
 	pidFileName, err := getPidFileName(rootPath)
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: get pid file name: %v", err)
+		logger.Fatalf("tvnode->main: get pid file name: %v", err)
 	}
 	pidFileLockHandle, err := filelock.New(pidFileName)
-	tvsLog.Infof("tvnode->main: PID: %v", os.Getpid())
+	logger.Infof("tvnode->main: PID: %v", os.Getpid())
 	if err == filelock.ErrFileIsBeingUsed {
-		tvsLog.Errorf("tvnode->main: pid file is being locked: %v", err)
+		logger.Errorf("tvnode->main: pid file is being locked: %v", err)
 		return
 	}
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: pid file lock: %v", err)
+		logger.Errorf("tvnode->main: pid file lock: %v", err)
 		return
 	}
 	defer func() {
 		err = pidFileLockHandle.Unlock()
 		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file unlock: %v", err)
+			logger.Errorf("tvnode->main: pid file unlock: %v", err)
 		}
 		err = os.Remove(pidFileName)
 		if err != nil {
-			tvsLog.Errorf("tvnode->main: pid file remove: %v", err)
+			logger.Errorf("tvnode->main: pid file remove: %v", err)
 		}
 	}()
 
-	ctx := context.Background()
-	tb, err := tvbase.NewTvbase(rootPath, ctx, true)
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: NewInfrasture :%v", err)
+	cfg, err := loadConfig(rootPath)
+	if err != nil || cfg == nil {
+		logger.Fatalf("tvnode->main: loadConfig: %v", err)
 	}
 
-	_, err = tvbaseIpfs.CreateIpfsShellProxy(nodeConfig.CustomProtocol.IpfsSyncFile.IpfsURL)
+	err = initLog()
 	if err != nil {
-		tvsLog.Errorf("tvnode->main: CreateIpfsShell: %v", err)
+		logger.Fatalf("tvnode->main: initLog: %v", err)
+	}
+
+	logger.Infof("tvnode->main: isTest: %v", isTest)
+	if isTest {
+		cfg.Tvbase.SetLocalNet(true)
+		cfg.Tvbase.SetMdns(false)
+		cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
+		cfg.Tvbase.ClearBootstrapPeers()
+		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWGUjKn8SHYjdGsnzjFDT3G33svXCbLYXebsT9vsK8dyHu")
+		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWGhqQa67QMRFAisZSZ1snfCnpFtWtr4rXTZ2iPBfVu1RR")
+		logger.Infof("tvnode->main: test BootstrapPeers: %v", cfg.Tvbase.Bootstrap.BootstrapPeers)
+	}
+
+	ctx := context.Background()
+	tb, err := tvbase.NewTvbase(ctx, cfg.Tvbase, rootPath)
+	if err != nil {
+		logger.Fatalf("tvnode->main: NewInfrasture :%v", err)
+	}
+
+	_, err = tvbaseIpfs.CreateIpfsShellProxy(cfg.CustomProtocol.IpfsSyncFile.IpfsURL)
+	if err != nil {
+		logger.Errorf("tvnode->main: CreateIpfsShell: %v", err)
 		return
 	}
 
-	fp, err := ipfsCustomProtocol.GetFileSyncServiceProtocol(tb)
+	pp, err := pullcid.NewPullCidService()
 	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetFileSyncServiceProtocol :%v", err)
-	}
-	tb.RegistCSSProtocol(fp)
-
-	cp, err := ipfsCustomProtocol.GetCidStatusServiceProtocol()
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetCidStatusServiceProtocol :%v", err)
-	}
-	tb.RegistCSSProtocol(cp)
-
-	pp, err := ipfsCustomProtocol.GetPinServiceProtocol()
-	if err != nil {
-		tvsLog.Fatalf("tvnode->main: GetPinServiceProtocol :%v", err)
+		logger.Fatalf("tvnode->main: GetPullCidServiceProtocol :%v", err)
 	}
 	tb.RegistCSSProtocol(pp)
 
+	fp, err := syncfile.NewSyncFileUploadService()
+	if err != nil {
+		logger.Fatalf("tvnode->main: GetFileSyncServiceProtocol :%v", err)
+	}
+	tb.RegistCSSProtocol(fp)
+
+	cp, err := syncfile.NewSyncFileSummaryService()
+	if err != nil {
+		logger.Fatalf("tvnode->main: GetSummaryServiceProtocol :%v", err)
+	}
+	tb.RegistCSSProtocol(cp)
+
+	err = tb.Start()
+	if err != nil {
+		logger.Fatalf("tvnode->main: Start: %v", err)
+	}
+
+	err = tb.DmsgService.Start()
+	if err != nil {
+		logger.Fatalf("tvnode->main: Start: %v", err)
+	}
+
+	corehttp.StartWebService(tb)
 	<-ctx.Done()
 	// tvInfrasture.Stop()
 	// Logger.Info("tvnode_->main: Gracefully shut down daemon")

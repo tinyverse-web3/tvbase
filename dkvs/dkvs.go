@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -34,7 +33,7 @@ type Dkvs struct {
 	dhtDatastore   db.Datastore
 	protoMessenger *kadpb.ProtocolMessenger
 	baseService    tvCommon.TvBaseService
-	baseServiceCfg *tvConfig.NodeConfig
+	baseServiceCfg *tvConfig.TvbaseConfig
 }
 
 var _dkvs *Dkvs = nil
@@ -45,7 +44,7 @@ var (
 )
 
 func NewDkvs(tvbase tvCommon.TvBaseService) *Dkvs {
-	rootPath := tvbase.GetConfig().RootPath
+	rootPath := tvbase.GetRootPath()
 	dbPath := rootPath + string(filepath.Separator) + "unsynckv"
 	dkvsdb, err := createBadgerDB(dbPath)
 	if err != nil {
@@ -335,25 +334,13 @@ func (d *Dkvs) putRecord(key string, record *pb.DkvsRecord) error {
 }
 
 func createBadgerDB(dbRootDir string) (*badgerds.Datastore, error) {
-	fullPath := dbRootDir
-	if !filepath.IsAbs(fullPath) {
-		rootPath, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		fullPath = filepath.Join(rootPath, fullPath)
-	}
-	err := os.MkdirAll(fullPath, 0755)
-	if err != nil {
-		return nil, err
-	}
 	defopts := badgerds.DefaultOptions
 	defopts.SyncWrites = false
 	defopts.Truncate = true
-	return badgerds.NewDatastore(fullPath, &defopts)
+	return badgerds.NewDatastore(dbRootDir, &defopts)
 }
 
-func getProtocolMessenger(baseServiceCfg *tvConfig.NodeConfig, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
+func getProtocolMessenger(baseServiceCfg *tvConfig.TvbaseConfig, dht *dht.IpfsDHT) (*kadpb.ProtocolMessenger, error) {
 	v1proto := baseServiceCfg.DHT.ProtocolPrefix + baseServiceCfg.DHT.ProtocolID
 	protocols := []protocol.ID{protocol.ID(v1proto)}
 	msgSender := kaddht.NewMessageSenderImpl(dht.Host(), protocols)

@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "program": "${workspaceFolder}/tvnodelight",
             "console": "integratedTerminal",
             "args": ["-srcSeed", "a", "-destSeed", "b"]
         },
@@ -18,7 +18,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "program": "${workspaceFolder}/tvnodelight",
             "console": "integratedTerminal",
             "args": ["-srcSeed", "a", "-destSeed", "b", "-pubSeed", "c", "-rootPath", "./"]
         },
@@ -27,18 +27,54 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/tvnodelight/main.go",
+            "program": "${workspaceFolder}/tvnodelight",
             "console": "integratedTerminal",
             "args": ["-srcSeed", "b", "-destSeed", "a", "-pubSeed", "c", "-rootPath", "./"]
         },
         {
-            "name": "tvnode",
+            "name": "tvnode-.test",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "console": "integratedTerminal",
-            "program": "${workspaceFolder}/tvnode/main.go",
-            "args": ["-rootPath", "./"]
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-rootPath", "./", "-test"]
+        },
+        {
+            "name": "tvnode-.test",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-rootPath", "./", "-test"]
+        },
+        {
+            "name": "tvnode-~",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-rootPath", "~/.tvnode"]
+        },
+        {
+            "name": "tvnode-~.test",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-rootPath", "~/.tvnode", "-test"]
+        },
+        {
+            "name": "tvnode-init",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tvnode",
+            "args": ["-rootPath", "./", "-init"]
         }
     ]
 }

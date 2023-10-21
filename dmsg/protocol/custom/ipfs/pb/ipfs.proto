@@ -14,20 +14,17 @@ message SyncFileRes {
     string CID = 1;
 }
 
-message CidStatusReq {
+message SummaryReq {
     string CID = 1;
+    int32 MaxProviderCount = 2;
 }
 
-message CidStatusRes {
+message Provider {
     string CID = 1;
-    bool isPin = 2;
+    repeated string PeerIdList = 2;
 }
 
-message PinReq {
+message SummaryRes {
     string CID = 1;
-    int64 timeout = 2;
-}
-
-message PinRes {
-    string CID = 1;
+    repeated Provider ProivderList = 2;
 }

@@ -11,6 +11,8 @@ import (
 
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
+	utilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
+	utilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/dmsg"
@@ -20,8 +22,6 @@ import (
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	serviceProtocol "github.com/tinyverse-web3/tvbase/dmsg/service/protocol"
-	tvCrypto "github.com/tinyverse-web3/tvutil/crypto"
-	keyUtil "github.com/tinyverse-web3/tvutil/key"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -47,6 +47,7 @@ type DmsgService struct {
 	customStreamProtocolInfoList map[string]*dmsgServiceCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo
 	stopCleanRestResource        chan bool
+	proxyPubkey                  string
 }
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
@@ -65,7 +66,8 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	}
 
 	cfg := d.BaseService.GetConfig()
-	d.datastore, err = db.CreateDataStore(cfg.DMsg.DatastorePath, cfg.Mode)
+	filepath := d.BaseService.GetRootPath() + cfg.DMsg.DatastorePath
+	d.datastore, err = db.CreateDataStore(filepath, cfg.Mode)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->Init: create datastore error %v", err)
 		return err
@@ -97,24 +99,24 @@ func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.customPubsubProtocolInfoList = make(map[string]*dmsgServiceCommon.CustomPubsubProtocolInfo)
 
 	peerId := d.BaseService.GetHost().ID().String()
-	priKey, pubKey, err := keyUtil.GenerateEcdsaKey(peerId)
+	priKey, pubKey, err := utilKey.GenerateEcdsaKey(peerId)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->Init: generate priKey error %v", err)
 		return err
 	}
-	priKeyData, err := keyUtil.ECDSAPrivateKeyToProtoBuf(priKey)
+	priKeyData, err := utilKey.ECDSAPrivateKeyToProtoBuf(priKey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->Init: generate priKey_porto error %v", err)
 		return err
 	}
-	priKeyHex := keyUtil.TranslateKeyProtoBufToString(priKeyData)
+	priKeyHex := utilKey.TranslateKeyProtoBufToString(priKeyData)
 
-	pubKeyData, err := keyUtil.ECDSAPublicKeyToProtoBuf(pubKey)
+	pubKeyData, err := utilKey.ECDSAPublicKeyToProtoBuf(pubKey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("dmsgService->Init: generate pubKey_porto error %v", err)
 		return err
 	}
-	pubKeyHex := keyUtil.TranslateKeyProtoBufToString(pubKeyData)
+	pubKeyHex := utilKey.TranslateKeyProtoBufToString(pubKeyData)
 
 	d.curSrcUserInfo = &dmsgServiceCommon.UserInfo{
 		UserKey: &dmsgServiceCommon.UserKey{
@@ -133,8 +135,23 @@ func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	return d.curSrcUserInfo.UserKey.PubKeyHex, nil
 }
 
+func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
+	d.proxyPubkey = proxyPubkey
+}
+
+func (d *DmsgService) GetProxyPubkey() string {
+	return d.proxyPubkey
+}
+
+func (d *DmsgService) SetProxyReqPubkey(pubkey string) {
+}
+
+func (d *DmsgService) GetProxyReqPubkey() string {
+	return ""
+}
+
 func (d *DmsgService) GetUserSig(protoData []byte) ([]byte, error) {
-	sign, err := tvCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
+	sign, err := utilCrypto.SignDataByEcdsa(d.curSrcUserInfo.UserKey.PriKey, protoData)
 	if err != nil {
 		dmsgLog.Logger.Errorf("GetCurUserSign: %v", err)
 		return sign, nil

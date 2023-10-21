@@ -263,23 +263,7 @@ func QueryProviders() ServeOption {
 func QueryAllConnectdPeers() ServeOption {
 	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/tvbase/queryAllPeers", func(w http.ResponseWriter, r *http.Request) {
-			host := t.GetHost()
-			peerstore := host.Peerstore()
-			//peers := peerstore.Peers()
-			peers := host.Network().Peers()
-			var nodeList []Node
-			for _, peerId := range peers {
-				var node Node
-				addrInfo := peerstore.PeerInfo(peerId)
-				isPrivateIP, publicIp := isPrivateNode(addrInfo)
-				if isPrivateIP {
-					continue
-				}
-				node.NodeId = peerId.Pretty()
-				node.Addrs = addrInfo.String()
-				node.PublicIp = publicIp
-				nodeList = append(nodeList, node)
-			}
+			nodeList := getConnetedServerNode(t)
 			jsonData, err := json.Marshal(nodeList)
 			if err != nil {
 				Logger.Errorf("queryAllPeers---> json.Marshal(nodeList) failed:  %v", err)
@@ -388,6 +372,171 @@ func QuerySystemResouce() ServeOption {
 			_, err = w.Write(jsonData)
 			if err != nil {
 				Logger.Errorf("querySysRes---> failed to write json data to w http.ResponseWriter: %v", err)
+				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
+				return
+			}
+		})
+		return mux, nil
+	}
+}
+
+func GetDemoKey() ServeOption {
+	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		mux.HandleFunc("/tvbase/getDemoKey", func(w http.ResponseWriter, r *http.Request) {
+			queryParams := r.URL.Query()
+			querySeed := queryParams.Get("seed")
+			if len(querySeed) == 0 {
+				Logger.Errorf("getDemoKey---> seed does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "seed does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			demoKey := getDemoKey(querySeed)
+			jsonData, err := json.Marshal(demoKey)
+			if err != nil {
+				Logger.Errorf("getDemoKey---> json.Marshal(nodeList) failed:  %v", err)
+				handleError(w, "failed to marshal demoKey", err, 400)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, err = w.Write(jsonData)
+			if err != nil {
+				Logger.Errorf("getDemoKey---> failed to write json data to w http.ResponseWriter:  %v", err)
+				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
+				return
+			}
+		})
+		return mux, nil
+	}
+}
+
+func GetEncryptedDemoValue() ServeOption {
+	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		mux.HandleFunc("/tvbase/getEncryptedDemoValue", func(w http.ResponseWriter, r *http.Request) {
+			queryParams := r.URL.Query()
+			queryPrivateKey := queryParams.Get("private_key")
+			queryAesKey := queryParams.Get("aes_key")
+			queryKey := queryParams.Get("key")
+			queryValue := queryParams.Get("value")
+			if len(queryPrivateKey) == 0 {
+				Logger.Errorf("getEncryptedDemoValue---> private_key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "private_key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryKey) == 0 {
+				Logger.Errorf("getEncryptedDemoValue---> key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryValue) == 0 {
+				Logger.Errorf("getEncryptedDemoValue---> value does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "value does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryAesKey) == 0 {
+				Logger.Errorf("getEncryptedDemoValue---> aes_key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "aes_key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			demoEncryptedValue := getEncryptedDemoValue(queryPrivateKey, queryAesKey, queryKey, queryValue)
+			jsonData, err := json.Marshal(demoEncryptedValue)
+			if err != nil {
+				Logger.Errorf("getEncryptedDemoValue---> json.Marshal(nodeList) failed:  %v", err)
+				handleError(w, "failed to marshal demoEncryptedValue", err, 400)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, err = w.Write(jsonData)
+			if err != nil {
+				Logger.Errorf("getEncryptedDemoValue---> failed to write json data to w http.ResponseWriter:  %v", err)
+				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
+				return
+			}
+		})
+		return mux, nil
+	}
+}
+
+func PubDemoKey() ServeOption {
+	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		mux.HandleFunc("/tvbase/pubDemoKey", func(w http.ResponseWriter, r *http.Request) {
+			queryParams := r.URL.Query()
+			queryPrivateKey := queryParams.Get("private_key")
+			queryKey := queryParams.Get("key")
+			queryValue := queryParams.Get("value")
+			queryTtl := queryParams.Get("ttl")
+			queryIssueTime := queryParams.Get("issue_time")
+
+			if len(queryPrivateKey) == 0 {
+				Logger.Errorf("pubDemoKey---> private_key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "private_key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryKey) == 0 {
+				Logger.Errorf("pubDemoKey---> key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryValue) == 0 {
+				Logger.Errorf("pubDemoKey---> value does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "value does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryTtl) == 0 {
+				Logger.Errorf("pubDemoKey---> queryTtl does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "queryTtl does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryIssueTime) == 0 {
+				Logger.Errorf("pubDemoKey---> queryIssueTime does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "queryIssueTime does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			putDemoKeyResult := pubDemoKey(t, queryPrivateKey, queryKey, queryValue, queryTtl, queryIssueTime)
+			jsonData, err := json.Marshal(putDemoKeyResult)
+			if err != nil {
+				Logger.Errorf("pubDemoKey---> json.Marshal(nodeList) failed:  %v", err)
+				handleError(w, "failed to marshal putDemoKeyResult", err, 400)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, err = w.Write(jsonData)
+			if err != nil {
+				Logger.Errorf("pubDemoKey---> failed to write json data to w http.ResponseWriter:  %v", err)
+				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
+				return
+			}
+		})
+		return mux, nil
+	}
+}
+
+func GetDemoKeyValue() ServeOption {
+	return func(t tvCommon.TvBaseService, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		mux.HandleFunc("/tvbase/getDemoKeyValue", func(w http.ResponseWriter, r *http.Request) {
+			queryParams := r.URL.Query()
+			queryAesKey := queryParams.Get("aes_key")
+			queryKey := queryParams.Get("key")
+			if len(queryAesKey) == 0 {
+				Logger.Errorf("getDemoKeyValue---> aes_key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "aes_key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			if len(queryKey) == 0 {
+				Logger.Errorf("getDemoKeyValue---> key does not exist in the url parameter:  %v", fmt.Errorf("error"))
+				handleError(w, "key does not exist in the url parameter", fmt.Errorf("error"), 400)
+				return
+			}
+			getDemoKeyResult := getDemoKeyValue(t, queryAesKey, queryKey)
+			jsonData, err := json.Marshal(getDemoKeyResult)
+			if err != nil {
+				Logger.Errorf("getDemoKeyValue---> json.Marshal(nodeList) failed:  %v", err)
+				handleError(w, "failed to marshal getDemoKeyResult", err, 400)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, err = w.Write(jsonData)
+			if err != nil {
+				Logger.Errorf("getDemoKeyValue---> failed to write json data to w http.ResponseWriter:  %v", err)
 				handleError(w, "failed to write json data to w http.ResponseWriter", err, 400)
 				return
 			}
