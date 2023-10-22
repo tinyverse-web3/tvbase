@@ -5,7 +5,6 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -36,20 +35,18 @@ func CreateService(tvbase define.TvBaseService) (*ChannelService, error) {
 // sdk-common
 func (d *ChannelService) Start(
 	enableService bool,
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
-	timeout time.Duration,
 ) error {
 	log.Debug("ChannelService->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
 
 	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, enableService, pubkey)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol, false)
+	err := d.ProxyPubsubService.Start(pubkey, getSig, createPubsubProtocol, pubsubMsgProtocol, false)
 	if err != nil {
 		return err
 	}

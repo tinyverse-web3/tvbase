@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 )
@@ -17,11 +16,11 @@ type LightUserService struct {
 }
 
 func (d *LightUserService) Start(
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
 	enablePubsub bool,
 ) error {
-	return d.initUser(pubkeyData, getSig, enablePubsub)
+	return d.initUser(pubkey, getSig, enablePubsub)
 }
 
 func (d *LightUserService) Stop() error {
@@ -59,13 +58,12 @@ func (d *LightUserService) GetPublishTarget(pubkey string) (*dmsgUser.Target, er
 
 // user
 func (d *LightUserService) initUser(
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
 	enablePubsub bool,
 ) error {
 	lightUserLog.Debug("LightUserService->InitUser begin")
-	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
-	err := d.subscribeUser(pubkey, getSig, enablePubsub)
+	err := d.SubscribeUser(pubkey, getSig, enablePubsub)
 	if err != nil {
 		return err
 	}
@@ -74,27 +72,27 @@ func (d *LightUserService) initUser(
 	return nil
 }
 
-func (d *LightUserService) subscribeUser(
+func (d *LightUserService) SubscribeUser(
 	pubkey string,
 	getSig dmsgKey.GetSigCallback,
 	enablePubsub bool,
 ) error {
-	lightUserLog.Debugf("LightUserService->subscribeUser begin\npubkey: %s", pubkey)
+	lightUserLog.Debugf("LightUserService->SubscribeUser begin\npubkey: %s", pubkey)
 	if d.LightUser != nil {
-		lightUserLog.Errorf("LightUserService->subscribeUser: user isn't nil")
-		return fmt.Errorf("LightUserService->subscribeUser: user isn't nil")
+		lightUserLog.Errorf("LightUserService->SubscribeUser: user isn't nil")
+		return fmt.Errorf("LightUserService->SubscribeUser: user isn't nil")
 	}
 
 	target, err := dmsgUser.NewTarget(pubkey, getSig)
 	if err != nil {
-		lightUserLog.Errorf("LightUserService->subscribeUser: NewUser error: %v", err)
+		lightUserLog.Errorf("LightUserService->SubscribeUser: NewUser error: %v", err)
 		return err
 	}
 
 	if enablePubsub {
 		err = target.InitPubsub(pubkey)
 		if err != nil {
-			lightUserLog.Errorf("LightUserService->subscribeUser: InitPubsub error: %v", err)
+			lightUserLog.Errorf("LightUserService->SubscribeUser: InitPubsub error: %v", err)
 			return err
 		}
 	}
@@ -103,7 +101,7 @@ func (d *LightUserService) subscribeUser(
 		Target: *target,
 	}
 
-	lightUserLog.Debugf("LightUserService->subscribeUser end")
+	lightUserLog.Debugf("LightUserService->SubscribeUser end")
 	return nil
 }
 

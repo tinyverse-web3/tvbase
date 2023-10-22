@@ -173,6 +173,18 @@ func initService(
 		return nil, nil, err
 	}
 
+	err = tb.Start()
+	if err != nil {
+		testLog.Errorf("initService error: %v", err)
+		return nil, nil, err
+	}
+
+	err = tb.WaitRendezvous(30 * time.Second)
+	if err != nil {
+		testLog.Errorf("initService error: %v", err)
+		return nil, nil, err
+	}
+
 	srcPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		testLog.Errorf("initMsgClient: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -193,7 +205,8 @@ func initService(
 		return nil, nil, err
 	}
 
-	err = dmsgService.Start(false, srcPubkeyBytes, getSigCallback, 30*time.Second)
+	pubkey := key.TranslateKeyProtoBufToString(srcPubkeyBytes)
+	err = dmsgService.Start(false, pubkey, getSigCallback, true)
 	if err != nil {
 		return nil, nil, err
 	}

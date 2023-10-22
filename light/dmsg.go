@@ -67,23 +67,25 @@ func (d *DmsgService) GetChannelService() service.ChannelService {
 
 func (d *DmsgService) Start(
 	enableService bool,
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
 	timeout time.Duration,
+	isListenMsg bool,
 ) error {
-	err := d.mailboxService.StartService()
+
+	err := d.mailboxService.Start(enableService, pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	err = d.msgService.Start(enableService, pubkeyData, getSig, timeout)
+	err = d.msgService.Start(enableService, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return err
 	}
-	err = d.channelService.Start(enableService, pubkeyData, getSig, timeout)
+	err = d.channelService.Start(enableService, pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	err = d.customProtocolService.Start(enableService, pubkeyData, getSig, timeout)
+	err = d.customProtocolService.Start(enableService, pubkey, getSig)
 	if err != nil {
 		return err
 	}

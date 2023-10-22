@@ -63,6 +63,10 @@ func main() {
 	}
 
 	tb.Start()
+	err = tb.WaitRendezvous(30 * time.Second)
+	if err != nil {
+		logger.Fatalf("tvnode->main: WaitRendezvous error: %v", err)
+	}
 
 	corehttp.StartWebService(tb)
 
@@ -74,7 +78,7 @@ func main() {
 	}()
 
 	srcPrikey, srcPubkey := getSeedKey("softwarecheng@gmail.com")
-	err = startDmsgService(srcPubkey, srcPrikey, tb)
+	err = startDmsgService(srcPubkey, srcPrikey, tb, true)
 	if err != nil {
 		logger.Errorf("tvnode->main: startDmsgService: %v", err)
 		return
@@ -89,7 +93,8 @@ func main() {
 	<-ctx.Done()
 }
 
-func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvbase.TvBase) error {
+func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey,
+	tb *tvbase.TvBase, isListenMsg bool) error {
 	userPubkeyData, err := key.ECDSAPublicKeyToProtoBuf(srcPubkey)
 	if err != nil {
 		logger.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
@@ -109,17 +114,17 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, t
 		return err
 	}
 
-	err = dmsgService.Start(true, userPubkeyData, getSig, 30*time.Second)
+	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
+	err = dmsgService.Start(true, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return err
 	}
 
-	dmsgService.GetMailboxService().SetUserPubkey(userPubkeyData, getSig)
-	err = dmsgService.GetMailboxService().CreateMailbox(30 * time.Second)
+	err = dmsgService.GetMailboxService().CreateMailbox(pubkey, 3*time.Second)
 	if err != nil {
 		return err
 	}
-	dmsgService.GetMailboxService().StartService()
+	dmsgService.GetMailboxService().Start(true, pubkey, getSig)
 	dmsgService.GetMailboxService().TickReadMailbox(3*time.Minute, 30*time.Second)
 
 	return nil

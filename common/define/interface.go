@@ -49,8 +49,6 @@ type TvBaseService interface {
 	GetAvailableLightPeerList(key string) ([]peer.ID, error)
 	RegistConnectedCallback(callback tvPeer.ConnectCallback)
 	RegistNotConnectedCallback(callback tvPeer.ConnectCallback)
-	GetIsRendezvous() bool
-	RegistRendezvousChan() chan bool
-	UnregistRendezvousChan(rc chan bool)
+	WaitRendezvous(timeout time.Duration) error
 	PrintDiagnosisInfo() *DiagnosisInfo
 }

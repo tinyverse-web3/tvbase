@@ -1,6 +1,7 @@
 package tvbase
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -150,4 +151,20 @@ func (m *TvBase) UnregistRendezvousChan(rc chan bool) {
 
 func (m *TvBase) GetIsRendezvous() bool {
 	return m.isRendezvous
+}
+
+func (m *TvBase) WaitRendezvous(timeout time.Duration) error {
+	if m.GetIsRendezvous() {
+		return nil
+	}
+	c := m.RegistRendezvousChan()
+	select {
+	case <-c:
+		m.UnregistRendezvousChan(c)
+		return nil
+	case <-time.After(timeout):
+		return fmt.Errorf("TvBase->WaitRendezvous: timeout")
+	case <-m.GetCtx().Done():
+		return m.GetCtx().Err()
+	}
 }

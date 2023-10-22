@@ -47,7 +47,7 @@ func (d *ProxyPubsubService) Init(
 
 // sdk-common
 func (d *ProxyPubsubService) Start(
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
 	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
 	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol,
@@ -61,7 +61,7 @@ func (d *ProxyPubsubService) Start(
 	d.pubsubMsgProtocol = pubsubMsgProtocol
 
 	// light user
-	err := d.LightUserService.Start(pubkeyData, getSig, isListenPubsubMsg)
+	err := d.LightUserService.Start(pubkey, getSig, isListenPubsubMsg)
 	if err != nil {
 		return err
 	}

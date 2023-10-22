@@ -5,7 +5,6 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -36,20 +35,19 @@ func CreateService(tvbase define.TvBaseService) (*MsgService, error) {
 // sdk-common
 func (d *MsgService) Start(
 	enableService bool,
-	pubkeyData []byte,
+	pubkey string,
 	getSig dmsgKey.GetSigCallback,
-	timeout time.Duration,
+	isListenMsg bool,
 ) error {
 	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-	pubkey := tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
 
 	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, enableService, pubkey)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(pubkeyData, getSig, createPubsubProtocol, pubsubMsgProtocol, true)
+	err := d.ProxyPubsubService.Start(pubkey, getSig, createPubsubProtocol, pubsubMsgProtocol, isListenMsg)
 	if err != nil {
 		return err
 	}
@@ -112,12 +110,17 @@ func (d *MsgService) OnPubsubMsgRequest(
 			d.LightUser.Key.PubkeyHex)
 	}
 
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
 	var responseContent []byte
 	var retCode *pb.RetCode
 	if d.OnReceiveMsg != nil {
 		message := &msg.ReceiveMsg{
 			ID:         request.BasicData.ID,
-			ReqPubkey:  request.BasicData.Pubkey,
+			ReqPubkey:  pubkey,
 			DestPubkey: request.DestPubkey,
 			Content:    request.Content,
 			TimeStamp:  request.BasicData.TS,

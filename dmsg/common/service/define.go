@@ -37,12 +37,13 @@ type CommonService interface {
 
 type MailboxService interface {
 	CommonService
-	SetUserPubkey(pubkeyData []byte, getSig dmsgKey.GetSigCallback)
-	TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration)
-	CreateMailbox(timeout time.Duration) error
-	StartService() error
+	Start(enableRequest bool, pubkey string, getSig dmsgKey.GetSigCallback) error
+	CreateMailbox(pubkey string, timeout time.Duration) error
+	CreateUserMailbox(timeout time.Duration) error
+	CreateProxyMailbox(pubkey string, timeout time.Duration) error
 	SetOnReceiveMsg(cb msg.OnReceiveMsg)
 	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
+	TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration)
 }
 
 type MsgService interface {
@@ -56,9 +57,9 @@ type MsgService interface {
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 	Start(
 		enableService bool,
-		pubkeyData []byte,
+		pubkey string,
 		getSig dmsgKey.GetSigCallback,
-		timeout time.Duration,
+		isListenMsg bool,
 	) error
 }
 
@@ -73,9 +74,8 @@ type ChannelService interface {
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
 	Start(
 		enableService bool,
-		pubkeyData []byte,
+		pubkey string,
 		getSig dmsgKey.GetSigCallback,
-		timeout time.Duration,
 	) error
 }
 
@@ -89,8 +89,7 @@ type CustomProtocolService interface {
 	Request(peerId string, pid string, content []byte) (*pb.CustomProtocolReq, chan any, error)
 	Start(
 		enableService bool,
-		pubkeyData []byte,
+		pubkey string,
 		getSig dmsgKey.GetSigCallback,
-		timeout time.Duration,
 	) error
 }

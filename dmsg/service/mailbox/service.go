@@ -12,7 +12,6 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
-	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
@@ -41,8 +40,6 @@ type MailboxService struct {
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
 	stopReadMailbox       chan bool
-	pubkey                string
-	getSig                dmsgKey.GetSigCallback
 }
 
 func CreateService(tvbaseService define.TvBaseService) (*MailboxService, error) {
@@ -64,38 +61,54 @@ func (d *MailboxService) Init(tvbaseService define.TvBaseService) error {
 }
 
 // sdk-common
-func (d *MailboxService) SetUserPubkey(pubkeyData []byte, getSig dmsgKey.GetSigCallback) {
-	d.pubkey = tvutilKey.TranslateKeyProtoBufToString(pubkeyData)
-	d.getSig = getSig
-}
-
-func (d *MailboxService) CreateMailbox(timeout time.Duration) error {
-	err := d.initUser(d.pubkey, d.getSig, timeout)
+func (d *MailboxService) IsExistMailbox(userPubkey string, timeout time.Duration) (*pb.SeekMailboxRes, error) {
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.lightMailboxUser.Key.PubkeyHex, userPubkey)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("MailboxService->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
 	}
-	return nil
+
+	select {
+	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
+		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
+		if !ok || response == nil {
+			return response, fmt.Errorf("MailboxService->IsExistMailbox: seekMailboxProtoData is not SeekMailboxRes")
+		}
+		if response.RetCode.Code < 0 {
+			return response, fmt.Errorf("MailboxService->IsExistMailbox: seekMailboxProtoData retcode.code < 0")
+		} else {
+			log.Debugf("MailboxService->IsExistMailbox: seekMailboxProtoData success")
+			return response, nil
+		}
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("MailboxService->IsExistMailbox: time.After 3s timeout")
+	case <-d.BaseService.TvBase.GetCtx().Done():
+		log.Debug("MailboxService->IsExistMailbox: BaseService.GetCtx().Done()")
+	}
+	return nil, fmt.Errorf("MailboxService->IsExistMailbox: unknow error")
 }
 
-func (d *MailboxService) StartService() error {
-	log.Debugf("MailboxService->StartService begin\nenableService:")
+func (d *MailboxService) Start(enableRequest bool, pubkey string, getSig dmsgKey.GetSigCallback) error {
+	log.Debugf("MailboxService->Start begin")
 
-	var err error
-	cfg := d.BaseService.TvBase.GetConfig()
-	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
-	d.datastore, err = db.CreateBadgerDB(filepath)
+	err := d.SubscribeUser(pubkey, getSig)
 	if err != nil {
-		log.Errorf("MailboxService->StartService: create datastore error %v", err)
 		return err
 	}
 
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
-
 	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, true, d.pubkey)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, true, d.pubkey)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, true, d.pubkey)
+	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, enableRequest, pubkey)
+	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, enableRequest, pubkey)
+	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, enableRequest, pubkey)
+
+	cfg := d.BaseService.TvBase.GetConfig()
+	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
+	d.datastore, err = db.CreateBadgerDB(filepath)
+	if err != nil {
+		log.Errorf("MailboxService->Start: create datastore error %v", err)
+		return err
+	}
 
 	// pubsub protocol
 	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
@@ -213,7 +226,12 @@ func (d *MailboxService) OnCreateMailboxRequest(
 		log.Errorf("MailboxService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 		return nil, nil, false, errors.New("MailboxService->OnCreateMailboxRequest: exceeded the maximum number of mailbox service")
 	}
-	user := d.getServiceUser(request.BasicData.Pubkey)
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
+	user := d.getServiceUser(pubkey)
 	if user != nil {
 		log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
 		retCode := &pb.RetCode{
@@ -280,7 +298,12 @@ func (d *MailboxService) OnReleaseMailboxRequest(
 		return nil, nil, true, nil
 	}
 
-	err := d.unsubscribeServiceUser(request.BasicData.Pubkey)
+	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
+	err := d.unsubscribeServiceUser(pubkey)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -322,6 +345,9 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 	}
 
 	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnReadMailboxRequest: cannot find user for pubkey: %s", pubkey)
@@ -642,54 +668,27 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 }
 
 // user
-func (d *MailboxService) initUser(
-	pubkey string,
-	getSig dmsgKey.GetSigCallback,
-	timeout time.Duration,
-) error {
-	log.Debug("MailboxService->initUser begin")
-
-	err := d.subscribeUser(pubkey, getSig)
-	if err != nil {
-		return err
-	}
-
-	if d.TvBase.GetIsRendezvous() {
-		return d.initMailbox(pubkey)
-	}
-	c := d.TvBase.RegistRendezvousChan()
-	select {
-	case <-c:
-		d.TvBase.UnregistRendezvousChan(c)
-		return d.initMailbox(pubkey)
-	case <-time.After(timeout):
-		return fmt.Errorf("MailboxService->initUser: timeout")
-	case <-d.TvBase.GetCtx().Done():
-		return d.TvBase.GetCtx().Err()
-	}
-}
-
-func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallback) error {
-	log.Debugf("MailboxService->subscribeUser begin\npubkey: %s", pubkey)
+func (d *MailboxService) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallback) error {
+	log.Debugf("MailboxService->SubscribeUser begin\npubkey: %s", pubkey)
 	if d.lightMailboxUser != nil {
-		log.Errorf("MailboxService->subscribeUser: user isn't nil")
-		return fmt.Errorf("MailboxService->subscribeUser: user isn't nil")
+		log.Errorf("MailboxService->SubscribeUser: user isn't nil")
+		return fmt.Errorf("MailboxService->SubscribeUser: user isn't nil")
 	}
 
 	if d.serviceUserList[pubkey] != nil {
-		log.Errorf("MailboxService->subscribeUser: pubkey is already exist in serviceUserList")
-		return fmt.Errorf("MailboxService->subscribeUser: pubkey is already exist in serviceUserList")
+		log.Errorf("MailboxService->SubscribeUser: pubkey is already exist in serviceUserList")
+		return fmt.Errorf("MailboxService->SubscribeUser: pubkey is already exist in serviceUserList")
 	}
 
 	target, err := dmsgUser.NewTarget(pubkey, getSig)
 	if err != nil {
-		log.Errorf("MailboxService->subscribeUser: NewUser error: %v", err)
+		log.Errorf("MailboxService->SubscribeUser: NewUser error: %v", err)
 		return err
 	}
 
 	err = target.InitPubsub(pubkey)
 	if err != nil {
-		log.Errorf("MailboxService->subscribeUser: InitPubsub error: %v", err)
+		log.Errorf("MailboxService->SubscribeUser: InitPubsub error: %v", err)
 		return err
 	}
 
@@ -700,16 +699,16 @@ func (d *MailboxService) subscribeUser(pubkey string, getSig dmsgKey.GetSigCallb
 
 	err = d.handlePubsubProtocol(&user.Target)
 	if err != nil {
-		log.Errorf("MailboxService->subscribeUser: handlePubsubProtocol error: %v", err)
+		log.Errorf("MailboxService->SubscribeUser: handlePubsubProtocol error: %v", err)
 		err := user.Target.Close()
 		if err != nil {
-			log.Warnf("MailboxService->subscribeUser: Target.Close error: %v", err)
+			log.Warnf("MailboxService->SubscribeUser: Target.Close error: %v", err)
 			return err
 		}
 		return err
 	}
 	d.lightMailboxUser = user
-	log.Debugf("MailboxService->subscribeUser end")
+	log.Debugf("MailboxService->SubscribeUser end")
 	return nil
 }
 
@@ -797,7 +796,7 @@ func (d *MailboxService) isAvailableMailbox(pubKey string) bool {
 	return destUserCount < d.GetConfig().MaxMailboxCount
 }
 
-func (d *MailboxService) createMailbox(reqPubkey string) error {
+func (d *MailboxService) createMailbox(pubkey string, timeout time.Duration) error {
 	hostId := d.TvBase.GetHost().ID().String()
 	servicePeerList, err := d.TvBase.GetAvailableServicePeerList(hostId)
 	if err != nil {
@@ -811,7 +810,7 @@ func (d *MailboxService) createMailbox(reqPubkey string) error {
 		if peerID == servicePeerID.String() {
 			continue
 		}
-		_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, reqPubkey)
+		_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, pubkey)
 		if err != nil {
 			log.Errorf("MailboxService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
@@ -833,7 +832,7 @@ func (d *MailboxService) createMailbox(reqPubkey string) error {
 			default:
 				continue
 			}
-		case <-time.After(time.Second * 3):
+		case <-time.After(timeout):
 			continue
 		case <-d.TvBase.GetCtx().Done():
 			return nil
@@ -843,44 +842,36 @@ func (d *MailboxService) createMailbox(reqPubkey string) error {
 	return nil
 }
 
-func (d *MailboxService) initMailbox(pubkey string) error {
-	log.Debug("MailboxService->initMailbox begin")
-	_, seekMailboxResponseChan, err := d.seekMailboxProtocol.Request(
-		d.lightMailboxUser.Key.PubkeyHex, d.lightMailboxUser.Key.PubkeyHex)
+func (d *MailboxService) CreateMailbox(pubkey string, timeout time.Duration) error {
+	log.Debug("MailboxService->CreateMailbox begin")
+	curtime := time.Now().UnixNano()
+	resp, err := d.IsExistMailbox(pubkey, timeout)
 	if err != nil {
 		return err
 	}
-	select {
-	case seekMailboxResponseProtoData := <-seekMailboxResponseChan:
-		log.Debugf("MailboxService->initMailbox: seekMailboxProtoData: %+v", seekMailboxResponseProtoData)
-		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
-		if !ok || response == nil {
-			log.Errorf("MailboxService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
-			return fmt.Errorf("MailboxService->initMailbox: seekMailboxProtoData is not SeekMailboxRes")
-			// skip seek when seek mailbox quest fail (server err), create a new mailbox
+	remainTimeDuration := timeout - time.Duration(curtime)
+	if remainTimeDuration >= 0 {
+		switch resp.RetCode.Code {
+		case dmsgProtocol.SuccCode:
+			err = d.releaseUnusedMailbox(resp.BasicData.PeerID, pubkey, 30*time.Second)
+			if err != nil {
+				return err
+			}
+		case dmsgProtocol.NoExistCode:
+			return d.createMailbox(pubkey, remainTimeDuration)
 		}
-		if response.RetCode.Code < 0 {
-			log.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
-			return fmt.Errorf("MailboxService->initMailbox: seekMailboxProtoData fail")
-			// skip seek when seek mailbox quest fail, create a new mailbox
-		} else if response.RetCode.Code == dmsgProtocol.SuccCode {
-			log.Debugf("MailboxService->initMailbox: seekMailboxProtoData success")
-			go d.releaseUnusedMailbox(response.BasicData.PeerID, pubkey, 30*time.Second)
-			return nil
-		} else if response.RetCode.Code == dmsgProtocol.NoExistCode {
-			d.createMailbox(pubkey)
-		}
-	case <-time.After(3 * time.Second):
-		log.Debugf("MailboxService->initMailbox: time.After 3s, create new mailbox")
-		// begin create new mailbox
-		d.createMailbox(pubkey)
-		return nil
-		// end create mailbox
-	case <-d.TvBase.GetCtx().Done():
-		log.Debug("MailboxService->InitUser: BaseService.GetCtx().Done()")
-		return nil
+	} else {
+		return fmt.Errorf("MailboxService->CreateMailboxWithProxy: timeout")
 	}
 	return nil
+}
+
+func (d *MailboxService) CreateUserMailbox(timeout time.Duration) error {
+	return d.CreateMailbox(d.lightMailboxUser.Key.PubkeyHex, timeout)
+}
+
+func (d *MailboxService) CreateProxyMailbox(pubkey string, timeout time.Duration) error {
+	return d.CreateMailbox(pubkey, timeout)
 }
 
 func (d *MailboxService) readMailbox(peerIdHex string, reqPubkey string, timeout time.Duration, clearMode bool) ([]msg.ReceiveMsg, error) {

@@ -40,7 +40,8 @@ func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvba
 		return err
 	}
 
-	err = dmsgService.Start(false, userPubkeyData, getSig, 30*time.Second)
+	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
+	err = dmsgService.Start(false, pubkey, getSig, 30*time.Second, true)
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,10 @@ func main() {
 		light.Logger.Fatalf("tvnode->main: NewTvbase error: %v", err)
 	}
 	tb.Start()
+	err = tb.WaitRendezvous(30 * time.Second)
+	if err != nil {
+		light.Logger.Fatalf("tvnode->main: WaitRendezvous error: %v", err)
+	}
 	defer func() {
 		err = tb.Stop()
 		if err != nil {
