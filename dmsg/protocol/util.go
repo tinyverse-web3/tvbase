@@ -52,11 +52,7 @@ func AuthProtoMsg(message proto.Message, basicData *pb.BasicData) bool {
 		return false
 	}
 	basicData.Sig = sig
-	pubkeyStr := basicData.Pubkey
-	if basicData.ProxyPubkey != "" {
-		pubkeyStr = basicData.ProxyPubkey
-	}
-	pubkey, err := crypto.PubkeyFromHex(pubkeyStr)
+	pubkey, err := crypto.PubkeyFromHex(basicData.Pubkey)
 	if err != nil {
 		log.Logger.Errorf("AuthProtoMsg: crypto.PubkeyFromHex error: %v", err)
 		return false

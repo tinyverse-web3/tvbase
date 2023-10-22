@@ -187,7 +187,7 @@ func (d *ProxyPubsubService) UnsubscribePubsubList() error {
 
 func (d *ProxyPubsubService) SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error) {
 	log.Debugf("ProxyPubsubService->SendMsg begin:\ndestPubkey: %s", destPubkey)
-	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, d.proxyPubkey, destPubkey, content)
+	requestProtoData, _, err := d.pubsubMsgProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, content)
 	if err != nil {
 		log.Errorf("ProxyPubsubService->SendMsg: sendMsgProtocol.Request error: %v", err)
 		return nil, err
@@ -315,7 +315,7 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 		if peerID == servicePeerID.String() {
 			continue
 		}
-		_, createPubsubResponseChan, err := d.createPubsubProtocol.Request(servicePeerID, reqPubkey, d.proxyPubkey, pubkey)
+		_, createPubsubResponseChan, err := d.createPubsubProtocol.Request(servicePeerID, reqPubkey, pubkey)
 		if err != nil {
 			continue
 		}

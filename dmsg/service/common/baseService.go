@@ -33,7 +33,6 @@ type BaseService struct {
 	TvBase             define.TvBaseService
 	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
 	proxyPubkey        string
-	proxyReqPubkey     string
 }
 
 func init() {
@@ -69,14 +68,6 @@ func (d *BaseService) SetProxyPubkey(proxyPubkey string) {
 
 func (d *BaseService) GetProxyPubkey() string {
 	return d.proxyPubkey
-}
-
-func (d *BaseService) SetProxyReqPubkey(pubkey string) {
-	d.proxyReqPubkey = pubkey
-}
-
-func (d *BaseService) GetProxyReqPubkey() string {
-	return d.proxyReqPubkey
 }
 
 // DmsgService

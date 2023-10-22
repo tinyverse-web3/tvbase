@@ -811,7 +811,7 @@ func (d *MailboxService) createMailbox(reqPubkey string) error {
 		if peerID == servicePeerID.String() {
 			continue
 		}
-		_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, reqPubkey, d.GetProxyPubkey())
+		_, createMailboxResponseChan, err := d.createMailboxProtocol.Request(servicePeerID, reqPubkey)
 		if err != nil {
 			log.Errorf("MailboxService->createMailbox: createMailboxProtocol.Request error: %v", err)
 			continue
@@ -846,7 +846,7 @@ func (d *MailboxService) createMailbox(reqPubkey string) error {
 func (d *MailboxService) initMailbox(pubkey string) error {
 	log.Debug("MailboxService->initMailbox begin")
 	_, seekMailboxResponseChan, err := d.seekMailboxProtocol.Request(
-		d.lightMailboxUser.Key.PubkeyHex, d.GetProxyPubkey(), d.lightMailboxUser.Key.PubkeyHex)
+		d.lightMailboxUser.Key.PubkeyHex, d.lightMailboxUser.Key.PubkeyHex)
 	if err != nil {
 		return err
 	}
@@ -892,7 +892,7 @@ func (d *MailboxService) readMailbox(peerIdHex string, reqPubkey string, timeout
 	}
 
 	for {
-		_, readMailboxResponseChan, err := d.readMailboxMsgPrtocol.Request(peerID, reqPubkey, d.GetProxyPubkey(), clearMode)
+		_, readMailboxResponseChan, err := d.readMailboxMsgPrtocol.Request(peerID, reqPubkey, clearMode)
 		if err != nil {
 			return msgList, err
 		}
@@ -939,7 +939,7 @@ func (d *MailboxService) releaseUnusedMailbox(peerIdHex string, reqPubkey string
 			log.Errorf("MailboxService->releaseUnusedMailbox: fail to decode peer id: %v", err)
 			return err
 		}
-		_, releaseMailboxResponseChan, err := d.releaseMailboxPrtocol.Request(peerID, reqPubkey, d.GetProxyPubkey())
+		_, releaseMailboxResponseChan, err := d.releaseMailboxPrtocol.Request(peerID, reqPubkey)
 		if err != nil {
 			return err
 		}

@@ -139,7 +139,7 @@ func (d *CustomProtocolService) GetQueryPeerPubkey() string {
 
 func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
 	destPubkey := d.GetQueryPeerPubkey()
-	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, d.GetProxyPubkey(), destPubkey, pid)
+	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, pid)
 	return request.(*pb.QueryPeerReq), responseChan, err
 }
 
@@ -162,7 +162,6 @@ func (d *CustomProtocolService) Request(
 	request, responseChan, err := protocolInfo.Protocol.Request(
 		peerID,
 		d.LightUser.Key.PubkeyHex,
-		d.GetProxyPubkey(),
 		pid,
 		content)
 	if err != nil {
