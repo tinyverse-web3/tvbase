@@ -294,11 +294,31 @@ func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 }
 
 func (d *DmsgService) SetProxyPubkey(pubkey string) error {
-	d.proxyPubkey = pubkey
-	if d.proxyPubkey != "" {
-		d.UnSubscribeDestUser(d.proxyPubkey)
+	if pubkey == "" {
+		return fmt.Errorf("MsgService->SetProxyPubkey: pubkey is empty")
 	}
-	return d.SubscribeDestUser(pubkey, false)
+
+	if d.proxyPubkey != "" {
+		return fmt.Errorf("MsgService->SetProxyPubkey: proxyPubkey is not empty")
+	}
+	err := d.SubscribeDestUser(pubkey, false)
+	if err != nil {
+		return err
+	}
+	d.proxyPubkey = pubkey
+	return nil
+}
+
+func (d *DmsgService) ClearProxyPubkey() error {
+	proxyPubkey := d.proxyPubkey
+	if proxyPubkey != "" {
+		err := d.UnSubscribeDestUser(proxyPubkey)
+		if err != nil {
+			return err
+		}
+		d.proxyPubkey = ""
+	}
+	return nil
 }
 
 func (d *DmsgService) GetProxyPubkey() string {
