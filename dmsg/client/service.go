@@ -293,8 +293,10 @@ func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	return d.SrcUserInfo.UserKey.PubkeyHex, nil
 }
 
-func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
-	d.proxyPubkey = proxyPubkey
+func (d *DmsgService) SetProxyPubkey(pubkey string) error {
+	d.proxyPubkey = pubkey
+	d.UnSubscribeDestUser(pubkey)
+	return d.SubscribeDestUser(pubkey, false)
 }
 
 func (d *DmsgService) GetProxyPubkey() string {
@@ -445,7 +447,6 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 
 	userInfo := d.getDestUserInfo(userPubkey)
 	if userInfo == nil {
-		dmsgLog.Logger.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
 		return fmt.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
 	}
 
