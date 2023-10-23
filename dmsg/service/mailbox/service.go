@@ -241,7 +241,7 @@ func (d *MailboxService) OnCreateMailboxRequest(
 		return nil, retCode, false, nil
 	}
 
-	err := d.subscribeServiceUser(request.BasicData.Pubkey)
+	err := d.subscribeServiceUser(pubkey)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -454,6 +454,10 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 	}
 
 	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
+
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnSeekMailboxRequest: cannot find user for pubkey: %s", pubkey)
@@ -508,13 +512,27 @@ func (d *MailboxService) OnPubsubMsgRequest(
 	}
 
 	pubkey := request.BasicData.Pubkey
+	if request.BasicData.ProxyPubkey != "" {
+		pubkey = request.BasicData.ProxyPubkey
+	}
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
 	}
+
+	user.MsgRWMutex.RLock()
+	defer user.MsgRWMutex.RUnlock()
+
+	key := d.getFullFromMsgPrefix(request)
+	err := d.datastore.Put(d.TvBase.GetCtx(), datastore.NewKey(key), request.Content)
+
+	if err != nil {
+		log.Errorf("MailboxService->OnPubsubMsgRequest: fail to save msg: %s", err.Error())
+		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to save msg: %s", err.Error())
+	}
+
 	user.LastTimestamp = time.Now().UnixNano()
-	d.saveMsg(requestProtoData)
 
 	log.Debugf("MailboxService->OnPubsubMsgRequest end")
 	return nil, nil, true, nil
@@ -990,32 +1008,6 @@ func (d *MailboxService) parseReadMailboxResponse(responseProtoData protoreflect
 	return msgList, nil
 }
 
-func (d *MailboxService) saveMsg(protoMsg protoreflect.ProtoMessage) error {
-	MsgReq, ok := protoMsg.(*pb.MsgReq)
-	if !ok {
-		log.Errorf("MailboxService->saveMsg: cannot convert %v to *pb.MsgReq", protoMsg)
-		return fmt.Errorf("MailboxService->saveMsg: cannot convert %v to *pb.MsgReq", protoMsg)
-	}
-
-	pubkey := MsgReq.BasicData.Pubkey
-	user := d.getServiceUser(pubkey)
-	if user == nil {
-		log.Errorf("MailboxService->saveMsg: cannot find src user pubsub for %v", pubkey)
-		return fmt.Errorf("MailboxService->saveMsg: cannot find src user pubsub for %v", pubkey)
-	}
-
-	user.MsgRWMutex.RLock()
-	defer user.MsgRWMutex.RUnlock()
-
-	key := d.getFullFromMsgPrefix(MsgReq)
-	err := d.datastore.Put(d.TvBase.GetCtx(), datastore.NewKey(key), MsgReq.Content)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
 func (d *MailboxService) getMsgPrefix(pubkey string) string {
 	return msg.MsgPrefix + pubkey
 }
@@ -1024,11 +1016,11 @@ func (d *MailboxService) getBasicFromMsgPrefix(srcUserPubkey string, destUserPub
 	return msg.MsgPrefix + destUserPubkey + msg.MsgKeyDelimiter + srcUserPubkey
 }
 
-func (d *MailboxService) getFullFromMsgPrefix(MsgReq *pb.MsgReq) string {
-	basicPrefix := d.getBasicFromMsgPrefix(MsgReq.BasicData.Pubkey, MsgReq.DestPubkey)
+func (d *MailboxService) getFullFromMsgPrefix(request *pb.MsgReq) string {
+	basicPrefix := d.getBasicFromMsgPrefix(request.BasicData.Pubkey, request.DestPubkey)
 	direction := msg.MsgDirection.From
 	return basicPrefix + msg.MsgKeyDelimiter +
 		direction + msg.MsgKeyDelimiter +
-		MsgReq.BasicData.ID + msg.MsgKeyDelimiter +
-		strconv.FormatInt(MsgReq.BasicData.TS, 10)
+		request.BasicData.ID + msg.MsgKeyDelimiter +
+		strconv.FormatInt(request.BasicData.TS, 10)
 }
