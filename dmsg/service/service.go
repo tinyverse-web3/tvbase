@@ -163,32 +163,6 @@ func (d *DmsgService) getMsgPrefix(userPubkey string) string {
 	return dmsg.MsgPrefix + userPubkey
 }
 
-func (d *DmsgService) saveUserMsg(protoMsg protoreflect.ProtoMessage) error {
-	sendMsgReq, ok := protoMsg.(*pb.SendMsgReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-		return fmt.Errorf("dmsgService->saveUserMsg: cannot convert %v to *pb.SendMsgReq", protoMsg)
-	}
-
-	pubkey := sendMsgReq.BasicData.Pubkey
-	pubsub := d.getDestUserPubsub(pubkey)
-	if pubsub == nil {
-		dmsgLog.Logger.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
-		return fmt.Errorf("dmsgService->saveUserMsg: cannot find src user pubsub for %v", pubkey)
-	}
-
-	pubsub.MsgRWMutex.RLock()
-	defer pubsub.MsgRWMutex.RUnlock()
-
-	key := d.GetFullFromMsgPrefix(sendMsgReq)
-	err := d.datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), sendMsgReq.Content)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
 func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
 	destUserCount := len(d.destUserInfoList)
 	cfg := d.BaseService.GetConfig()
@@ -497,7 +471,7 @@ func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.Proto
 		return nil, retCode, nil
 	}
 
-	err := d.publishDestUser(request.BasicData.Pubkey)
+	err := d.publishDestUser(pubkey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -700,8 +674,19 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (any,
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
 		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
 	}
+
+	pubsub.MsgRWMutex.RLock()
+	defer pubsub.MsgRWMutex.RUnlock()
+
+	key := d.GetFullFromMsgPrefix(request)
+	err := d.datastore.Put(d.BaseService.GetCtx(), ds.NewKey(key), request.Content)
+	if err != nil {
+		dmsgLog.Logger.Errorf("MailboxService->OnSendMsgRequest: fail to save msg: %s", err.Error())
+		return nil, fmt.Errorf("MailboxService->OnSendMsgRequest: fail to save msg: %s", err.Error())
+	}
+
 	pubsub.LastReciveTimestamp = time.Now().Unix()
-	d.saveUserMsg(protoMsg)
+
 	return nil, nil
 }
 
