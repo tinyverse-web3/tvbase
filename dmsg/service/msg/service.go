@@ -69,7 +69,12 @@ func (d *MsgService) IsExistDestUser(pubkey string) bool {
 }
 
 func (d *MsgService) SetProxyPubkey(pubkey string) error {
-	d.UnSubscribeDestUser(pubkey)
+	if pubkey == "" {
+		return fmt.Errorf("MsgService->SetProxyPubkey: pubkey is empty")
+	}
+	if d.GetProxyPubkey() != "" {
+		return fmt.Errorf("MsgService->SetProxyPubkey: proxyPubkey is not empty")
+	}
 	err := d.SubscribeDestUser(pubkey, false)
 	if err != nil {
 		return err
@@ -77,6 +82,18 @@ func (d *MsgService) SetProxyPubkey(pubkey string) error {
 	err = d.BaseService.SetProxyPubkey(pubkey)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (d *MsgService) ClearProxyPubkey() error {
+	proxyPubkey := d.GetProxyPubkey()
+	if proxyPubkey != "" {
+		err := d.UnSubscribeDestUser(proxyPubkey)
+		if err != nil {
+			return err
+		}
+		d.SetProxyPubkey("")
 	}
 	return nil
 }
