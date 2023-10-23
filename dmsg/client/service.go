@@ -295,7 +295,9 @@ func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 
 func (d *DmsgService) SetProxyPubkey(pubkey string) error {
 	d.proxyPubkey = pubkey
-	d.UnSubscribeDestUser(pubkey)
+	if d.proxyPubkey != "" {
+		d.UnSubscribeDestUser(d.proxyPubkey)
+	}
 	return d.SubscribeDestUser(pubkey, false)
 }
 
