@@ -62,8 +62,8 @@ func (d *BaseService) UnregistPubsubProtocol(pid pb.PID) {
 	delete(d.ProtocolHandleList, pid)
 }
 
-func (d *BaseService) SetProxyPubkey(proxyPubkey string) {
-	d.proxyPubkey = proxyPubkey
+func (d *BaseService) SetProxyPubkey(pubkey string) {
+	d.proxyPubkey = pubkey
 }
 
 func (d *BaseService) GetProxyPubkey() string {

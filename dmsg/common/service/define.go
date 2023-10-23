@@ -50,8 +50,8 @@ type MsgService interface {
 	CommonService
 	IsExistDestUser(pubkey string) bool
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
-	SubscribeDestUser(pubkey string) error
-	UnsubscribeDestUser(pubkey string) error
+	SubscribeDestUser(pubkey string, isListenMsg bool) error
+	UnSubscribeDestUser(pubkey string) error
 	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
 	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)

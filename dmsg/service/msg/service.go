@@ -68,16 +68,22 @@ func (d *MsgService) IsExistDestUser(pubkey string) bool {
 	return d.GetPubsub(pubkey) != nil
 }
 
-func (d *MsgService) SubscribeDestUser(pubkey string) error {
+func (d *MsgService) SetProxyPubkey(pubkey string) {
+	d.BaseService.SetProxyPubkey(pubkey)
+	d.UnSubscribeDestUser(pubkey)
+	d.SubscribeDestUser(pubkey, false)
+}
+
+func (d *MsgService) SubscribeDestUser(pubkey string, isListen bool) error {
 	log.Debug("MsgService->SubscribeDestUser begin\npubkey: %s", pubkey)
-	err := d.SubscribePubsub(pubkey, true, false, false)
+	err := d.SubscribePubsub(pubkey, true, isListen, false)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *MsgService) UnsubscribeDestUser(pubkey string) error {
+func (d *MsgService) UnSubscribeDestUser(pubkey string) error {
 	log.Debugf("MsgService->UnSubscribeDestUser begin\npubkey: %s", pubkey)
 	err := d.UnsubscribePubsub(pubkey)
 	if err != nil {

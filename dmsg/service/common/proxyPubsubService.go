@@ -165,7 +165,6 @@ func (d *ProxyPubsubService) UnsubscribePubsub(pubkey string) error {
 
 	proxyPubsub := d.PubsubList[pubkey]
 	if proxyPubsub == nil {
-		log.Errorf("ProxyPubsubService->UnsubscribePubsub: proxyPubsub is nil")
 		return fmt.Errorf("ProxyPubsubService->UnsubscribePubsub: proxyPubsub is nil")
 	}
 	err := proxyPubsub.Close()
