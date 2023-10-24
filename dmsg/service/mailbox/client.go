@@ -523,15 +523,19 @@ func (d *MailboxClient) readMailbox(peerIdHex string, reqPubkey string, timeout 
 }
 
 func (d *MailboxClient) ReleaseMailbox(timeout time.Duration) error {
-	log.Debug("MailboxClient->releaseUnusedMailbox begin")
-	if d.lightMailboxUser.ServicePeerID == "" {
-		log.Errorf("MailboxClient->releaseUnusedMailbox: ServicePeerID is empyt")
-		return fmt.Errorf("MailboxClient->releaseUnusedMailbox: ServicePeerID is empty")
+	return d.releaseMailbox(d.lightMailboxUser.ServicePeerID, timeout)
+}
+
+func (d *MailboxClient) releaseMailbox(peerIdHex string, timeout time.Duration) error {
+	log.Debug("MailboxClient->releaseMailbox begin")
+	if peerIdHex == "" {
+		log.Errorf("MailboxClient->releaseMailbox: ServicePeerID is empyt")
+		return fmt.Errorf("MailboxClient->releaseMailbox: ServicePeerID is empty")
 	}
 
-	peerID, err := peer.Decode(d.lightMailboxUser.ServicePeerID)
+	peerID, err := peer.Decode(peerIdHex)
 	if err != nil {
-		log.Errorf("MailboxClient->releaseUnusedMailbox: fail to decode peer id: %v", err)
+		log.Errorf("MailboxClient->releaseMailbox: fail to decode peer id: %v", err)
 		return err
 	}
 
@@ -541,13 +545,13 @@ func (d *MailboxClient) ReleaseMailbox(timeout time.Duration) error {
 	}
 	select {
 	case <-releaseMailboxResponseChan:
-		log.Debugf("MailboxClient->releaseUnusedMailbox: releaseMailboxResponseChan success")
+		log.Debugf("MailboxClient->releaseMailbox: releaseMailboxResponseChan success")
 	case <-time.After(time.Second * timeout):
-		return fmt.Errorf("MailboxClient->releaseUnusedMailbox: releaseMailboxResponseChan time out")
+		return fmt.Errorf("MailboxClient->releaseMailbox: releaseMailboxResponseChan time out")
 	case <-d.TvBase.GetCtx().Done():
-		return fmt.Errorf("MailboxClient->releaseUnusedMailbox: BaseService.GetCtx().Done()")
+		return fmt.Errorf("MailboxClient->releaseMailbox: BaseService.GetCtx().Done()")
 	}
-	log.Debugf("MailboxClient->releaseUnusedMailbox end")
+	log.Debugf("MailboxClient->releaseMailbox end")
 	return nil
 }
 
