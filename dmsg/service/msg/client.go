@@ -12,10 +12,9 @@ type MsgClient struct {
 	MsgBase
 }
 
-func CreateClient(tvbase define.TvBaseService) (*MsgClient, error) {
+func NewClient(tvbase define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) (*MsgClient, error) {
 	d := &MsgClient{}
-	cfg := tvbase.GetConfig().DMsg
-	err := d.MsgBase.Init(tvbase, cfg.MaxMsgCount, cfg.KeepMsgDay)
+	err := d.Init(tvbase, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -23,21 +22,48 @@ func CreateClient(tvbase define.TvBaseService) (*MsgClient, error) {
 }
 
 // sdk-common
-func (d *MsgClient) Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error {
+func (d *MsgClient) Init(tvbase define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error {
 	log.Debugf("MsgClient->Init begin")
-	ctx := d.TvBase.GetCtx()
-	host := d.TvBase.GetHost()
 
-	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, true, pubkey)
-	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
-	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
-	err := d.ProxyPubsubService.Start(pubkey, getSig, createPubsubProtocol, pubsubMsgProtocol, isListenMsg)
+	cfg := tvbase.GetConfig().DMsg
+	err := d.MsgBase.Init(tvbase, cfg.MaxMsgCount, cfg.KeepMsgDay)
 	if err != nil {
 		return err
 	}
 
+	ctx := d.TvBase.GetCtx()
+	host := d.TvBase.GetHost()
+
+	if d.createPubsubProtocol == nil {
+		d.createPubsubProtocol = adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, false, pubkey)
+	}
+	if d.pubsubMsgProtocol == nil {
+		d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
+		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
+	}
+
+	if d.createPubsubProtocol != nil && d.pubsubMsgProtocol != nil {
+		err = d.ProxyPubsubService.Start(pubkey, getSig, d.createPubsubProtocol, d.pubsubMsgProtocol, isListenMsg)
+		if err != nil {
+			return err
+		}
+	}
+	d.enable = true
 	log.Debug("MsgClient->Init end")
+	return nil
+}
+
+func (d *MsgClient) Release() error {
+	//TODO
+	// d.createPubsubProtocol.Release()
+	d.createPubsubProtocol = nil
+
+	d.UnregistPubsubProtocol(d.createPubsubProtocol.Adapter.GetRequestPID())
+	d.UnregistPubsubProtocol(d.createPubsubProtocol.Adapter.GetResponsePID())
+	d.pubsubMsgProtocol = nil
+
+	d.enable = false
 	return nil
 }
 

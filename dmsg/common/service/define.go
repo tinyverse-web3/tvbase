@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/tinyverse-web3/tvbase/common/config"
+	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
@@ -36,28 +37,34 @@ type CommonService interface {
 
 type MailboxService interface {
 	CommonService
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
+	Start() error
 	Stop() error
 }
 
 type MailboxClient interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
 	CreateMailbox(timeout time.Duration) (existMailbox bool, err error)
 	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
-	Stop() error
 }
 
 type MsgService interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
+	Start() error
+	Stop() error
 	IsExistDestUser(pubkey string) bool
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
-	Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
-	Stop() error
 }
 
 type MsgClient interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
+	Release() error
 	IsExistDestUser(pubkey string) bool
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeDestUser(pubkey string, isListenMsg bool) error
@@ -65,20 +72,22 @@ type MsgClient interface {
 	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
 	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
-	Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
-	Stop() error
 }
 
 type ChannelService interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
+	Start() error
+	Stop() error
 	IsExistChannel(pubkey string) bool
 	GetChannel(pubkey string) *dmsgUser.ProxyPubsub
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
-	Stop() error
 }
 
 type ChannelClient interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
 	IsExistChannel(pubkey string) bool
 	GetChannel(pubkey string) *dmsgUser.ProxyPubsub
 	SubscribeChannel(pubkey string) error
@@ -86,22 +95,22 @@ type ChannelClient interface {
 	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
 	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
-	Stop() error
 }
 type CustomProtocolService interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
+	Start() error
+	Stop() error
 	RegistServer(service customProtocol.ServerHandle) error
 	UnregistServer(callback customProtocol.ServerHandle) error
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
-	Stop() error
 }
 
 type CustomProtocolClient interface {
 	CommonService
+	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
+	Release() error
 	RegistClient(client customProtocol.ClientHandle) error
 	UnregistClient(client customProtocol.ClientHandle) error
 	QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error)
-	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
-	Stop() error
 }

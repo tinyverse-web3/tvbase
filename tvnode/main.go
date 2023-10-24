@@ -109,13 +109,14 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey,
 		return sig, nil
 	}
 
-	dmsgService, err = CreateDmsgService(tb)
+	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
+
+	dmsgService, err = CreateDmsgService(tb, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return err
 	}
 
-	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
-	err = dmsgService.Start(true, pubkey, getSig, isListenMsg)
+	err = dmsgService.Start()
 	if err != nil {
 		return err
 	}

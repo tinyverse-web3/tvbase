@@ -18,28 +18,24 @@ type CustomProtocolClient struct {
 	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
 }
 
-func CreateClient(tvbaseService define.TvBaseService) (*CustomProtocolClient, error) {
+func NewClient(tvbaseService define.TvBaseService, pubkey string, getSig dmsgCommonKey.GetSigCallback) (*CustomProtocolClient, error) {
 	d := &CustomProtocolClient{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbaseService, pubkey, getSig)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *CustomProtocolClient) Init(tvbaseService define.TvBaseService) error {
+// sdk-common
+func (d *CustomProtocolClient) Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgCommonKey.GetSigCallback) error {
+	log.Debug("CustomProtocolClient->Start begin")
 	err := d.LightUserService.Init(tvbaseService)
 	if err != nil {
 		return err
 	}
-	d.clientStreamProtocolList = make(map[string]*dmsgProtocolCustom.ClientStreamProtocol)
-	return nil
-}
 
-// sdk-common
-func (d *CustomProtocolClient) Start(pubkey string, getSig dmsgCommonKey.GetSigCallback) error {
-	log.Debug("CustomProtocolClient->Start begin")
-	err := d.LightUserService.Start(pubkey, getSig, false)
+	err = d.LightUserService.Start(pubkey, getSig, false)
 	if err != nil {
 		return err
 	}
@@ -47,20 +43,30 @@ func (d *CustomProtocolClient) Start(pubkey string, getSig dmsgCommonKey.GetSigC
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 
-	d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
+	if d.queryPeerProtocol == nil {
+		d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
+	}
+
+	if d.clientStreamProtocolList == nil {
+		d.clientStreamProtocolList = make(map[string]*dmsgProtocolCustom.ClientStreamProtocol)
+	}
 
 	log.Debug("CustomProtocolClient->Start end")
 	return nil
 }
 
-func (d *CustomProtocolClient) Stop() error {
-	log.Debug("CustomProtocolClient->Stop begin")
+func (d *CustomProtocolClient) Release() error {
+	log.Debug("CustomProtocolClient->Release begin")
+	d.UnregistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID())
+	d.queryPeerProtocol = nil
+
 	err := d.LightUserService.Stop()
 	if err != nil {
 		return err
 	}
-	log.Debug("CustomProtocolClient->Stop end")
+	d.clientStreamProtocolList = nil
+	log.Debug("CustomProtocolClient->Release end")
 	return nil
 }
 

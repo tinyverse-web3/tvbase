@@ -32,82 +32,123 @@ type MailboxService struct {
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
+	enable                bool
+	pubkey                string
 }
 
-func CreateService(tvbaseService define.TvBaseService) (*MailboxService, error) {
+func NewService(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*MailboxService, error) {
 	d := &MailboxService{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbaseService, pubkey, getSig)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *MailboxService) Init(tvbaseService define.TvBaseService) error {
+func (d *MailboxService) Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error {
 	err := d.BaseService.Init(tvbaseService)
 	if err != nil {
 		return err
 	}
-	d.serviceUserList = make(map[string]*dmsgUser.ServiceMailboxUser)
-	return nil
-}
-
-// sdk-common
-func (d *MailboxService) Start(pubkey string, getSig dmsgKey.GetSigCallback) error {
-	log.Debugf("MailboxService->Start begin")
-
-	err := d.SubscribeUser(pubkey, getSig)
+	err = d.SubscribeUser(pubkey, getSig)
 	if err != nil {
 		return err
 	}
-
-	ctx := d.TvBase.GetCtx()
-	host := d.TvBase.GetHost()
-	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, true, pubkey)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, true, pubkey)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, true, pubkey)
 
 	cfg := d.BaseService.TvBase.GetConfig()
 	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath
 	d.datastore, err = db.CreateBadgerDB(filepath)
 	if err != nil {
-		log.Errorf("MailboxService->Start: create datastore error %v", err)
+		log.Errorf("MailboxService->Init: create datastore error %v", err)
 		return err
 	}
 
-	// pubsub protocol
-	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
-	d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
-
-	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
-	d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
-
+	d.serviceUserList = make(map[string]*dmsgUser.ServiceMailboxUser)
 	d.stopCleanRestResource = make(chan bool)
+	return nil
+}
+
+// sdk-common
+func (d *MailboxService) Start() error {
+	log.Debugf("MailboxService->Start begin")
+
+	ctx := d.TvBase.GetCtx()
+	host := d.TvBase.GetHost()
+	// stream protocol
+	if d.createMailboxProtocol == nil {
+		d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, true, d.pubkey)
+	}
+	if d.readMailboxMsgPrtocol == nil {
+		d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, true, d.pubkey)
+	}
+	if d.releaseMailboxPrtocol == nil {
+		d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, true, d.pubkey)
+	}
+
+	// pubsub protocol
+	if d.seekMailboxProtocol == nil {
+		d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
+	}
+	if d.pubsubMsgProtocol == nil {
+		d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
+	}
+
 	d.cleanRestServiceUser(12 * time.Hour)
 
+	d.enable = true
 	log.Debug("MailboxService->Start end")
 	return nil
 }
 
 func (d *MailboxService) Stop() error {
 	log.Debug("MailboxService->Stop begin")
-	d.UnregistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID())
-	d.UnSubscribeUser()
-	d.unsubscribeServiceUserList()
 
-	if d.datastore != nil {
-		d.datastore.Close()
-		d.datastore = nil
-	}
 	select {
 	case d.stopCleanRestResource <- true:
 		log.Debugf("MailboxService->Stop: succ send stopCleanRestResource")
 	default:
 		log.Debugf("MailboxService->Stop: no receiver for stopCleanRestResource")
 	}
-	close(d.stopCleanRestResource)
+
+	d.enable = false
 	log.Debug("MailboxService->Stop end")
+	return nil
+}
+
+func (d *MailboxService) Release() error {
+	err := d.Stop()
+	if err != nil {
+		return err
+	}
+	// TODO
+	// d.createMailboxProtocol.Release()
+	d.createMailboxProtocol = nil
+	// d.readMailboxMsgPrtocol.Release()
+	d.readMailboxMsgPrtocol = nil
+	// d.releaseMailboxPrtocol.Release()
+	d.releaseMailboxPrtocol = nil
+
+	d.UnregistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID())
+	d.seekMailboxProtocol = nil
+	d.UnregistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID())
+	d.pubsubMsgProtocol = nil
+
+	err = d.UnSubscribeUser()
+	if err != nil {
+		return err
+	}
+	err = d.unsubscribeServiceUserList()
+	if err != nil {
+		return err
+	}
+	if d.datastore != nil {
+		d.datastore.Close()
+		d.datastore = nil
+	}
+
+	close(d.stopCleanRestResource)
 	return nil
 }
 
@@ -135,6 +176,9 @@ func (d *MailboxService) GetPublishTarget(pubkey string) (*dmsgUser.Target, erro
 // MailboxSpCallback
 func (d *MailboxService) OnCreateMailboxRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	log.Debugf("MailboxService->OnCreateMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
@@ -178,6 +222,9 @@ func (d *MailboxService) OnCreateMailboxRequest(
 func (d *MailboxService) OnReleaseMailboxRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnReleaseMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.ReleaseMailboxReq)
 	if !ok {
 		log.Errorf("MailboxService->OnReleaseMailboxRequest: fail to convert requestProtoData to *pb.ReleaseMailboxReq")
@@ -204,6 +251,9 @@ func (d *MailboxService) OnReleaseMailboxRequest(
 
 func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnReadMailboxRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.ReadMailboxReq)
 	if !ok {
 		log.Errorf("MailboxService->OnReadMailboxRequest: fail to convert requestProtoData to *pb.ReadMailboxReq")
@@ -281,6 +331,9 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 // MailboxPpCallback
 func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
 	if !ok {
 		log.Errorf("MailboxService->OnSeekMailboxRequest: fail to convert requestProtoData to *pb.SeekMailboxReq")
@@ -315,6 +368,9 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 func (d *MailboxService) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
 		log.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")

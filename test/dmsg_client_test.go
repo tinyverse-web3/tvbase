@@ -14,12 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	cryptoUtil "github.com/tinyverse-web3/mtv_go_utils/crypto"
-	"github.com/tinyverse-web3/mtv_go_utils/ipfs"
 	"github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
-	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/tvbase"
 )
 
@@ -200,159 +198,18 @@ func initService(
 		return sig, nil
 	}
 
-	dmsgService, err := CreateDmsgService(tb)
+	pubkey := key.TranslateKeyProtoBufToString(srcPubkeyBytes)
+	dmsgService, err := CreateDmsgService(tb, pubkey, getSigCallback, true)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pubkey := key.TranslateKeyProtoBufToString(srcPubkeyBytes)
-	err = dmsgService.Start(pubkey, getSigCallback, 30*time.Second, true)
+	err = dmsgService.Start()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return tb, dmsgService, nil
-}
-
-func TestPullCID(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	rootPath := "."
-	srcSeed := "a"
-	cfg, err := loadConfig("./")
-	if err != nil {
-		testLog.Errorf("TestPullCID error: %v", err)
-		return
-	}
-	err = initLog()
-	if err != nil {
-		testLog.Errorf("TestPullCID error: %v", err)
-		return
-	}
-
-	srcPrkey, srcPubkey, err := getKeyBySeed(srcSeed)
-	if err != nil {
-		testLog.Errorf("getKeyBySeed error: %v", err)
-		return
-	}
-	srcPrikeyHex := hex.EncodeToString(crypto.FromECDSA(srcPrkey))
-	srcPubkeyHex := hex.EncodeToString(crypto.FromECDSAPub(srcPubkey))
-	testLog.Infof("src user: seed:%s, prikey:%v, pubkey:%v", srcSeed, srcPrikeyHex, srcPubkeyHex)
-
-	// init dmsg client
-	tb, _, err := initService(srcPubkey, srcPrkey, cfg, rootPath, ctx)
-	if err != nil {
-		testLog.Errorf("init acceptable error: %v", err)
-		return
-	}
-
-	// pullCidProtocol, err := pullcid.GetPullCidClientProtocol()
-	// if err != nil {
-	// 	testLog.Errorf("pullcid.GetPullCidClientProtocol error: %v", err)
-	// 	return
-	// }
-
-	// err = tvbase.GetDmsgService().GetCustomProtocolService().RegistClient(pullCidProtocol)
-	// if err != nil {
-	// 	testLog.Errorf("RegistClient error: %v", err)
-	// 	return
-	// }
-
-	dmsgService, err := CreateDmsgService(tb)
-	if err != nil {
-		testLog.Errorf("CreateDmsgService error: %v", err)
-		return
-	}
-
-	queryPeerRequest, queryPeerResponseChan, err := dmsgService.GetCustomProtocolClient().QueryPeer("pullcid")
-	if err != nil {
-		testLog.Errorf("QueryPeer error: %v", err)
-		return
-	}
-	testLog.Debugf("queryPeerRequest: %v", queryPeerRequest)
-	queryPeerResponseData := <-queryPeerResponseChan
-	queryPeerResponse, ok := queryPeerResponseData.(*pb.QueryPeerRes)
-	if !ok {
-		testLog.Errorf("QueryPeerRes error: %v", err)
-		return
-	}
-	testLog.Debugf("queryPeerResponse: %v", queryPeerResponse)
-	// peerId := queryPeerResponse.BasicData.PeerID
-	// bootPeerID := "12D3KooWFvycqvSRcrPPSEygV7pU6Vd2BrpGsMMFvzeKURbGtMva"
-	// localPeerID := "12D3KooWDHUopoYJemJxzMSrTFPpshbKFaEJv3xX1SogvZpcMEic"
-	/*
-		## shell for generate random cid file
-		dd if=/dev/urandom of=random-file bs=1k  count=1
-		## add random file to ipfs
-		ipfs add ./random-file
-		## check cid
-		ipfs pin ls --type recursive QmPTbqArM6Pe9xbmCgcMgBFsPQFC4TFbodHTq36jrBgSVH
-	*/
-
-	CID_RANDOM_1K := "QmfTpubWPxpiWy8LDi3XKKgirpJQqkobhxvHR1UVabkezz"
-	CID_RANDOM_1M := "QmadujPGectw6pm7Sx9McePenrUohpLfzE4FxhnzHCM6vS"
-	CID_RANDOM_10M := "QmVa9N59PRDeqTSV6L3wRTMDfU5vycviBky41q6aGyJZmX"
-	cid := CID_RANDOM_1K
-	cid = CID_RANDOM_1M
-	cid = CID_RANDOM_10M
-	cid = CID_RANDOM_10M
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	info, _, err := ipfs.IpfsObjectStat(cid, timeoutCtx)
-	if err != nil {
-		return
-	}
-	contentSize := (*info)[ipfs.ObjectStatusField_CumulativeSize]
-	if contentSize >= 100*1024*1024 {
-		// TODO over 100MB need to be split using CAR,, implement it
-		testLog.Errorf("file too large(<100MB), bufSize:%v", contentSize)
-		return
-	}
-
-	// pullCidResponseChan, err := pullCidProtocol.Request(ctx, peerId, &pullcid.PullCidRequest{
-	// 	CID:          cid,
-	// 	MaxCheckTime: 30 * time.Minute,
-	// })
-	if err != nil {
-		testLog.Errorf("pullCidProtocol.Request error: %v", err)
-		return
-	}
-
-	// go func() {
-	// 	timeout := 300 * time.Second
-	// 	startTime := time.Now()
-	// 	select {
-	// 	case pullCidResponse := <-pullCidResponseChan:
-	// 		elapsed := time.Since(startTime)
-	// 		testLog.Debugf("PullCidClientProtocol->Request: elapsed time: %v", elapsed.Seconds())
-	// 		if pullCidResponse == nil {
-	// 			testLog.Errorf("PullCidClientProtocol->Request: pullCidResponse is nil")
-	// 			return
-	// 		}
-	// 		switch pullCidResponse.PinStatus {
-	// 		case tvIpfs.PinStatus_ERR:
-	// 			testLog.Debugf("Save2Ipfs->PinStatus:ERR, pullCidResponse: %v", pullCidResponseChan)
-	// 		case tvIpfs.PinStatus_TIMEOUT:
-	// 			testLog.Debugf("Save2Ipfs->PinStatus:TIMEOUT, pullCidResponse: %v", pullCidResponseChan)
-	// 		case tvIpfs.PinStatus_PINNED:
-	// 			testLog.Debugf("Save2Ipfs->PinStatus:PINNED, pullCidResponse: %v", pullCidResponseChan)
-	// 		default:
-	// 			testLog.Debugf("Save2Ipfs->PinStatus:Other: %v, pullCidResponse: %v", pullCidResponse.Status, pullCidResponseChan)
-	// 		}
-	// 		testLog.Debugf("PullCidClientProtocol->Request end")
-	// 		return
-	// 	case <-time.After(timeout):
-	// 		testLog.Debugf("PullCidClientProtocol->Request end: time.After, timeout :%v", timeout)
-	// 		return
-	// 	case <-ctx.Done():
-	// 		testLog.Debugf("PullCidClientProtocol->Request end: ctx.Done()")
-	// 		return
-	// 	}
-	// }()
-
-	<-ctx.Done()
 }
 
 func TesTinverseInfrasture(t *testing.T) {

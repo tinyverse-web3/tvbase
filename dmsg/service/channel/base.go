@@ -13,6 +13,7 @@ import (
 
 type ChannelBase struct {
 	dmsgServiceCommon.ProxyPubsubService
+	enable bool
 }
 
 func (d *ChannelBase) GetChannel(pubkey string) *dmsgUser.ProxyPubsub {
@@ -51,6 +52,9 @@ func (d *ChannelBase) UnsubscribeChannelList() error {
 func (d *ChannelBase) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("ChannelBase->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
 		log.Errorf("ChannelBase->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
@@ -100,7 +104,9 @@ func (d *ChannelBase) OnPubsubMsgResponse(
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	log.Debugf("ChannelBase->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-
+	if !d.enable {
+		return nil, nil
+	}
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
 		log.Debugf("ChannelBase->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")

@@ -28,30 +28,25 @@ type MailboxClient struct {
 	lightMailboxUser      *dmsgUser.LightMailboxUser
 	proxyUser             *dmsgUser.LightMailboxUser
 	onReceiveMsg          msg.OnReceiveMsg
-	stopReadMailbox       chan bool
 }
 
-func CreateClient(tvbaseService define.TvBaseService) (*MailboxClient, error) {
+func NewClient(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*MailboxClient, error) {
 	d := &MailboxClient{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbaseService, pubkey, getSig)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *MailboxClient) Init(tvbaseService define.TvBaseService) error {
+// sdk-common
+func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error {
 	err := d.BaseService.Init(tvbaseService)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-// sdk-common
-
-func (d *MailboxClient) Start(pubkey string, getSig dmsgKey.GetSigCallback) error {
-	err := d.SubscribeUser(pubkey, getSig)
+	err = d.SubscribeUser(pubkey, getSig)
 	if err != nil {
 		return err
 	}
@@ -59,23 +54,42 @@ func (d *MailboxClient) Start(pubkey string, getSig dmsgKey.GetSigCallback) erro
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 	// stream protocol
-	d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, false, pubkey)
-	d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, false, pubkey)
-	d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, false, pubkey)
+	if d.createMailboxProtocol == nil {
+		d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, false, pubkey)
+	}
+	if d.readMailboxMsgPrtocol == nil {
+		d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, false, pubkey)
+	}
+	if d.releaseMailboxPrtocol == nil {
+		d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, false, pubkey)
+	}
 
 	// pubsub protocol
-	d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
+	if d.seekMailboxProtocol == nil {
+		d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
+	}
+
 	return nil
 }
 
-func (d *MailboxClient) Stop() error {
-	log.Debug("MailboxService->Stop begin")
+func (d *MailboxClient) Release() error {
+	log.Debug("MailboxService->Release begin")
+	// TODO
+	// d.createMailboxProtocol.Release()
+	d.createMailboxProtocol = nil
+	// d.readMailboxMsgPrtocol.Release()
+	d.readMailboxMsgPrtocol = nil
+	// d.releaseMailboxPrtocol.Release()
+	d.releaseMailboxPrtocol = nil
 	d.UnregistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID())
-	d.UnSubscribeUser()
+	d.seekMailboxProtocol = nil
+	err := d.UnSubscribeUser()
+	if err != nil {
+		return err
+	}
 
-	close(d.stopReadMailbox)
-	log.Debug("MailboxService->Stop end")
+	log.Debug("MailboxService->Release end")
 	return nil
 }
 

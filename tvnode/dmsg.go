@@ -14,38 +14,63 @@ type DmsgService struct {
 	mailboxService        service.MailboxService
 	mailboxClient         service.MailboxClient
 	msgService            service.MsgService
+	msgClient             service.MsgClient
 	customProtocolService service.CustomProtocolService
+	customProtocolClient  service.CustomProtocolClient
 	channelService        service.ChannelService
+	channelClient         service.ChannelClient
 }
 
-func CreateDmsgService(tvbaseService define.TvBaseService) (*DmsgService, error) {
+func CreateDmsgService(
+	tvbaseService define.TvBaseService,
+	pubkey string,
+	getSig dmsgKey.GetSigCallback,
+	isListenMsg bool,
+) (*DmsgService, error) {
 	d := &DmsgService{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbaseService, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *DmsgService) Init(tvbase define.TvBaseService) error {
+func (d *DmsgService) Init(
+	tvbase define.TvBaseService,
+	pubkey string,
+	getSig dmsgKey.GetSigCallback,
+	isListenMsg bool,
+) error {
 	var err error
-	d.mailboxService, err = mailbox.CreateService(tvbase)
+	d.mailboxService, err = mailbox.NewService(tvbase, pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	d.mailboxClient, err = mailbox.CreateClient(tvbase)
+	d.mailboxClient, err = mailbox.NewClient(tvbase, pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	d.msgService, err = msgService.CreateService(tvbase)
+	d.msgService, err = msgService.NewService(tvbase, pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	d.channelService, err = channelService.CreateService(tvbase)
+	d.msgClient, err = msgService.NewClient(tvbase, pubkey, getSig, isListenMsg)
 	if err != nil {
 		return err
 	}
-	d.customProtocolService, err = customProtocolService.CreateService(tvbase)
+	d.channelService, err = channelService.NewService(tvbase, pubkey, getSig)
+	if err != nil {
+		return err
+	}
+	d.channelClient, err = channelService.NewClient(tvbase, pubkey, getSig)
+	if err != nil {
+		return err
+	}
+	d.customProtocolService, err = customProtocolService.NewService(tvbase, pubkey, getSig)
+	if err != nil {
+		return err
+	}
+	d.customProtocolClient, err = customProtocolService.NewClient(tvbase, pubkey, getSig)
 	if err != nil {
 		return err
 	}
@@ -64,33 +89,40 @@ func (d *DmsgService) GetMsgService() service.MsgService {
 	return d.msgService
 }
 
+func (d *DmsgService) GetMsgClient() service.MsgClient {
+	return d.msgClient
+}
+
 func (d *DmsgService) GetCustomProtocolService() service.CustomProtocolService {
 	return d.customProtocolService
+}
+
+func (d *DmsgService) GetCustomProtocolClient() service.CustomProtocolClient {
+	return d.customProtocolClient
 }
 
 func (d *DmsgService) GetChannelService() service.ChannelService {
 	return d.channelService
 }
 
-func (d *DmsgService) Start(
-	enableService bool,
-	pubkey string,
-	getSig dmsgKey.GetSigCallback,
-	isListenMsg bool,
-) error {
-	err := d.mailboxService.Start(pubkey, getSig)
+func (d *DmsgService) GetChannelClient() service.ChannelClient {
+	return d.channelClient
+}
+
+func (d *DmsgService) Start() error {
+	err := d.mailboxService.Start()
 	if err != nil {
 		return err
 	}
-	err = d.msgService.Start(pubkey, getSig, isListenMsg)
+	err = d.msgService.Start()
 	if err != nil {
 		return err
 	}
-	err = d.channelService.Start(pubkey, getSig)
+	err = d.channelService.Start()
 	if err != nil {
 		return err
 	}
-	err = d.customProtocolService.Start(pubkey, getSig)
+	err = d.customProtocolService.Start()
 	if err != nil {
 		return err
 	}

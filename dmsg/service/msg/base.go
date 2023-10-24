@@ -6,6 +6,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -13,6 +14,9 @@ import (
 
 type MsgBase struct {
 	dmsgServiceCommon.ProxyPubsubService
+	createPubsubProtocol *protocol.CreatePubsubSProtocol
+	pubsubMsgProtocol    *protocol.PubsubMsgProtocol
+	enable               bool
 }
 
 func (d *MsgBase) GetDestUser(pubkey string) *dmsgUser.ProxyPubsub {
@@ -50,6 +54,9 @@ func (d *MsgBase) UnsubscribeDestUserList() error {
 func (d *MsgBase) OnPubsubMsgRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MsgBase->OnPubsubMsgRequest begin:\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
 		log.Errorf("MsgBase->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
@@ -101,7 +108,9 @@ func (d *MsgBase) OnPubsubMsgResponse(
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	log.Debugf("MsgBase->OnPubsubMsgResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
 		requestProtoData, responseProtoData)
-
+	if !d.enable {
+		return nil, nil
+	}
 	request, ok := requestProtoData.(*pb.MsgReq)
 	if !ok {
 		log.Debugf("MsgBase->OnPubsubMsgResponse: fail to convert requestProtoData to *pb.MsgReq")

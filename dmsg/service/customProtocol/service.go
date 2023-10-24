@@ -22,88 +22,116 @@ type CustomProtocolService struct {
 	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
 	queryPeerTarget          *dmsgUser.Target
+	stopServiceChan          chan bool
+	enable                   bool
 }
 
-func CreateService(tvbaseService define.TvBaseService) (*CustomProtocolService, error) {
+func NewService(tvbaseService define.TvBaseService, pubkey string, getSig dmsgCommonKey.GetSigCallback) (*CustomProtocolService, error) {
 	d := &CustomProtocolService{}
-	err := d.Init(tvbaseService)
+	err := d.Init(tvbaseService, pubkey, getSig)
 	if err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-func (d *CustomProtocolService) Init(tvbaseService define.TvBaseService) error {
+func (d *CustomProtocolService) Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgCommonKey.GetSigCallback) error {
 	err := d.LightUserService.Init(tvbaseService)
 	if err != nil {
 		return err
 	}
-	d.serverStreamProtocolList = make(map[string]*dmsgProtocolCustom.ServerStreamProtocol)
+	err = d.LightUserService.Start(pubkey, getSig, false)
+	if err != nil {
+		return err
+	}
 
+	d.serverStreamProtocolList = make(map[string]*dmsgProtocolCustom.ServerStreamProtocol)
+	d.stopServiceChan = make(chan bool)
 	return nil
 }
 
 // sdk-common
-func (d *CustomProtocolService) Start(pubkey string, getSig dmsgCommonKey.GetSigCallback) error {
+func (d *CustomProtocolService) Start() error {
 	log.Debug("CustomProtocolService->Start begin")
-	err := d.LightUserService.Start(pubkey, getSig, false)
-	if err != nil {
-		return err
-	}
-
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 
-	d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
-	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
-	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
-
-	topicName := dmsgCommonService.GetQueryPeerTopicName()
-	topicNamePrikey, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
-	if err != nil {
-		return err
+	if d.queryPeerProtocol == nil {
+		d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
+		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
+		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
 	}
-	topicNamePubkeyData, err := tvutilKey.ECDSAPublicKeyToProtoBuf(topicNamePubkey)
-	if err != nil {
-		log.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
-		return err
-	}
-	topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
-
-	topicNameGetSig := func(protoData []byte) ([]byte, error) {
-		sig, err := tvutilCrypto.SignDataByEcdsa(topicNamePrikey, protoData)
+	if d.queryPeerTarget == nil {
+		topicName := dmsgCommonService.GetQueryPeerTopicName()
+		topicNamePrikey, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
 		if err != nil {
-			log.Errorf("initDmsg: sig error: %v", err)
+			return err
 		}
-		return sig, nil
+		topicNamePubkeyData, err := tvutilKey.ECDSAPublicKeyToProtoBuf(topicNamePubkey)
+		if err != nil {
+			log.Errorf("initDmsg: ECDSAPublicKeyToProtoBuf error: %v", err)
+			return err
+		}
+		topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
+
+		topicNameGetSig := func(protoData []byte) ([]byte, error) {
+			sig, err := tvutilCrypto.SignDataByEcdsa(topicNamePrikey, protoData)
+			if err != nil {
+				log.Errorf("initDmsg: sig error: %v", err)
+			}
+			return sig, nil
+		}
+
+		d.queryPeerTarget, err = dmsgUser.NewTarget(topicNamePubkeyHex, topicNameGetSig)
+		if err != nil {
+			return err
+		}
+		err = d.queryPeerTarget.InitPubsub(topicNamePubkeyHex)
+		if err != nil {
+			return err
+		}
+		err = d.HandlePubsubProtocol(d.queryPeerTarget)
+		if err != nil {
+			log.Errorf("CustomProtocolService->Start: HandlePubsubProtocol error: %v", err)
+			return err
+		}
 	}
 
-	d.queryPeerTarget, err = dmsgUser.NewTarget(topicNamePubkeyHex, topicNameGetSig)
-	if err != nil {
-		return err
-	}
-	err = d.queryPeerTarget.InitPubsub(topicNamePubkeyHex)
-	if err != nil {
-		return err
-	}
-
-	err = d.HandlePubsubProtocol(d.queryPeerTarget)
-	if err != nil {
-		log.Errorf("CustomProtocolService->Start: HandlePubsubProtocol error: %v", err)
-		return err
-	}
-
+	d.enable = true
 	log.Debug("CustomProtocolService->Start end")
 	return nil
 }
 
 func (d *CustomProtocolService) Stop() error {
-	log.Debug("CustomProtocolService->Stop begin")
-	err := d.LightUserService.Stop()
+	select {
+	case d.stopServiceChan <- true:
+		log.Debugf("CustomProtocolService->Stop: succ send stopService")
+	default:
+		log.Debugf("CustomProtocolService->Stop: no receiver for stopService")
+	}
+	d.enable = false
+	return nil
+}
+
+func (d *CustomProtocolService) Release() error {
+	d.UnregistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID())
+	d.UnregistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID())
+	d.queryPeerProtocol = nil
+
+	err := d.Stop()
 	if err != nil {
 		return err
 	}
-	log.Debug("CustomProtocolService->Stop end")
+	err = d.queryPeerTarget.Close()
+	if err != nil {
+		return err
+	}
+	d.queryPeerTarget = nil
+	err = d.LightUserService.Stop()
+	if err != nil {
+		return err
+	}
+	close(d.stopServiceChan)
 	return nil
 }
 
@@ -134,6 +162,9 @@ func (d *CustomProtocolService) UnregistServer(callback dmsgProtocolCustom.Serve
 func (d *CustomProtocolService) OnCustomRequest(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("CustomProtocolService->OnCustomRequest begin")
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.CustomProtocolReq)
 	if !ok {
 		log.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
@@ -158,6 +189,9 @@ func (d *CustomProtocolService) OnCustomRequest(
 
 func (d *CustomProtocolService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("CustomProtocolService->OnQueryPeerRequest begin\nrequestProtoData: %+v", requestProtoData)
+	if !d.enable {
+		return nil, nil, true, nil
+	}
 	request, ok := requestProtoData.(*pb.QueryPeerReq)
 	if !ok {
 		log.Errorf("CustomProtocolService->OnQueryPeerRequest: fail to convert requestProtoData to *pb.QueryPeerReq")
@@ -184,6 +218,8 @@ func (d *CustomProtocolService) HandlePubsubProtocol(target *dmsgUser.Target) er
 	go func() {
 		for {
 			select {
+			case <-d.stopServiceChan:
+				return
 			case protocolHandle, ok := <-protocolDataChan:
 				if !ok {
 					return

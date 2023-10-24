@@ -34,14 +34,12 @@ func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvba
 		}
 		return sig, nil
 	}
-
-	dmsgService, err = light.CreateDmsgService(tb)
+	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
+	dmsgService, err = light.CreateDmsgService(tb, pubkey, getSig, true)
 	if err != nil {
 		return err
 	}
-
-	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
-	err = dmsgService.Start(pubkey, getSig, 30*time.Second, true)
+	err = dmsgService.Start()
 	if err != nil {
 		return err
 	}
