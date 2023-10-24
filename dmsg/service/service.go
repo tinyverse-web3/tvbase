@@ -167,10 +167,7 @@ func (d *DmsgService) getMsgPrefix(userPubkey string) string {
 func (d *DmsgService) isAvailableMailbox(userPubKey string) bool {
 	destUserCount := len(d.destUserInfoList)
 	cfg := d.BaseService.GetConfig()
-	if destUserCount >= cfg.DMsg.MaxMailboxPubsubCount {
-		return false
-	}
-	return true
+	return destUserCount < cfg.DMsg.MaxMailboxPubsubCount
 }
 
 func (d *DmsgService) cleanRestResource(done chan bool) {
