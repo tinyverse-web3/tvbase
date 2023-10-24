@@ -736,8 +736,6 @@ func (d *DmsgService) ReleaseMailbox(peerIdHex string, pubkey string) error {
 			d.SrcUserInfo.MailboxPeerID = ""
 		}
 		dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan success")
-		d.SrcUserInfo.MailboxPeerID = ""
-		dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan success")
 	case <-time.After(time.Second * 3):
 		return fmt.Errorf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan time out")
 	case <-d.BaseService.GetCtx().Done():
