@@ -42,7 +42,7 @@ type MailboxService interface {
 
 type MailboxClient interface {
 	CommonService
-	CreateMailbox(timeout time.Duration) error
+	CreateMailbox(timeout time.Duration) (existMailbox bool, err error)
 	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
 	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
 	Stop() error

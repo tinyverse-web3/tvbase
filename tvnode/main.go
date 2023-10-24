@@ -120,10 +120,11 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey,
 		return err
 	}
 
-	err = dmsgService.GetMailboxClient().CreateMailbox(3 * time.Second)
+	_, err = dmsgService.GetMailboxClient().CreateMailbox(3 * time.Second)
 	if err != nil {
 		return err
 	}
+
 	dmsgService.GetMailboxClient().CreateMailbox(30 * time.Second)
 	return nil
 }
