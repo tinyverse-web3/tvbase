@@ -230,8 +230,8 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 		if response.RetCode.Code < 0 {
 			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
 			return false, fmt.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
-
 		} else {
+			d.SrcUserInfo.MailboxPeerID = response.BasicData.PeerID
 			dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: seekMailboxProtoData success")
 			return true, nil
 		}
@@ -732,6 +732,11 @@ func (d *DmsgService) ReleaseMailbox(peerIdHex string, pubkey string) error {
 	}
 	select {
 	case <-releaseMailboxDoneChan:
+		if d.SrcUserInfo.MailboxPeerID == peerIdHex {
+			d.SrcUserInfo.MailboxPeerID = ""
+		}
+		dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan success")
+		d.SrcUserInfo.MailboxPeerID = ""
 		dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan success")
 	case <-time.After(time.Second * 3):
 		return fmt.Errorf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan time out")
