@@ -160,13 +160,15 @@ func (d *DmsgService) InitUser(
 	done := make(chan error)
 	go func() {
 		if d.BaseService.GetIsRendezvous() {
-			done <- d.CreateMailbox(userPubkey)
+			_, err := d.CreateMailbox(userPubkey)
+			done <- err
 		} else {
 			c := d.BaseService.RegistRendezvousChan()
 			select {
 			case <-c:
 				d.BaseService.UnregistRendezvousChan(c)
-				done <- d.CreateMailbox(userPubkey)
+				_, err := d.CreateMailbox(userPubkey)
+				done <- err
 				return
 			case <-d.BaseService.GetCtx().Done():
 				dmsgLog.Logger.Debug("DmsgService->InitUser: BaseService.GetCtx().Done()")
@@ -210,11 +212,11 @@ func (d *DmsgService) IsExistMailbox(userPubkey string, duration time.Duration) 
 	}
 }
 
-func (d *DmsgService) CreateMailbox(userPubkey string) error {
+func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err error) {
 	dmsgLog.Logger.Debug("DmsgService->CreateMailbox begin")
 	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, userPubkey)
 	if err != nil {
-		return err
+		return false, err
 	}
 	select {
 	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
@@ -222,15 +224,16 @@ func (d *DmsgService) CreateMailbox(userPubkey string) error {
 		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
 		if !ok || response == nil {
 			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData is not SeekMailboxRes")
-			// skip seek when seek mailbox quest fail (server err), create a new mailbox
+			return false, fmt.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData is not SeekMailboxRes")
+
 		}
 		if response.RetCode.Code < 0 {
 			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
-			// skip seek when seek mailbox quest fail, create a new mailbox
+			return false, fmt.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
+
 		} else {
 			dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: seekMailboxProtoData success")
-			go d.releaseUnusedMailbox(response.BasicData.PeerID, userPubkey)
-			return nil
+			return true, nil
 		}
 	case <-time.After(3 * time.Second):
 		dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: time.After 3s, create new mailbox")
@@ -240,7 +243,7 @@ func (d *DmsgService) CreateMailbox(userPubkey string) error {
 		servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: getAvailableServicePeerList error: %v", err)
-			return err
+			return false, err
 		}
 
 		for _, servicePeerID := range servicePeerList {
@@ -259,11 +262,10 @@ func (d *DmsgService) CreateMailbox(userPubkey string) error {
 					dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: createMailboxDoneChan is not CreateMailboxRes")
 					continue
 				}
-
 				switch response.RetCode.Code {
 				case 0, 1:
 					dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: createMailboxProtocol success")
-					return nil
+					return false, nil
 				default:
 					continue
 				}
@@ -271,18 +273,17 @@ func (d *DmsgService) CreateMailbox(userPubkey string) error {
 				continue
 			case <-d.BaseService.GetCtx().Done():
 				dmsgLog.Logger.Debug("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
-				return d.BaseService.GetCtx().Err()
+				return false, d.BaseService.GetCtx().Err()
 			}
 		}
 
 		dmsgLog.Logger.Error("DmsgService->CreateMailbox: no available service peers")
-		return fmt.Errorf("DmsgService->CreateMailbox: no available service peers")
+		return false, fmt.Errorf("DmsgService->CreateMailbox: no available service peers")
 		// end create mailbox
 	case <-d.BaseService.GetCtx().Done():
 		dmsgLog.Logger.Debug("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
-		return fmt.Errorf("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
+		return false, fmt.Errorf("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
 	}
-	return nil
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
@@ -677,8 +678,12 @@ func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg
 }
 
 func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, error) {
+	return d.ReadMailbox(d.SrcUserInfo.MailboxPeerID, timeout)
+}
+
+func (d *DmsgService) ReadMailbox(mailPeerID string, timeout time.Duration) ([]dmsg.Msg, error) {
 	var msgList []dmsg.Msg
-	peerID, err := peer.Decode(d.SrcUserInfo.MailboxPeerID)
+	peerID, err := peer.Decode(mailPeerID)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: peer.Decode error: %v", err)
 		return msgList, err
@@ -712,43 +717,29 @@ func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, err
 	}
 }
 
-func (d *DmsgService) releaseUnusedMailbox(peerIdHex string, pubkey string) error {
-	dmsgLog.Logger.Debug("DmsgService->releaseUnusedMailbox begin")
+func (d *DmsgService) ReleaseMailbox(peerIdHex string, pubkey string) error {
+	dmsgLog.Logger.Debug("DmsgService->ReleaseMailbox begin")
 
 	peerID, err := peer.Decode(peerIdHex)
 	if err != nil {
-		dmsgLog.Logger.Warnf("DmsgService->releaseUnusedMailbox: fail to decode peer id: %v", err)
-		return err
-	}
-	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, pubkey, d.proxyPubkey)
-	if err != nil {
+		dmsgLog.Logger.Warnf("DmsgService->ReleaseMailbox: fail to decode peer id: %v", err)
 		return err
 	}
 
-	select {
-	case <-readMailboxDoneChan:
-		if d.SrcUserInfo.MailboxPeerID == "" {
-			d.SrcUserInfo.MailboxPeerID = peerIdHex
-		} else if peerIdHex != d.SrcUserInfo.MailboxPeerID {
-			_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey, d.proxyPubkey)
-			if err != nil {
-				return err
-			}
-			select {
-			case <-releaseMailboxDoneChan:
-				dmsgLog.Logger.Debugf("DmsgService->releaseUnusedMailbox: releaseMailboxDoneChan success")
-			case <-time.After(time.Second * 3):
-				return fmt.Errorf("DmsgService->releaseUnusedMailbox: releaseMailboxDoneChan time out")
-			case <-d.BaseService.GetCtx().Done():
-				return fmt.Errorf("DmsgService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
-			}
-		}
-	case <-time.After(time.Second * 10):
-		return fmt.Errorf("DmsgService->releaseUnusedMailbox: readMailboxDoneChan time out")
-	case <-d.BaseService.GetCtx().Done():
-		return fmt.Errorf("DmsgService->releaseUnusedMailbox: BaseService.GetCtx().Done()")
+	_, releaseMailboxDoneChan, err := d.releaseMailboxPrtocol.Request(peerID, pubkey)
+	if err != nil {
+		return err
 	}
-	dmsgLog.Logger.Debugf("DmsgService->releaseUnusedMailbox end")
+	select {
+	case <-releaseMailboxDoneChan:
+		dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan success")
+	case <-time.After(time.Second * 3):
+		return fmt.Errorf("DmsgService->ReleaseMailbox: releaseMailboxDoneChan time out")
+	case <-d.BaseService.GetCtx().Done():
+		return fmt.Errorf("DmsgService->ReleaseMailbox: BaseService.GetCtx().Done()")
+	}
+
+	dmsgLog.Logger.Debugf("DmsgService->ReleaseMailbox end")
 	return nil
 }
 
@@ -806,30 +797,6 @@ func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.Proto
 }
 
 func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
-	request, ok := requestProtoData.(*pb.CreateMailboxReq)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxReq", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxReq", responseProtoData)
-	}
-	response, ok := responseProtoData.(*pb.CreateMailboxRes)
-	if !ok {
-		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", responseProtoData)
-		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", responseProtoData)
-	}
-
-	switch response.RetCode.Code {
-	case 0: // new
-		fallthrough
-	case 1: // exist mailbox
-		dmsgLog.Logger.Debug("DmsgService->OnCreateMailboxResponse: mailbox has created, read message from mailbox...")
-		err := d.releaseUnusedMailbox(response.BasicData.PeerID, request.BasicData.Pubkey)
-		if err != nil {
-			return nil, err
-		}
-
-	default: // < 0 service no finish create mailbox
-		dmsgLog.Logger.Warnf("DmsgService->OnCreateMailboxResponse: RetCode(%v) fail", response.RetCode)
-	}
 	return nil, nil
 }
 
