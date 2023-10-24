@@ -113,8 +113,8 @@ func TestPubsubMsg(t *testing.T) {
 			message.ReqPubkey, message.DestPubkey, string(message.Content), time.Unix(message.TimeStamp, 0), message.Direction)
 		return nil, nil
 	}
-	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
-	dmsg.GetMailboxClient().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMsgClient().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMsgClient().SetOnReceiveMsg(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
@@ -122,7 +122,7 @@ func TestPubsubMsg(t *testing.T) {
 		return
 	}
 	destPubKeyStr := key.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr, true)
+	err = dmsg.GetMsgClient().SubscribeDestUser(destPubKeyStr, true)
 	if err != nil {
 		testLog.Errorf("SubscribeDestUser error: %v", err)
 		return

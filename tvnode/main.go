@@ -125,7 +125,5 @@ func startDmsgService(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey,
 		return err
 	}
 	dmsgService.GetMailboxClient().CreateMailbox(30 * time.Second)
-	dmsgService.GetMailboxClient().TickReadMailbox(3*time.Minute, 30*time.Second)
-
 	return nil
 }

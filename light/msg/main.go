@@ -200,7 +200,7 @@ func main() {
 	light.Logger.Info("tvnodelight->main: gracefully shut down")
 }
 
-func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.MsgService {
+func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.MsgClient {
 	msgOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
 		var err error
 		decrypedContent := []byte("")
@@ -227,14 +227,14 @@ func initMsgService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) s
 		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 	}
 
-	ret := dmsgService.GetMsgService()
+	ret := dmsgService.GetMsgClient()
 	ret.SetOnReceiveMsg(msgOnRequest)
 	ret.SetOnRespondMsg(msgOnResponse)
 	return ret
 }
 
-func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.ChannelService {
-	ret := dmsgService.GetChannelService()
+func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) service.ChannelClient {
+	ret := dmsgService.GetChannelClient()
 	channelOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
 		light.Logger.Infof("OnMsgResponse-> \nmessage: %+v", message)
 		return nil, nil
@@ -248,27 +248,9 @@ func initChannelService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKe
 }
 
 func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) {
-	mailOnRequest := func(message *msg.ReceiveMsg) ([]byte, error) {
-		decrypedContent := []byte("")
-		var err error
-		switch message.Direction {
-		case msg.MsgDirection.To:
-			decrypedContent, err = crypto.DecryptWithPrikey(destPrikey, message.Content)
-			if err != nil {
-				decrypedContent = []byte(err.Error())
-				light.Logger.Errorf("decrypt error: %v", err)
-			}
-		case msg.MsgDirection.From:
-			decrypedContent, err = crypto.DecryptWithPrikey(srcPrikey, message.Content)
-			if err != nil {
-				decrypedContent = []byte(err.Error())
-				light.Logger.Errorf("decrypt error: %v", err)
-			}
-		}
-		light.Logger.Infof("mailOnRequest-> \nsrcUserPubkey: %s, \ndestUserPubkey: %s, \nmsgContent: %s, time:%v, direction: %s",
-			message.ReqPubkey, message.DestPubkey, string(decrypedContent), time.Unix(message.TimeStamp, 0), message.Direction)
-		return nil, nil
+	msgList, err := dmsgService.GetMailboxClient().ReadMailbox(3 * time.Second)
+	if err != nil {
+		light.Logger.Errorf("initMailService: read mailbox error: %v", err)
 	}
-
-	dmsgService.GetMailboxClient().SetOnReceiveMsg(mailOnRequest)
+	light.Logger.Debugf("initMailService: found (%d) new message", len(msgList))
 }

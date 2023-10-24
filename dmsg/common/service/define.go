@@ -43,9 +43,7 @@ type MailboxService interface {
 type MailboxClient interface {
 	CommonService
 	CreateMailbox(timeout time.Duration) error
-	SetOnReceiveMsg(cb msg.OnReceiveMsg)
 	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
-	TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration)
 	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
 	Stop() error
 }
@@ -54,10 +52,6 @@ type MsgService interface {
 	CommonService
 	IsExistDestUser(pubkey string) bool
 	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
-	SubscribeDestUser(pubkey string, isListenMsg bool) error
-	UnSubscribeDestUser(pubkey string) error
-	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
-	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
 	Stop() error
 }
@@ -79,10 +73,6 @@ type ChannelService interface {
 	CommonService
 	IsExistChannel(pubkey string) bool
 	GetChannel(pubkey string) *dmsgUser.ProxyPubsub
-	SubscribeChannel(pubkey string) error
-	UnsubscribeChannel(pubkey string) error
-	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
-	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
 	Stop() error
 }

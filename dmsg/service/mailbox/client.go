@@ -239,36 +239,6 @@ func (d *MailboxClient) OnPubsubMsgResponse(requestProtoData protoreflect.ProtoM
 	return nil, nil
 }
 
-// common
-
-func (d *MailboxClient) TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration) {
-	if d.stopReadMailbox != nil {
-		d.stopReadMailbox <- true
-		close(d.stopReadMailbox)
-	} else {
-		d.stopReadMailbox = make(chan bool)
-	}
-
-	go func() {
-		ticker := time.NewTicker(checkDuration)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-d.stopReadMailbox:
-				return
-			case <-ticker.C:
-				_, err := d.readMailbox(d.lightMailboxUser.ServicePeerID, d.lightMailboxUser.Key.PubkeyHex, readMailboxTimeout, true)
-				if err != nil {
-					log.Errorf("MailboxClient->tickReadMailbox: readMailbox error: %v", err)
-					continue
-				}
-			case <-d.TvBase.GetCtx().Done():
-				return
-			}
-		}
-	}()
-}
-
 // user
 
 func (d *MailboxClient) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallback) error {
