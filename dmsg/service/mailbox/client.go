@@ -2,11 +2,13 @@ package mailbox
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -28,6 +30,7 @@ type MailboxClient struct {
 	lightMailboxUser      *dmsgUser.LightMailboxUser
 	proxyUser             *dmsgUser.LightMailboxUser
 	onReceiveMsg          msg.OnReceiveMsg
+	datastore             db.Datastore
 }
 
 func NewClient(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*MailboxClient, error) {
@@ -43,6 +46,22 @@ func NewClient(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey
 func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error {
 	err := d.BaseService.Init(tvbaseService)
 	if err != nil {
+		return err
+	}
+	cfg := d.BaseService.TvBase.GetConfig()
+	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath + "-" + pubkey
+
+	_, err = os.Stat(filepath)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(filepath, 0755)
+		if err != nil {
+			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
+			return err
+		}
+	}
+	d.datastore, err = db.CreateBadgerDB(filepath)
+	if err != nil {
+		log.Errorf("MailboxClient->Init: create datastore error %v", err)
 		return err
 	}
 
@@ -87,6 +106,11 @@ func (d *MailboxClient) Release() error {
 	err := d.UnSubscribeUser()
 	if err != nil {
 		return err
+	}
+
+	if d.datastore != nil {
+		d.datastore.Close()
+		d.datastore = nil
 	}
 
 	log.Debug("MailboxService->Release end")
