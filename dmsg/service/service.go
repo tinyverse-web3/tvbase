@@ -135,8 +135,9 @@ func (d *DmsgService) GetUserPubkeyHex() (string, error) {
 	return d.curSrcUserInfo.UserKey.PubKeyHex, nil
 }
 
-func (d *DmsgService) SetProxyPubkey(proxyPubkey string) {
+func (d *DmsgService) SetProxyPubkey(proxyPubkey string) error {
 	d.proxyPubkey = proxyPubkey
+	return nil
 }
 
 func (d *DmsgService) GetProxyPubkey() string {
