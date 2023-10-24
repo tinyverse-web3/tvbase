@@ -122,7 +122,7 @@ func TestPubsubMsg(t *testing.T) {
 		return
 	}
 	destPubKeyStr := key.TranslateKeyProtoBufToString(destPubkeyBytes)
-	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr)
+	err = dmsg.GetMsgService().SubscribeDestUser(destPubKeyStr, true)
 	if err != nil {
 		testLog.Errorf("SubscribeDestUser error: %v", err)
 		return

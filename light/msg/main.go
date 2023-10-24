@@ -129,7 +129,7 @@ func main() {
 		light.Logger.Fatalf("tvnode->main: GetPubkey error: %v", err)
 	}
 	light.Logger.Debugf("tvnode->main: destPubkeyStr: %v", destPubkeyStr)
-	err = msgService.SubscribeDestUser(destPubkeyStr)
+	err = msgService.SubscribeDestUser(destPubkeyStr, true)
 	if err != nil {
 		tb.SetTracerStatus(err)
 		light.Logger.Fatalf("tvnode->main: SetTracerStatus error: %v", err)
