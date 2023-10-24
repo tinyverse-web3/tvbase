@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -15,8 +14,6 @@ import (
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-var log = ipfsLog.Logger("dmsg.service.msg")
 
 type MsgService struct {
 	dmsgServiceCommon.ProxyPubsubService
@@ -33,17 +30,12 @@ func CreateService(tvbase define.TvBaseService) (*MsgService, error) {
 }
 
 // sdk-common
-func (d *MsgService) Start(
-	enableService bool,
-	pubkey string,
-	getSig dmsgKey.GetSigCallback,
-	isListenMsg bool,
-) error {
-	log.Debugf("MsgService->Start begin\nenableService: %v", enableService)
+func (d *MsgService) Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error {
+	log.Debugf("MsgService->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 
-	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, enableService, pubkey)
+	createPubsubProtocol := adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, false, pubkey)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
@@ -52,9 +44,7 @@ func (d *MsgService) Start(
 		return err
 	}
 
-	if enableService {
-		d.CleanRestPubsub(12 * time.Hour)
-	}
+	d.CleanRestPubsub(12 * time.Hour)
 
 	log.Debug("MsgService->Start end")
 	return nil
@@ -66,36 +56,6 @@ func (d *MsgService) GetDestUser(pubkey string) *dmsgUser.ProxyPubsub {
 
 func (d *MsgService) IsExistDestUser(pubkey string) bool {
 	return d.GetPubsub(pubkey) != nil
-}
-
-func (d *MsgService) SetProxyPubkey(pubkey string) error {
-	if pubkey == "" {
-		return fmt.Errorf("MsgService->SetProxyPubkey: pubkey is empty")
-	}
-	if d.GetProxyPubkey() != "" {
-		return fmt.Errorf("MsgService->SetProxyPubkey: proxyPubkey is not empty")
-	}
-	err := d.SubscribeDestUser(pubkey, false)
-	if err != nil {
-		return err
-	}
-	err = d.BaseService.SetProxyPubkey(pubkey)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d *MsgService) ClearProxyPubkey() error {
-	proxyPubkey := d.GetProxyPubkey()
-	if proxyPubkey != "" {
-		err := d.UnSubscribeDestUser(proxyPubkey)
-		if err != nil {
-			return err
-		}
-		d.SetProxyPubkey("")
-	}
-	return nil
 }
 
 func (d *MsgService) SubscribeDestUser(pubkey string, isListen bool) error {

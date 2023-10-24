@@ -32,18 +32,22 @@ type CommonService interface {
 	GetUserPubkeyHex() (string, error)
 	GetUserSig(protoData []byte) ([]byte, error)
 	GetPublishTarget(pubkey string) (*dmsgUser.Target, error)
-	Stop() error
 }
 
 type MailboxService interface {
 	CommonService
-	Start(enableRequest bool, pubkey string, getSig dmsgKey.GetSigCallback) error
-	CreateMailbox(pubkey string, timeout time.Duration) error
-	CreateUserMailbox(timeout time.Duration) error
-	CreateProxyMailbox(pubkey string, timeout time.Duration) error
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
+}
+
+type MailboxClient interface {
+	CommonService
+	CreateMailbox(timeout time.Duration) error
 	SetOnReceiveMsg(cb msg.OnReceiveMsg)
 	ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, error)
 	TickReadMailbox(checkDuration time.Duration, readMailboxTimeout time.Duration)
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
 }
 
 type MsgService interface {
@@ -54,13 +58,21 @@ type MsgService interface {
 	UnSubscribeDestUser(pubkey string) error
 	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
 	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
+	Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
+	Stop() error
+}
+
+type MsgClient interface {
+	CommonService
+	IsExistDestUser(pubkey string) bool
+	GetDestUser(pubkey string) *dmsgUser.ProxyPubsub
+	SubscribeDestUser(pubkey string, isListenMsg bool) error
+	UnSubscribeDestUser(pubkey string) error
+	SetOnReceiveMsg(onMsgReceive msg.OnReceiveMsg)
+	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
 	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
-	Start(
-		enableService bool,
-		pubkey string,
-		getSig dmsgKey.GetSigCallback,
-		isListenMsg bool,
-	) error
+	Start(pubkey string, getSig dmsgKey.GetSigCallback, isListenMsg bool) error
+	Stop() error
 }
 
 type ChannelService interface {
@@ -71,25 +83,35 @@ type ChannelService interface {
 	UnsubscribeChannel(pubkey string) error
 	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
 	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
-	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
-	Start(
-		enableService bool,
-		pubkey string,
-		getSig dmsgKey.GetSigCallback,
-	) error
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
 }
 
+type ChannelClient interface {
+	CommonService
+	IsExistChannel(pubkey string) bool
+	GetChannel(pubkey string) *dmsgUser.ProxyPubsub
+	SubscribeChannel(pubkey string) error
+	UnsubscribeChannel(pubkey string) error
+	SetOnReceiveMsg(onMsgRequest msg.OnReceiveMsg)
+	SetOnRespondMsg(onMsgResponse msg.OnRespondMsg)
+	SendMsg(destPubkey string, content []byte) (*pb.MsgReq, error)
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
+}
 type CustomProtocolService interface {
+	CommonService
+	RegistServer(service customProtocol.ServerHandle) error
+	UnregistServer(callback customProtocol.ServerHandle) error
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
+}
+
+type CustomProtocolClient interface {
 	CommonService
 	RegistClient(client customProtocol.ClientHandle) error
 	UnregistClient(client customProtocol.ClientHandle) error
-	RegistServer(service customProtocol.ServerHandle) error
-	UnregistServer(callback customProtocol.ServerHandle) error
 	QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error)
-	Request(peerId string, pid string, content []byte) (*pb.CustomProtocolReq, chan any, error)
-	Start(
-		enableService bool,
-		pubkey string,
-		getSig dmsgKey.GetSigCallback,
-	) error
+	Start(pubkey string, getSig dmsgKey.GetSigCallback) error
+	Stop() error
 }

@@ -3,8 +3,6 @@ package customProtocol
 import (
 	"fmt"
 
-	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/libp2p/go-libp2p/core/peer"
 	tvutilCrypto "github.com/tinyverse-web3/mtv_go_utils/crypto"
 	tvutilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	"github.com/tinyverse-web3/tvbase/common/define"
@@ -19,13 +17,10 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var log = ipfsLog.Logger("dmsg.service.customprotocol")
-
 type CustomProtocolService struct {
-	dmsgServiceCommon.LightUserService
+	CustomProtocolBase
 	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
-	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
 	queryPeerTarget          *dmsgUser.Target
 }
 
@@ -43,18 +38,13 @@ func (d *CustomProtocolService) Init(tvbaseService define.TvBaseService) error {
 	if err != nil {
 		return err
 	}
-	d.clientStreamProtocolList = make(map[string]*dmsgProtocolCustom.ClientStreamProtocol)
 	d.serverStreamProtocolList = make(map[string]*dmsgProtocolCustom.ServerStreamProtocol)
 
 	return nil
 }
 
 // sdk-common
-func (d *CustomProtocolService) Start(
-	enableService bool,
-	pubkey string,
-	getSig dmsgCommonKey.GetSigCallback,
-) error {
+func (d *CustomProtocolService) Start(pubkey string, getSig dmsgCommonKey.GetSigCallback) error {
 	log.Debug("CustomProtocolService->Start begin")
 	err := d.LightUserService.Start(pubkey, getSig, false)
 	if err != nil {
@@ -66,10 +56,7 @@ func (d *CustomProtocolService) Start(
 
 	d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
-
-	if enableService {
-		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
-	}
+	d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
 
 	topicName := dmsgCommonService.GetQueryPeerTopicName()
 	topicNamePrikey, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
@@ -117,81 +104,6 @@ func (d *CustomProtocolService) Stop() error {
 		return err
 	}
 	log.Debug("CustomProtocolService->Stop end")
-	return nil
-}
-
-func (d *CustomProtocolService) GetQueryPeerPubkey() string {
-	topicName := dmsgCommonService.GetQueryPeerTopicName()
-	_, topicNamePubkey, err := tvutilKey.GenerateEcdsaKey(topicName)
-	if err != nil {
-		return ""
-	}
-	topicNamePubkeyData, err := tvutilKey.ECDSAPublicKeyToProtoBuf(topicNamePubkey)
-	if err != nil {
-		log.Errorf("CustomProtocolService->GetQueryPeerPubkey: ECDSAPublicKeyToProtoBuf error: %v", err)
-		return ""
-	}
-	topicNamePubkeyHex := tvutilKey.TranslateKeyProtoBufToString(topicNamePubkeyData)
-	return topicNamePubkeyHex
-}
-
-func (d *CustomProtocolService) QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error) {
-	destPubkey := d.GetQueryPeerPubkey()
-	request, responseChan, err := d.queryPeerProtocol.Request(d.LightUser.Key.PubkeyHex, destPubkey, pid)
-	return request.(*pb.QueryPeerReq), responseChan, err
-}
-
-func (d *CustomProtocolService) Request(
-	peerIdStr string,
-	pid string,
-	content []byte,
-) (*pb.CustomProtocolReq, chan any, error) {
-	protocolInfo := d.clientStreamProtocolList[pid]
-	if protocolInfo == nil {
-		log.Errorf("CustomProtocolService->RequestService: protocol %s is not exist", pid)
-		return nil, nil, fmt.Errorf("CustomProtocolService->RequestService: protocol %s is not exist", pid)
-	}
-
-	peerID, err := peer.Decode(peerIdStr)
-	if err != nil {
-		log.Errorf("CustomProtocolService->RequestService: err: %v", err)
-		return nil, nil, err
-	}
-	request, responseChan, err := protocolInfo.Protocol.Request(
-		peerID,
-		d.LightUser.Key.PubkeyHex,
-		pid,
-		content)
-	if err != nil {
-		log.Errorf("CustomProtocolService->RequestService: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
-			err, peerID, d.LightUser.Key.PubkeyHex, content)
-		return nil, nil, err
-	}
-	return request.(*pb.CustomProtocolReq), responseChan, nil
-}
-
-func (d *CustomProtocolService) RegistClient(client dmsgProtocolCustom.ClientHandle) error {
-	customProtocolID := client.GetProtocolID()
-	if d.clientStreamProtocolList[customProtocolID] != nil {
-		log.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
-		return fmt.Errorf("CustomProtocolService->RegistCSPClient: protocol %s is already exist", customProtocolID)
-	}
-	d.clientStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ClientStreamProtocol{
-		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, false),
-		Handle:   client,
-	}
-	client.SetCtx(d.TvBase.GetCtx())
-	client.SetService(d)
-	return nil
-}
-
-func (d *CustomProtocolService) UnregistClient(client dmsgProtocolCustom.ClientHandle) error {
-	customProtocolID := client.GetProtocolID()
-	if d.clientStreamProtocolList[customProtocolID] == nil {
-		log.Warnf("CustomProtocolService->UnregistCSPClient: protocol %s is not exist", customProtocolID)
-		return nil
-	}
-	d.clientStreamProtocolList[customProtocolID] = nil
 	return nil
 }
 
@@ -244,16 +156,6 @@ func (d *CustomProtocolService) OnCustomRequest(
 	return responseContent, retCode, false, nil
 }
 
-func (d *CustomProtocolService) OnCustomResponse(
-	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	log.Debugf(
-		"CustomProtocolService->OnCustomResponse begin:\nrequestProtoData: %+v\nresponseProtoData: %+v",
-		requestProtoData, responseProtoData)
-
-	return nil, nil
-}
-
 func (d *CustomProtocolService) OnQueryPeerRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("CustomProtocolService->OnQueryPeerRequest begin\nrequestProtoData: %+v", requestProtoData)
 	request, ok := requestProtoData.(*pb.QueryPeerReq)
@@ -269,14 +171,6 @@ func (d *CustomProtocolService) OnQueryPeerRequest(requestProtoData protoreflect
 
 	log.Debug("CustomProtocolService->OnQueryPeerRequest end")
 	return d.TvBase.GetHost().ID().String(), nil, false, nil
-}
-
-func (d *CustomProtocolService) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) {
-	if d.queryPeerTarget == nil {
-		log.Errorf("CustomProtocolService->GetPublishTarget: queryPeerTarget is nil")
-		return nil, fmt.Errorf("CustomProtocolService->GetPublishTarget: queryPeerTarget is nil")
-	}
-	return d.queryPeerTarget, nil
 }
 
 func (d *CustomProtocolService) HandlePubsubProtocol(target *dmsgUser.Target) error {

@@ -6,12 +6,13 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	channelService "github.com/tinyverse-web3/tvbase/dmsg/service/channel"
 	customProtocolService "github.com/tinyverse-web3/tvbase/dmsg/service/customProtocol"
-	mailboxService "github.com/tinyverse-web3/tvbase/dmsg/service/mailbox"
+	"github.com/tinyverse-web3/tvbase/dmsg/service/mailbox"
 	msgService "github.com/tinyverse-web3/tvbase/dmsg/service/msg"
 )
 
 type DmsgService struct {
 	mailboxService        service.MailboxService
+	mailboxClient         service.MailboxClient
 	msgService            service.MsgService
 	customProtocolService service.CustomProtocolService
 	channelService        service.ChannelService
@@ -28,7 +29,11 @@ func CreateDmsgService(tvbaseService define.TvBaseService) (*DmsgService, error)
 
 func (d *DmsgService) Init(tvbase define.TvBaseService) error {
 	var err error
-	d.mailboxService, err = mailboxService.CreateService(tvbase)
+	d.mailboxService, err = mailbox.CreateService(tvbase)
+	if err != nil {
+		return err
+	}
+	d.mailboxClient, err = mailbox.CreateClient(tvbase)
 	if err != nil {
 		return err
 	}
@@ -51,6 +56,10 @@ func (d *DmsgService) GetMailboxService() service.MailboxService {
 	return d.mailboxService
 }
 
+func (d *DmsgService) GetMailboxClient() service.MailboxClient {
+	return d.mailboxClient
+}
+
 func (d *DmsgService) GetMsgService() service.MsgService {
 	return d.msgService
 }
@@ -69,19 +78,19 @@ func (d *DmsgService) Start(
 	getSig dmsgKey.GetSigCallback,
 	isListenMsg bool,
 ) error {
-	err := d.mailboxService.Start(enableService, pubkey, getSig)
+	err := d.mailboxService.Start(pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	err = d.msgService.Start(enableService, pubkey, getSig, isListenMsg)
+	err = d.msgService.Start(pubkey, getSig, isListenMsg)
 	if err != nil {
 		return err
 	}
-	err = d.channelService.Start(enableService, pubkey, getSig)
+	err = d.channelService.Start(pubkey, getSig)
 	if err != nil {
 		return err
 	}
-	err = d.customProtocolService.Start(enableService, pubkey, getSig)
+	err = d.customProtocolService.Start(pubkey, getSig)
 	if err != nil {
 		return err
 	}

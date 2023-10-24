@@ -114,7 +114,7 @@ func TestPubsubMsg(t *testing.T) {
 		return nil, nil
 	}
 	dmsg.GetMsgService().SetOnReceiveMsg(onReceiveMsg)
-	dmsg.GetMailboxService().SetOnReceiveMsg(onReceiveMsg)
+	dmsg.GetMailboxClient().SetOnReceiveMsg(onReceiveMsg)
 	// publish dest user
 	destPubkeyBytes, err := key.ECDSAPublicKeyToProtoBuf(destPubKey)
 	if err != nil {
@@ -144,7 +144,7 @@ func TestPubsubMsg(t *testing.T) {
 				continue
 			}
 
-			sendMsgReq, err := dmsg.GetMsgService().SendMsg(destPubKeyStr, encrypedContent)
+			sendMsgReq, err := dmsg.GetMsgClient().SendMsg(destPubKeyStr, encrypedContent)
 
 			if err != nil {
 				testLog.Errorf("send msg: error: %v", err)
@@ -206,7 +206,7 @@ func initService(
 	}
 
 	pubkey := key.TranslateKeyProtoBufToString(srcPubkeyBytes)
-	err = dmsgService.Start(false, pubkey, getSigCallback, true)
+	err = dmsgService.Start(pubkey, getSigCallback, 30*time.Second, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,7 +265,7 @@ func TestPullCID(t *testing.T) {
 		return
 	}
 
-	queryPeerRequest, queryPeerResponseChan, err := dmsgService.GetCustomProtocolService().QueryPeer("pullcid")
+	queryPeerRequest, queryPeerResponseChan, err := dmsgService.GetCustomProtocolClient().QueryPeer("pullcid")
 	if err != nil {
 		testLog.Errorf("QueryPeer error: %v", err)
 		return

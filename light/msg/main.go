@@ -41,7 +41,7 @@ func startDmsg(srcPubkey *ecdsa.PublicKey, srcPrikey *ecdsa.PrivateKey, tb *tvba
 	}
 
 	pubkey := key.TranslateKeyProtoBufToString(userPubkeyData)
-	err = dmsgService.Start(false, pubkey, getSig, 30*time.Second, true)
+	err = dmsgService.Start(pubkey, getSig, 30*time.Second, true)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func main() {
 			pubkeyStr := destPubkeyStr
 			// pubkeyStr := channelPubkeyStr
 			// encrypedContent = []byte(sendContent)
-			sendMsgReq, err := dmsgService.GetMsgService().SendMsg(pubkeyStr, encrypedContent)
+			sendMsgReq, err := dmsgService.GetMsgClient().SendMsg(pubkeyStr, encrypedContent)
 			if err != nil {
 				light.Logger.Errorf("tvnode->main: send msg: error: %v", err)
 			}
@@ -270,5 +270,5 @@ func initMailService(srcPrikey *ecdsa.PrivateKey, destPrikey *ecdsa.PrivateKey) 
 		return nil, nil
 	}
 
-	dmsgService.GetMailboxService().SetOnReceiveMsg(mailOnRequest)
+	dmsgService.GetMailboxClient().SetOnReceiveMsg(mailOnRequest)
 }

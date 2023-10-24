@@ -1,21 +1,18 @@
 package channel
 
 import (
-	"time"
-
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
 )
 
-type ChannelService struct {
+type ChannelClient struct {
 	ChannelBase
 }
 
-func CreateService(tvbase define.TvBaseService) (*ChannelService, error) {
-	d := &ChannelService{}
-	cfg := tvbase.GetConfig().DMsg
-	err := d.Init(tvbase, cfg.MaxChannelCount, cfg.KeepChannelDay)
+func CreateClient(tvbase define.TvBaseService) (*ChannelClient, error) {
+	d := &ChannelClient{}
+	err := d.Init(tvbase, 10000, 365)
 	if err != nil {
 		return nil, err
 	}
@@ -23,15 +20,12 @@ func CreateService(tvbase define.TvBaseService) (*ChannelService, error) {
 }
 
 // sdk-common
-func (d *ChannelService) Start(
-	pubkey string,
-	getSig dmsgKey.GetSigCallback,
-) error {
-	log.Debug("ChannelService->Start begin")
+func (d *ChannelClient) Start(pubkey string, getSig dmsgKey.GetSigCallback) error {
+	log.Debug("ChannelClient->Start begin")
 	ctx := d.TvBase.GetCtx()
 	host := d.TvBase.GetHost()
 
-	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, true, pubkey)
+	createPubsubProtocol := adapter.NewCreateChannelProtocol(ctx, host, d, d, false, pubkey)
 	pubsubMsgProtocol := adapter.NewPubsubMsgProtocol(ctx, host, d, d)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetRequestPID(), pubsubMsgProtocol)
 	d.RegistPubsubProtocol(pubsubMsgProtocol.Adapter.GetResponsePID(), pubsubMsgProtocol)
@@ -40,8 +34,6 @@ func (d *ChannelService) Start(
 		return err
 	}
 
-	d.CleanRestPubsub(12 * time.Hour)
-
-	log.Debug("ChannelService->Start end")
+	log.Debug("ChannelClient->Start end")
 	return nil
 }
