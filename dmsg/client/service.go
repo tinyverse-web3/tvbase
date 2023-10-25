@@ -225,20 +225,10 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 		if !ok || response == nil {
 			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData is not SeekMailboxRes")
 			return false, fmt.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData is not SeekMailboxRes")
-
-		}
-		if response.RetCode.Code < 0 {
-			dmsgLog.Logger.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
-			return false, fmt.Errorf("DmsgService->CreateMailbox: seekMailboxProtoData fail")
-		} else {
-			d.SrcUserInfo.MailboxPeerID = response.BasicData.PeerID
-			dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: seekMailboxProtoData success")
-			return true, nil
 		}
 	case <-time.After(3 * time.Second):
 		dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: time.After 3s, create new mailbox")
-		// begin create new mailbox
-
+		// create new mailbox
 		hostId := d.BaseService.GetHost().ID().String()
 		servicePeerList, err := d.BaseService.GetAvailableServicePeerList(hostId)
 		if err != nil {
@@ -265,6 +255,7 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 				switch response.RetCode.Code {
 				case 0, 1:
 					dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: createMailboxProtocol success")
+					d.SrcUserInfo.MailboxPeerID = response.BasicData.PeerID
 					return false, nil
 				default:
 					continue
@@ -284,6 +275,7 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 		dmsgLog.Logger.Debug("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
 		return false, fmt.Errorf("DmsgService->CreateMailbox: BaseService.GetCtx().Done()")
 	}
+	return false, nil
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
@@ -678,30 +670,57 @@ func (d *DmsgService) SetOnReceiveMsg(onReceiveMsg dmsgClientCommon.OnReceiveMsg
 }
 
 func (d *DmsgService) RequestReadMailbox(timeout time.Duration) ([]dmsg.Msg, error) {
-	return d.ReadMailbox(d.SrcUserInfo.MailboxPeerID, timeout)
+	pubkey := d.SrcUserInfo.UserKey.PubkeyHex
+	if d.proxyPubkey != "" {
+		pubkey = d.proxyPubkey
+	}
+
+	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.SrcUserInfo.UserKey.PubkeyHex, pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case data := <-seekMailboxDoneChan:
+		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: seekMailboxResponseProtoData: %+v", data)
+		resp, ok := data.(*pb.SeekMailboxRes)
+		if !ok || resp == nil {
+			dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: data is not SeekMailboxRes")
+			return nil, fmt.Errorf("DmsgService->RequestReadMailbox: data is not SeekMailboxRes")
+		}
+		return d.ReadMailbox(resp.BasicData.PeerID, timeout)
+	case <-time.After(timeout):
+		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: timeout :%v", timeout)
+		return nil, fmt.Errorf("DmsgService->RequestReadMailbox: timeout :%v", timeout)
+		// end create mailbox
+	case <-d.BaseService.GetCtx().Done():
+		dmsgLog.Logger.Debug("DmsgService->RequestReadMailbox: BaseService.GetCtx().Done()")
+		return nil, fmt.Errorf("DmsgService->RequestReadMailbox: BaseService.GetCtx().Done()")
+	}
+
 }
 
 func (d *DmsgService) ReadMailbox(mailPeerID string, timeout time.Duration) ([]dmsg.Msg, error) {
 	var msgList []dmsg.Msg
 	peerID, err := peer.Decode(mailPeerID)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: peer.Decode error: %v", err)
+		dmsgLog.Logger.Errorf("DmsgService->ReadMailbox: peer.Decode error: %v", err)
 		return msgList, err
 	}
-	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, d.SrcUserInfo.UserKey.PubkeyHex, d.proxyPubkey)
+	_, readMailboxDoneChan, err := d.readMailboxMsgPrtocol.Request(peerID, d.SrcUserInfo.UserKey.PubkeyHex)
 	if err != nil {
 		return msgList, err
 	}
 
 	select {
 	case responseProtoData := <-readMailboxDoneChan:
-		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: responseProtoData: %+v", responseProtoData)
+		dmsgLog.Logger.Debugf("DmsgService->ReadMailbox: responseProtoData: %+v", responseProtoData)
 		response, ok := responseProtoData.(*pb.ReadMailboxRes)
 		if !ok || response == nil {
-			dmsgLog.Logger.Errorf("DmsgService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
-			return msgList, fmt.Errorf("DmsgService->RequestReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
+			dmsgLog.Logger.Errorf("DmsgService->ReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
+			return msgList, fmt.Errorf("DmsgService->ReadMailbox: readMailboxDoneChan is not ReadMailboxRes")
 		}
-		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: readMailboxChanDoneChan success")
+		dmsgLog.Logger.Debugf("DmsgService->ReadMailbox: readMailboxChanDoneChan success")
 		msgList, err = d.parseReadMailboxResponse(response, dmsg.MsgDirection.From)
 		if err != nil {
 			return msgList, err
@@ -709,11 +728,11 @@ func (d *DmsgService) ReadMailbox(mailPeerID string, timeout time.Duration) ([]d
 
 		return msgList, nil
 	case <-time.After(timeout):
-		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: timeout")
-		return msgList, fmt.Errorf("DmsgService->RequestReadMailbox: timeout")
+		dmsgLog.Logger.Debugf("DmsgService->ReadMailbox: timeout")
+		return msgList, fmt.Errorf("DmsgService->ReadMailbox: timeout")
 	case <-d.BaseService.GetCtx().Done():
-		dmsgLog.Logger.Debugf("DmsgService->RequestReadMailbox: BaseService.GetCtx().Done()")
-		return msgList, fmt.Errorf("DmsgService->RequestReadMailbox: BaseService.GetCtx().Done()")
+		dmsgLog.Logger.Debugf("DmsgService->ReadMailbox: BaseService.GetCtx().Done()")
+		return msgList, fmt.Errorf("DmsgService->ReadMailbox: BaseService.GetCtx().Done()")
 	}
 }
 
@@ -884,26 +903,6 @@ func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMe
 func (d *DmsgService) OnSeekMailboxResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
-	dmsgLog.Logger.Debug("DmsgService->OnSeekMailboxResponse begin")
-	// request, ok := requestProtoData.(*pb.SeekMailboxReq)
-	// if !ok {
-	// 	dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
-	// 	return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.ReleaseMailboxReq", responseProtoData)
-	// }
-	// response, ok := responseProtoData.(*pb.SeekMailboxRes)
-	// if !ok {
-	// 	dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", responseProtoData)
-	// 	return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", responseProtoData)
-	// }
-
-	// userPubKey := request.BasicData.Pubkey
-	// userInfo := d.getSrcUserInfo(userPubKey)
-	// if userInfo == nil {
-	// 	dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", userPubKey)
-	// 	return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot find src user pubic key %s", userPubKey)
-	// }
-
-	dmsgLog.Logger.Debugf("DmsgService->OnSeekMailboxResponse end")
 	return nil, nil
 }
 
