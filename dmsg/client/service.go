@@ -255,7 +255,6 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 				switch response.RetCode.Code {
 				case 0, 1:
 					dmsgLog.Logger.Debugf("DmsgService->CreateMailbox: createMailboxProtocol success")
-					d.SrcUserInfo.MailboxPeerID = response.BasicData.PeerID
 					return false, nil
 				default:
 					continue
@@ -809,7 +808,6 @@ func (d *DmsgService) parseReadMailboxResponse(responseProtoData protoreflect.Pr
 
 // StreamProtocolCallback interface
 func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, error) {
-	// TODO implement me
 	_, ok := requestProtoData.(*pb.CreateMailboxReq)
 	if !ok {
 		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxReq", requestProtoData)
@@ -818,7 +816,23 @@ func (d *DmsgService) OnCreateMailboxRequest(requestProtoData protoreflect.Proto
 	return nil, nil
 }
 
-func (d *DmsgService) OnCreateMailboxResponse(requestProtoData protoreflect.ProtoMessage, responseProtoData protoreflect.ProtoMessage) (any, error) {
+func (d *DmsgService) OnCreateMailboxResponse(
+	reqProtoData protoreflect.ProtoMessage,
+	respProtoData protoreflect.ProtoMessage) (any, error) {
+	resp, ok := respProtoData.(*pb.CreateMailboxRes)
+	if !ok {
+		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", respProtoData)
+		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: cannot convert %v to *pb.CreateMailboxRes", respProtoData)
+	}
+	if resp.RetCode.Code < 0 {
+		dmsgLog.Logger.Errorf("DmsgService->OnCreateMailboxResponse: error RetCode: %+v", resp.RetCode)
+		return nil, fmt.Errorf("DmsgService->OnCreateMailboxResponse: error RetCode: %+v", resp.RetCode)
+	}
+
+	if d.SrcUserInfo.MailboxPeerID != "" {
+		dmsgLog.Logger.Debugf("DmsgService->OnCreateMailboxResponse: mailbox already exist")
+	}
+	d.SrcUserInfo.MailboxPeerID = resp.BasicData.PeerID
 	return nil, nil
 }
 
@@ -901,8 +915,24 @@ func (d *DmsgService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMe
 }
 
 func (d *DmsgService) OnSeekMailboxResponse(
-	requestProtoData protoreflect.ProtoMessage,
-	responseProtoData protoreflect.ProtoMessage) (any, error) {
+	reqProtoData protoreflect.ProtoMessage,
+	respProtoData protoreflect.ProtoMessage) (any, error) {
+	resp, ok := respProtoData.(*pb.SeekMailboxRes)
+	if !ok {
+		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", respProtoData)
+		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: cannot convert %v to *pb.SeekMailboxRes", respProtoData)
+	}
+
+	if resp.RetCode.Code < 0 {
+		dmsgLog.Logger.Errorf("DmsgService->OnSeekMailboxResponse: error RetCode: %+v", resp.RetCode)
+		return nil, fmt.Errorf("DmsgService->OnSeekMailboxResponse: error RetCode: %+v", resp.RetCode)
+	}
+	if d.SrcUserInfo.MailboxPeerID != "" {
+		dmsgLog.Logger.Debugf("DmsgService->OnSeekMailboxResponse: mailboxPeerID(%s) already set", d.SrcUserInfo.MailboxPeerID)
+	} else {
+		d.SrcUserInfo.MailboxPeerID = resp.BasicData.PeerID
+	}
+
 	return nil, nil
 }
 
