@@ -31,6 +31,7 @@ import (
 	tvLog "github.com/tinyverse-web3/tvbase/common/log"
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
+	"github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dmsgClient "github.com/tinyverse-web3/tvbase/dmsg/client"
 	dmsgService "github.com/tinyverse-web3/tvbase/dmsg/service"
@@ -321,7 +322,12 @@ func (m *TvBase) initHost(lc fx.Lifecycle, privateKey crypto.PrivKey, swamPsk pn
 		return nil, err
 	}
 
-	filepath := m.rootPath + m.cfg.DHT.DatastorePath
+	root, err := util.GetRootPath(m.rootPath)
+	if err != nil {
+		return nil, err
+	}
+
+	filepath := root + m.cfg.DHT.DatastorePath
 	m.dhtDatastore, err = db.CreateDataStore(filepath, m.cfg.Mode)
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->createOpts->createDataStore: error: %v", err)
