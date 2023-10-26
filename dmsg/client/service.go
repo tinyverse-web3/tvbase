@@ -293,7 +293,7 @@ func (d *DmsgService) SetProxyPubkey(pubkey string) error {
 	if d.proxyPubkey != "" {
 		return fmt.Errorf("MsgService->SetProxyPubkey: proxyPubkey is not empty")
 	}
-	err := d.SubscribeDestUser(pubkey, false)
+	err := d.SubscribeDestUser(pubkey, true)
 	if err != nil {
 		return err
 	}
