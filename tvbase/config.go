@@ -1,6 +1,7 @@
 package tvbase
 
 import (
+	"encoding/base64"
 	"strings"
 
 	"github.com/libp2p/go-libp2p"
@@ -8,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/metrics"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/pnet"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
@@ -35,6 +37,15 @@ func (m *TvBase) initKey(lc fx.Lifecycle) (crypto.PrivKey, pnet.PSK, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// privateKeyData, _ := crypto.MarshalPrivateKey(privteKey)
+	// privateKeyStr := base64.StdEncoding.EncodeToString(privateKeyData)
+	publicKey := privteKey.GetPublic()
+	publicKeyData, _ := crypto.MarshalPublicKey(publicKey)
+	publicKeyStr := base64.StdEncoding.EncodeToString(publicKeyData)
+	peerId, _ := peer.IDFromPublicKey(publicKey)
+	tvLog.Logger.Infof("TvBase->initKey: \npublicKey: %s\npeerId: %s", publicKeyStr, peerId.Pretty())
+
 	swarmPsk, fprint, err := identity.LoadSwarmKey(m.cfg.Identity.PrivSwarmKey)
 	if err != nil {
 		tvLog.Logger.Infof("no private swarm key")

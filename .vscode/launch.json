@@ -41,15 +41,6 @@
             "args": ["-rootPath", "./", "-test"]
         },
         {
-            "name": "tvnode-.test",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "console": "integratedTerminal",
-            "program": "${workspaceFolder}/tvnode",
-            "args": ["-rootPath", "./", "-test"]
-        },
-        {
             "name": "tvnode-~",
             "type": "go",
             "request": "launch",
