@@ -68,9 +68,17 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
+	var retCode *pb.RetCode
+	var ok bool
+	if len(dataList) > 1 {
+		retCode, ok = dataList[1].(*pb.RetCode)
+		if !ok {
+			retCode = dmsgProtocol.NewSuccRetCode()
+		}
+	}
 	response := &pb.CreateMailboxRes{
 		BasicData: basicData,
-		RetCode:   dmsgProtocol.NewSuccRetCode(),
+		RetCode:   retCode,
 	}
 	return response, nil
 }
