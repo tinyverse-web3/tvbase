@@ -151,7 +151,7 @@ func (p *Protocol) HandleResponseData(responseProtoData []byte) error {
 			dmsgLog.Logger.Warnf("Protocol->HandleResponseData:\nCallResponseCallback: error %v", err)
 		}
 		requestInfo.DoneChan <- responseProtoMsg
-		p.RequestInfoList.Delete(responseBasicData.ID)
+		// p.RequestInfoList.Delete(responseBasicData.ID)
 	} else {
 		dmsgLog.Logger.Warnf("Protocol->HandleResponseData: failed to locate request info for responseBasicData: %v", responseBasicData)
 	}
