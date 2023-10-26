@@ -3,7 +3,6 @@ package mailbox
 import (
 	"fmt"
 
-	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
@@ -104,8 +103,4 @@ func (d *MailboxBase) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) 
 	topicName := target.Pubsub.Topic.String()
 	log.Debugf("MailboxBase->GetPublishTarget: target's topic name: %s", topicName)
 	return target, nil
-}
-
-func (d *MailboxBase) getMsgPrefix(pubkey string) string {
-	return msg.MsgPrefix + pubkey
 }

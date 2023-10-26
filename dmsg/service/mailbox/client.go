@@ -250,7 +250,7 @@ func (d *MailboxClient) OnSeekMailboxResponse(
 
 	if response.RetCode.Code == dmsgProtocol.SuccCode {
 		if d.lightMailboxUser.ServicePeerID != "" && d.lightMailboxUser.ServicePeerID != request.BasicData.PeerID {
-
+			d.lightMailboxUser.ServicePeerID = response.BasicData.PeerID
 		}
 	}
 
