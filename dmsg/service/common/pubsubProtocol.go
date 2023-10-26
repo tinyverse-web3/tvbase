@@ -79,7 +79,11 @@ func (p *PubsubProtocol) HandleRequestData(protocolData []byte) error {
 	}
 
 	// send the response
-	err = p.Service.PublishProtocol(p.Ctx, requestBasicData.Pubkey, responseBasicData.PID, protoData)
+	pubkey := requestBasicData.Pubkey
+	if requestBasicData.ProxyPubkey != "" {
+		pubkey = requestBasicData.ProxyPubkey
+	}
+	err = p.Service.PublishProtocol(p.Ctx, pubkey, responseBasicData.PID, protoData)
 
 	if err == nil {
 		dmsgLog.Logger.Infof("PubsubProtocol->HandleRequestData: pubulish response requestProtocolId:%s, Message:%v",

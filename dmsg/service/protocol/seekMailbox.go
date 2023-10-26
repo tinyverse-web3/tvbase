@@ -77,6 +77,11 @@ func (adapter *SeekMailboxProtocolAdapter) SetResponseSig(responseProtoData prot
 }
 
 func (adapter *SeekMailboxProtocolAdapter) CallRequestCallback(requestProtoData protoreflect.ProtoMessage) (any, any, error) {
+	// request, ok := requestProtoData.(*pb.SeekMailboxReq)
+	// if !ok {
+	// 	return nil, nil, errors.New("SeekMailboxProtocolAdapter->CallRequestCallback: failed to cast response to *pb.SeekMailboxReq")
+	// }
+	// fmt.Printf("SeekMailboxProtocolAdapter->CallRequestCallback: request.BasicData:\n%+v", request.BasicData)
 	return nil, nil, nil
 }
 
