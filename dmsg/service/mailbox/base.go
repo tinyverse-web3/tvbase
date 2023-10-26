@@ -3,14 +3,21 @@ package mailbox
 import (
 	"fmt"
 
+	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
+	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxBase struct {
 	dmsgServiceCommon.BaseService
-	lightMailboxUser *dmsgUser.LightMailboxUser
+	createMailboxProtocol *dmsgProtocol.MailboxSProtocol
+	releaseMailboxPrtocol *dmsgProtocol.MailboxSProtocol
+	readMailboxMsgPrtocol *dmsgProtocol.MailboxSProtocol
+	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
+	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
+	lightMailboxUser      *dmsgUser.LightMailboxUser
 }
 
 // MailboxSpCallback
@@ -97,4 +104,8 @@ func (d *MailboxBase) GetPublishTarget(pubkey string) (*dmsgUser.Target, error) 
 	topicName := target.Pubsub.Topic.String()
 	log.Debugf("MailboxBase->GetPublishTarget: target's topic name: %s", topicName)
 	return target, nil
+}
+
+func (d *MailboxBase) getMsgPrefix(pubkey string) string {
+	return msg.MsgPrefix + pubkey
 }

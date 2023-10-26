@@ -22,7 +22,10 @@ type MsgService struct {
 
 func NewService(tvbase define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*MsgService, error) {
 	d := &MsgService{}
-
+	err := d.Init(tvbase, pubkey, getSig)
+	if err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
