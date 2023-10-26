@@ -21,15 +21,20 @@ type DmsgService struct {
 	PubsubProtocolReqSubscribes map[pb.PID]protocol.ReqSubscribe
 }
 
+var Pubsub *pubsub.PubSub
+
 func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.BaseService = nodeService
 
 	var err error
-	d.Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
-	if err != nil {
-		dmsgLog.Logger.Errorf("Init: failed to create pubsub: %v", err)
-		return err
+	if Pubsub == nil {
+		Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
+		if err != nil {
+			dmsgLog.Logger.Errorf("Init: failed to create pubsub: %v", err)
+			return err
+		}
 	}
+	d.Pubsub = Pubsub
 
 	d.PubsubProtocolReqSubscribes = make(map[pb.PID]protocol.ReqSubscribe)
 	d.PubsubProtocolResSubscribes = make(map[pb.PID]protocol.ResSubscribe)
