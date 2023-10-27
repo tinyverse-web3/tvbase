@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	utilKey "github.com/tinyverse-web3/mtv_go_utils/key"
 	tvCommon "github.com/tinyverse-web3/tvbase/common"
@@ -42,6 +43,13 @@ type DmsgService struct {
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
 }
+
+type UserPubInfo struct {
+	topic        *pubsub.Topic
+	subscription *pubsub.Subscription
+}
+
+var userPubInfoList map[string]*UserPubInfo = make(map[string]*UserPubInfo)
 
 func CreateService(nodeService tvCommon.TvBaseService) (*DmsgService, error) {
 	d := &DmsgService{}
@@ -278,7 +286,8 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
-	return d.getDestUserInfo(userPubkey) != nil
+	ret := d.getDestUserInfo(userPubkey) != nil && userPubInfoList[userPubkey] != nil
+	return ret
 }
 
 func (d *DmsgService) GetUserPubkeyHex() (string, error) {
@@ -436,7 +445,11 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
 		return err
 	}
-	// go d.BaseService.DiscoverRendezvousPeers()
+
+	userPubInfoList[userPubkey] = &UserPubInfo{
+		topic:        userTopic,
+		subscription: userSub,
+	}
 
 	destUserInfo := &dmsgClientCommon.DestUserInfo{}
 	destUserInfo.Topic = userTopic
@@ -474,6 +487,7 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 	}
 	delete(d.destUserInfoList, userPubkey)
 
+	delete(userPubInfoList, userPubkey)
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser end")
 	return nil
 }
