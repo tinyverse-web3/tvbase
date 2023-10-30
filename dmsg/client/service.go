@@ -393,7 +393,12 @@ func (d *DmsgService) UnSubscribeSrcUser() error {
 	}
 	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser:\nsrcUserInfo: %+v", d.SrcUserInfo)
 
-	d.SrcUserInfo.CancelCtx()
+	if d.SrcUserInfo.CancelCtx != nil {
+		d.SrcUserInfo.CancelCtx()
+	} else {
+		dmsgLog.Logger.Warnf("DmsgService->UnSubscribeSrcUser: CancelCtx is nil")
+	}
+
 	d.SrcUserInfo.Subscription.Cancel()
 	err := d.SrcUserInfo.Topic.Close()
 	if err != nil {
