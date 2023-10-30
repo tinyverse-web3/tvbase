@@ -16,6 +16,7 @@ import (
 	"github.com/ipfs/go-metrics-interface"
 	"github.com/libp2p/go-libp2p"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -31,7 +32,7 @@ import (
 	tvPeer "github.com/tinyverse-web3/tvbase/common/peer"
 	tvProtocol "github.com/tinyverse-web3/tvbase/common/protocol"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
-	"github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
+	dmsgPubsub "github.com/tinyverse-web3/tvbase/dmsg/common/pubsub"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -422,7 +423,7 @@ func (m *TvBase) init() error {
 	fxOpts = append(fxOpts, fx.Provide(m.initHost))
 	fxOpts = append(fxOpts, fx.Invoke(m.initMdns))
 	fxOpts = append(fxOpts, fx.Invoke(m.netCheck))
-	fxOpts = append(fxOpts, fx.Invoke(m.initDmsg))
+	fxOpts = append(fxOpts, fx.Invoke(m.initDmsgPubsub))
 	err = m.initFx(fx.Options(fxOpts...))
 	if err != nil {
 		tvLog.Logger.Errorf("tvbase->init: error: %v", err)
@@ -434,8 +435,18 @@ func (m *TvBase) init() error {
 	return nil
 }
 
-func (m *TvBase) initDmsg(lc fx.Lifecycle) error {
-	pubsub.NewPubsubMgr(m.ctx, m.host)
+func (m *TvBase) initDmsgPubsub(lc fx.Lifecycle) error {
+	cfg := m.cfg.DMsg.Pubsub
+	var optList []pubsub.Option
+	if cfg != nil && cfg.TraceFile != "" {
+		tracer, err := pubsub.NewJSONTracer(m.rootPath + cfg.TraceFile)
+		if err != nil {
+			return err
+		}
+		opt := pubsub.WithEventTracer(tracer)
+		optList = append(optList, opt)
+	}
+	dmsgPubsub.NewPubsubMgr(m.ctx, m.host, optList...)
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
 			return nil

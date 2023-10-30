@@ -21,9 +21,9 @@ type PubsubMgr struct {
 
 var pubsubMgr = &PubsubMgr{}
 
-func NewPubsubMgr(ctx context.Context, host host.Host) (*PubsubMgr, error) {
+func NewPubsubMgr(ctx context.Context, host host.Host, opts ...pubsub.Option) (*PubsubMgr, error) {
 	pubsubMgr = &PubsubMgr{}
-	err := pubsubMgr.init(ctx, host)
+	err := pubsubMgr.init(ctx, host, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +34,8 @@ func GetPubsubMgr() *PubsubMgr {
 	return pubsubMgr
 }
 
-func (d *PubsubMgr) init(ctx context.Context, host host.Host) error {
-	ret, err := pubsub.NewGossipSub(ctx, host)
+func (d *PubsubMgr) init(ctx context.Context, host host.Host, opts ...pubsub.Option) error {
+	ret, err := pubsub.NewGossipSub(ctx, host, opts...)
 	if err != nil {
 		return err
 	}

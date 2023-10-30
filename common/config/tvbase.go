@@ -145,14 +145,19 @@ type DHTConfig struct {
 	MaxRecordAge   time.Duration
 }
 
+type PubsubConfig struct {
+	TraceFile string
+}
+
 type DMsgConfig struct {
+	DatastorePath   string
+	Pubsub          *PubsubConfig
 	MaxMsgCount     int
 	KeepMsgDay      int
 	MaxMailboxCount int
 	KeepMailboxDay  int
 	MaxChannelCount int
 	KeepChannelDay  int
-	DatastorePath   string
 }
 
 type MetricsConfig struct {
@@ -254,13 +259,14 @@ func NewDefaultTvbaseConfig() *TvbaseConfig {
 			MaxRecordAge:   time.Hour * 24 * 365 * 100,
 		},
 		DMsg: DMsgConfig{
+			DatastorePath:   "msg_data",
+			Pubsub:          &PubsubConfig{},
 			MaxMsgCount:     1000,
 			KeepMsgDay:      30,
 			MaxMailboxCount: 1000,
 			KeepMailboxDay:  30,
 			MaxChannelCount: 1000,
 			KeepChannelDay:  30,
-			DatastorePath:   "msg_data",
 		},
 		Relay: RelayConfig{
 			Enabled: true,
