@@ -25,10 +25,21 @@ var Pubsub *pubsub.PubSub
 
 func (d *DmsgService) Init(nodeService tvCommon.TvBaseService) error {
 	d.BaseService = nodeService
-
-	var err error
+	cfg := d.BaseService.GetConfig().DMsg.Pubsub
 	if Pubsub == nil {
-		Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost())
+		var optList []pubsub.Option
+		if cfg != nil && cfg.TraceFile != "" {
+			rootPath := d.BaseService.GetRootPath()
+			filePath := rootPath + cfg.TraceFile
+			tracer, err := pubsub.NewJSONTracer(filePath)
+			if err != nil {
+				return err
+			}
+			opt := pubsub.WithEventTracer(tracer)
+			optList = append(optList, opt)
+		}
+		var err error
+		Pubsub, err = pubsub.NewGossipSub(d.BaseService.GetCtx(), d.BaseService.GetHost(), optList...)
 		if err != nil {
 			dmsgLog.Logger.Errorf("Init: failed to create pubsub: %v", err)
 			return err
