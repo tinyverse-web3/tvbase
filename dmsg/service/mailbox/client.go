@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
@@ -22,15 +21,8 @@ import (
 
 type MailboxClient struct {
 	MailboxBase
-	createMailboxProtocol *dmsgProtocol.MailboxSProtocol
-	releaseMailboxPrtocol *dmsgProtocol.MailboxSProtocol
-	readMailboxMsgPrtocol *dmsgProtocol.MailboxSProtocol
-	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
-	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
-	lightMailboxUser      *dmsgUser.LightMailboxUser
-	proxyUser             *dmsgUser.LightMailboxUser
-	onReceiveMsg          msg.OnReceiveMsg
-	datastore             db.Datastore
+	proxyUser    *dmsgUser.LightMailboxUser
+	onReceiveMsg msg.OnReceiveMsg
 }
 
 func NewClient(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*MailboxClient, error) {
@@ -58,11 +50,6 @@ func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, 
 			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
 			return err
 		}
-	}
-	d.datastore, err = db.CreateBadgerDB(filepath)
-	if err != nil {
-		log.Errorf("MailboxClient->Init: create datastore error %v", err)
-		return err
 	}
 
 	err = d.SubscribeUser(pubkey, getSig)
@@ -106,11 +93,6 @@ func (d *MailboxClient) Release() error {
 	err := d.UnSubscribeUser()
 	if err != nil {
 		return err
-	}
-
-	if d.datastore != nil {
-		d.datastore.Close()
-		d.datastore = nil
 	}
 
 	log.Debug("MailboxService->Release end")
@@ -268,11 +250,7 @@ func (d *MailboxClient) OnSeekMailboxResponse(
 
 	if response.RetCode.Code == dmsgProtocol.SuccCode {
 		if d.lightMailboxUser.ServicePeerID != "" && d.lightMailboxUser.ServicePeerID != request.BasicData.PeerID {
-			_, err := d.readMailbox(request.BasicData.PeerID, d.lightMailboxUser.Key.PubkeyHex, 3*time.Second, false)
-			if err != nil {
-				log.Warnf("MailboxClient->OnSeekMailboxResponse: readMailbox error: %+v", err)
-			}
-
+			d.lightMailboxUser.ServicePeerID = response.BasicData.PeerID
 		}
 	}
 
@@ -443,6 +421,7 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 	if err != nil {
 		return false, err
 	}
+
 	remainTimeDuration := timeout - time.Duration(curtime)
 	if remainTimeDuration >= 0 {
 		if resp.RetCode.Code == dmsgProtocol.NoExistCode {

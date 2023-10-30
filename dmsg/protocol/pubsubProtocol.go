@@ -73,7 +73,12 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 		return err
 	}
 
-	target, err := p.Service.GetPublishTarget(requestBasicData.Pubkey)
+	pubkey := requestBasicData.Pubkey
+	if requestBasicData.ProxyPubkey != "" {
+		pubkey = requestBasicData.ProxyPubkey
+	}
+
+	target, err := p.Service.GetPublishTarget(pubkey)
 	if err != nil {
 		return err
 	}
