@@ -1107,8 +1107,8 @@ func (d *DmsgService) RequestCustomStreamProtocol(
 	}
 	request, responseChan, err := protocolInfo.Protocol.Request(peerId, d.SrcUserInfo.UserKey.PubkeyHex, pid, content)
 	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
-			err, peerId, d.SrcUserInfo.UserKey.PubkeyHex, content)
+		dmsgLog.Logger.Errorf("DmsgService->RequestCustomStreamProtocol: err: %v, servicePeerInfo: %v, user public key: %s",
+			err, peerId, d.SrcUserInfo.UserKey.PubkeyHex)
 		return nil, nil, err
 	}
 	return request.(*pb.CustomProtocolReq), responseChan, nil
