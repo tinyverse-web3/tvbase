@@ -113,12 +113,53 @@ func (d *MailboxClient) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, er
 		log.Errorf("MailboxClient->ReadMailbox: servicePeerID is empty")
 		return nil, fmt.Errorf("MailboxClient->ReadMailbox: servicePeerID is empty")
 	}
-	return d.readMailbox(
+
+	msglist := make([]msg.ReceiveMsg, 0)
+	log.Debugf("MailboxClient->ReadMail: Master peer: %s", d.lightMailboxUser.ServicePeerID)
+	log.Debugf("MailboxClient->ReadMail: Sliver peer count: %d", len(d.lightMailboxUser.UserMailboxPeers))
+	log.Debugf("MailboxClient->ReadMail: Sliver peers: %v", d.lightMailboxUser.UserMailboxPeers)
+
+	if len(d.lightMailboxUser.UserMailboxPeers) > 0 {
+		// The user has other mailbox in tvs network, read msgs for these peer, and release it
+		for index, peerID := range d.lightMailboxUser.UserMailboxPeers {
+			log.Debugf("MailboxClient->ReadMail: from: %s", peerID)
+			msgs, err := d.readMailbox(
+				peerID,
+				d.lightMailboxUser.Key.PubkeyHex,
+				timeout,
+				false,
+			)
+			if err == nil {
+				// The mail has read, release it
+				log.Infof("MailboxClient->ReadMail:The sliver mail box has benn read, release it: %s", peerID)
+				d.releaseMailbox(peerID, timeout)
+				d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers[:index], d.lightMailboxUser.UserMailboxPeers[index+1:]...)
+			}
+			if len(msgs) > 0 {
+				// add the msg to msg list
+				log.Infof("MailboxClient->ReadMail: count [%d] msgs from: %s", len(msgs), peerID)
+				msglist = append(msglist, msgs...)
+			}
+		}
+
+	}
+
+	// read msgs from master mailbox
+	msgs, err := d.readMailbox(
 		d.lightMailboxUser.ServicePeerID,
 		d.lightMailboxUser.Key.PubkeyHex,
 		timeout,
 		false,
 	)
+	if err == nil && len(msgs) > 0 {
+		msglist = append(msglist, msgs...)
+	}
+
+	if len(msglist) > 0 {
+		return msglist, nil
+	}
+
+	return msglist, err
 }
 
 // DmsgService
@@ -249,9 +290,21 @@ func (d *MailboxClient) OnSeekMailboxResponse(
 	}
 
 	if response.RetCode.Code == dmsgProtocol.SuccCode {
-		if d.lightMailboxUser.ServicePeerID != "" && d.lightMailboxUser.ServicePeerID != request.BasicData.PeerID {
+		if d.lightMailboxUser.ServicePeerID == "" {
+			log.Infof("MailboxClient->SeekMail: master mail peer: %s", response.BasicData.PeerID)
 			d.lightMailboxUser.ServicePeerID = response.BasicData.PeerID
+		} else {
+			log.Infof("MailboxClient->SeekMail: add sliver mail peer: %s", response.BasicData.PeerID)
+			d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers, response.BasicData.PeerID)
 		}
+		//if d.lightMailboxUser.ServicePeerID != "" && d.lightMailboxUser.ServicePeerID != request.BasicData.PeerID {
+		//_, err := d.readMailbox(request.BasicData.PeerID, d.lightMailboxUser.Key.PubkeyHex, 3*time.Second, false)
+		//if err != nil {
+		//	log.Warnf("MailboxClient->OnSeekMailboxResponse: readMailbox error: %+v", err)
+		//}
+
+		//}
+
 	}
 
 	log.Debug("MailboxClient->OnSeekMailboxResponse end")
@@ -277,6 +330,7 @@ func (d *MailboxClient) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallba
 		return err
 	}
 
+	log.Debugf("MailboxClient->SubscribeUser target: %s", target.Key.PubkeyHex)
 	err = target.InitPubsub(pubkey)
 	if err != nil {
 		log.Errorf("MailboxClient->SubscribeUser: InitPubsub error: %v", err)
@@ -284,8 +338,9 @@ func (d *MailboxClient) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallba
 	}
 
 	user := &dmsgUser.LightMailboxUser{
-		Target:        *target,
-		ServicePeerID: "",
+		Target:           *target,
+		ServicePeerID:    "",
+		UserMailboxPeers: make([]string, 0),
 	}
 
 	err = d.handlePubsubProtocol(&user.Target)
@@ -299,6 +354,8 @@ func (d *MailboxClient) SubscribeUser(pubkey string, getSig dmsgKey.GetSigCallba
 		return err
 	}
 	d.lightMailboxUser = user
+
+	log.Debugf("MailboxClient->SubscribeUser lightMailboxUser.Key.PubkeyHex: %s", d.lightMailboxUser.Key.PubkeyHex)
 	log.Debugf("MailboxClient->SubscribeUser end")
 	return nil
 }
@@ -363,8 +420,9 @@ func (d *MailboxClient) subscribeProxyUser(pubkey string) error {
 	}
 
 	user := &dmsgUser.LightMailboxUser{
-		Target:        *target,
-		ServicePeerID: "",
+		Target:           *target,
+		ServicePeerID:    "",
+		UserMailboxPeers: make([]string, 0),
 	}
 
 	d.proxyUser = user
@@ -386,55 +444,81 @@ func (d *MailboxClient) unsubscribeProxyUser() error {
 func (d *MailboxClient) IsExistMailbox(userPubkey string, timeout time.Duration) (*pb.SeekMailboxRes, error) {
 	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.lightMailboxUser.Key.PubkeyHex, userPubkey)
 	if err != nil {
-		return nil, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
+		return false, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
 	}
 
 	select {
 	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
 		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
 		if !ok || response == nil {
-			return response, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtoData is not SeekMailboxRes")
+			return false, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtoData is not SeekMailboxRes")
 		}
 		if response.RetCode.Code < 0 {
-			return response, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtoData retcode.code < 0")
+			return false, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtoData retcode.code < 0")
 		} else {
-			log.Debugf("MailboxClient->IsExistMailbox: seekMailboxProtoData success")
-			return response, nil
+			log.Debugf("MailboxClient->IsExistMailbox: seekMailboxProtoData success, response.RetCode.Code = %d", response.RetCode.Code)
+			if response.RetCode.Code == dmsgProtocol.NoExistCode {
+				return false, nil
+			} else {
+				return true, nil
+			}
 		}
 	case <-time.After(timeout):
-		return nil, fmt.Errorf("MailboxClient->IsExistMailbox: time.After 3s timeout")
+		log.Debugf("MailboxClient->IsExistMailbox: Timeout")
+		return false, nil
 	case <-d.BaseService.TvBase.GetCtx().Done():
 		log.Debug("MailboxClient->IsExistMailbox: BaseService.GetCtx().Done()")
 	}
-	return nil, fmt.Errorf("MailboxClient->IsExistMailbox: unknow error")
+
+	return false, fmt.Errorf("MailboxClient->IsExistMailbox: unknow error")
 }
 
 func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool, err error) {
 	log.Debug("MailboxClient->CreateMailbox begin")
-
+	log.Debugf("MailboxClient->CreateMailbox lightMailboxUser.Key.PubkeyHex: %v", d.lightMailboxUser.Key.PubkeyHex)
 	pubkey := d.lightMailboxUser.Key.PubkeyHex
 	if d.GetProxyPubkey() != "" {
 		pubkey = d.GetProxyPubkey()
 	}
-	curtime := time.Now().UnixNano()
-	resp, err := d.IsExistMailbox(pubkey, timeout)
+	/*
+		//curtime := time.Now().UnixNano()
+		isExist, err := d.IsExistMailbox(pubkey, timeout)
+		if err != nil {
+			log.Errorf("MailboxClient->IsExistMailbox failed:  err = %v", err)
+			return false, err
+		}
+	*/
+
+	isExist, err := d.seekMailbox(pubkey, timeout)
 	if err != nil {
+		log.Errorf("MailboxClient->IsExistMailbox failed:  err = %v", err)
 		return false, err
 	}
-
-	remainTimeDuration := timeout - time.Duration(curtime)
+	//isExist := false
+	log.Info("**********************************************************************C3")
+	log.Infof("seekMailbox = %v", isExist)
+	//remainTimeDuration := timeout - time.Duration(curtime)
+	remainTimeDuration := timeout
 	if remainTimeDuration >= 0 {
-		if resp.RetCode.Code == dmsgProtocol.NoExistCode {
+		if isExist == false {
 			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(pubkey, remainTimeDuration)
 			if err != nil {
+				log.Errorf("MailboxClient->CreateMailbox: createMailbox failed:  err = %v", err)
 				return false, err
 			}
+			log.Errorf("MailboxClient->CreateMailbox: createMailbox succeed.")
 			return false, nil
+		} else {
+			//err := fmt.Errorf("MailboxClient->CreateMailbox: The mailbax has exist, not need to create/")
+			log.Infof("MailboxClient->CreateMailbox: The mailbox has exist, not need to create.")
+			log.Infof("MailboxClient->CreateMailbox: The mailbox peer id = %s.", d.lightMailboxUser.ServicePeerID)
+			return true, nil
 		}
 	} else {
-		return false, fmt.Errorf("MailboxClient->CreateMailboxWithProxy: timeout")
+		err := fmt.Errorf("MailboxClient->CreateMailbox: timeout")
+		log.Errorf("MailboxClient->CreateMailbox: createMailbox failed: err = %v.", err)
+		return false, err
 	}
-	return false, nil
 }
 
 func (d *MailboxClient) createMailbox(pubkey string, timeout time.Duration) (string, error) {
@@ -615,27 +699,29 @@ func (d *MailboxClient) handlePubsubProtocol(target *dmsgUser.Target) error {
 					return
 				}
 				pid := protocolHandle.PID
-				log.Debugf("MailboxClient->handlePubsubProtocol: \npid: %d\ntopicName: %s", pid, target.Pubsub.Topic.String())
+				log.Debugf("MailboxClient->handlePubsubProtocol: \npid: %v\ntopicName: %s", pid, target.Pubsub.Topic.String())
 
 				handle := d.ProtocolHandleList[pid]
 				if handle == nil {
 					log.Debugf("MailboxClient->handlePubsubProtocol: no handle for pid: %d", pid)
 					continue
 				}
-				msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
-				msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
+				//msgRequestPID := d.pubsubMsgProtocol.Adapter.GetRequestPID()
+				//msgResponsePID := d.pubsubMsgProtocol.Adapter.GetResponsePID()
 				seekRequestPID := d.seekMailboxProtocol.Adapter.GetRequestPID()
 				seekResponsePID := d.seekMailboxProtocol.Adapter.GetResponsePID()
 				data := protocolHandle.Data
 				switch pid {
-				case msgRequestPID:
-					err = handle.HandleRequestData(data)
-					if err != nil {
-						log.Warnf("MailboxClient->handlePubsubProtocol: HandleRequestData error: %v", err)
-					}
-					continue
-				case msgResponsePID:
-					continue
+				/*
+					case msgRequestPID:
+						err = handle.HandleRequestData(data)
+						if err != nil {
+							log.Warnf("MailboxClient->handlePubsubProtocol: HandleRequestData error: %v", err)
+						}
+						continue
+					case msgResponsePID:
+						continue
+				*/
 				case seekRequestPID:
 					err = handle.HandleRequestData(data)
 					if err != nil {

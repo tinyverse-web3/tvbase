@@ -67,7 +67,7 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 		return err
 	}
 
-	requestBasicData, err := GetBasicData(response)
+	requestBasicData, err := GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetRequestBasicData error: %+v", err)
 		return err
@@ -82,6 +82,7 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	if err != nil {
 		return err
 	}
+	log.Logger.Debugf("PubsubProtocol->HandleRequestData response : target is %v", target)
 	err = p.Service.PublishProtocol(p.Ctx, target, responseBasicData.PID, responseProtoData)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: PublishProtocol error: %v", err)

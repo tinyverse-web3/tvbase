@@ -92,7 +92,11 @@ func (d *ProxyPubsubService) Stop() error {
 	default:
 		log.Debugf("ProxyPubsubService->Stop: no receiver for stopCleanRestResource")
 	}
-	close(d.stopCleanRestResource)
+	if d.stopCleanRestResource != nil {
+		close(d.stopCleanRestResource)
+		d.stopCleanRestResource = nil
+	}
+
 	log.Debug("ProxyPubsubService->Stop end")
 	return nil
 }
@@ -312,10 +316,13 @@ func (d *ProxyPubsubService) createPubsubService(pubkey string) error {
 	for _, servicePeerID := range servicePeerList {
 		log.Debugf("ProxyPubsubService->CreatePubsubService: servicePeerID: %s", servicePeerID)
 		if peerID == servicePeerID.String() {
+			// The peer ID is owner, it need to other peer ID
+			log.Debugf("ProxyPubsubService->CreatePubsubService:\n The peer ID <%s> is owner", peerID)
 			continue
 		}
 		_, createPubsubResponseChan, err := d.createPubsubProtocol.Request(servicePeerID, reqPubkey, pubkey)
 		if err != nil {
+			log.Debugf("ProxyPubsubService->CreatePubsubService:\n The peer ID <%s> is invalid", peerID)
 			continue
 		}
 

@@ -1,8 +1,10 @@
 package mailbox
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -98,6 +100,9 @@ func (d *MailboxService) Start() error {
 	d.cleanRestServiceUser(12 * time.Hour)
 
 	d.enable = true
+
+	// load subscribed user mailbox
+	d.loadSubscribeMailboxList()
 	log.Debug("MailboxService->Start end")
 	return nil
 }
@@ -215,6 +220,10 @@ func (d *MailboxService) OnCreateMailboxRequest(
 	if err != nil {
 		return nil, nil, false, err
 	}
+
+	// Have new user create mailbox, save it
+	d.saveSubscribeMailboxList()
+
 	log.Debugf("MailboxService->OnCreateMailboxRequest end")
 	return nil, nil, false, nil
 }
@@ -245,6 +254,10 @@ func (d *MailboxService) OnReleaseMailboxRequest(
 	if err != nil {
 		return nil, nil, false, err
 	}
+
+	// Have user delete mailbox subscribed, save it
+	d.saveSubscribeMailboxList()
+
 	log.Debugf("MailboxService->OnReleaseMailboxRequest end")
 	return nil, nil, false, nil
 }
@@ -660,4 +673,73 @@ func (d *MailboxService) handlePubsubProtocol(target *dmsgUser.Target) error {
 		}
 	}()
 	return nil
+}
+
+type MailboxSubscribeList struct {
+	UserList []string `json:"user_list"`
+}
+
+const SubscribeMailboxListPath = "subscribe_mailbox_list.json"
+
+func (d *MailboxService) saveSubscribeMailboxList() {
+
+	log.Debugf("MailboxService->saveSubscribeMailboxList: begin")
+	subscribeUserList := &MailboxSubscribeList{
+		UserList: make([]string, 0),
+	}
+
+	for pubkey := range d.serviceUserList {
+		subscribeUserList.UserList = append(subscribeUserList.UserList, pubkey)
+	}
+
+	subscribeUserListByte, err := json.Marshal(subscribeUserList)
+	if err != nil {
+		log.Errorf("MailboxService->saveSubscribeMailboxList: json.Marshal error: %v", err)
+		return
+	}
+
+	path := d.TvBase.GetRootPath() + SubscribeMailboxListPath
+	err = os.WriteFile(path, subscribeUserListByte, 0644)
+	if err != nil {
+		log.Errorf("MailboxService->saveSubscribeMailboxList: os.WriteFile error: %v", err)
+		return
+	}
+
+	log.Infof("MailboxService->saveSubscribeMailboxList: list <%v> has been saved: %s", subscribeUserList.UserList, path)
+	return
+}
+
+func (d *MailboxService) loadSubscribeMailboxList() {
+	log.Debugf("MailboxService->loadSubscribeMailboxList: begin")
+	subscribeUserList := &MailboxSubscribeList{}
+
+	path := d.TvBase.GetRootPath() + SubscribeMailboxListPath
+	subscribeUserListByte, err := os.ReadFile(path)
+	if err != nil {
+		log.Errorf("MailboxService->loadSubscribeMailboxList: read error: %v", err)
+		return
+	}
+
+	err = json.Unmarshal(subscribeUserListByte, subscribeUserList)
+	if err != nil {
+		log.Errorf("MailboxService->saveSubscribeMailboxList: json.Unmarshal error: %v", err)
+		return
+	}
+
+	log.Infof("MailboxService->saveSubscribeMailboxList: list <%v> has been loaded", subscribeUserList.UserList)
+
+	for _, pubkey := range subscribeUserList.UserList {
+		user := d.getServiceUser(pubkey)
+		if user != nil {
+			log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
+			continue
+		}
+
+		err := d.subscribeServiceUser(pubkey)
+		if err != nil {
+			continue
+		}
+	}
+
+	log.Debugf("MailboxService->loadSubscribeMailboxList: end")
 }

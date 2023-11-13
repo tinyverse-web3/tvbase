@@ -94,8 +94,8 @@ func (d *CustomProtocolClient) Request(peerIdStr string, pid string, content []b
 		pid,
 		content)
 	if err != nil {
-		log.Errorf("CustomProtocolClient->Request: err: %v, servicePeerInfo: %v, user public key: %s, content: %v",
-			err, peerID, d.LightUser.Key.PubkeyHex, content)
+		log.Errorf("CustomProtocolClient->Request: err: %v, servicePeerInfo: %v, user public key: %s",
+			err, peerID, d.LightUser.Key.PubkeyHex)
 		return nil, nil, err
 	}
 	return request.(*pb.CustomProtocolReq), responseChan, nil

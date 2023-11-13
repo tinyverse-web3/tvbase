@@ -159,7 +159,8 @@ type LightUser struct {
 
 type LightMailboxUser struct {
 	Target
-	ServicePeerID string
+	ServicePeerID    string
+	UserMailboxPeers []string
 }
 
 type ServiceMailboxUser struct {
