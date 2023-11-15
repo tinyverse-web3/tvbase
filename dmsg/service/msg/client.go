@@ -57,11 +57,11 @@ func (d *MsgClient) Init(tvbase define.TvBaseService, pubkey string, getSig dmsg
 func (d *MsgClient) Release() error {
 	//TODO
 	// d.createPubsubProtocol.Release()
-	d.createPubsubProtocol = nil
 
 	d.UnregistPubsubProtocol(d.createPubsubProtocol.Adapter.GetRequestPID())
 	d.UnregistPubsubProtocol(d.createPubsubProtocol.Adapter.GetResponsePID())
 	d.pubsubMsgProtocol = nil
+	d.createPubsubProtocol = nil
 
 	d.enable = false
 	return nil

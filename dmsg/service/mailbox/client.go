@@ -514,6 +514,9 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 			log.Infof("MailboxClient->CreateMailbox: The mailbox peer id = %s.", d.lightMailboxUser.ServicePeerID)
 			return true, nil
 		}
+		err := fmt.Errorf("MailboxClient->CreateMailboxWithProxy: timeout")
+		log.Errorf("MailboxClient->CreateMailbox: createMailbox failed: err = %v.", err)
+		return false, err
 	} else {
 		err := fmt.Errorf("MailboxClient->CreateMailbox: timeout")
 		log.Errorf("MailboxClient->CreateMailbox: createMailbox failed: err = %v.", err)
