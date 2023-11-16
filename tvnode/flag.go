@@ -18,7 +18,12 @@ import (
 )
 
 var nodeMode config.NodeMode = config.ServiceMode
-var isTest bool
+
+// var isTest bool
+var env *string
+var localnetTestEnv = "test-localnet"
+var internetTestEnv = "test-internet"
+var defaultEnv = localnetTestEnv
 
 func parseCmdParams() string {
 	generateCfg := flag.Bool("init", false, "init generate identity key and config file")
@@ -26,7 +31,8 @@ func parseCmdParams() string {
 	rootPath := flag.String("rootPath", defaultPathRoot, "config file path")
 	shutDown := flag.Bool("shutdown", false, "shutdown daemon")
 	help := flag.Bool("help", false, "Display help")
-	test := flag.Bool("test", false, "Test mode.")
+	// test := flag.Bool("test", false, "Test mode.")
+	env = flag.String("env", defaultEnv, "prod or test-localnet or test-internet")
 
 	flag.Parse()
 
@@ -41,9 +47,9 @@ func parseCmdParams() string {
 		nodeMode = config.LightMode
 	}
 
-	if *test {
-		isTest = true
-	}
+	// if *test {
+	// 	isTest = true
+	// }
 
 	if *generateCfg {
 		dataPath, err := tvbaseUtil.GetRootPath(*rootPath)
