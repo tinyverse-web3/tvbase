@@ -23,7 +23,7 @@ var nodeMode config.NodeMode = config.ServiceMode
 var env *string
 var localnetTestEnv = "test-localnet"
 var internetTestEnv = "test-internet"
-var defaultEnv = ""
+var defaultEnv = "prod"
 
 func parseCmdParams() string {
 	generateCfg := flag.Bool("init", false, "init generate identity key and config file")
