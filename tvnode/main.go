@@ -98,16 +98,16 @@ func main() {
 		logger.Fatalf("tvnode->main: initLog: %v", err)
 	}
 
-	if *env == localnetTestEnv {
+	switch *env {
+	case localnetTestEnv:
 		cfg.Tvbase.SetLocalNet(true)
 		cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
 		// cfg.DMsg.Pubsub.TraceFile = "pubsub-trace.json"
 		cfg.Tvbase.ClearBootstrapPeers()
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWGUjKn8SHYjdGsnzjFDT3G33svXCbLYXebsT9vsK8dyHu")
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWGhqQa67QMRFAisZSZ1snfCnpFtWtr4rXTZ2iPBfVu1RR")
-
-	} else if *env == internetTestEnv {
-		cfg.Tvbase.SetLocalNet(true)
+	case internetTestEnv:
+		cfg.Tvbase.SetLocalNet(false)
 		cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
 		// cfg.DMsg.Pubsub.TraceFile = "pubsub-trace.json"
 		cfg.Tvbase.ClearBootstrapPeers()
@@ -116,17 +116,6 @@ func main() {
 	}
 
 	logger.Infof("tvnode->main: BootstrapPeers: %v", cfg.Tvbase.Bootstrap.BootstrapPeers)
-
-	// logger.Infof("tvnode->main: isTest: %v", isTest)
-	// if isTest {
-	// 	cfg.Tvbase.SetLocalNet(true)
-	// 	cfg.Tvbase.SetMdns(false)
-	// 	cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
-	// 	cfg.Tvbase.ClearBootstrapPeers()
-	// 	cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWGUjKn8SHYjdGsnzjFDT3G33svXCbLYXebsT9vsK8dyHu")
-	// 	cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWGhqQa67QMRFAisZSZ1snfCnpFtWtr4rXTZ2iPBfVu1RR")
-	// 	logger.Infof("tvnode->main: test BootstrapPeers: %v", cfg.Tvbase.Bootstrap.BootstrapPeers)
-	// }
 
 	ctx := context.Background()
 	tb, err := tvbase.NewTvbase(ctx, cfg.Tvbase, rootPath)
