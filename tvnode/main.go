@@ -106,8 +106,7 @@ func main() {
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.102/tcp/9000/p2p/12D3KooWGUjKn8SHYjdGsnzjFDT3G33svXCbLYXebsT9vsK8dyHu")
 		cfg.Tvbase.AddBootstrapPeer("/ip4/192.168.1.109/tcp/9000/p2p/12D3KooWGhqQa67QMRFAisZSZ1snfCnpFtWtr4rXTZ2iPBfVu1RR")
 
-	}
-	if *env == internetTestEnv {
+	} else if *env == internetTestEnv {
 		cfg.Tvbase.SetLocalNet(true)
 		cfg.Tvbase.SetDhtProtocolPrefix("/tvnode_test")
 		// cfg.DMsg.Pubsub.TraceFile = "pubsub-trace.json"
