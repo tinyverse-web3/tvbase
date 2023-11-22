@@ -427,6 +427,8 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg() error {
 }
 
 // dest user
+var subDestCount map[string]int
+
 func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error {
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\nuserPubkey: %s", userPubkey)
 
@@ -438,21 +440,33 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 		return fmt.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
 	}
 
+	objCount := subDestCount[userPubkey]
+	if objCount == 0 {
+		dmsgLog.Logger.Debugf("DmsgService->subscribeDestUser: userPubkey: %s, objCount: %d", userPubkey, objCount)
+	} else {
+		dmsgLog.Logger.Debugf("DmsgService->subscribeDestUser: objCount already exist, userPubkey: %s, objCount: %d", userPubkey, objCount)
+	}
+	subDestCount[userPubkey] = objCount + 1
+
 	userTopic, err := d.Pubsub.Join(userPubkey)
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Join error: %v", err)
 		return err
 	}
+	dmsgLog.Logger.Debugf("DmsgService->subscribeDestUser: Pubsub.Join userPubkey: %s, userTopic: %v", userPubkey, userTopic)
 	userSub, err := userTopic.Subscribe()
 	if err != nil {
 		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
 		return err
 	}
+	dmsgLog.Logger.Debugf("DmsgService->subscribeDestUser: Pubsub.Subscribe userPubkey: %s, userSub: %v", userPubkey, userSub)
 
 	destUserInfo := &dmsgClientCommon.DestUserInfo{}
 	destUserInfo.Topic = userTopic
 	destUserInfo.Subscription = userSub
 	d.destUserInfoList[userPubkey] = destUserInfo
+
+	dmsgLog.Logger.Debugf("DmsgService->subscribeDestUser: add destUserInfoList: userPubkey: %+v", userPubkey)
 
 	if isListen {
 		err = d.StartReadDestUserPubsubMsg(userPubkey)
@@ -471,7 +485,17 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 
 	d.destUserListMx.Lock()
 	defer d.destUserListMx.Unlock()
+
+	objCount := subDestCount[userPubkey]
+	if objCount == 0 {
+		dmsgLog.Logger.Debugf("DmsgService->UnSubscribeDestUser: userPubkey: %s, objCount: %d", userPubkey, objCount)
+	} else {
+		dmsgLog.Logger.Debugf("DmsgService->UnSubscribeDestUser: objCount already exist, userPubkey: %s, objCount: %d", userPubkey, objCount)
+	}
+	subDestCount[userPubkey] = objCount - 1
+
 	userInfo := d.getDestUserInfo(userPubkey)
+	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeDestUser: userInfo: %+v", userInfo)
 	if userInfo == nil {
 		return fmt.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
 	}
