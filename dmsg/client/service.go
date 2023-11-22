@@ -427,7 +427,7 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg() error {
 }
 
 // dest user
-var subDestCount map[string]int
+var subDestCount map[string]int = make(map[string]int)
 
 func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error {
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\nuserPubkey: %s", userPubkey)
