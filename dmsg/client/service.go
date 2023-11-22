@@ -450,13 +450,8 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 	var userSub *pubsub.Subscription
 	userPubInfo := userPubInfoList[userPubkey]
 	if userPubInfo != nil {
-		userTopic = userPubInfoList[userPubkey].topic
-		userSub = userPubInfoList[userPubkey].subscription
-
-		userPubInfoList[userPubkey] = &UserPubInfo{
-			topic:        userTopic,
-			subscription: userSub,
-		}
+		userTopic = userPubInfo.topic
+		userSub = userPubInfo.subscription
 	} else {
 		var err error
 		userTopic, err = d.Pubsub.Join(userPubkey)
@@ -468,6 +463,11 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 		if err != nil {
 			dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
 			return err
+		}
+
+		userPubInfoList[userPubkey] = &UserPubInfo{
+			topic:        userTopic,
+			subscription: userSub,
 		}
 	}
 
