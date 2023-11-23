@@ -10,7 +10,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -93,7 +92,7 @@ func NewCreateMailboxProtocol(
 	pubkey string,
 ) *basic.MailboxSProtocol {
 	adapter := NewCreateMailboxProtocolAdapter()
-	protocol := newProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
+	protocol := basic.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

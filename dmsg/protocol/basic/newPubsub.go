@@ -1,10 +1,9 @@
-package newProtocol
+package basic
 
 import (
 	"context"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 )
 
@@ -13,8 +12,8 @@ func NewQueryPeerProtocol(
 	host host.Host,
 	callback common.QueryPeerCallback,
 	dmsg common.DmsgService,
-	adapter common.PpAdapter) *basic.QueryPeerProtocol {
-	ret := &basic.QueryPeerProtocol{}
+	adapter common.PpAdapter) *QueryPeerProtocol {
+	ret := &QueryPeerProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = callback
@@ -29,8 +28,8 @@ func NewPubsubMsgProtocol(
 	host host.Host,
 	callback common.PubsubMsgCallback,
 	dmsg common.DmsgService,
-	adapter common.PpAdapter) *basic.PubsubMsgProtocol {
-	ret := &basic.PubsubMsgProtocol{}
+	adapter common.PpAdapter) *PubsubMsgProtocol {
+	ret := &PubsubMsgProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = callback
@@ -45,8 +44,8 @@ func NewMailboxPProtocol(
 	host host.Host,
 	callback common.MailboxPpCallback,
 	dmsg common.DmsgService,
-	adapter common.PpAdapter) *basic.MailboxPProtocol {
-	ret := &basic.MailboxPProtocol{}
+	adapter common.PpAdapter) *MailboxPProtocol {
+	ret := &MailboxPProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
 	ret.Callback = callback

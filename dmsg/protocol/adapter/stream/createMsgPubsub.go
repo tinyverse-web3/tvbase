@@ -12,7 +12,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -106,7 +105,7 @@ func NewCreateMsgPubsubProtocol(
 	pubkey string,
 ) *basic.CreatePubsubSProtocol {
 	adapter := NewCreateMsgPubsubProtocolAdapter()
-	protocol := newProtocol.NewCreateMsgPubsubSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
+	protocol := basic.NewCreateMsgPubsubSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

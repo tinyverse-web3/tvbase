@@ -1,11 +1,10 @@
-package newProtocol
+package basic
 
 import (
 	"context"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 )
 
@@ -17,8 +16,8 @@ func NewCreateMsgPubsubSProtocol(
 	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
-) *basic.CreatePubsubSProtocol {
-	p := &basic.CreatePubsubSProtocol{}
+) *CreatePubsubSProtocol {
+	p := &CreatePubsubSProtocol{}
 	p.Host = host
 	p.Ctx = ctx
 	p.Callback = callback
@@ -41,8 +40,8 @@ func NewCreateChannelSProtocol(
 	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
-) *basic.CreatePubsubSProtocol {
-	p := &basic.CreatePubsubSProtocol{}
+) *CreatePubsubSProtocol {
+	p := &CreatePubsubSProtocol{}
 	p.Host = host
 	p.Ctx = ctx
 	p.Callback = callback
@@ -65,8 +64,8 @@ func NewMailboxSProtocol(
 	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
-) *basic.MailboxSProtocol {
-	p := &basic.MailboxSProtocol{}
+) *MailboxSProtocol {
+	p := &MailboxSProtocol{}
 	p.Host = host
 	p.Ctx = ctx
 	p.Callback = callback
@@ -88,8 +87,8 @@ func NewCustomSProtocol(
 	service common.DmsgService,
 	adapter common.SpAdapter,
 	enableRequest bool,
-) *basic.CustomSProtocol {
-	protocol := &basic.CustomSProtocol{}
+) *CustomSProtocol {
+	protocol := &CustomSProtocol{}
 	protocol.Host = host
 	protocol.Ctx = ctx
 	protocol.Callback = callback

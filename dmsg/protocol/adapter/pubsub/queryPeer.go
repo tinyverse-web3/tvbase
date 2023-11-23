@@ -11,7 +11,6 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -95,7 +94,7 @@ func NewQueryPeerProtocol(
 	service common.DmsgService,
 ) *basic.QueryPeerProtocol {
 	adapter := NewQueryPeerProtocolAdapter()
-	protocol := newProtocol.NewQueryPeerProtocol(ctx, host, callback, service, adapter)
+	protocol := basic.NewQueryPeerProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }
