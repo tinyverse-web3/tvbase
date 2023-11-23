@@ -4,18 +4,17 @@ import (
 	"fmt"
 
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxBase struct {
 	dmsgServiceCommon.BaseService
-	createMailboxProtocol *dmsgProtocol.MailboxSProtocol
-	releaseMailboxPrtocol *dmsgProtocol.MailboxSProtocol
-	readMailboxMsgPrtocol *dmsgProtocol.MailboxSProtocol
-	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
-	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
+	createMailboxProtocol *basic.MailboxSProtocol
+	releaseMailboxPrtocol *basic.MailboxSProtocol
+	readMailboxMsgPrtocol *basic.MailboxSProtocol
+	seekMailboxProtocol   *basic.MailboxPProtocol
 	lightMailboxUser      *dmsgUser.LightMailboxUser
 }
 

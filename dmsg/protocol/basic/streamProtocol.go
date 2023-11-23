@@ -1,4 +1,4 @@
-package protocol
+package basic
 
 import (
 	"context"
@@ -9,24 +9,26 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxSProtocol struct {
 	StreamProtocol
-	Callback MailboxSpCallback
+	Callback common.MailboxSpCallback
 }
 
 type CreatePubsubSProtocol struct {
 	StreamProtocol
-	Callback CreatePubsubSpCallback
+	Callback common.CreatePubsubSpCallback
 }
 
 type CustomSProtocol struct {
 	StreamProtocol
-	Callback CustomSpCallback
+	Callback common.CustomSpCallback
 }
 
 type StreamProtocol struct {
@@ -66,7 +68,7 @@ func (p *StreamProtocol) HandleRequestData(
 	}
 
 	// send the response
-	adapter, ok := p.Adapter.(SpAdapter)
+	adapter, ok := p.Adapter.(common.SpAdapter)
 	if !ok {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
 		return fmt.Errorf("StreamProtocol->HandleRequestData: adapter is not StreamProtocolAdapter")
@@ -78,7 +80,7 @@ func (p *StreamProtocol) HandleRequestData(
 		return fmt.Errorf("StreamProtocol->HandleRequestData: dataList[0] is not peer.ID")
 	}
 
-	basicData, err := GetBasicData(request)
+	basicData, err := util.GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("StreamProtocol->HandleRequestData: GetBasicData(request) error: %v", err)
 		return err
@@ -112,7 +114,7 @@ func (p *StreamProtocol) RequestHandler(stream network.Stream) {
 	remotePeer := stream.Conn().RemotePeer()
 	localMultiAddr := stream.Conn().LocalMultiaddr()
 	remoteMultiAddr := stream.Conn().RemoteMultiaddr()
-	streamAdapter := p.Adapter.(SpAdapter)
+	streamAdapter := p.Adapter.(common.SpAdapter)
 	sreamRequestProtocolId := streamAdapter.GetStreamRequestPID()
 	sreamResponseProtocolId := streamAdapter.GetStreamResponsePID()
 	requestProtocolId := streamAdapter.GetRequestPID()
@@ -178,7 +180,7 @@ func (p *StreamProtocol) Request(peerID peer.ID, reqPubkey string, dataList ...a
 		return nil, nil, err
 	}
 
-	adapter, ok := p.Adapter.(SpAdapter)
+	adapter, ok := p.Adapter.(common.SpAdapter)
 	if !ok {
 		log.Logger.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
 		return nil, nil, fmt.Errorf("StreamProtocol->Request: adapter is not StreamProtocolAdapter")
@@ -222,9 +224,9 @@ func (p *StreamProtocol) Request(peerID peer.ID, reqPubkey string, dataList ...a
 func NewCreateMsgPubsubSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback CreatePubsubSpCallback,
-	service DmsgService,
-	adapter SpAdapter,
+	callback common.CreatePubsubSpCallback,
+	service common.DmsgService,
+	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
 ) *CreatePubsubSProtocol {
@@ -246,9 +248,9 @@ func NewCreateMsgPubsubSProtocol(
 func NewCreateChannelSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback CreatePubsubSpCallback,
-	service DmsgService,
-	adapter SpAdapter,
+	callback common.CreatePubsubSpCallback,
+	service common.DmsgService,
+	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
 ) *CreatePubsubSProtocol {
@@ -270,9 +272,9 @@ func NewCreateChannelSProtocol(
 func NewMailboxSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback MailboxSpCallback,
-	service DmsgService,
-	adapter SpAdapter,
+	callback common.MailboxSpCallback,
+	service common.DmsgService,
+	adapter common.SpAdapter,
 	enableRequest bool,
 	pubkey string,
 ) *MailboxSProtocol {
@@ -294,9 +296,9 @@ func NewMailboxSProtocol(
 func NewCustomSProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback CustomSpCallback,
-	service DmsgService,
-	adapter SpAdapter,
+	callback common.CustomSpCallback,
+	service common.DmsgService,
+	adapter common.SpAdapter,
 	enableRequest bool,
 ) *CustomSProtocol {
 	protocol := &CustomSProtocol{}

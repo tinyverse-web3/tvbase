@@ -1,28 +1,30 @@
-package protocol
+package basic
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/log"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxPProtocol struct {
 	PubsubProtocol
-	Callback MailboxPpCallback
+	Callback common.MailboxPpCallback
 }
 
 type QueryPeerProtocol struct {
 	PubsubProtocol
-	Callback QueryPeerCallback
+	Callback common.QueryPeerCallback
 }
 
 type PubsubMsgProtocol struct {
 	PubsubProtocol
-	Callback PubsubMsgCallback
+	Callback common.PubsubMsgCallback
 }
 
 type PubsubProtocol struct {
@@ -61,13 +63,13 @@ func (p *PubsubProtocol) HandleRequestData(requestProtocolData []byte, dataList 
 	}
 
 	// send the response
-	responseBasicData, err := GetBasicData(response)
+	responseBasicData, err := util.GetBasicData(response)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetResponseBasicData error: %+v", err)
 		return err
 	}
 
-	requestBasicData, err := GetBasicData(request)
+	requestBasicData, err := util.GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->HandleRequestData: GetRequestBasicData error: %+v", err)
 		return err
@@ -100,7 +102,7 @@ func (p *PubsubProtocol) Request(reqPubkey string, destPubkey string, dataList .
 		return nil, nil, err
 	}
 
-	requestBasicData, err := GetBasicData(request)
+	requestBasicData, err := util.GetBasicData(request)
 	if err != nil {
 		log.Logger.Errorf("PubsubProtocol->Request: GetRequestBasicData error: %+v", err)
 		return nil, nil, err
@@ -125,9 +127,9 @@ func (p *PubsubProtocol) Request(reqPubkey string, destPubkey string, dataList .
 func NewQueryPeerProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback QueryPeerCallback,
-	dmsg DmsgService,
-	adapter PpAdapter) *QueryPeerProtocol {
+	callback common.QueryPeerCallback,
+	dmsg common.DmsgService,
+	adapter common.PpAdapter) *QueryPeerProtocol {
 	ret := &QueryPeerProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
@@ -141,9 +143,9 @@ func NewQueryPeerProtocol(
 func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback PubsubMsgCallback,
-	dmsg DmsgService,
-	adapter PpAdapter) *PubsubMsgProtocol {
+	callback common.PubsubMsgCallback,
+	dmsg common.DmsgService,
+	adapter common.PpAdapter) *PubsubMsgProtocol {
 	ret := &PubsubMsgProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host
@@ -157,9 +159,9 @@ func NewPubsubMsgProtocol(
 func NewMailboxPProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback MailboxPpCallback,
-	dmsg DmsgService,
-	adapter PpAdapter) *MailboxPProtocol {
+	callback common.MailboxPpCallback,
+	dmsg common.DmsgService,
+	adapter common.PpAdapter) *MailboxPProtocol {
 	ret := &MailboxPProtocol{}
 	ret.Ctx = ctx
 	ret.Host = host

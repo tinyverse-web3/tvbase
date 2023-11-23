@@ -5,13 +5,15 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SeekMailboxProtocolAdapter struct {
 	AbstructProtocolAdapter
-	protocol *dmsgProtocol.MailboxPProtocol
+	protocol *basic.MailboxPProtocol
 }
 
 func NewSeekMailboxProtocolAdapter() *SeekMailboxProtocolAdapter {
@@ -74,10 +76,10 @@ func (adapter *SeekMailboxProtocolAdapter) CallResponseCallback(
 func NewSeekMailboxProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.MailboxPpCallback,
-	service dmsgProtocol.DmsgService) *dmsgProtocol.MailboxPProtocol {
+	callback common.MailboxPpCallback,
+	service common.DmsgService) *basic.MailboxPProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
-	protocol := dmsgProtocol.NewMailboxPProtocol(ctx, host, callback, service, adapter)
+	protocol := basic.NewMailboxPProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }

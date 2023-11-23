@@ -12,7 +12,8 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
 )
 
 var baseLog = ipfsLog.Logger("dmsg.service.base")
@@ -31,7 +32,7 @@ var waitMessageList map[string]*waitMessage
 
 type BaseService struct {
 	TvBase             define.TvBaseService
-	ProtocolHandleList map[pb.PID]dmsgProtocol.ProtocolHandle
+	ProtocolHandleList map[pb.PID]common.ProtocolHandle
 	proxyPubkey        string
 }
 
@@ -46,7 +47,7 @@ func (d *BaseService) Init(baseService define.TvBaseService) error {
 		baseLog.Errorf("Service.Init: pubsub.NewGossipSub error: %v", err)
 		return err
 	}
-	d.ProtocolHandleList = make(map[pb.PID]dmsgProtocol.ProtocolHandle)
+	d.ProtocolHandleList = make(map[pb.PID]common.ProtocolHandle)
 	return nil
 }
 
@@ -54,7 +55,7 @@ func (d *BaseService) GetConfig() *config.DMsgConfig {
 	return &d.TvBase.GetConfig().DMsg
 }
 
-func (d *BaseService) RegistPubsubProtocol(pid pb.PID, handle dmsgProtocol.ProtocolHandle) {
+func (d *BaseService) RegistPubsubProtocol(pid pb.PID, handle common.ProtocolHandle) {
 	d.ProtocolHandleList[pid] = handle
 }
 
@@ -73,7 +74,7 @@ func (d *BaseService) GetProxyPubkey() string {
 
 // DmsgService
 func (d *BaseService) PublishProtocol(ctx context.Context, target *dmsgUser.Target, pid pb.PID, protoData []byte) error {
-	buf, err := dmsgProtocol.GenProtoData(pid, protoData)
+	buf, err := util.GenProtoData(pid, protoData)
 	if err != nil {
 		baseLog.Errorf("Service->PublishProtocol: GenProtoData error: %v", err)
 		return err

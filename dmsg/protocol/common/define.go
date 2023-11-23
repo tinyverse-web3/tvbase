@@ -1,4 +1,4 @@
-package protocol
+package common
 
 const (
 	ProtocolVersion = "0.0.1"

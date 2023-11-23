@@ -8,12 +8,13 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -21,8 +22,8 @@ var log = ipfsLog.Logger("dmsg.service.proxypubsub")
 
 type ProxyPubsubService struct {
 	LightUserService
-	createPubsubProtocol  *dmsgProtocol.CreatePubsubSProtocol
-	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
+	createPubsubProtocol  *basic.CreatePubsubSProtocol
+	pubsubMsgProtocol     *basic.PubsubMsgProtocol
 	PubsubList            map[string]*dmsgUser.ProxyPubsub
 	OnReceiveMsg          msg.OnReceiveMsg
 	OnResponseMsg         msg.OnRespondMsg
@@ -49,8 +50,8 @@ func (d *ProxyPubsubService) Init(
 func (d *ProxyPubsubService) Start(
 	pubkey string,
 	getSig dmsgKey.GetSigCallback,
-	createPubsubProtocol *dmsgProtocol.CreatePubsubSProtocol,
-	pubsubMsgProtocol *dmsgProtocol.PubsubMsgProtocol,
+	createPubsubProtocol *basic.CreatePubsubSProtocol,
+	pubsubMsgProtocol *basic.PubsubMsgProtocol,
 	isListenPubsubMsg bool,
 ) error {
 	log.Debug("ProxyPubsubService->Start begin")
@@ -237,7 +238,7 @@ func (d *ProxyPubsubService) OnCreatePubsubRequest(
 	if pubsub != nil {
 		log.Debugf("ProxyPubsubService->OnCreatePubusubRequest: pubsub already exist")
 		retCode := &pb.RetCode{
-			Code:   dmsgProtocol.AlreadyExistCode,
+			Code:   common.AlreadyExistCode,
 			Result: "ProxyPubsubService->OnCreatePubusubRequest: pubsub already exist",
 		}
 		return nil, retCode, false, nil

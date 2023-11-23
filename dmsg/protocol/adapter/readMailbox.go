@@ -7,7 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -18,7 +20,7 @@ type ReadMailRequestParam struct {
 
 type ReadMailboxProtocolAdapter struct {
 	AbstructProtocolAdapter
-	protocol *dmsgProtocol.MailboxSProtocol
+	protocol *basic.MailboxSProtocol
 }
 
 func NewReadMailboxMsgProtocolAdapter() *ReadMailboxProtocolAdapter {
@@ -35,11 +37,11 @@ func (adapter *ReadMailboxProtocolAdapter) GetResponsePID() pb.PID {
 }
 
 func (adapter *ReadMailboxProtocolAdapter) GetStreamRequestPID() protocol.ID {
-	return dmsgProtocol.PidReadMailboxMsgReq
+	return common.PidReadMailboxMsgReq
 }
 
 func (adapter *ReadMailboxProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return dmsgProtocol.PidReadMailboxMsgRes
+	return common.PidReadMailboxMsgRes
 }
 
 func (adapter *ReadMailboxProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
@@ -111,13 +113,13 @@ func (adapter *ReadMailboxProtocolAdapter) CallResponseCallback(
 func NewReadMailboxMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.MailboxSpCallback,
-	service dmsgProtocol.DmsgService,
+	callback common.MailboxSpCallback,
+	service common.DmsgService,
 	enableRequest bool,
 	pubkey string,
-) *dmsgProtocol.MailboxSProtocol {
+) *basic.MailboxSProtocol {
 	adapter := NewReadMailboxMsgProtocolAdapter()
-	protocol := dmsgProtocol.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
+	protocol := basic.NewMailboxSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

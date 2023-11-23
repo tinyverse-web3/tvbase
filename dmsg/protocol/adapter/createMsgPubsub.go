@@ -8,13 +8,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CreateMsgPubsubProtocolAdapter struct {
 	AbstructProtocolAdapter
-	protocol *dmsgProtocol.CreatePubsubSProtocol
+	protocol *basic.CreatePubsubSProtocol
 }
 
 func NewCreateMsgPubsubProtocolAdapter() *CreateMsgPubsubProtocolAdapter {
@@ -31,11 +32,11 @@ func (adapter *CreateMsgPubsubProtocolAdapter) GetResponsePID() pb.PID {
 }
 
 func (adapter *CreateMsgPubsubProtocolAdapter) GetStreamRequestPID() protocol.ID {
-	return dmsgProtocol.PidCreateMsgPubsubReq
+	return common.PidCreateMsgPubsubReq
 }
 
 func (adapter *CreateMsgPubsubProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return dmsgProtocol.PidCreateMsgPubsubRes
+	return common.PidCreateMsgPubsubRes
 }
 
 func (adapter *CreateMsgPubsubProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
@@ -96,13 +97,13 @@ func (adapter *CreateMsgPubsubProtocolAdapter) CallResponseCallback(
 func NewCreateMsgPubsubProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.CreatePubsubSpCallback,
-	service dmsgProtocol.DmsgService,
+	callback common.CreatePubsubSpCallback,
+	service common.DmsgService,
 	enableRequest bool,
 	pubkey string,
-) *dmsgProtocol.CreatePubsubSProtocol {
+) *basic.CreatePubsubSProtocol {
 	adapter := NewCreateMsgPubsubProtocolAdapter()
-	protocol := dmsgProtocol.NewCreateMsgPubsubSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
+	protocol := basic.NewCreateMsgPubsubSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

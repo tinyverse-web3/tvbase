@@ -1,4 +1,4 @@
-package protocol
+package util
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"github.com/tinyverse-web3/mtv_go_utils/crypto"
 	"github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,7 +24,7 @@ func NewBasicData(host host.Host, reqPubKey string, proxyPubkey string, pid pb.P
 		TS:          time.Now().Unix(),
 		ID:          uuid.New().String(),
 		PID:         pid,
-		Ver:         DataVersion,
+		Ver:         common.DataVersion,
 	}
 	return ret
 }

@@ -5,14 +5,15 @@ import (
 
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 )
 
 type ChannelService struct {
 	ChannelBase
-	createPubsubProtocol *protocol.CreatePubsubSProtocol
-	pubsubMsgProtocol    *protocol.PubsubMsgProtocol
+	createPubsubProtocol *basic.CreatePubsubSProtocol
+	pubsubMsgProtocol    *basic.PubsubMsgProtocol
 	pubkey               string
 	getSig               dmsgKey.GetSigCallback
 }

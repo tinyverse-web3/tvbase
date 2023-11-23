@@ -13,8 +13,9 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -293,7 +294,7 @@ func (d *MailboxClient) OnSeekMailboxResponse(
 		return nil, fmt.Errorf("MailboxClient->OnSeekMailboxResponse: fail request.BasicData.Pubkey != d.lightMailboxUser.Key.PubkeyHex")
 	}
 
-	if response.RetCode.Code == dmsgProtocol.SuccCode {
+	if response.RetCode.Code == common.SuccCode {
 		if d.lightMailboxUser.ServicePeerID == "" {
 			log.Infof("MailboxClient->SeekMail: master mail peer: %s", response.BasicData.PeerID)
 			d.lightMailboxUser.ServicePeerID = response.BasicData.PeerID
@@ -460,7 +461,7 @@ func (d *MailboxClient) seekMailbox(userPubkey string, timeout time.Duration) (b
 			return false, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtoData retcode.code < 0")
 		} else {
 			log.Debugf("MailboxClient->IsExistMailbox: seekMailboxProtoData success, response.RetCode.Code = %d", response.RetCode.Code)
-			if response.RetCode.Code == dmsgProtocol.NoExistCode {
+			if response.RetCode.Code == common.NoExistCode {
 				return false, nil
 			} else {
 				return true, nil
@@ -502,7 +503,7 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 	//remainTimeDuration := timeout - time.Duration(curtime)
 	remainTimeDuration := timeout
 	if remainTimeDuration >= 0 {
-		if isExist == false {
+		if !isExist {
 			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(pubkey, remainTimeDuration)
 			if err != nil {
 				log.Errorf("MailboxClient->CreateMailbox: createMailbox failed:  err = %v", err)
@@ -511,14 +512,9 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 			log.Errorf("MailboxClient->CreateMailbox: createMailbox succeed.")
 			return false, nil
 		} else {
-			//err := fmt.Errorf("MailboxClient->CreateMailbox: The mailbax has exist, not need to create/")
-			log.Infof("MailboxClient->CreateMailbox: The mailbox has exist, not need to create.")
-			log.Infof("MailboxClient->CreateMailbox: The mailbox peer id = %s.", d.lightMailboxUser.ServicePeerID)
+			log.Infof("MailboxClient->CreateMailbox: The mailbox has exist, peer id = %s.", d.lightMailboxUser.ServicePeerID)
 			return true, nil
 		}
-		err := fmt.Errorf("MailboxClient->CreateMailboxWithProxy: timeout")
-		log.Errorf("MailboxClient->CreateMailbox: createMailbox failed: err = %v.", err)
-		return false, err
 	} else {
 		err := fmt.Errorf("MailboxClient->CreateMailbox: timeout")
 		log.Errorf("MailboxClient->CreateMailbox: createMailbox failed: err = %v.", err)

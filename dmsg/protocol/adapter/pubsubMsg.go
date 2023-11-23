@@ -7,13 +7,14 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type PubsubMsgProtocolAdapter struct {
 	AbstructProtocolAdapter
-	Protocol *dmsgProtocol.PubsubMsgProtocol
+	Protocol *basic.PubsubMsgProtocol
 }
 
 func NewPubsubMsgProtocolAdapter() *PubsubMsgProtocolAdapter {
@@ -100,10 +101,10 @@ func (adapter *PubsubMsgProtocolAdapter) CallResponseCallback(
 func NewPubsubMsgProtocol(
 	ctx context.Context,
 	host host.Host,
-	callback dmsgProtocol.PubsubMsgCallback,
-	service dmsgProtocol.DmsgService) *dmsgProtocol.PubsubMsgProtocol {
+	callback common.PubsubMsgCallback,
+	service common.DmsgService) *basic.PubsubMsgProtocol {
 	adapter := NewPubsubMsgProtocolAdapter()
-	protocol := dmsgProtocol.NewPubsubMsgProtocol(ctx, host, callback, service, adapter)
+	protocol := basic.NewPubsubMsgProtocol(ctx, host, callback, service, adapter)
 	adapter.Protocol = protocol
 	return protocol
 }

@@ -3,14 +3,14 @@ package channel
 import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 )
 
 type ChannelClient struct {
 	ChannelBase
-	createPubsubProtocol *protocol.CreatePubsubSProtocol
-	pubsubMsgProtocol    *protocol.PubsubMsgProtocol
+	createPubsubProtocol *basic.CreatePubsubSProtocol
+	pubsubMsgProtocol    *basic.PubsubMsgProtocol
 }
 
 func NewClient(tvbase define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) (*ChannelClient, error) {

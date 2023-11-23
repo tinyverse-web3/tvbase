@@ -18,19 +18,21 @@ import (
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type MailboxService struct {
 	MailboxBase
-	createMailboxProtocol *dmsgProtocol.MailboxSProtocol
-	releaseMailboxPrtocol *dmsgProtocol.MailboxSProtocol
-	readMailboxMsgPrtocol *dmsgProtocol.MailboxSProtocol
-	seekMailboxProtocol   *dmsgProtocol.MailboxPProtocol
-	pubsubMsgProtocol     *dmsgProtocol.PubsubMsgProtocol
+	createMailboxProtocol *basic.MailboxSProtocol
+	releaseMailboxPrtocol *basic.MailboxSProtocol
+	readMailboxMsgPrtocol *basic.MailboxSProtocol
+	seekMailboxProtocol   *basic.MailboxPProtocol
+	pubsubMsgProtocol     *basic.PubsubMsgProtocol
 	serviceUserList       map[string]*dmsgUser.ServiceMailboxUser
 	datastore             db.Datastore
 	stopCleanRestResource chan bool
@@ -210,7 +212,7 @@ func (d *MailboxService) OnCreateMailboxRequest(
 	if user != nil {
 		log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
 		retCode := &pb.RetCode{
-			Code:   dmsgProtocol.AlreadyExistCode,
+			Code:   common.AlreadyExistCode,
 			Result: "MailboxService->OnCreateMailboxRequest: pubkey already exist in serviceUserList",
 		}
 		return nil, retCode, false, nil
@@ -369,7 +371,7 @@ func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.Prot
 	if user == nil {
 		log.Errorf("MailboxService->OnSeekMailboxRequest: cannot find user for pubkey: %s", pubkey)
 		retCode := &pb.RetCode{
-			Code:   dmsgProtocol.NoExistCode,
+			Code:   common.NoExistCode,
 			Result: "MailboxService->OnSeekMailboxRequest: pubkey no exist in serviceUserList",
 		}
 		return nil, retCode, false, fmt.Errorf("MailboxService->OnSeekMailboxRequest: cannot find user for pubkey: %s", pubkey)
@@ -707,7 +709,6 @@ func (d *MailboxService) saveSubscribeMailboxList() {
 	}
 
 	log.Infof("MailboxService->saveSubscribeMailboxList: list <%v> has been saved: %s", subscribeUserList.UserList, path)
-	return
 }
 
 func (d *MailboxService) loadSubscribeMailboxList() {

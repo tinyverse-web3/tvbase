@@ -9,8 +9,9 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -161,7 +162,7 @@ func (d *MsgService) OnPubsubMsgRequest(
 		responseContent, err = d.OnReceiveMsg(message)
 		if err != nil {
 			retCode = &pb.RetCode{
-				Code:   dmsgProtocol.ErrCode,
+				Code:   common.ErrCode,
 				Result: "MsgService->OnPubsubMsgRequest: OnMsgRequest error: " + err.Error(),
 			}
 		}

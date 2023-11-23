@@ -7,14 +7,15 @@ import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgCommonKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 )
 
 type CustomProtocolClient struct {
 	CustomProtocolBase
-	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
+	queryPeerProtocol        *basic.QueryPeerProtocol
 	clientStreamProtocolList map[string]*dmsgProtocolCustom.ClientStreamProtocol
 }
 

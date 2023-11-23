@@ -8,13 +8,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type CustomStreamProtocolAdapter struct {
 	AbstructProtocolAdapter
-	protocol *dmsgProtocol.CustomSProtocol
+	protocol *basic.CustomSProtocol
 	pid      string
 }
 
@@ -32,11 +33,11 @@ func (adapter *CustomStreamProtocolAdapter) GetRequestPID() pb.PID {
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetStreamRequestPID() protocol.ID {
-	return protocol.ID(dmsgProtocol.PidCustomProtocolReq + "/" + adapter.pid)
+	return protocol.ID(common.PidCustomProtocolReq + "/" + adapter.pid)
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return protocol.ID(dmsgProtocol.PidCustomProtocolRes + "/" + adapter.pid)
+	return protocol.ID(common.PidCustomProtocolRes + "/" + adapter.pid)
 }
 
 func (adapter *CustomStreamProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
@@ -116,13 +117,13 @@ func NewCustomStreamProtocol(
 	ctx context.Context,
 	host host.Host,
 	pid string,
-	callbck dmsgProtocol.CustomSpCallback,
-	service dmsgProtocol.DmsgService,
+	callbck common.CustomSpCallback,
+	service common.DmsgService,
 	enableRequest bool,
-) *dmsgProtocol.CustomSProtocol {
+) *basic.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = pid
-	protocol := dmsgProtocol.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
+	protocol := basic.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
 	ret.protocol = protocol
 	return protocol
 }

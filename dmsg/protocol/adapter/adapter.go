@@ -5,7 +5,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
+	util "github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -60,7 +60,7 @@ func (adapter *AbstructProtocolAdapter) CallResponseCallback(
 }
 
 func getRetCode(dataList ...any) (*pb.RetCode, error) {
-	retCode := dmsgProtocol.NewSuccRetCode()
+	retCode := util.NewSuccRetCode()
 	if len(dataList) > 1 && dataList[1] != nil {
 		data, ok := dataList[1].(*pb.RetCode)
 		if !ok {

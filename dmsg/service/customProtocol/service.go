@@ -10,8 +10,8 @@ import (
 	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	dmsgProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -19,7 +19,7 @@ import (
 
 type CustomProtocolService struct {
 	CustomProtocolBase
-	queryPeerProtocol        *dmsgProtocol.QueryPeerProtocol
+	queryPeerProtocol        *basic.QueryPeerProtocol
 	serverStreamProtocolList map[string]*dmsgProtocolCustom.ServerStreamProtocol
 	queryPeerTarget          *dmsgUser.Target
 	stopServiceChan          chan bool
