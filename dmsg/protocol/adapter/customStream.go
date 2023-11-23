@@ -10,6 +10,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -123,7 +124,7 @@ func NewCustomStreamProtocol(
 ) *basic.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = pid
-	protocol := basic.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
+	protocol := newProtocol.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
 	ret.protocol = protocol
 	return protocol
 }

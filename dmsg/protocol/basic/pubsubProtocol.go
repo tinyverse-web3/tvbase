@@ -1,10 +1,8 @@
 package basic
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
@@ -122,52 +120,4 @@ func (p *PubsubProtocol) Request(reqPubkey string, destPubkey string, dataList .
 	log.Logger.Debugf("PubsubProtocol->Request end")
 	requestInfoData, _ := p.RequestInfoList.Load(requestBasicData.ID)
 	return request, requestInfoData.(*RequestInfo).ResponseChan, nil
-}
-
-func NewQueryPeerProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.QueryPeerCallback,
-	dmsg common.DmsgService,
-	adapter common.PpAdapter) *QueryPeerProtocol {
-	ret := &QueryPeerProtocol{}
-	ret.Ctx = ctx
-	ret.Host = host
-	ret.Callback = callback
-	ret.Service = dmsg
-	ret.Adapter = adapter
-	go ret.TickCleanRequest()
-	return ret
-}
-
-func NewPubsubMsgProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.PubsubMsgCallback,
-	dmsg common.DmsgService,
-	adapter common.PpAdapter) *PubsubMsgProtocol {
-	ret := &PubsubMsgProtocol{}
-	ret.Ctx = ctx
-	ret.Host = host
-	ret.Callback = callback
-	ret.Service = dmsg
-	ret.Adapter = adapter
-	go ret.TickCleanRequest()
-	return ret
-}
-
-func NewMailboxPProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.MailboxPpCallback,
-	dmsg common.DmsgService,
-	adapter common.PpAdapter) *MailboxPProtocol {
-	ret := &MailboxPProtocol{}
-	ret.Ctx = ctx
-	ret.Host = host
-	ret.Callback = callback
-	ret.Service = dmsg
-	ret.Adapter = adapter
-	go ret.TickCleanRequest()
-	return ret
 }

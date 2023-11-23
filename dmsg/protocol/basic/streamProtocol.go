@@ -1,11 +1,9 @@
 package basic
 
 import (
-	"context"
 	"fmt"
 	"io"
 
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -219,98 +217,4 @@ func (p *StreamProtocol) Request(peerID peer.ID, reqPubkey string, dataList ...a
 	requestInfoData, _ := p.RequestInfoList.Load(requestInfoId)
 	requestInfo := requestInfoData.(*RequestInfo)
 	return requestProtoMsg, requestInfo.ResponseChan, nil
-}
-
-func NewCreateMsgPubsubSProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.CreatePubsubSpCallback,
-	service common.DmsgService,
-	adapter common.SpAdapter,
-	enableRequest bool,
-	pubkey string,
-) *CreatePubsubSProtocol {
-	p := &CreatePubsubSProtocol{}
-	p.Host = host
-	p.Ctx = ctx
-	p.Callback = callback
-	p.Service = service
-	p.Adapter = adapter
-	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
-	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
-	if enableRequest {
-		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
-	}
-	go p.TickCleanRequest()
-	return p
-}
-
-func NewCreateChannelSProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.CreatePubsubSpCallback,
-	service common.DmsgService,
-	adapter common.SpAdapter,
-	enableRequest bool,
-	pubkey string,
-) *CreatePubsubSProtocol {
-	p := &CreatePubsubSProtocol{}
-	p.Host = host
-	p.Ctx = ctx
-	p.Callback = callback
-	p.Service = service
-	p.Adapter = adapter
-	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
-	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
-	if enableRequest {
-		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
-	}
-	go p.TickCleanRequest()
-	return p
-}
-
-func NewMailboxSProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.MailboxSpCallback,
-	service common.DmsgService,
-	adapter common.SpAdapter,
-	enableRequest bool,
-	pubkey string,
-) *MailboxSProtocol {
-	p := &MailboxSProtocol{}
-	p.Host = host
-	p.Ctx = ctx
-	p.Callback = callback
-	p.Service = service
-	p.Adapter = adapter
-	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
-	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
-	if enableRequest {
-		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
-	}
-	go p.TickCleanRequest()
-	return p
-}
-
-func NewCustomSProtocol(
-	ctx context.Context,
-	host host.Host,
-	callback common.CustomSpCallback,
-	service common.DmsgService,
-	adapter common.SpAdapter,
-	enableRequest bool,
-) *CustomSProtocol {
-	protocol := &CustomSProtocol{}
-	protocol.Host = host
-	protocol.Ctx = ctx
-	protocol.Callback = callback
-	protocol.Service = service
-	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
-	if enableRequest {
-		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
-	}
-	go protocol.TickCleanRequest()
-	return protocol
 }

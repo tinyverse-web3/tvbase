@@ -7,6 +7,7 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -79,7 +80,7 @@ func NewSeekMailboxProtocol(
 	callback common.MailboxPpCallback,
 	service common.DmsgService) *basic.MailboxPProtocol {
 	adapter := NewSeekMailboxProtocolAdapter()
-	protocol := basic.NewMailboxPProtocol(ctx, host, callback, service, adapter)
+	protocol := newProtocol.NewMailboxPProtocol(ctx, host, callback, service, adapter)
 	adapter.protocol = protocol
 	return protocol
 }
