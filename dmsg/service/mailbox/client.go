@@ -133,7 +133,11 @@ func (d *MailboxClient) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, er
 				// The mail has read, release it
 				log.Infof("MailboxClient->ReadMail:The sliver mail box has benn read, release it: %s", peerID)
 				d.releaseMailbox(peerID, timeout)
-				d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers[:index], d.lightMailboxUser.UserMailboxPeers[index+1:]...)
+				if index == len(d.lightMailboxUser.UserMailboxPeers)-1 {
+					d.lightMailboxUser.UserMailboxPeers = d.lightMailboxUser.UserMailboxPeers[:index]
+				} else {
+					d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers[:index], d.lightMailboxUser.UserMailboxPeers[index+1:]...)
+				}
 			}
 			if len(msgs) > 0 {
 				// add the msg to msg list
@@ -441,12 +445,11 @@ func (d *MailboxClient) unsubscribeProxyUser() error {
 	return nil
 }
 
-func (d *MailboxClient) IsExistMailbox(userPubkey string, timeout time.Duration) (*pb.SeekMailboxRes, error) {
+func (d *MailboxClient) seekMailbox(userPubkey string, timeout time.Duration) (bool, error) {
 	_, seekMailboxDoneChan, err := d.seekMailboxProtocol.Request(d.lightMailboxUser.Key.PubkeyHex, userPubkey)
 	if err != nil {
 		return false, fmt.Errorf("MailboxClient->IsExistMailbox: seekMailboxProtocol.Request error : %+v", err)
 	}
-
 	select {
 	case seekMailboxResponseProtoData := <-seekMailboxDoneChan:
 		response, ok := seekMailboxResponseProtoData.(*pb.SeekMailboxRes)
@@ -495,7 +498,6 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 		return false, err
 	}
 	//isExist := false
-	log.Info("**********************************************************************C3")
 	log.Infof("seekMailbox = %v", isExist)
 	//remainTimeDuration := timeout - time.Duration(curtime)
 	remainTimeDuration := timeout

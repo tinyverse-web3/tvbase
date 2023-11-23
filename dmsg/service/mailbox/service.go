@@ -345,6 +345,7 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 func (d *MailboxService) OnSeekMailboxRequest(requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	log.Debugf("MailboxService->OnSeekMailboxRequest begin\nrequestProtoData: %+v", requestProtoData)
 	if !d.enable {
+		log.Errorf("MailboxService->OnSeekMailboxRequest: fail to d.enable is false")
 		return nil, nil, true, nil
 	}
 	request, ok := requestProtoData.(*pb.SeekMailboxReq)
