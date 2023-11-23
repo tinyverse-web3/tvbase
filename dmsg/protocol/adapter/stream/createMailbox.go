@@ -1,4 +1,4 @@
-package adapter
+package stream
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	basicAdapter "github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
@@ -13,7 +14,7 @@ import (
 )
 
 type CreateMailboxProtocolAdapter struct {
-	AbstructProtocolAdapter
+	basicAdapter.AbstructProtocolAdapter
 	protocol *basic.MailboxSProtocol
 }
 
@@ -58,7 +59,7 @@ func (adapter *CreateMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := getRetCode(dataList)
+	retCode, err := basicAdapter.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}

@@ -13,8 +13,8 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/stream"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -62,18 +62,18 @@ func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, 
 	host := d.TvBase.GetHost()
 	// stream protocol
 	if d.createMailboxProtocol == nil {
-		d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, false, pubkey)
+		d.createMailboxProtocol = stream.NewCreateMailboxProtocol(ctx, host, d, d, false, pubkey)
 	}
 	if d.readMailboxMsgPrtocol == nil {
-		d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, false, pubkey)
+		d.readMailboxMsgPrtocol = stream.NewReadMailboxMsgProtocol(ctx, host, d, d, false, pubkey)
 	}
 	if d.releaseMailboxPrtocol == nil {
-		d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, false, pubkey)
+		d.releaseMailboxPrtocol = stream.NewReleaseMailboxProtocol(ctx, host, d, d, false, pubkey)
 	}
 
 	// pubsub protocol
 	if d.seekMailboxProtocol == nil {
-		d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
+		d.seekMailboxProtocol = pubsub.NewSeekMailboxProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetResponsePID(), d.seekMailboxProtocol)
 	}
 

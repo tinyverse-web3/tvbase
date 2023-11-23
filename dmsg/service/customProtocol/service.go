@@ -10,7 +10,9 @@ import (
 	dmsgCommonService "github.com/tinyverse-web3/tvbase/dmsg/common/service"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/stream"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	dmsgProtocolCustom "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
@@ -57,7 +59,7 @@ func (d *CustomProtocolService) Start() error {
 	host := d.TvBase.GetHost()
 
 	if d.queryPeerProtocol == nil {
-		d.queryPeerProtocol = adapter.NewQueryPeerProtocol(ctx, host, d, d)
+		d.queryPeerProtocol = pubsub.NewQueryPeerProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetResponsePID(), d.queryPeerProtocol)
 		d.RegistPubsubProtocol(d.queryPeerProtocol.Adapter.GetRequestPID(), d.queryPeerProtocol)
 	}
@@ -142,7 +144,7 @@ func (d *CustomProtocolService) RegistServer(service dmsgProtocolCustom.ServerHa
 		return fmt.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 	}
 	d.serverStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ServerStreamProtocol{
-		Protocol: adapter.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, true),
+		Protocol: stream.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, true),
 		Handle:   service,
 	}
 	service.SetCtx(d.TvBase.GetCtx())

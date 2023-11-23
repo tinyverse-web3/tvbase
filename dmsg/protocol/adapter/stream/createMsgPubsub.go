@@ -1,4 +1,4 @@
-package adapter
+package stream
 
 import (
 	"context"
@@ -8,46 +8,47 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
+	basicAdapter "github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type CreateChannelProtocolAdapter struct {
-	AbstructProtocolAdapter
+type CreateMsgPubsubProtocolAdapter struct {
+	basicAdapter.AbstructProtocolAdapter
 	protocol *basic.CreatePubsubSProtocol
 }
 
-func NewCreateChannelProtocolAdapter() *CreateChannelProtocolAdapter {
-	ret := &CreateChannelProtocolAdapter{}
+func NewCreateMsgPubsubProtocolAdapter() *CreateMsgPubsubProtocolAdapter {
+	ret := &CreateMsgPubsubProtocolAdapter{}
 	return ret
 }
 
-func (adapter *CreateChannelProtocolAdapter) GetRequestPID() pb.PID {
-	return pb.PID_CREATE_CHANNEL_REQ
+func (adapter *CreateMsgPubsubProtocolAdapter) GetRequestPID() pb.PID {
+	return pb.PID_CREATE_MSG_PUBSUB_REQ
 }
 
-func (adapter *CreateChannelProtocolAdapter) GetResponsePID() pb.PID {
-	return pb.PID_CREATE_CHANNEL_RES
+func (adapter *CreateMsgPubsubProtocolAdapter) GetResponsePID() pb.PID {
+	return pb.PID_CREATE_MSG_PUBSUB_RES
 }
 
-func (adapter *CreateChannelProtocolAdapter) GetStreamRequestPID() protocol.ID {
-	return common.PidCreateChannelReq
+func (adapter *CreateMsgPubsubProtocolAdapter) GetStreamRequestPID() protocol.ID {
+	return common.PidCreateMsgPubsubReq
 }
 
-func (adapter *CreateChannelProtocolAdapter) GetStreamResponsePID() protocol.ID {
-	return common.PidCreateChannelRes
+func (adapter *CreateMsgPubsubProtocolAdapter) GetStreamResponsePID() protocol.ID {
+	return common.PidCreateMsgPubsubRes
 }
 
-func (adapter *CreateChannelProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
+func (adapter *CreateMsgPubsubProtocolAdapter) GetEmptyRequest() protoreflect.ProtoMessage {
 	return &pb.CreatePubsubReq{}
 }
-func (adapter *CreateChannelProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
+func (adapter *CreateMsgPubsubProtocolAdapter) GetEmptyResponse() protoreflect.ProtoMessage {
 	return &pb.CreatePubsubRes{}
 }
 
-func (adapter *CreateChannelProtocolAdapter) InitRequest(
+func (adapter *CreateMsgPubsubProtocolAdapter) InitRequest(
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
 	request := &pb.CreatePubsubReq{
@@ -55,11 +56,11 @@ func (adapter *CreateChannelProtocolAdapter) InitRequest(
 	}
 
 	if len(dataList) == 1 {
-		key, ok := dataList[0].(string)
+		pubkey, ok := dataList[0].(string)
 		if !ok {
 			return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: failed to cast datalist[0] to string for key")
 		}
-		request.Key = key
+		request.Key = pubkey
 	} else {
 		return request, errors.New("CreatePubusubProtocolAdapter->InitRequest: parameter dataList need contain key")
 	}
@@ -67,11 +68,11 @@ func (adapter *CreateChannelProtocolAdapter) InitRequest(
 	return request, nil
 }
 
-func (adapter *CreateChannelProtocolAdapter) InitResponse(
+func (adapter *CreateMsgPubsubProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := getRetCode(dataList)
+	retCode, err := basicAdapter.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
@@ -79,24 +80,23 @@ func (adapter *CreateChannelProtocolAdapter) InitResponse(
 		BasicData: basicData,
 		RetCode:   retCode,
 	}
-
 	return response, nil
 }
 
-func (adapter *CreateChannelProtocolAdapter) CallRequestCallback(
+func (adapter *CreateMsgPubsubProtocolAdapter) CallRequestCallback(
 	requestProtoData protoreflect.ProtoMessage) (any, any, bool, error) {
 	data, retCode, abort, err := adapter.protocol.Callback.OnCreatePubsubRequest(requestProtoData)
 	return data, retCode, abort, err
 }
 
-func (adapter *CreateChannelProtocolAdapter) CallResponseCallback(
+func (adapter *CreateMsgPubsubProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	data, err := adapter.protocol.Callback.OnCreatePubsubResponse(requestProtoData, responseProtoData)
 	return data, err
 }
 
-func NewCreateChannelProtocol(
+func NewCreateMsgPubsubProtocol(
 	ctx context.Context,
 	host host.Host,
 	callback common.CreatePubsubSpCallback,
@@ -104,8 +104,8 @@ func NewCreateChannelProtocol(
 	enableRequest bool,
 	pubkey string,
 ) *basic.CreatePubsubSProtocol {
-	adapter := NewCreateChannelProtocolAdapter()
-	protocol := newProtocol.NewCreateChannelSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
+	adapter := NewCreateMsgPubsubProtocolAdapter()
+	protocol := newProtocol.NewCreateMsgPubsubSProtocol(ctx, host, callback, service, adapter, enableRequest, pubkey)
 	adapter.protocol = protocol
 	return protocol
 }

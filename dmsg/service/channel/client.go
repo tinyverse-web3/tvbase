@@ -3,7 +3,8 @@ package channel
 import (
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/stream"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 )
 
@@ -35,11 +36,11 @@ func (d *ChannelClient) Init(tvbase define.TvBaseService, pubkey string, getSig 
 	host := d.TvBase.GetHost()
 
 	if d.createPubsubProtocol == nil {
-		d.createPubsubProtocol = adapter.NewCreateChannelProtocol(ctx, host, d, d, false, pubkey)
+		d.createPubsubProtocol = stream.NewCreateChannelProtocol(ctx, host, d, d, false, pubkey)
 	}
 
 	if d.pubsubMsgProtocol == nil {
-		d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+		d.pubsubMsgProtocol = pubsub.NewPubsubMsgProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	}

@@ -9,8 +9,8 @@ import (
 	"github.com/tinyverse-web3/tvbase/dmsg/common/msg"
 	dmsgUser "github.com/tinyverse-web3/tvbase/dmsg/common/user"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/stream"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -51,10 +51,10 @@ func (d *MsgService) Start() error {
 	host := d.TvBase.GetHost()
 
 	if d.createPubsubProtocol == nil {
-		d.createPubsubProtocol = adapter.NewCreateMsgPubsubProtocol(ctx, host, d, d, true, d.pubkey)
+		d.createPubsubProtocol = stream.NewCreateMsgPubsubProtocol(ctx, host, d, d, true, d.pubkey)
 	}
 	if d.pubsubMsgProtocol == nil {
-		d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+		d.pubsubMsgProtocol = pubsub.NewPubsubMsgProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetResponsePID(), d.pubsubMsgProtocol)
 	}

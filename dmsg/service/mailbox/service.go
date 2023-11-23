@@ -19,7 +19,8 @@ import (
 	dmsgCommonUtil "github.com/tinyverse-web3/tvbase/dmsg/common/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 
-	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/pubsub"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/stream"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	dmsgServiceCommon "github.com/tinyverse-web3/tvbase/dmsg/service/common"
@@ -80,22 +81,22 @@ func (d *MailboxService) Start() error {
 	host := d.TvBase.GetHost()
 	// stream protocol
 	if d.createMailboxProtocol == nil {
-		d.createMailboxProtocol = adapter.NewCreateMailboxProtocol(ctx, host, d, d, true, d.pubkey)
+		d.createMailboxProtocol = stream.NewCreateMailboxProtocol(ctx, host, d, d, true, d.pubkey)
 	}
 	if d.readMailboxMsgPrtocol == nil {
-		d.readMailboxMsgPrtocol = adapter.NewReadMailboxMsgProtocol(ctx, host, d, d, true, d.pubkey)
+		d.readMailboxMsgPrtocol = stream.NewReadMailboxMsgProtocol(ctx, host, d, d, true, d.pubkey)
 	}
 	if d.releaseMailboxPrtocol == nil {
-		d.releaseMailboxPrtocol = adapter.NewReleaseMailboxProtocol(ctx, host, d, d, true, d.pubkey)
+		d.releaseMailboxPrtocol = stream.NewReleaseMailboxProtocol(ctx, host, d, d, true, d.pubkey)
 	}
 
 	// pubsub protocol
 	if d.seekMailboxProtocol == nil {
-		d.seekMailboxProtocol = adapter.NewSeekMailboxProtocol(ctx, host, d, d)
+		d.seekMailboxProtocol = pubsub.NewSeekMailboxProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.seekMailboxProtocol.Adapter.GetRequestPID(), d.seekMailboxProtocol)
 	}
 	if d.pubsubMsgProtocol == nil {
-		d.pubsubMsgProtocol = adapter.NewPubsubMsgProtocol(ctx, host, d, d)
+		d.pubsubMsgProtocol = pubsub.NewPubsubMsgProtocol(ctx, host, d, d)
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	}
 
@@ -306,7 +307,7 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 	needDeleteKeyList := []string{}
 	const MaxContentSize = 2 * 1024 * 1024
 	factSize := 0
-	requestParam := &adapter.ReadMailRequestParam{}
+	requestParam := &stream.ReadMailRequestParam{}
 	for result := range results.Next() {
 		if !request.ClearMode {
 			mailboxMsgData := &pb.MailboxItem{

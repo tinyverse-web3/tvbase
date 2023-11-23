@@ -1,4 +1,4 @@
-package adapter
+package basic
 
 import (
 	"fmt"
@@ -59,16 +59,16 @@ func (adapter *AbstructProtocolAdapter) CallResponseCallback(
 	return nil, nil
 }
 
-func getRetCode(dataList ...any) (*pb.RetCode, error) {
+func GetRetCode(dataList ...any) (*pb.RetCode, error) {
 	retCode := util.NewSuccRetCode()
 	if len(dataList) > 1 && dataList[1] != nil {
 		data, ok := dataList[1].(*pb.RetCode)
 		if !ok {
-			return nil, fmt.Errorf("getRetCode: fail to cast dataList[1] to *pb.RetCode")
+			return nil, fmt.Errorf("GetRetCode: fail to cast dataList[1] to *pb.RetCode")
 		} else {
 			if data == nil {
-				fmt.Printf("getRetCode: data == nil")
-				return nil, fmt.Errorf("getRetCode: data == nil")
+				fmt.Printf("GetRetCode: data == nil")
+				return nil, fmt.Errorf("GetRetCode: data == nil")
 			}
 			retCode = data
 		}
