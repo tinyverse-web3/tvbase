@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	basicAdapter "github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
@@ -75,7 +76,7 @@ func (adapter *PubsubMsgProtocolAdapter) InitResponse(
 			return nil, fmt.Errorf("PubsubMsgProtocolAdapter->InitResponse: fail to cast dataList[0] to []byte")
 		}
 	}
-	retCode, err := basicAdapter.GetRetCode(dataList)
+	retCode, err := util.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}

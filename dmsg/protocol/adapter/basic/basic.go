@@ -1,11 +1,8 @@
 package basic
 
 import (
-	"fmt"
-
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
-	util "github.com/tinyverse-web3/tvbase/dmsg/protocol/util"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -57,21 +54,4 @@ func (adapter *AbstructProtocolAdapter) CallResponseCallback(
 	requestProtoData protoreflect.ProtoMessage,
 	responseProtoData protoreflect.ProtoMessage) (any, error) {
 	return nil, nil
-}
-
-func GetRetCode(dataList ...any) (*pb.RetCode, error) {
-	retCode := util.NewSuccRetCode()
-	if len(dataList) > 1 && dataList[1] != nil {
-		data, ok := dataList[1].(*pb.RetCode)
-		if !ok {
-			return nil, fmt.Errorf("GetRetCode: fail to cast dataList[1] to *pb.RetCode")
-		} else {
-			if data == nil {
-				fmt.Printf("GetRetCode: data == nil")
-				return nil, fmt.Errorf("GetRetCode: data == nil")
-			}
-			retCode = data
-		}
-	}
-	return retCode, nil
 }

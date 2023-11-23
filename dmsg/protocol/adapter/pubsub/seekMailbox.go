@@ -6,6 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	basicAdapter "github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/basic"
+	"github.com/tinyverse-web3/tvbase/dmsg/protocol/adapter/util"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/basic"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/common"
 	"github.com/tinyverse-web3/tvbase/dmsg/protocol/newProtocol"
@@ -50,7 +51,7 @@ func (adapter *SeekMailboxProtocolAdapter) InitResponse(
 	requestProtoData protoreflect.ProtoMessage,
 	basicData *pb.BasicData,
 	dataList ...any) (protoreflect.ProtoMessage, error) {
-	retCode, err := basicAdapter.GetRetCode(dataList)
+	retCode, err := util.GetRetCode(dataList)
 	if err != nil {
 		return nil, err
 	}
