@@ -13,7 +13,7 @@ func JoinErrors(errs ...error) error {
 	}
 
 	if len(errStrings) > 0 {
-		return errors.New(joinStringSlice(errStrings, "; "))
+		return errors.New(joinStringSlice(errStrings, ";"))
 	}
 	return nil
 }
