@@ -20,6 +20,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
+	"github.com/tinyverse-web3/tvbase/dmsg/util"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -150,9 +151,7 @@ func (d *DmsgService) Stop() error {
 	if err != nil {
 		return err
 	}
-	d.UnSubscribeSrcUser()
-	d.UnSubscribeDestUsers()
-	return nil
+	return util.JoinErrors(d.UnSubscribeSrcUser(), d.UnSubscribeDestUsers())
 }
 
 func (d *DmsgService) InitUser(
@@ -408,7 +407,7 @@ func (d *DmsgService) UnSubscribeSrcUser() error {
 	}
 	d.SrcUserInfo = nil
 	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser end")
-	return nil
+	return err
 }
 
 func (d *DmsgService) StartReadSrcUserPubsubMsg() error {
@@ -516,10 +515,14 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 }
 
 func (d *DmsgService) UnSubscribeDestUsers() error {
+	var err error
 	for userPubKey := range d.destUserInfoList {
-		d.UnSubscribeDestUser(userPubKey)
+		errChild := d.UnSubscribeDestUser(userPubKey)
+		if errChild != nil {
+			err = util.JoinErrors(err, errChild)
+		}
 	}
-	return nil
+	return err
 }
 
 func (d *DmsgService) StartReadDestUserPubsubMsg(userPubkey string) error {
