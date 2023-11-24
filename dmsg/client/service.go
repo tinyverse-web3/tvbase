@@ -501,15 +501,17 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 
 	if userInfo.CancelCtx != nil {
 		userInfo.CancelCtx()
+	} else {
+		dmsgLog.Logger.Warnf("DmsgService->UnSubscribeDestUser: userInfo.CancelCtx is nil")
 	}
-	userInfo.Subscription.Cancel()
-	err := userInfo.Topic.Close()
-	if err != nil {
-		dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
-	}
-	delete(d.destUserInfoList, userPubkey)
+	// userInfo.Subscription.Cancel()
+	// err := userInfo.Topic.Close()
+	// if err != nil {
+	// 	dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
+	// }
+	// delete(userPubInfoList, userPubkey)
 
-	delete(userPubInfoList, userPubkey)
+	delete(d.destUserInfoList, userPubkey)
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser end")
 	return nil
 }
