@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -19,6 +20,7 @@ import (
 	dmsgLog "github.com/tinyverse-web3/tvbase/dmsg/common/log"
 	"github.com/tinyverse-web3/tvbase/dmsg/pb"
 	customProtocol "github.com/tinyverse-web3/tvbase/dmsg/protocol/custom"
+	"github.com/tinyverse-web3/tvbase/dmsg/util"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -39,6 +41,7 @@ type DmsgService struct {
 	onReceiveMsg                 dmsgClientCommon.OnReceiveMsg
 	proxyPubkey                  string
 	destUserInfoList             map[string]*dmsgClientCommon.DestUserInfo
+	destUserListMx               sync.Mutex
 	pubChannelInfoList           map[string]*dmsgClientCommon.PubChannelInfo
 	customStreamProtocolInfoList map[string]*dmsgClientCommon.CustomStreamProtocolInfo
 	customPubsubProtocolInfoList map[string]*dmsgClientCommon.CustomPubsubProtocolInfo
@@ -148,9 +151,7 @@ func (d *DmsgService) Stop() error {
 	if err != nil {
 		return err
 	}
-	d.UnSubscribeSrcUser()
-	d.UnSubscribeDestUsers()
-	return nil
+	return util.JoinErrors(d.UnSubscribeSrcUser(), d.UnSubscribeDestUsers())
 }
 
 func (d *DmsgService) InitUser(
@@ -286,7 +287,7 @@ func (d *DmsgService) CreateMailbox(userPubkey string) (existMailbox bool, err e
 }
 
 func (d *DmsgService) IsExistDestUser(userPubkey string) bool {
-	ret := d.getDestUserInfo(userPubkey) != nil && userPubInfoList[userPubkey] != nil
+	ret := d.getDestUserInfo(userPubkey) != nil
 	return ret
 }
 
@@ -406,7 +407,7 @@ func (d *DmsgService) UnSubscribeSrcUser() error {
 	}
 	d.SrcUserInfo = nil
 	dmsgLog.Logger.Debugf("DmsgService->UnSubscribeSrcUser end")
-	return nil
+	return err
 }
 
 func (d *DmsgService) StartReadSrcUserPubsubMsg() error {
@@ -435,25 +436,38 @@ func (d *DmsgService) StopReadSrcUserPubsubMsg() error {
 // dest user
 func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error {
 	dmsgLog.Logger.Debug("DmsgService->subscribeDestUser begin\nuserPubkey: %s", userPubkey)
+
+	d.destUserListMx.Lock()
+	defer d.destUserListMx.Unlock()
+
 	if d.IsExistDestUser(userPubkey) {
 		dmsgLog.Logger.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
 		return fmt.Errorf("DmsgService->SubscribeSrcUser: user key is already exist in destUserInfoList")
 	}
 
-	userTopic, err := d.Pubsub.Join(userPubkey)
-	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Join error: %v", err)
-		return err
-	}
-	userSub, err := userTopic.Subscribe()
-	if err != nil {
-		dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
-		return err
-	}
+	var userTopic *pubsub.Topic
+	var userSub *pubsub.Subscription
+	userPubInfo := userPubInfoList[userPubkey]
+	if userPubInfo != nil {
+		userTopic = userPubInfo.topic
+		userSub = userPubInfo.subscription
+	} else {
+		var err error
+		userTopic, err = d.Pubsub.Join(userPubkey)
+		if err != nil {
+			dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Join error: %v", err)
+			return err
+		}
+		userSub, err = userTopic.Subscribe()
+		if err != nil {
+			dmsgLog.Logger.Errorf("DmsgService->subscribeDestUser: Pubsub.Subscribe error: %v", err)
+			return err
+		}
 
-	userPubInfoList[userPubkey] = &UserPubInfo{
-		topic:        userTopic,
-		subscription: userSub,
+		userPubInfoList[userPubkey] = &UserPubInfo{
+			topic:        userTopic,
+			subscription: userSub,
+		}
 	}
 
 	destUserInfo := &dmsgClientCommon.DestUserInfo{}
@@ -463,7 +477,7 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 	d.destUserInfoList[userPubkey] = destUserInfo
 
 	if isListen {
-		err = d.StartReadDestUserPubsubMsg(userPubkey)
+		err := d.StartReadDestUserPubsubMsg(userPubkey)
 		if err != nil {
 			return err
 		}
@@ -477,6 +491,9 @@ func (d *DmsgService) SubscribeDestUser(userPubkey string, isListen bool) error 
 func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 	dmsgLog.Logger.Debugf("DmsgService->unSubscribeDestUser begin\nuserPubkey: %s", userPubkey)
 
+	d.destUserListMx.Lock()
+	defer d.destUserListMx.Unlock()
+
 	userInfo := d.getDestUserInfo(userPubkey)
 	if userInfo == nil {
 		return fmt.Errorf("DmsgService->UnSubscribeDestUser: userPubkey is not exist in destUserInfoList")
@@ -484,24 +501,30 @@ func (d *DmsgService) UnSubscribeDestUser(userPubkey string) error {
 
 	if userInfo.CancelCtx != nil {
 		userInfo.CancelCtx()
+	} else {
+		dmsgLog.Logger.Warnf("DmsgService->UnSubscribeDestUser: userInfo.CancelCtx is nil")
 	}
-	userInfo.Subscription.Cancel()
-	err := userInfo.Topic.Close()
-	if err != nil {
-		dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
-	}
-	delete(d.destUserInfoList, userPubkey)
+	// userInfo.Subscription.Cancel()
+	// err := userInfo.Topic.Close()
+	// if err != nil {
+	// 	dmsgLog.Logger.Warnf("DmsgService->unSubscribeDestUser: userTopic.Close error: %v", err)
+	// }
+	// delete(userPubInfoList, userPubkey)
 
-	delete(userPubInfoList, userPubkey)
+	delete(d.destUserInfoList, userPubkey)
 	dmsgLog.Logger.Debug("DmsgService->unSubscribeDestUser end")
 	return nil
 }
 
 func (d *DmsgService) UnSubscribeDestUsers() error {
+	var err error
 	for userPubKey := range d.destUserInfoList {
-		d.UnSubscribeDestUser(userPubKey)
+		errChild := d.UnSubscribeDestUser(userPubKey)
+		if errChild != nil {
+			err = util.JoinErrors(err, errChild)
+		}
 	}
-	return nil
+	return err
 }
 
 func (d *DmsgService) StartReadDestUserPubsubMsg(userPubkey string) error {
