@@ -663,10 +663,13 @@ func (d *DmsgService) OnSendMsgRequest(protoMsg protoreflect.ProtoMessage) (any,
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 		return nil, fmt.Errorf("dmsgService->OnSendMsgRequest: cannot convert %v to *pb.SendMsgReq", protoMsg)
 	}
-	pubkey := request.BasicData.Pubkey
-	if request.BasicData.ProxyPubkey != "" {
-		pubkey = request.BasicData.ProxyPubkey
-	}
+	/*
+		pubkey := request.BasicData.Pubkey
+		if request.BasicData.ProxyPubkey != "" {
+			pubkey = request.BasicData.ProxyPubkey
+		}
+	*/
+	pubkey := request.DestPubkey
 	pubsub := d.getDestUserPubsub(pubkey)
 	if pubsub == nil {
 		dmsgLog.Logger.Errorf("dmsgService->OnSendMsgRequest: public key %s is not exist", pubkey)
