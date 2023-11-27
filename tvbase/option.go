@@ -157,23 +157,32 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 
 	// annouceAddrs
 	if len(m.cfg.Network.AnnounceAddrs) > 0 {
-		var announce []ma.Multiaddr
+		var announceNet []ma.Multiaddr
 		for _, s := range m.cfg.Network.AnnounceAddrs {
 			a := ma.StringCast(s)
-			announce = append(announce, a)
+			announceNet = append(announceNet, a)
 		}
 		opts = append(opts,
-			libp2p.AddrsFactory(func([]ma.Multiaddr) []ma.Multiaddr {
+			libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+				//tvLog.Logger.Infof("Add address: %s", announce)
+				announce := make([]ma.Multiaddr, 0)
+				//tvLog.Logger.Infof("Add address: %s", a)
+				announce = append(announce, addrs...)
+				announce = append(announce, announceNet...)
 				return announce
 			}),
 		)
 	} else {
+		tvLog.Logger.Infof("Add announce address: ")
 		if m.cfg.Mode == config.ServiceMode && !m.cfg.Network.IsLocalNet {
+			tvLog.Logger.Infof("Service Mode and internet")
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
 					for _, a := range addrs {
+						//tvLog.Logger.Infof("Get address: %s", a)
 						if manet.IsPublicAddr(a) {
+							//tvLog.Logger.Infof("Add address: %s", a)
 							announce = append(announce, a)
 						}
 					}
@@ -181,16 +190,19 @@ func (m *TvBase) createCommonOpts(privateKey crypto.PrivKey, swarmPsk pnet.PSK) 
 				}),
 			)
 		} else {
+			tvLog.Logger.Infof("Client Mode, or local network.")
 			opts = append(opts,
 				libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 					announce := make([]ma.Multiaddr, 0, len(addrs))
 					for _, a := range addrs {
+						//tvLog.Logger.Infof("Get address: %s", a)
 						addrInfo := strings.Split(a.String(), "/")
 						if len(addrInfo) < 3 {
 							continue
 						}
 						ip := addrInfo[2]
 						if ip != "127.0.0.1" {
+							//tvLog.Logger.Infof("Add address: %s", a)
 							announce = append(announce, a)
 						}
 					}

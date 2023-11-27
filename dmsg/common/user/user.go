@@ -53,6 +53,9 @@ func NewTarget(pk string, getSig key.GetSigCallback) (*Target, error) {
 	}
 	if targetList[pk] != nil {
 		dmsgLog.Logger.Debugf("User->NewTarget: target is already exist for pk :%s", pk)
+		if targetList[pk].Key.GetSig == nil {
+			targetList[pk].Key.GetSig = getSig
+		}
 		targetList[pk].RefCount++
 		return targetList[pk], nil
 	}
@@ -68,6 +71,13 @@ func NewTarget(pk string, getSig key.GetSigCallback) (*Target, error) {
 }
 
 func GetTarget(pk string) *Target {
+	target := targetList[pk]
+	if target == nil {
+		dmsgLog.Logger.Debugf("*********User->GetTarget: pk :%s ,cannot found target", pk)
+	} else {
+		dmsgLog.Logger.Debugf("*********User->GetTarget: pk :%s , getSig: %v", pk, target.GetSig)
+	}
+
 	return targetList[pk]
 }
 
