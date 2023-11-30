@@ -2,7 +2,6 @@ package mailbox
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -41,17 +40,19 @@ func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, 
 	if err != nil {
 		return err
 	}
-	cfg := d.BaseService.TvBase.GetConfig()
-	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath + "-" + pubkey
 
-	_, err = os.Stat(filepath)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(filepath, 0755)
-		if err != nil {
-			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
-			return err
-		}
-	}
+	//	cfg := d.BaseService.TvBase.GetConfig()
+
+	//	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath + "-" + pubkey
+
+	//	_, err = os.Stat(filepath)
+	//	if os.IsNotExist(err) {
+	//		err = os.MkdirAll(filepath, 0755)
+	//		if err != nil {
+	//			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
+	//			return err
+	//		}
+	//	}
 
 	err = d.SubscribeUser(pubkey, getSig)
 	if err != nil {
