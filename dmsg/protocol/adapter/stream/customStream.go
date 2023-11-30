@@ -122,10 +122,11 @@ func NewCustomStreamProtocol(
 	callbck common.CustomSpCallback,
 	service common.DmsgService,
 	enableRequest bool,
+	pubkey string,
 ) *basic.CustomSProtocol {
 	ret := NewCustomStreamProtocolAdapter()
 	ret.pid = pid
-	protocol := basic.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest)
+	protocol := basic.NewCustomSProtocol(ctx, host, callbck, service, ret, enableRequest, pubkey)
 	ret.protocol = protocol
 	return protocol
 }

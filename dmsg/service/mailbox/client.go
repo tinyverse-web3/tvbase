@@ -504,7 +504,7 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 	remainTimeDuration := timeout
 	if remainTimeDuration >= 0 {
 		if !isExist {
-			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(pubkey, remainTimeDuration)
+			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(d.lightMailboxUser.Key.PubkeyHex, remainTimeDuration)
 			if err != nil {
 				log.Errorf("MailboxClient->CreateMailbox: createMailbox failed:  err = %v", err)
 				return false, err

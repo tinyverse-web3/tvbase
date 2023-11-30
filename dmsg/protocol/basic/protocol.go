@@ -187,7 +187,7 @@ func (p *Protocol) HandleResponseData(
 	if ok {
 		requestInfo = requestInfoData.(*RequestInfo)
 	}
-	log.Logger.Debugf("Protocol->HandleResponseData:\nrequestInfo: %+v", requestInfo)
+	//log.Logger.Debugf("Protocol->HandleResponseData:\nrequestInfo: %+v", requestInfo)
 	if ok && requestInfo != nil {
 		_, err := p.Adapter.CallResponseCallback(requestInfo.ProtoMessage, responseProtoMsg)
 		if err != nil {

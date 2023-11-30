@@ -103,14 +103,14 @@ func (d *CustomProtocolClient) Request(peerIdStr string, pid string, content []b
 	return request.(*pb.CustomProtocolReq), responseChan, nil
 }
 
-func (d *CustomProtocolClient) RegistClient(client dmsgProtocolCustom.ClientHandle) error {
+func (d *CustomProtocolClient) RegistClient(client dmsgProtocolCustom.ClientHandle, pubkey string) error {
 	customProtocolID := client.GetProtocolID()
 	if d.clientStreamProtocolList[customProtocolID] != nil {
 		log.Errorf("CustomProtocolClient->RegistCSPClient: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolClient->RegistCSPClient: protocol %s is already exist", customProtocolID)
 	}
 	d.clientStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ClientStreamProtocol{
-		Protocol: stream.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, false),
+		Protocol: stream.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, false, pubkey),
 		Handle:   client,
 	}
 	client.SetCtx(d.TvBase.GetCtx())

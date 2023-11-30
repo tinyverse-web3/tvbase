@@ -137,14 +137,14 @@ func (d *CustomProtocolService) Release() error {
 	return nil
 }
 
-func (d *CustomProtocolService) RegistServer(service dmsgProtocolCustom.ServerHandle) error {
+func (d *CustomProtocolService) RegistServer(service dmsgProtocolCustom.ServerHandle, pubkey string) error {
 	customProtocolID := service.GetProtocolID()
 	if d.serverStreamProtocolList[customProtocolID] != nil {
 		log.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 		return fmt.Errorf("CustomProtocolService->RegistCSPServer: protocol %s is already exist", customProtocolID)
 	}
 	d.serverStreamProtocolList[customProtocolID] = &dmsgProtocolCustom.ServerStreamProtocol{
-		Protocol: stream.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, true),
+		Protocol: stream.NewCustomStreamProtocol(d.TvBase.GetCtx(), d.TvBase.GetHost(), customProtocolID, d, d, true, pubkey),
 		Handle:   service,
 	}
 	service.SetCtx(d.TvBase.GetCtx())
@@ -173,15 +173,17 @@ func (d *CustomProtocolService) OnCustomRequest(
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: fail to convert requestProtoData to *pb.CustomContentReq")
 	}
 
-	log.Debugf("dmsgService->OnCustomRequest:\nrequest.BasicData: %v\nrequest.PID: ", request.BasicData, request.PID)
+	log.Debugf("CustomProtocolService->OnCustomRequest:\nrequest.BasicData: %v\nrequest.PID: ", request.BasicData, request.PID)
 
 	customProtocolInfo := d.serverStreamProtocolList[request.PID]
 	if customProtocolInfo == nil {
 		log.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 		return nil, nil, false, fmt.Errorf("CustomProtocolService->OnCustomRequest: customProtocolInfo is nil, request: %+v", request)
 	}
+	log.Debugf("CustomProtocolService->OnCustomRequest: HandleRequest: ")
 	responseContent, retCode, err := customProtocolInfo.Handle.HandleRequest(request)
 	if err != nil {
+		log.Errorf("CustomProtocolService->OnCustomRequest: HandleRequest failed: %+v", err)
 		return nil, nil, true, err
 	}
 
