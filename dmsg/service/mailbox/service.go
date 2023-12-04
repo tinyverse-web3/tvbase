@@ -11,6 +11,8 @@ import (
 
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	dmsgKey "github.com/tinyverse-web3/tvbase/dmsg/common/key"
@@ -399,10 +401,13 @@ func (d *MailboxService) OnPubsubMsgRequest(
 		return nil, nil, true, nil
 	}
 
-	pubkey := request.BasicData.Pubkey
-	if request.BasicData.ProxyPubkey != "" {
-		pubkey = request.BasicData.ProxyPubkey
-	}
+	/*
+		pubkey := request.BasicData.Pubkey
+		if request.BasicData.ProxyPubkey != "" {
+			pubkey = request.BasicData.ProxyPubkey
+		}
+	*/
+	pubkey := request.DestPubkey
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
@@ -684,8 +689,9 @@ type MailboxSubscribeList struct {
 }
 
 const SubscribeMailboxListPath = "subscribe_mailbox_list.json"
+const SubscribeMailboxListDBName = "subscribe_mailbox_list"
 
-func (d *MailboxService) saveSubscribeMailboxList() {
+func (d *MailboxService) saveSubscribeMailboxList1() {
 
 	log.Debugf("MailboxService->saveSubscribeMailboxList: begin")
 	subscribeUserList := &MailboxSubscribeList{
@@ -712,7 +718,77 @@ func (d *MailboxService) saveSubscribeMailboxList() {
 	log.Infof("MailboxService->saveSubscribeMailboxList: list <%v> has been saved: %s", subscribeUserList.UserList, path)
 }
 
-func (d *MailboxService) loadSubscribeMailboxList() {
+func (d *MailboxService) saveSubscribeMailboxList() {
+	log.Debugf("saveSubscribeMailboxList...\n")
+	// 打开已有的 LevelDB 数据库
+	options := &opt.Options{
+		// 如果数据库不存在，自动创建数据库
+		ErrorIfMissing: false,
+	}
+	var err error
+	//reserveFilename := rootPath + "reservename"
+	dbName_SubscribedList := d.TvBase.GetRootPath() + SubscribeMailboxListDBName
+	dbSubscribedList, err := leveldb.OpenFile(dbName_SubscribedList, options)
+	if err != nil {
+		log.Errorf("Open DB subscribedList failed, %v.\n", err)
+		return
+	}
+	defer dbSubscribedList.Close()
+
+	log.Debugf("The DBs have been opened...\n")
+	// 设置迭代器范围为整个数据库
+	iter := dbSubscribedList.NewIterator(nil, nil)
+	defer iter.Release()
+
+	// Clear data
+	for iter.Next() {
+		userid := string(iter.Key())
+		value := iter.Value()
+		if d.serviceUserList[userid] != nil {
+			// The key is subscribed mailbox
+			if string(value) != "1" {
+				// The value is unsubscribe, restore the key
+				log.Debugf("Restore user <%s> to db.", userid)
+				value = []byte("1")
+				err = dbSubscribedList.Put([]byte(userid), value, nil)
+				if err != nil {
+					log.Errorf("Put DB subscribedList failed, %v.\n", err)
+				}
+			}
+		} else {
+			// The user is not subscribed mailbox, clear the key
+			if string(value) != "0" {
+				// The value is subscribed, clear the key
+				log.Debugf("Clear user <%s> to db.", userid)
+				value = []byte("0")
+				err = dbSubscribedList.Put([]byte(userid), value, nil)
+				if err != nil {
+					log.Errorf("Put DB subscribedList failed, %v.\n", err)
+				}
+			}
+		}
+	}
+
+	// check all users is recorded
+	for pubkey := range d.serviceUserList {
+		_, err := dbSubscribedList.Get([]byte(pubkey), nil)
+		if err != nil {
+			// The user is not record it, put it into db
+			log.Debugf("Add new user <%s> to db.", pubkey)
+			value := []byte("1")
+			err = dbSubscribedList.Put([]byte(pubkey), value, nil)
+			if err != nil {
+				log.Errorf("Put DB subscribedList failed, %v.\n", err)
+			}
+		}
+
+	}
+
+	log.Debugf("saveSubscribeMailboxList Done.")
+
+}
+
+func (d *MailboxService) loadJsonSubscribeMailboxList() *MailboxSubscribeList {
 	log.Debugf("MailboxService->loadSubscribeMailboxList: begin")
 	subscribeUserList := &MailboxSubscribeList{}
 
@@ -720,29 +796,93 @@ func (d *MailboxService) loadSubscribeMailboxList() {
 	subscribeUserListByte, err := os.ReadFile(path)
 	if err != nil {
 		log.Errorf("MailboxService->loadSubscribeMailboxList: read error: %v", err)
-		return
+		return nil
 	}
 
 	err = json.Unmarshal(subscribeUserListByte, subscribeUserList)
 	if err != nil {
 		log.Errorf("MailboxService->saveSubscribeMailboxList: json.Unmarshal error: %v", err)
-		return
+		return nil
 	}
+
+	// The data has been loaded, remove it.
+	os.Remove(path)
 
 	log.Infof("MailboxService->saveSubscribeMailboxList: list <%v> has been loaded", subscribeUserList.UserList)
 
-	for _, pubkey := range subscribeUserList.UserList {
-		user := d.getServiceUser(pubkey)
-		if user != nil {
-			log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
-			continue
+	return subscribeUserList
+	/*
+		for _, pubkey := range subscribeUserList.UserList {
+			user := d.getServiceUser(pubkey)
+			if user != nil {
+				log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
+				continue
+			}
+
+			err := d.subscribeServiceUser(pubkey)
+			if err != nil {
+				continue
+			}
 		}
 
-		err := d.subscribeServiceUser(pubkey)
-		if err != nil {
-			continue
+		log.Debugf("MailboxService->loadSubscribeMailboxList: end")
+	*/
+}
+
+func (d *MailboxService) loadSubscribeMailboxList() {
+	log.Debugf("loadSubscribeMailboxList...")
+	// 打开已有的 LevelDB 数据库
+	options := &opt.Options{
+		// 如果数据库不存在，自动创建数据库
+		ErrorIfMissing: false,
+	}
+	var err error
+	//reserveFilename := rootPath + "reservename"
+	dbName_SubscribedList := d.TvBase.GetRootPath() + SubscribeMailboxListDBName
+	dbSubscribedList, err := leveldb.OpenFile(dbName_SubscribedList, options)
+	if err != nil {
+		log.Errorf("Open DB subscribedList failed, %v.\n", err)
+		return
+	}
+	defer dbSubscribedList.Close()
+
+	log.Debugf("The DBs have been opened...\n")
+
+	jsonSubscribeMailboxList := d.loadJsonSubscribeMailboxList()
+	if jsonSubscribeMailboxList != nil {
+		for _, userid := range jsonSubscribeMailboxList.UserList {
+			value := []byte("1")
+			err = dbSubscribedList.Put([]byte(userid), value, nil)
+			if err != nil {
+				log.Errorf("Put DB subscribedList failed, %v.\n", err)
+			}
 		}
 	}
 
-	log.Debugf("MailboxService->loadSubscribeMailboxList: end")
+	// 设置迭代器范围为整个数据库
+	iter := dbSubscribedList.NewIterator(nil, nil)
+	defer iter.Release()
+
+	for iter.Next() {
+		userid := string(iter.Key())
+		value := iter.Value()
+
+		if string(value) == "1" {
+			// The value is recored with subscribed, subscribe to pubsub
+			user := d.getServiceUser(userid)
+			if user != nil {
+				log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
+				continue
+			}
+
+			log.Debugf("Subscribe the user <%s>.", userid)
+			err := d.subscribeServiceUser(userid)
+			if err != nil {
+				continue
+			}
+		}
+
+	}
+	log.Debugf("loadSubscribeMailboxList Done.\n")
+
 }

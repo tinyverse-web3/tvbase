@@ -102,7 +102,7 @@ type CustomProtocolService interface {
 	Release() error
 	Start() error
 	Stop() error
-	RegistServer(service customProtocol.ServerHandle) error
+	RegistServer(service customProtocol.ServerHandle, pubkey string) error
 	UnregistServer(callback customProtocol.ServerHandle) error
 }
 
@@ -110,7 +110,7 @@ type CustomProtocolClient interface {
 	CommonService
 	Init(tvbaseService define.TvBaseService, pubkey string, getSig dmsgKey.GetSigCallback) error
 	Release() error
-	RegistClient(client customProtocol.ClientHandle) error
+	RegistClient(client customProtocol.ClientHandle, pubkey string) error
 	UnregistClient(client customProtocol.ClientHandle) error
 	QueryPeer(pid string) (*pb.QueryPeerReq, chan any, error)
 }

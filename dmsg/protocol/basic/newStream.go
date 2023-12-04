@@ -2,6 +2,7 @@ package basic
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -87,17 +88,20 @@ func NewCustomSProtocol(
 	service common.DmsgService,
 	adapter common.SpAdapter,
 	enableRequest bool,
+	pubkey string,
 ) *CustomSProtocol {
-	protocol := &CustomSProtocol{}
-	protocol.Host = host
-	protocol.Ctx = ctx
-	protocol.Callback = callback
-	protocol.Service = service
-	protocol.Adapter = adapter
-	protocol.Host.SetStreamHandler(adapter.GetStreamResponsePID(), protocol.ResponseHandler)
+	p := &CustomSProtocol{}
+	p.Host = host
+	p.Ctx = ctx
+	p.Callback = callback
+	p.Service = service
+	p.Adapter = adapter
+	respPid := protocol.ID(string(adapter.GetStreamResponsePID()) + "/" + pubkey)
+	fmt.Printf("SetStreamHandler : respPid = %s\n", respPid)
+	p.Host.SetStreamHandler(respPid, p.ResponseHandler)
 	if enableRequest {
-		protocol.Host.SetStreamHandler(adapter.GetStreamRequestPID(), protocol.RequestHandler)
+		p.Host.SetStreamHandler(adapter.GetStreamRequestPID(), p.RequestHandler)
 	}
-	go protocol.TickCleanRequest()
-	return protocol
+	go p.TickCleanRequest()
+	return p
 }

@@ -2,7 +2,6 @@ package mailbox
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -41,17 +40,19 @@ func (d *MailboxClient) Init(tvbaseService define.TvBaseService, pubkey string, 
 	if err != nil {
 		return err
 	}
-	cfg := d.BaseService.TvBase.GetConfig()
-	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath + "-" + pubkey
 
-	_, err = os.Stat(filepath)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(filepath, 0755)
-		if err != nil {
-			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
-			return err
-		}
-	}
+	//	cfg := d.BaseService.TvBase.GetConfig()
+
+	//	filepath := d.BaseService.TvBase.GetRootPath() + cfg.DMsg.DatastorePath + "-" + pubkey
+
+	//	_, err = os.Stat(filepath)
+	//	if os.IsNotExist(err) {
+	//		err = os.MkdirAll(filepath, 0755)
+	//		if err != nil {
+	//			log.Errorf("MailboxClient->Init: MkdirAll error %v", err)
+	//			return err
+	//		}
+	//	}
 
 	err = d.SubscribeUser(pubkey, getSig)
 	if err != nil {
@@ -504,7 +505,7 @@ func (d *MailboxClient) CreateMailbox(timeout time.Duration) (existMailbox bool,
 	remainTimeDuration := timeout
 	if remainTimeDuration >= 0 {
 		if !isExist {
-			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(pubkey, remainTimeDuration)
+			d.lightMailboxUser.ServicePeerID, err = d.createMailbox(d.lightMailboxUser.Key.PubkeyHex, remainTimeDuration)
 			if err != nil {
 				log.Errorf("MailboxClient->CreateMailbox: createMailbox failed:  err = %v", err)
 				return false, err
