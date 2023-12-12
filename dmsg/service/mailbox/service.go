@@ -102,7 +102,7 @@ func (d *MailboxService) Start() error {
 		d.RegistPubsubProtocol(d.pubsubMsgProtocol.Adapter.GetRequestPID(), d.pubsubMsgProtocol)
 	}
 
-	d.cleanRestServiceUser(12 * time.Hour)
+	//d.cleanRestServiceUser(1 * time.Minute)
 
 	d.enable = true
 
