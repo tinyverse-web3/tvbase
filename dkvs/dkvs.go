@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,20 +14,17 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
 	badgerds "github.com/ipfs/go-ds-badger2"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
-	"github.com/multiformats/go-base32"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
 	cm "github.com/tinyverse-web3/tvbase/dkvs/common"
 	kaddht "github.com/tinyverse-web3/tvbase/dkvs/kaddht"
-	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 	pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
 )
 
@@ -42,7 +37,10 @@ type Dkvs struct {
 	baseServiceCfg *tvConfig.TvbaseConfig
 }
 
-var _dkvs *Dkvs = nil
+var (
+	_dkvs        *Dkvs  = nil
+	dbversionKey string = "dbversion"
+)
 
 var (
 	currentReadRecMode = cm.NetworkFirst //默认读取数据模式：网络优先
@@ -76,6 +74,13 @@ func NewDkvs(tvbase define.TvBaseService) *Dkvs {
 
 	// register a network event to handler unsynckey
 	// tvbase.RegistConnectedCallback(_dkvs.putAllUnsyncKeyToNetwork)
+
+	//check db data version
+	err = _dkvs.checkDBDataVersion()
+	if err != nil {
+		Logger.Errorf("NewDkvs check DB Data Version %v", err)
+		return nil
+	}
 
 	// Periodically process unsynchronized keys
 	_dkvs.periodicallyProcessUnsyncKey()
@@ -400,6 +405,31 @@ func isValidKey(key string) bool {
 	return true
 }
 
+func (d *Dkvs) checkDBDataVersion() error {
+	dbInst := d.dhtDatastore
+	if dbInst == nil {
+		return errors.New("checkDBDataVersion ---> dbInst dhtDatastore is nil")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dskey := d.mkDsKey(dbversionKey)
+	bsc := d.baseServiceCfg
+	v1proto := bsc.DHT.ProtocolPrefix + bsc.DHT.ProtocolID
+	dbVersion, err := dbInst.Get(ctx, dskey)
+	if err != nil && err == ds.ErrNotFound {
+		dbInst.Put(ctx, dskey, []byte(v1proto))
+		dbVersion = []byte(v1proto)
+	} else {
+		return errors.New("checkDBDataVersion--->dbInst.Get(ctx, dskey) err: " + err.Error())
+	}
+	if bytes.Equal(dbVersion, []byte(v1proto)) {
+		return fmt.Errorf("checkDBDataVersion--->db data version is inconsistent, current db data version: %s, current protocol version: %s", string(dbVersion), v1proto)
+	}
+	Logger.Info("checkDBDataVersion ---> current protocol version: ", v1proto)
+	Logger.Info("checkDBDataVersion ---> current db data version: ", string(dbVersion))
+	return nil
+}
+
 // key的格式：只关注前两个
 // /namespace/name 或者 /namespace/name/xxx
 func (d *Dkvs) checkKeyValidity(key string, pubkey []byte) bool {
@@ -721,98 +751,4 @@ func delBadRecFromLocal(d *Dkvs, key string) {
 		}
 		Logger.Infof("delBadRecFromLocal---Successfully delete bad record from datastore {key: %s}", key)
 	}
-}
-
-func QueryAllKeyOption(t define.TvBaseService, prefix string, saved bool) error {
-	db := t.GetDhtDatabase()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if db == nil {
-		err := fmt.Errorf("get DB failed")
-		Logger.Errorf("queryAllKeys---> failed: %v", err)
-		return err
-	}
-	q := query.Query{}
-	results, err := db.Query(ctx, q)
-	if err != nil {
-		Logger.Errorf("queryAllKeys---> failed to querying dht datastore: %v", err)
-		return err
-	}
-	defer results.Close()
-
-	var file *os.File
-	if saved {
-		rootAPP := t.GetRootPath()
-		filePath := rootAPP + "allkeys.txt"
-		//file, err := os.Open(filePath)
-		file, err = os.OpenFile(filePath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			Logger.Errorf("Failed to open file: %v", err)
-			return err
-		}
-		defer file.Close()
-		Logger.Errorf("WRITE ALL DATA INTO: %s", filePath)
-	}
-
-	for result := range results.Next() {
-		keyObj := ds.NewKey(result.Key)
-		//Logger.Infof("queryAllKeys---> result.Key: %s", result.Key)
-		key, err := dsKeyDcode(keyObj.List()[0])
-		if err != nil {
-			Logger.Debugf("queryAllKeys---> dsKeyDcode(keyObj.List()[0] failed: %v", err)
-			continue
-		}
-
-		dataKey := string(RemovePrefix(string(key)))
-		if prefix != "" && !strings.HasPrefix(dataKey, prefix) {
-			//Logger.Infof("queryAllKeys---> dkvs Key ignore : %s", dataKey)
-			continue
-		}
-
-		lbp2pRec := new(recpb.Record)
-		err = proto.Unmarshal(result.Value, lbp2pRec)
-		if err != nil {
-			Logger.Debugf("queryAllKeys---> proto.Unmarshal(lbp2pRec.Value, lbp2pRec) failed: %v", err)
-			continue
-		}
-		dkvsRec := new(dkvs_pb.DkvsRecord)
-		if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
-			Logger.Debugf("queryAllKeys---> proto.Unmarshal(dkvsRec.Value, dkvsRec) failed: %v", err)
-			continue
-		}
-
-		dataValue := string(dkvsRec.Value)
-		dataPutTime := formatUnixTime(dkvsRec.Seq)
-		dataValidity := formatUnixTime(dkvsRec.Validity)
-		dataPubKey := hex.EncodeToString(dkvsRec.PubKey)
-
-		if saved {
-			Content := dataKey + "    " + dataPutTime + "    " + dataValidity + "    " + dataPubKey + "\r\n"
-			file.WriteString(Content)
-		}
-
-		Logger.Infof("---------------------------------------")
-		Logger.Infof("key = %s", dataKey)
-		Logger.Infof("owner = %s", dataPubKey)
-		Logger.Infof("last update time = %s", dataPutTime)
-		Logger.Infof("validate time = %s", dataValidity)
-		Logger.Infof("Value = %v", dataValue)
-	}
-	return nil
-}
-
-func dsKeyDcode(s string) ([]byte, error) {
-	return base32.RawStdEncoding.DecodeString(s)
-}
-
-func formatUnixTime(unixTime uint64) string {
-	// convert Unix timestamp() to time.Time type
-	timeObj := time.Unix(int64(unixTime)/1000, int64(unixTime)%1000*int64(time.Millisecond))
-
-	// String formatted as year, month, day, hour, minute, and second
-	// formattedTime := timeObj.Format("2006-01-02 15:04:05.000")
-
-	formattedTime := fmt.Sprintf("%v", timeObj)
-
-	return formattedTime
 }

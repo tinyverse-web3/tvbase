@@ -431,7 +431,13 @@ func (m *TvBase) init() error {
 	}
 
 	// dkvs service
-	m.DkvsService = dkvs.NewDkvs(m)
+	dkvsServer := dkvs.NewDkvs(m)
+	if dkvsServer == nil {
+		dkvsErr := fmt.Errorf("failed to create dkvs service")
+		tvLog.Logger.Errorf("tvbase->init: error: %v", dkvsErr)
+		return dkvsErr
+	}
+	m.DkvsService = dkvsServer
 	return nil
 }
 
