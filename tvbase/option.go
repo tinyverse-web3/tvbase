@@ -323,6 +323,7 @@ func (m *TvBase) createRouteOpt() (libp2p.Option, error) {
 			//
 			// EXPERIMENTAL: This is an experimental option and might be removed in the future. Use at your own risk.
 			kaddht.EnableOptimisticProvide(), // enable optimistic provide
+			kaddht.MaxRecordAge(m.cfg.DHT.MaxRecordAge),
 			modeOption,
 			// BootstrapPeers configures the bootstrapping nodes that we will connect to to seed
 			// and refresh our Routing Table if it becomes empty.
