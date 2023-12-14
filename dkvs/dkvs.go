@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -14,12 +16,14 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/query"
 	badgerds "github.com/ipfs/go-ds-badger2"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	kadpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	recpb "github.com/libp2p/go-libp2p-record/pb"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/core/routing"
+	"github.com/multiformats/go-base32"
 	tvConfig "github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/db"
 	"github.com/tinyverse-web3/tvbase/common/define"
@@ -811,7 +815,7 @@ func QueryAllKeyOption(t define.TvBaseService, prefix string, saved bool) error 
 			Logger.Debugf("queryAllKeys---> proto.Unmarshal(lbp2pRec.Value, lbp2pRec) failed: %v", err)
 			continue
 		}
-		dkvsRec := new(dkvs_pb.DkvsRecord)
+		dkvsRec := new(pb.DkvsRecord)
 		if err := proto.Unmarshal(lbp2pRec.Value, dkvsRec); err != nil {
 			Logger.Debugf("queryAllKeys---> proto.Unmarshal(dkvsRec.Value, dkvsRec) failed: %v", err)
 			continue

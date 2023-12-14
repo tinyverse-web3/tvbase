@@ -13,6 +13,7 @@ import (
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	dkvs_pb "github.com/tinyverse-web3/tvbase/dkvs/pb"
@@ -41,7 +42,13 @@ func TestDkvs(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
+	_, prikeyHex, err := identity.GenIdenity()
+	if err != nil {
+		t.Fatal(err)
+	}
 	cfg.InitMode(config.LightMode)
+	cfg.Identity.PrivKey = prikeyHex
+
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
