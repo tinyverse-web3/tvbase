@@ -133,7 +133,7 @@ func (d *MailboxClient) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, er
 			)
 			if err == nil {
 				// The mail has read, release it
-				log.Infof("MailboxClient->ReadMail:The sliver mail box has benn read, release it: %s", peerID)
+				log.Infof("MailboxClient->ReadMail:The sliver mail box has been read, release it: %s", peerID)
 				d.releaseMailbox(peerID, timeout)
 				if index == len(d.lightMailboxUser.UserMailboxPeers)-1 {
 					d.lightMailboxUser.UserMailboxPeers = d.lightMailboxUser.UserMailboxPeers[:index]

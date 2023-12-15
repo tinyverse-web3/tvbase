@@ -211,6 +211,8 @@ func (d *MailboxService) OnCreateMailboxRequest(
 		pubkey = request.BasicData.ProxyPubkey
 	}
 
+	log.Infof("MailboxService->OnCreateMailboxRequest: Create mail box: %s", pubkey)
+
 	user := d.getServiceUser(pubkey)
 	if user != nil {
 		log.Errorf("MailboxService->OnCreateMailboxRequest: pubkey is already exist in serviceUserList")
@@ -287,6 +289,7 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 	if request.BasicData.ProxyPubkey != "" {
 		pubkey = request.BasicData.ProxyPubkey
 	}
+	log.Infof("MailboxService->OnReadMailboxRequest: Read mail box user : %s", pubkey)
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnReadMailboxRequest: cannot find user for pubkey: %s", pubkey)
@@ -300,6 +303,7 @@ func (d *MailboxService) OnReadMailboxRequest(requestProtoData protoreflect.Prot
 	defer user.MsgRWMutex.Unlock()
 	results, err := d.datastore.Query(d.TvBase.GetCtx(), query)
 	if err != nil {
+		log.Errorf("MailboxService->OnReadMailboxRequest: Read mail box  : No mail for %s", pubkey)
 		return nil, nil, false, err
 	}
 	defer results.Close()
@@ -396,10 +400,12 @@ func (d *MailboxService) OnPubsubMsgRequest(
 		return nil, nil, true, fmt.Errorf("MailboxService->OnPubsubMsgRequest: fail to convert requestProtoData to *pb.MsgReq")
 	}
 
-	if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
-		log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
-		return nil, nil, true, nil
-	}
+	/*
+		if request.BasicData.PeerID == d.TvBase.GetHost().ID().String() {
+			log.Debugf("MailboxService->OnCreatePubusubRequest: request.BasicData.PeerID == d.TvBase.GetHost().ID().String()")
+			return nil, nil, true, nil
+		}
+	*/
 
 	/*
 		pubkey := request.BasicData.Pubkey
@@ -408,6 +414,9 @@ func (d *MailboxService) OnPubsubMsgRequest(
 		}
 	*/
 	pubkey := request.DestPubkey
+
+	log.Infof("MailboxService->OnPubsubMsgRequest: Receive msg with %s", pubkey)
+
 	user := d.getServiceUser(pubkey)
 	if user == nil {
 		log.Errorf("MailboxService->OnPubsubMsgRequest: public key %s is not exist", pubkey)
