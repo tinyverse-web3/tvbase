@@ -22,13 +22,19 @@ import (
 
 func init() {
 	logCfg := map[string]string{
-		"tvbase":         "debug",
-		"dkvs":           "debug",
-		"dmsg":           "debug",
-		"customProtocol": "debug",
-		"tvnode":         "debug",
-		"tvipfs":         "debug",
-		"core_http":      "debug",
+		"core_http":                "error",
+		"customProtocol":           "error",
+		"dkvs":                     "debug",
+		"dmsg":                     "error",
+		"dmsg.common":              "error",
+		"dmsg.protocol":            "error",
+		"dmsg.service.base":        "error",
+		"dmsg.service.channel":     "error",
+		"dmsg.service.mail":        "error",
+		"dmsg.service.msg":         "error",
+		"dmsg.service.proxypubsub": "error",
+		"tvbase":                   "debug",
+		"tvipfs":                   "error",
 	}
 	err := tvUtil.SetLogModule(logCfg)
 	if err != nil {

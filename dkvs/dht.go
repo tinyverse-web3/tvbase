@@ -484,16 +484,16 @@ func (d *Dkvs) tryToConnectNetPeers() int { //主动连接网络节点
 			defer wg.Done() // 当goroutine完成时减少WaitGroup的计数
 			result := nodeInfoService.Request(ctx, pId)
 			if result == nil {
-				Logger.Debugf("tryToConnectNetPeers->try get peer info: %v, result is nil", pId.Pretty())
+				Logger.Debugf("tryToConnectNetPeers---> try get peer info: %v, result is nil", pId.Pretty())
 				return
 			}
 			if result.Error != nil {
-				Logger.Debugf("tryToConnectNetPeers: try get peer info: %v happen error, result: %v", pId.Pretty(), result)
+				Logger.Debugf("tryToConnectNetPeers---> try get peer info: %v happen error, result: %v", pId.Pretty(), result)
 				return
 			}
 
 			if result.NodeInfo == nil {
-				Logger.Warnf("tryToConnectNetPeers: result node info is nil: pereID %s", pId.Pretty())
+				Logger.Warnf("tryToConnectNetPeers---> result node info is nil: pereID %s", pId.Pretty())
 				return
 			}
 			switch result.NodeInfo.NodeType {

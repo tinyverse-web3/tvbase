@@ -48,7 +48,11 @@ var (
 
 var (
 	currentReadRecMode = cm.NetworkFirst //默认读取数据模式：网络优先
-	modeMutex          sync.RWMutex      // 用于保护全局模式配置项的互斥锁
+	// Quorum is a DHT option that tells the DHT how many peers it needs to get
+	// values from before returning the best one. Zero means the DHT query
+	// should complete instead of returning early.
+	defaultQuorum int          = 2
+	globalMutex   sync.RWMutex // 用于保护全局配置项的互斥锁
 )
 
 func NewDkvs(tvbase define.TvBaseService) *Dkvs {
@@ -163,7 +167,7 @@ func (d *Dkvs) Has(key string) bool {
 		Logger.Error(err)
 		return false
 	}
-	_, err := d.idht.GetValue(ctx, RecordKey(key))
+	_, err := d.idht.GetValue(ctx, RecordKey(key), dht.Quorum(d.GetDefaultQuorum()))
 	return err == nil
 }
 
@@ -609,7 +613,7 @@ func (d *Dkvs) dhtGetRecordFromNet(ctx context.Context, key string) ([]byte, err
 	err := retry.Do(
 		func() error {
 			var err error
-			val, err = d.idht.GetValue(ctx, key)
+			val, err = d.idht.GetValue(ctx, key, dht.Quorum(d.GetDefaultQuorum()))
 			if err != nil && err == routing.ErrNotFound {
 				d.tryToConnectNetPeers() //主动连接之前连接过网络服务节点以提高网络的稳定性
 			}
@@ -688,15 +692,15 @@ func (d *Dkvs) IsApprovedPubkey(sn string, pk []byte) bool {
 
 // 获取dkvs当前的读取记录优先级,返回为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
 func (d *Dkvs) GetReadRecMode() cm.ReadPriority {
-	modeMutex.Lock()
-	defer modeMutex.Unlock()
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
 	return currentReadRecMode
 }
 
 // 设置dkvs读取记录的优先级，入参为本地优先 common.LocalFirst 或者网络优先: common.NetworkFirst
 func (d *Dkvs) SetReadRecMode(readPriority cm.ReadPriority) {
-	modeMutex.Lock()
-	defer modeMutex.Unlock()
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
 	currentReadRecMode = readPriority
 }
 
@@ -855,4 +859,19 @@ func formatUnixTime(unixTime uint64) string {
 	formattedTime := fmt.Sprintf("%v", timeObj)
 
 	return formattedTime
+}
+
+// Quorum is a DHT option that tells the DHT how many peers it needs to get
+// values from before returning the best one. Zero means the DHT query
+// should complete instead of returning early.
+func (d *Dkvs) GetDefaultQuorum() int {
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
+	return defaultQuorum
+}
+
+func (d *Dkvs) SetDefaultQuorum(quorum int) {
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
+	defaultQuorum = quorum
 }

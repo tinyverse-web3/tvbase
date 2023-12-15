@@ -7,10 +7,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 
 	ic "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/tinyverse-web3/tvbase/common/config"
 	"github.com/tinyverse-web3/tvbase/common/define"
+	"github.com/tinyverse-web3/tvbase/common/identity"
 	tvUtil "github.com/tinyverse-web3/tvbase/common/util"
 	dkvs "github.com/tinyverse-web3/tvbase/dkvs"
 	"github.com/tinyverse-web3/tvbase/tvbase"
@@ -18,13 +20,19 @@ import (
 
 func init() {
 	logCfg := map[string]string{
-		"tvbase":         "debug",
-		"dkvs":           "debug",
-		"dmsg":           "debug",
-		"customProtocol": "debug",
-		"tvnode":         "debug",
-		"tvipfs":         "debug",
-		"core_http":      "debug",
+		"core_http":                "error",
+		"customProtocol":           "error",
+		"dkvs":                     "debug",
+		"dmsg":                     "error",
+		"dmsg.common":              "error",
+		"dmsg.protocol":            "error",
+		"dmsg.service.base":        "error",
+		"dmsg.service.channel":     "error",
+		"dmsg.service.mail":        "error",
+		"dmsg.service.msg":         "error",
+		"dmsg.service.proxypubsub": "error",
+		"tvbase":                   "debug",
+		"tvipfs":                   "error",
 	}
 	err := tvUtil.SetLogModule(logCfg)
 	if err != nil {
@@ -51,10 +59,21 @@ func TestDkvsGetKeyFromOtherNode(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.NewDefaultTvbaseConfig()
+	_, prikeyHex, err := identity.GenIdenity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Identity.PrivKey = prikeyHex
 	cfg.InitMode(config.LightMode)
 	tvbase, err := tvbase.NewTvbase(ctx, cfg, "./")
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	tvbase.Start()
+	err = tvbase.WaitRendezvous(30 * time.Second)
+	if err != nil {
+		t.Fatalf("tvnode->main: WaitRendezvous error: %v", err)
 	}
 
 	kv := tvbase.GetDkvsService() //.表示当前路径
