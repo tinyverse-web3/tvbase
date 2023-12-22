@@ -135,11 +135,13 @@ func (d *MailboxClient) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, er
 				// The mail has read, release it
 				log.Infof("MailboxClient->ReadMail:The sliver mail box has been read, release it: %s", peerID)
 				d.releaseMailbox(peerID, timeout)
-				if index == len(d.lightMailboxUser.UserMailboxPeers)-1 {
-					d.lightMailboxUser.UserMailboxPeers = d.lightMailboxUser.UserMailboxPeers[:index]
-				} else {
-					d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers[:index], d.lightMailboxUser.UserMailboxPeers[index+1:]...)
-				}
+				/*
+					if index == len(d.lightMailboxUser.UserMailboxPeers)-1 {
+						d.lightMailboxUser.UserMailboxPeers = d.lightMailboxUser.UserMailboxPeers[:index]
+					} else {
+						d.lightMailboxUser.UserMailboxPeers = append(d.lightMailboxUser.UserMailboxPeers[:index], d.lightMailboxUser.UserMailboxPeers[index+1:]...)
+					}
+				*/
 			}
 			if len(msgs) > 0 {
 				// add the msg to msg list
