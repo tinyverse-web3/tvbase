@@ -123,7 +123,7 @@ func (d *MailboxClient) ReadMailbox(timeout time.Duration) ([]msg.ReceiveMsg, er
 
 	if len(d.lightMailboxUser.UserMailboxPeers) > 0 {
 		// The user has other mailbox in tvs network, read msgs for these peer, and release it
-		for index, peerID := range d.lightMailboxUser.UserMailboxPeers {
+		for _, peerID := range d.lightMailboxUser.UserMailboxPeers {
 			log.Debugf("MailboxClient->ReadMail: from: %s", peerID)
 			msgs, err := d.readMailbox(
 				peerID,
